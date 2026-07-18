@@ -1,0 +1,55 @@
+# Squill syntax definition.
+#
+# Parsed by crates/parser/build.rs, which generates:
+#   - the SyntaxKind enum (all token + node kinds),
+#   - the typed AST accessor layer included by src/ast.rs.
+#
+# Format (indentation-sensitive, `#` starts a comment line):
+#   token NAME [trivia]  — a token kind; `trivia` marks whitespace/comments
+#   node NAME            — a node kind, optionally followed by indented
+#                          accessor lines generated as methods:
+#     one   name Kind    -> fn name() -> Option<Kind<'_>>       (first child node)
+#     many  name Kind    -> fn name() -> impl Iterator<Kind>    (all child nodes)
+#     token name Kind    -> fn name() -> Option<&SyntaxToken>   (first child token)
+
+# ---- tokens ----
+
+# Unrecognized input, or an unterminated string/comment spanning to EOF.
+token Error
+token Whitespace trivia
+token LineComment trivia
+token BlockComment trivia
+
+# Bare identifier or keyword (keywords are resolved by the parser).
+token Ident
+# Delimited identifier: "..." or SQLite `...` / [...].
+token QuotedIdent
+token String
+token EscapeString
+token UnicodeString
+token BitString
+token HexString
+token DollarString
+token Number
+token Param
+
+token LParen
+token RParen
+token LBracket
+token RBracket
+token Comma
+token Semicolon
+token Dot
+token Colon
+token ColonColon
+token Operator
+
+# ---- nodes ----
+
+node Root
+  many statements Statement
+
+# Placeholder statement node for the toy grammar; TREE-95 introduces the
+# real statement kinds.
+node Statement
+  token semicolon Semicolon

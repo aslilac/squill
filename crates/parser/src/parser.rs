@@ -2,16 +2,8 @@
 
 use std::fmt;
 
-use cstree::green::GreenNode;
-
 use crate::lexer::Token;
-
-/// A concrete syntax tree for one SQL file.
-#[derive(Debug)]
-pub struct Cst {
-    /// The root green node of the tree.
-    pub green: GreenNode,
-}
+pub use crate::tree::Cst;
 
 /// Errors produced while parsing.
 #[derive(Debug, Clone, PartialEq, Eq)]
