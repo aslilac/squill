@@ -85,9 +85,8 @@ create table workspace_agents (
 	first_connected_at timestamptz,
 	last_connected_at timestamptz,
 	disconnected_at timestamptz,
-	resource_id uuid not null references workspace_resources (
-		id
-	) on delete cascade,
+	resource_id uuid not null references workspace_resources (id)
+		on delete cascade,
 	auth_token uuid not null,
 	auth_instance_id varchar (64),
 	architecture varchar (64) not null,
@@ -181,9 +180,8 @@ create table workspace_builds (
 	created_at timestamptz not null,
 	updated_at timestamptz not null,
 	workspace_id uuid not null references workspaces (id) on delete cascade,
-	template_version_id uuid not null references template_versions (
-		id
-	) on delete cascade,
+	template_version_id uuid not null references template_versions (id)
+		on delete cascade,
 	name varchar (64) not null,
 	build_number integer not null,
 	transition workspace_transition not null,
@@ -191,9 +189,7 @@ create table workspace_builds (
 	-- State stored by the provisioner
 	provisioner_state bytea,
 	-- Job ID of the action
-	job_id uuid not null unique references provisioner_jobs (
-		id
-	) on delete cascade,
+	job_id uuid not null unique references provisioner_jobs (id) on delete cascade,
 	primary key (id),
 	UNIQUE(workspace_id, name),
 	UNIQUE(workspace_id, build_number)

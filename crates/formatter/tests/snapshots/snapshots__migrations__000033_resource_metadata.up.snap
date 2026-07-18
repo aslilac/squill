@@ -8,7 +8,6 @@ create table if not exists workspace_resource_metadata (
 	value varchar (65536),
 	sensitive boolean not null,
 	primary key (workspace_resource_id, key),
-	foreign key (workspace_resource_id) references workspace_resources (
-		id
-	) on delete cascade
+	foreign key (workspace_resource_id) references workspace_resources (id)
+		on delete cascade
 );

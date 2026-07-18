@@ -3,9 +3,8 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 create table if not exists template_version_workspace_tags (
-	template_version_id uuid not null references template_versions (
-		id
-	) on delete cascade,
+	template_version_id uuid not null references template_versions (id)
+		on delete cascade,
 	key text not null,
 	value text not null,
 	unique(template_version_id, key)

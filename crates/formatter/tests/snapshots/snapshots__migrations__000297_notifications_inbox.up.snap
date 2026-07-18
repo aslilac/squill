@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 create type inbox_notification_read_status as enum (
@@ -12,9 +11,8 @@ create type inbox_notification_read_status as enum (
 create table inbox_notifications (
 	id uuid primary key,
 	user_id uuid not null references users (id) on delete cascade,
-	template_id uuid not null references notification_templates (
-		id
-	) on delete cascade,
+	template_id uuid not null references notification_templates (id)
+		on delete cascade,
 	targets uuid [],
 	title text not null,
 	content text not null,

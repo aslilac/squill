@@ -23,9 +23,8 @@ create type workspace_agent_script_timing_status as enum (
 comment on type workspace_agent_script_timing_status is 'What the exit status of the script is.';
 
 create table workspace_agent_script_timings (
-	script_id uuid not null references workspace_agent_scripts (
-		id
-	) on delete cascade,
+	script_id uuid not null references workspace_agent_scripts (id)
+		on delete cascade,
 	started_at timestamp with time zone not null,
 	ended_at timestamp with time zone not null,
 	exit_code int not null,

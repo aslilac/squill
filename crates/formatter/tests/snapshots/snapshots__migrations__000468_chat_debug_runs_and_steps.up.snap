@@ -53,10 +53,8 @@ create table chat_debug_steps (
 	started_at timestamptz not null default NOW(),
 	updated_at timestamptz not null default NOW(),
 	finished_at timestamptz,
-	constraint fk_chat_debug_steps_run_chat foreign key (
-		run_id,
-		chat_id
-	) references chat_debug_runs (id, chat_id) on delete cascade
+	constraint fk_chat_debug_steps_run_chat foreign key (run_id, chat_id)
+		references chat_debug_runs (id, chat_id) on delete cascade
 );
 
 create unique index idx_chat_debug_steps_run_step

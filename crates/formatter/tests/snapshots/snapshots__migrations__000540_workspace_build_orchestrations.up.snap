@@ -22,9 +22,8 @@ create table workspace_build_orchestrations (
 	parent_build_id uuid unique not null,
 	child_build_id uuid unique,
 	child_transition workspace_transition not null,
-	child_template_version_id uuid references template_versions (
-		id
-	) on delete cascade,
+	child_template_version_id uuid references template_versions (id)
+		on delete cascade,
 	child_template_version_preset_id uuid, -- a constraint is added below
 	child_rich_parameter_values jsonb default '[]'::jsonb not null,
 	child_log_level text default '' not null,
@@ -33,50 +32,42 @@ create table workspace_build_orchestrations (
 	next_retry_after timestamptz,
 	status text default 'pending' not null,
 	error text,
-	constraint workspace_build_orchestrations_status_check check (
-		status in ('pending', 'completed', 'failed', 'canceled')
-	),
-	constraint workspace_build_orchestrations_completed_child_check check (
-		status <> 'completed' or child_build_id is not null
-	),
-	constraint workspace_build_orchestrations_child_parameters_check check (
-		jsonb_typeof(child_rich_parameter_values) = 'array'
-	),
-	constraint workspace_build_orchestrations_attempt_count_check check (
-		attempt_count >= 0
-	),
-	constraint workspace_build_orchestrations_next_retry_after_check check (
-		status = 'pending' or next_retry_after is null
-	),
-	constraint workspace_build_orchestrations_child_preset_version_check check (
-		child_template_version_preset_id is null
-		or child_template_version_id is not null
-	),
+	constraint workspace_build_orchestrations_status_check
+		check (status in ('pending', 'completed', 'failed', 'canceled')),
+	constraint workspace_build_orchestrations_completed_child_check
+		check (status <> 'completed' or child_build_id is not null),
+	constraint workspace_build_orchestrations_child_parameters_check
+		check (jsonb_typeof(child_rich_parameter_values) = 'array'),
+	constraint workspace_build_orchestrations_attempt_count_check
+		check (attempt_count >= 0),
+	constraint workspace_build_orchestrations_next_retry_after_check
+		check (status = 'pending' or next_retry_after is null),
+	constraint workspace_build_orchestrations_child_preset_version_check
+		check (
+			child_template_version_preset_id is null
+			or child_template_version_id is not null
+		),
 	-- Mirrors CreateWorkspaceBuildRequest validation, where the optional
 	-- log level is either unset or debug.
-	constraint workspace_build_orchestrations_child_log_level_check check (
-		child_log_level in ('', 'debug')
-	),
+	constraint workspace_build_orchestrations_child_log_level_check
+		check (child_log_level in ('', 'debug')),
 	-- These constraints enforce that any stored child preset belongs to
 	-- the requested child template version, while preset deletion still
 	-- clears only the preset column.
-	constraint workspace_build_orchestrations_child_preset_id_fkey foreign key (
-		child_template_version_preset_id
-	) references template_version_presets (id) on delete set null,
-	constraint workspace_build_orchestrations_child_preset_version_fkey foreign key (
-		child_template_version_preset_id,
-		child_template_version_id
-	) references template_version_presets (id, template_version_id),
+	constraint workspace_build_orchestrations_child_preset_id_fkey
+		foreign key (child_template_version_preset_id)
+		references template_version_presets (id) on delete set null,
+	constraint workspace_build_orchestrations_child_preset_version_fkey
+		foreign key (child_template_version_preset_id, child_template_version_id)
+		references template_version_presets (id, template_version_id),
 	-- Composite foreign keys enforce that the parent and child builds
 	-- belong to the same workspace.
-	constraint workspace_build_orchestrations_parent_build_workspace_id_fkey foreign key (
-		parent_build_id,
-		workspace_id
-	) references workspace_builds (id, workspace_id) on delete cascade,
-	constraint workspace_build_orchestrations_child_build_workspace_id_fkey foreign key (
-		child_build_id,
-		workspace_id
-	) references workspace_builds (id, workspace_id) on delete cascade
+	constraint workspace_build_orchestrations_parent_build_workspace_id_fkey
+		foreign key (parent_build_id, workspace_id)
+		references workspace_builds (id, workspace_id) on delete cascade,
+	constraint workspace_build_orchestrations_child_build_workspace_id_fkey
+		foreign key (child_build_id, workspace_id)
+		references workspace_builds (id, workspace_id) on delete cascade
 );
 
 -- The orchestrator scans eligible pending rows oldest first and skips

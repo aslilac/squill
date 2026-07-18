@@ -34,7 +34,8 @@ create table notification_messages (
 	notification_template_id uuid not null,
 	user_id uuid not null,
 	method notification_method not null,
-	status notification_message_status not null default 'pending'::notification_message_status,
+	status notification_message_status not null
+		default 'pending'::notification_message_status,
 	status_reason text,
 	created_by text not null,
 	payload jsonb not null,
@@ -45,9 +46,8 @@ create table notification_messages (
 	leased_until timestamp with time zone,
 	next_retry_after timestamp with time zone,
 	primary key (id),
-	foreign key (notification_template_id) references notification_templates (
-		id
-	) on delete cascade,
+	foreign key (notification_template_id) references notification_templates (id)
+		on delete cascade,
 	foreign key (user_id) references users (id) on delete cascade
 );
 

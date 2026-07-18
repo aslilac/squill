@@ -12,15 +12,13 @@ create table mcp_server_configs (
 	icon_url text not null default '',
 
 	-- Connection
-	transport text not null default 'streamable_http' check (
-		transport in ('streamable_http', 'sse')
-	),
+	transport text not null default 'streamable_http'
+		check (transport in ('streamable_http', 'sse')),
 	url text not null,
 
 	-- Authentication
-	auth_type text not null default 'none' check (
-		auth_type in ('none', 'oauth2', 'api_key', 'custom_headers')
-	),
+	auth_type text not null default 'none'
+		check (auth_type in ('none', 'oauth2', 'api_key', 'custom_headers')),
 
 	-- OAuth2 config (when auth_type = 'oauth2')
 	oauth2_client_id text not null default '',
@@ -44,9 +42,8 @@ create table mcp_server_configs (
 	tool_deny_list text [] not null default '{}',
 
 	-- Availability policy
-	availability text not null default 'default_off' check (
-		availability in ('force_on', 'default_on', 'default_off')
-	),
+	availability text not null default 'default_off'
+		check (availability in ('force_on', 'default_on', 'default_off')),
 
 	-- Lifecycle
 	enabled boolean not null default false,
@@ -58,9 +55,8 @@ create table mcp_server_configs (
 
 create table mcp_server_user_tokens (
 	id uuid primary key default gen_random_uuid(),
-	mcp_server_config_id uuid not null references mcp_server_configs (
-		id
-	) on delete cascade,
+	mcp_server_config_id uuid not null references mcp_server_configs (id)
+		on delete cascade,
 	user_id uuid not null references users (id) on delete cascade,
 	access_token text not null,
 	access_token_key_id text references dbcrypt_keys (active_key_digest),

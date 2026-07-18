@@ -13,9 +13,8 @@ create table user_skills (
 	updated_at timestamptz not null default now(),
 	constraint user_skills_name_size check (octet_length(name) <= 256),
 	constraint user_skills_name_format check (name ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
-	constraint user_skills_description_size check (
-		octet_length(description) <= 4096
-	),
+	constraint user_skills_description_size
+		check (octet_length(description) <= 4096),
 	constraint user_skills_content_size check (octet_length(content) <= 65536)
 );
 

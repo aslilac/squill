@@ -10,13 +10,11 @@ create table chat_usage_limit_config (
 	UNIQUE(singleton),
 	enabled boolean not null default false,
 	-- Limit per user per period, in micro-dollars (1 USD = 1,000,000).
-	default_limit_micros bigint not null default 0 check (
-		default_limit_micros >= 0
-	),
+	default_limit_micros bigint not null default 0
+		check (default_limit_micros >= 0),
 	-- Period length: 'day', 'week', or 'month'.
-	period text not null default 'month' check (
-		period in ('day', 'week', 'month')
-	),
+	period text not null default 'month'
+		check (period in ('day', 'week', 'month')),
 	created_at timestamptz not null default NOW(),
 	updated_at timestamptz not null default NOW()
 );

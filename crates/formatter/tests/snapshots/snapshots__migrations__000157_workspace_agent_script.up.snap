@@ -3,9 +3,8 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 create table workspace_agent_log_sources (
-	workspace_agent_id uuid not null references workspace_agents (
-		id
-	) on delete cascade,
+	workspace_agent_id uuid not null references workspace_agents (id)
+		on delete cascade,
 	id uuid not null,
 	created_at timestamptz not null,
 	display_name varchar (127) not null,
@@ -14,9 +13,8 @@ create table workspace_agent_log_sources (
 );
 
 create table workspace_agent_scripts (
-	workspace_agent_id uuid not null references workspace_agents (
-		id
-	) on delete cascade,
+	workspace_agent_id uuid not null references workspace_agents (id)
+		on delete cascade,
 	log_source_id uuid not null,
 	log_path text not null,
 	created_at timestamptz not null,

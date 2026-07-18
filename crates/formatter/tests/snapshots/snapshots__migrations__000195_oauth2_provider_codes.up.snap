@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 create table oauth2_provider_app_codes (
@@ -23,9 +22,8 @@ create table oauth2_provider_app_tokens (
 	expires_at timestamp with time zone not null,
 	hash_prefix bytea not null,
 	refresh_hash bytea not null,
-	app_secret_id uuid not null references oauth2_provider_app_secrets (
-		id
-	) on delete cascade,
+	app_secret_id uuid not null references oauth2_provider_app_secrets (id)
+		on delete cascade,
 	api_key_id text not null references api_keys (id) on delete cascade,
 	primary key (id),
 	UNIQUE(hash_prefix)

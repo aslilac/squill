@@ -3,9 +3,8 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 create table if not exists template_version_parameters (
-	template_version_id uuid not null references template_versions (
-		id
-	) on delete cascade,
+	template_version_id uuid not null references template_versions (id)
+		on delete cascade,
 	name text not null,
 	description text not null,
 	type text not null,
@@ -31,9 +30,8 @@ comment on column template_version_parameters.validation_min is 'Validation: min
 comment on column template_version_parameters.validation_max is 'Validation: maximum length of value';
 
 create table if not exists workspace_build_parameters (
-	workspace_build_id uuid not null references workspace_builds (
-		id
-	) on delete cascade,
+	workspace_build_id uuid not null references workspace_builds (id)
+		on delete cascade,
 	name text not null,
 	value text not null,
 	unique(workspace_build_id, name)

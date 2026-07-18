@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 create table workspace_agent_devcontainers (
@@ -9,9 +8,8 @@ create table workspace_agent_devcontainers (
 	created_at timestamptz not null default now(),
 	workspace_folder text not null,
 	config_path text not null,
-	foreign key (workspace_agent_id) references workspace_agents (
-		id
-	) on delete cascade
+	foreign key (workspace_agent_id) references workspace_agents (id)
+		on delete cascade
 );
 
 comment on table workspace_agent_devcontainers is 'Workspace agent devcontainer configuration';

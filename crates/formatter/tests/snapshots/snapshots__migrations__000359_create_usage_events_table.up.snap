@@ -7,9 +7,8 @@ create table usage_events (
 	-- We use a TEXT column with a CHECK constraint rather than an enum because of
 	-- the limitations with adding new values to an enum and using them in the
 	-- same transaction.
-	event_type text not null constraint usage_event_type_check check (
-		event_type in ('dc_managed_agents_v1')
-	),
+	event_type text not null constraint usage_event_type_check
+		check (event_type in ('dc_managed_agents_v1')),
 	event_data jsonb not null,
 	created_at timestamp with time zone not null,
 	publish_started_at timestamp with time zone default null,

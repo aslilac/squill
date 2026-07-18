@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 create table tailnet_client_subscriptions (
@@ -12,9 +11,8 @@ create table tailnet_client_subscriptions (
 	agent_id uuid not null,
 	updated_at timestamp with time zone not null,
 	primary key (client_id, coordinator_id, agent_id),
-	foreign key (coordinator_id) references tailnet_coordinators (
-		id
-	) on delete cascade
+	foreign key (coordinator_id) references tailnet_coordinators (id)
+		on delete cascade
 	-- we don't keep a foreign key to the tailnet_clients table since there's
 	-- not a great way to guarantee that a subscription is always added after
 	-- the client is inserted. clients are only created after the client sends

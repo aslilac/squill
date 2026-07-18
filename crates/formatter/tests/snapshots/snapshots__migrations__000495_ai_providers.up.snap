@@ -10,9 +10,8 @@ create type ai_provider_type as enum (
 create table ai_providers (
 	id uuid primary key default gen_random_uuid(),
 	type ai_provider_type not null,
-	name text not null constraint ai_providers_name_check check (
-		name ~ '^[a-z0-9]+(-[a-z0-9]+)*$'
-	),
+	name text not null constraint ai_providers_name_check
+		check (name ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
 	display_name text,
 	enabled boolean not null default true,
 	deleted boolean not null default false,

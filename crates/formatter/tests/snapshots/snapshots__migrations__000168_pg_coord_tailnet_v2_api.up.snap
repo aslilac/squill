@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 create type tailnet_status as enum (
@@ -15,9 +14,8 @@ create table tailnet_peers (
 	node bytea not null,
 	status tailnet_status default 'ok'::tailnet_status not null,
 	primary key (id, coordinator_id),
-	foreign key (coordinator_id) references tailnet_coordinators (
-		id
-	) on delete cascade
+	foreign key (coordinator_id) references tailnet_coordinators (id)
+		on delete cascade
 );
 
 -- For shutting down / GC a coordinator
@@ -53,9 +51,8 @@ create table tailnet_tunnels (
 	dst_id uuid not null,
 	updated_at timestamp with time zone not null,
 	primary key (coordinator_id, src_id, dst_id),
-	foreign key (coordinator_id) references tailnet_coordinators (
-		id
-	) on delete cascade
+	foreign key (coordinator_id) references tailnet_coordinators (id)
+		on delete cascade
 );
 
 create function tailnet_notify_tunnel_change()

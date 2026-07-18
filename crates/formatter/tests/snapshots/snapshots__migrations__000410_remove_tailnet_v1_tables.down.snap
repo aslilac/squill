@@ -11,9 +11,8 @@ create table tailnet_clients (
 	updated_at timestamp with time zone not null,
 	node jsonb not null,
 	primary key (id, coordinator_id),
-	foreign key (coordinator_id) references tailnet_coordinators (
-		id
-	) on delete cascade
+	foreign key (coordinator_id) references tailnet_coordinators (id)
+		on delete cascade
 );
 
 create table tailnet_agents (
@@ -22,9 +21,8 @@ create table tailnet_agents (
 	updated_at timestamp with time zone not null,
 	node jsonb not null,
 	primary key (id, coordinator_id),
-	foreign key (coordinator_id) references tailnet_coordinators (
-		id
-	) on delete cascade
+	foreign key (coordinator_id) references tailnet_coordinators (id)
+		on delete cascade
 );
 
 create table tailnet_client_subscriptions (
@@ -33,9 +31,8 @@ create table tailnet_client_subscriptions (
 	agent_id uuid not null,
 	updated_at timestamp with time zone not null,
 	primary key (client_id, coordinator_id, agent_id),
-	foreign key (coordinator_id) references tailnet_coordinators (
-		id
-	) on delete cascade
+	foreign key (coordinator_id) references tailnet_coordinators (id)
+		on delete cascade
 );
 
 -- Create indexes.

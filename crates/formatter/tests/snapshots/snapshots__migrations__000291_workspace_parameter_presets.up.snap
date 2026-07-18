@@ -7,9 +7,8 @@ create table template_version_presets (
 	template_version_id uuid not null,
 	name text not null,
 	created_at timestamp with time zone not null default CURRENT_TIMESTAMP,
-	foreign key (template_version_id) references template_versions (
-		id
-	) on delete cascade
+	foreign key (template_version_id) references template_versions (id)
+		on delete cascade
 );
 
 create table template_version_preset_parameters (
@@ -17,9 +16,8 @@ create table template_version_preset_parameters (
 	template_version_preset_id uuid not null,
 	name text not null,
 	value text not null,
-	foreign key (template_version_preset_id) references template_version_presets (
-		id
-	) on delete cascade
+	foreign key (template_version_preset_id)
+		references template_version_presets (id) on delete cascade
 );
 
 alter table workspace_builds add column template_version_preset_id uuid null;

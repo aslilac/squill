@@ -8,9 +8,8 @@ create table tasks (
 	owner_id uuid not null references users (id) on delete cascade,
 	name text not null,
 	workspace_id uuid references workspaces (id) on delete cascade,
-	template_version_id uuid not null references template_versions (
-		id
-	) on delete cascade,
+	template_version_id uuid not null references template_versions (id)
+		on delete cascade,
 	template_parameters jsonb not null default '{}'::jsonb,
 	prompt text not null,
 	created_at timestamptz not null,
@@ -19,13 +18,10 @@ create table tasks (
 
 create table task_workspace_apps (
 	task_id uuid not null references tasks (id) on delete cascade,
-	workspace_build_id uuid not null references workspace_builds (
-		id
-	) on delete cascade,
-	workspace_agent_id uuid not null references workspace_agents (
-		id
-	) on delete cascade,
-	workspace_app_id uuid not null references workspace_apps (
-		id
-	) on delete cascade
+	workspace_build_id uuid not null references workspace_builds (id)
+		on delete cascade,
+	workspace_agent_id uuid not null references workspace_agents (id)
+		on delete cascade,
+	workspace_app_id uuid not null references workspace_apps (id)
+		on delete cascade
 );

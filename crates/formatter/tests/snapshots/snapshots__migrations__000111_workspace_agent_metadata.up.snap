@@ -14,9 +14,9 @@ create unlogged table workspace_agent_metadata (
 	error varchar (65535) not null default '',
 	timeout bigint not null,
 	interval bigint not null,
-	collected_at timestamp with time zone not null default '0001-01-01 00:00:00+00',
+	collected_at timestamp with time zone not null
+		default '0001-01-01 00:00:00+00',
 	primary key (workspace_agent_id, key),
-	foreign key (workspace_agent_id) references workspace_agents (
-		id
-	) on delete cascade
+	foreign key (workspace_agent_id) references workspace_agents (id)
+		on delete cascade
 );

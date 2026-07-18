@@ -1,11 +1,11 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 create table notification_preferences (
 	user_id uuid references users on delete cascade not null,
-	notification_template_id uuid references notification_templates on delete cascade not null,
+	notification_template_id uuid references notification_templates
+		on delete cascade not null,
 	disabled bool not null default false,
 	created_at timestamp with time zone not null default CURRENT_TIMESTAMP,
 	updated_at timestamp with time zone not null default CURRENT_TIMESTAMP,

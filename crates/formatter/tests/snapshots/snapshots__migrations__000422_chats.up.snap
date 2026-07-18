@@ -96,21 +96,22 @@ create table chat_providers (
 	created_at timestamptz not null default NOW(),
 	updated_at timestamptz not null default NOW(),
 	base_url text not null default '',
-	constraint chat_providers_provider_check check (
-		provider
-		= any(
-			array [
-				'anthropic'::text,
-				'azure'::text,
-				'bedrock'::text,
-				'google'::text,
-				'openai'::text,
-				'openai-compat'::text,
-				'openrouter'::text,
-				'vercel'::text
-			]
+	constraint chat_providers_provider_check
+		check (
+			provider
+			= any(
+				array [
+					'anthropic'::text,
+					'azure'::text,
+					'bedrock'::text,
+					'google'::text,
+					'openai'::text,
+					'openai-compat'::text,
+					'openrouter'::text,
+					'vercel'::text
+				]
+			)
 		)
-	)
 );
 
 comment on column chat_providers.api_key_key_id is 'The ID of the key used to encrypt the provider API key. If this is NULL, the API key is not encrypted';
@@ -134,9 +135,8 @@ create table chat_model_configs (
 	compression_threshold integer not null,
 	options jsonb not null default '{}'::jsonb,
 	constraint chat_model_configs_context_limit_check check (context_limit > 0),
-	constraint chat_model_configs_compression_threshold_check check (
-		compression_threshold >= 0 and compression_threshold <= 100
-	)
+	constraint chat_model_configs_compression_threshold_check
+		check (compression_threshold >= 0 and compression_threshold <= 100)
 );
 
 create index idx_chat_model_configs_enabled on chat_model_configs (enabled);

@@ -9,15 +9,12 @@ create table ai_gateway_keys (
 	secret_prefix varchar (11) not null,
 	hashed_secret bytea not null,
 	last_used_at timestamptz null,
-	constraint ai_gateway_keys_name_check check (
-		length(name) <= 64 and name ~ '^[a-z0-9]+(-[a-z0-9]+)*$'
-	),
-	constraint ai_gateway_keys_secret_prefix_check check (
-		length(secret_prefix) = 11
-	),
-	constraint ai_gateway_keys_hashed_secret_check check (
-		length(hashed_secret) > 0
-	)
+	constraint ai_gateway_keys_name_check
+		check (length(name) <= 64 and name ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
+	constraint ai_gateway_keys_secret_prefix_check
+		check (length(secret_prefix) = 11),
+	constraint ai_gateway_keys_hashed_secret_check
+		check (length(hashed_secret) > 0)
 );
 
 comment on table ai_gateway_keys is 'Hashed bearer secrets used by AI Gateway standalone replicas to authenticate into coderd.';

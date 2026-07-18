@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 create table tailnet_coordinators (
@@ -17,9 +16,8 @@ create table tailnet_clients (
 	updated_at timestamp with time zone not null,
 	node jsonb not null,
 	primary key (id, coordinator_id),
-	foreign key (coordinator_id) references tailnet_coordinators (
-		id
-	) on delete cascade
+	foreign key (coordinator_id) references tailnet_coordinators (id)
+		on delete cascade
 );
 
 -- For querying/deleting mappings
@@ -35,9 +33,8 @@ create table tailnet_agents (
 	updated_at timestamp with time zone not null,
 	node jsonb not null,
 	primary key (id, coordinator_id),
-	foreign key (coordinator_id) references tailnet_coordinators (
-		id
-	) on delete cascade
+	foreign key (coordinator_id) references tailnet_coordinators (id)
+		on delete cascade
 );
 
 -- For shutting down / GC a coordinator
