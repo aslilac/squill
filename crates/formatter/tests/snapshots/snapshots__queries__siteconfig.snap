@@ -493,9 +493,9 @@ select
 
 -- name: UpsertChatRetentionDays :exec
 insert into site_configs (key, value)
-values ('agents_chat_retention_days', cast (@retention_days as integer) :: text)
+values ('agents_chat_retention_days', cast (@retention_days as integer)::text)
 on conflict
-	(key) do update set value = cast (@retention_days as integer) :: text where
+	(key) do update set value = cast (@retention_days as integer)::text where
 		site_configs.key = 'agents_chat_retention_days';
 
 -- name: GetChatDebugRetentionDays :one
@@ -515,11 +515,11 @@ insert into site_configs (key, value)
 values
 	(
 		'agents_chat_debug_retention_days',
-		cast (@debug_retention_days as integer) :: text
+		cast (@debug_retention_days as integer)::text
 	)
 on conflict
 	(key) do update set
-		value = cast (@debug_retention_days as integer) :: text where
+		value = cast (@debug_retention_days as integer)::text where
 		site_configs.key = 'agents_chat_debug_retention_days';
 
 -- name: GetChatAutoArchiveDays :one
@@ -537,10 +537,7 @@ select
 -- name: UpsertChatAutoArchiveDays :exec
 insert into site_configs (key, value)
 values
-	(
-		'agents_chat_auto_archive_days',
-		cast (@auto_archive_days as integer) :: text
-	)
+	('agents_chat_auto_archive_days', cast (@auto_archive_days as integer)::text)
 on conflict
-	(key) do update set value = cast (@auto_archive_days as integer) :: text where
+	(key) do update set value = cast (@auto_archive_days as integer)::text where
 		site_configs.key = 'agents_chat_auto_archive_days';

@@ -1541,8 +1541,15 @@ impl Lowerer {
 
     fn cast_expr(&mut self, node: &SyntaxNode) -> Doc {
         // `expr::type` tight, or `cast( expr as type )` via paren block.
+        // The first token can be leading trivia (a value on its own
+        // line); the CAST keyword is the first *significant* element.
         let has_cast_kw = node
-            .first_token()
+            .children_with_tokens()
+            .find(|element| match element {
+                SyntaxElement::Token(token) => !token.kind().is_trivia(),
+                SyntaxElement::Node(_) => true,
+            })
+            .and_then(|element| element.into_token())
             .is_some_and(|t| t.text().eq_ignore_ascii_case("cast"));
         if has_cast_kw {
             return self.paren_block(node);

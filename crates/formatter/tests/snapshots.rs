@@ -40,3 +40,8 @@ fn queries_formatted_snapshots() {
 fn migrations_formatted_snapshots() {
     snapshot_dir("migrations");
 }
+
+#[test]
+fn fixtures_formatted_snapshots() {
+    snapshot_dir("fixtures");
+}

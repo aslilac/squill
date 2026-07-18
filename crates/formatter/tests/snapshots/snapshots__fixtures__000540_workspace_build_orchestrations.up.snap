@@ -1,0 +1,23 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+insert into workspace_build_orchestrations (
+	id,
+	created_at,
+	updated_at,
+	workspace_id,
+	parent_build_id,
+	child_transition
+)
+select
+	'4e983a68-9b8a-4d4e-a4d6-5f2dd73551c2'::uuid,
+	NOW(),
+	NOW(),
+	workspace_id,
+	id,
+	'start'::workspace_transition
+from workspace_builds
+order by created_at, id
+limit 1
+on conflict do nothing;

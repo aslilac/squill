@@ -1,0 +1,23 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+insert into workspace_agent_stats (
+	id,
+	created_at,
+	user_id,
+	agent_id,
+	workspace_id,
+	template_id,
+	connection_median_latency_ms
+)
+values
+	(
+		gen_random_uuid(),
+		NOW(),
+		gen_random_uuid(),
+		gen_random_uuid(),
+		gen_random_uuid(),
+		gen_random_uuid(),
+		0.5::float
+	);

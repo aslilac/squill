@@ -1,0 +1,58 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+insert into ai_providers (
+	id,
+	type,
+	name,
+	display_name,
+	enabled,
+	deleted,
+	base_url,
+	settings
+)
+values
+	(
+		'8e3c6e18-2b75-4c3f-9b35-9d1c6f4e1a01',
+		'openai',
+		'openai',
+		'OpenAI (Fixture)',
+		true,
+		false,
+		'https://api.openai.com/v1/',
+		''
+	),
+	(
+		'8e3c6e18-2b75-4c3f-9b35-9d1c6f4e1a02',
+		'anthropic',
+		'anthropic-bedrock',
+		'Anthropic via Bedrock (Fixture)',
+		true,
+		false,
+		'https://bedrock-runtime.us-west-2.amazonaws.com/',
+		'{"_type":"bedrock","_version":1,"region":"us-west-2","model":"global.anthropic.claude-sonnet-4-5-20250929-v1:0","access_key":"fixture-bedrock-access-key","access_key_secret":"fixture-bedrock-access-key-secret"}'
+	),
+	(
+		'8e3c6e18-2b75-4c3f-9b35-9d1c6f4e1a03',
+		'openai',
+		'openai-deleted',
+		'OpenAI (Deleted Fixture)',
+		false,
+		true,
+		'https://api.openai.com/v1/',
+		''
+	);
+
+insert into ai_provider_keys (id, provider_id, api_key)
+values
+	(
+		'8e3c6e18-2b75-4c3f-9b35-9d1c6f4e1b01',
+		'8e3c6e18-2b75-4c3f-9b35-9d1c6f4e1a01',
+		'fixture-openai-key'
+	),
+	(
+		'8e3c6e18-2b75-4c3f-9b35-9d1c6f4e1b02',
+		'8e3c6e18-2b75-4c3f-9b35-9d1c6f4e1a01',
+		'fixture-openai-key-failover'
+	);

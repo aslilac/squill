@@ -1,0 +1,15 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Fixture for migration 000404_allow_same_role_name_in_different_orgs.
+-- Inserts a custom role with an all-zero organization_id to ensure the
+-- migration correctly normalizes such values.
+insert into custom_roles (name, display_name, organization_id)
+values
+	(
+		'custom-role-zero-org-id',
+		'Custom Role (Zero Org ID)',
+		'00000000-0000-0000-0000-000000000000'::uuid
+	)
+on conflict do nothing;

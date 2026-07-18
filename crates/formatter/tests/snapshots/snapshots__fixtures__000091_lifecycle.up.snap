@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Set a non-default lifecycle_state.
+update workspace_agents
+set lifecycle_state = 'ready'
+where id = '7a1ce5f8-8d00-431c-ad1b-97a846512804';

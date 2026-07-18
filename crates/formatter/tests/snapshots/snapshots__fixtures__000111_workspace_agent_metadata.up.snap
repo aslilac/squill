@@ -1,0 +1,14 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+insert into workspace_agent_metadata (
+	workspace_agent_id,
+	display_name,
+	key,
+	script,
+	timeout,
+	interval
+)
+values
+	('45e89705-e09d-4850-bcec-f9a937f5d78d', 'a h e m', 'ahem', 'rm -rf', 3, 1);

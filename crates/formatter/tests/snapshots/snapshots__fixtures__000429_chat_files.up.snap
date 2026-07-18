@@ -1,0 +1,24 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+insert into chat_files (
+	id,
+	owner_id,
+	organization_id,
+	created_at,
+	name,
+	mimetype,
+	data
+)
+select
+	'00000000-0000-0000-0000-000000000099',
+	u.id,
+	om.organization_id,
+	'2024-01-01 00:00:00+00',
+	'test.png',
+	'image/png',
+	E'\\x89504E47'
+from users u join organization_members om on om.user_id = u.id
+order by u.created_at, u.id
+limit 1;

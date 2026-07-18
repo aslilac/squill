@@ -1,0 +1,21 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+insert into workspace_agent_script_timings (
+	script_id,
+	started_at,
+	ended_at,
+	exit_code,
+	stage,
+	status
+)
+values
+	(
+		(select id from workspace_agent_scripts limit 1),
+		NOW() - interval '1 hour 55 minutes',
+		NOW() - interval '1 hour 50 minutes',
+		0,
+		'start',
+		'ok'
+	);

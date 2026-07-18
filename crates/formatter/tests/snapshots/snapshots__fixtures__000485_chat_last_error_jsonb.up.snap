@@ -1,0 +1,30 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Migration 485 retypes chats.last_error to jsonb and backfills legacy
+-- text rows into the structured persisted payload shape.
+do $$
+	declare
+		payload jsonb;
+	begin
+		select last_error
+		into strict payload
+		from chats
+		where id = '72c0438a-18eb-4688-ab80-e4c6a126ef96';
+		if payload ->> 'message' <> 'Legacy provider failure' then
+			raise exception 'expected migrated last_error message, got %',
+			payload ->> 'message';
+		end if;
+		if payload ->> 'kind' <> 'generic' then
+			raise exception 'expected migrated last_error kind, got %',
+			payload ->> 'kind';
+		end if;
+		perform 1
+		from chats
+		where id = '5a4ac6a3-9dc5-440f-ae6b-5805e477bc59' and last_error is null;
+		if not FOUND then
+			raise exception 'expected null last_error row to remain NULL after migration';
+		end if;
+	end
+$$;

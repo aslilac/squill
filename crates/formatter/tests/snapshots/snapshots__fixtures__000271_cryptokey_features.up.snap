@@ -1,0 +1,75 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+insert into crypto_keys (
+	feature,
+	sequence,
+	secret,
+	secret_key_id,
+	starts_at,
+	deletes_at
+)
+values
+	(
+		'workspace_apps_token',
+		1,
+		'abc',
+		null,
+		'1970-01-01 00:00:00 UTC'::timestamptz,
+		'2100-01-01 00:00:00 UTC'::timestamptz
+	);
+
+insert into crypto_keys (
+	feature,
+	sequence,
+	secret,
+	secret_key_id,
+	starts_at,
+	deletes_at
+)
+values
+	(
+		'workspace_apps_api_key',
+		1,
+		'def',
+		null,
+		'1970-01-01 00:00:00 UTC'::timestamptz,
+		'2100-01-01 00:00:00 UTC'::timestamptz
+	);
+
+insert into crypto_keys (
+	feature,
+	sequence,
+	secret,
+	secret_key_id,
+	starts_at,
+	deletes_at
+)
+values
+	(
+		'oidc_convert',
+		2,
+		'ghi',
+		null,
+		'1970-01-01 00:00:00 UTC'::timestamptz,
+		'2100-01-01 00:00:00 UTC'::timestamptz
+	);
+
+insert into crypto_keys (
+	feature,
+	sequence,
+	secret,
+	secret_key_id,
+	starts_at,
+	deletes_at
+)
+values
+	(
+		'tailnet_resume',
+		2,
+		'jkl',
+		null,
+		'1970-01-01 00:00:00 UTC'::timestamptz,
+		'2100-01-01 00:00:00 UTC'::timestamptz
+	);

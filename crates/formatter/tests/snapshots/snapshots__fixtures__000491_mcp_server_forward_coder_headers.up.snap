@@ -1,0 +1,10 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Migration 491 adds forward_coder_headers with a default of false.
+-- Flip the existing fixture row to true here so fixture data exercises
+-- the non-default state only after the column exists.
+update mcp_server_configs
+set forward_coder_headers = true
+where id = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';

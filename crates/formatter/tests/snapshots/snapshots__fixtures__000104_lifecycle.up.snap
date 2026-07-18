@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Set lifecycle_state to enum value not available in previous migration.
+update workspace_agents
+set lifecycle_state = 'off'
+where id = '7a1ce5f8-8d00-431c-ad1b-97a846512804';

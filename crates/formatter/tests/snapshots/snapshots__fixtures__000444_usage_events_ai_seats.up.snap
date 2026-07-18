@@ -1,0 +1,24 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+insert into usage_events (
+	id,
+	event_type,
+	event_data,
+	created_at,
+	publish_started_at,
+	published_at,
+	failure_message
+)
+values
+	-- Unpublished hb_ai_seats_v1 event.
+	(
+		'ai-seats-event1',
+		'hb_ai_seats_v1',
+		'{"count":3}',
+		'2023-06-01 00:00:00+00',
+		null,
+		null,
+		null
+	);

@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+insert into telemetry_items (key, value)
+values ('example_key', 'example_value');

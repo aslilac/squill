@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+insert into crypto_keys (feature, sequence, starts_at, secret)
+values
+	('workspace_apps', 1, now(), 'abc'),
+	('oidc_convert', 1, now(), 'def'),
+	('tailnet_resume', 1, now(), 'ghi');

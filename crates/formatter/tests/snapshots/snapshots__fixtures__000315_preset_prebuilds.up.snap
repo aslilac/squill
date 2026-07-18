@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+update template_version_presets
+set desired_instances = 1
+where id = '28b42cc0-c4fe-4907-a0fe-e4d20f1e9bfe';
