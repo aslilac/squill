@@ -3,12 +3,18 @@
 A SQL formatter for Postgres and SQLite, built on a lossless CST.
 
 ```console
-$ echo 'SELECT id,name FROM users WHERE org_id=$1 ORDER BY name' | cargo run -q -p cli --bin squill -- fmt --stdin
-select id, name
-from users
-where org_id = $1
-order by name;
+$ echo 'SELECT id,name FROM users WHERE org_id=$1 ORDER BY name;' | squill fmt --stdin
+select id, name from users where org_id = $1 order by name;
+
+$ echo 'SELECT u.id,count(*) FILTER (WHERE o.active) AS n FROM users u LEFT JOIN orgs o ON o.id=u.org_id GROUP BY u.id ORDER BY n DESC;' | squill fmt --stdin
+select u.id, count(*) filter (where o.active) as n
+from users u left join orgs o on o.id = u.org_id
+group by u.id
+order by n desc;
 ```
+
+Short statements collapse onto one line; long ones break clause-per-line
+at 80 columns.
 
 ## Quickstart
 
