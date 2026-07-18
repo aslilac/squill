@@ -858,6 +858,8 @@ impl Lowerer {
     /// (`from a`, never `from` alone above `a`); joins and further
     /// comma'd items break onto indented lines when the clause is too
     /// long.
+    // Named for SyntaxKind::FromClause, not a `from_x` conversion.
+    #[allow(clippy::wrong_self_convention)]
     fn from_clause(&mut self, node: &SyntaxNode) -> Doc {
         let mut head = Vec::new();
         let mut content = Vec::new();
