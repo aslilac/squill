@@ -243,7 +243,14 @@ fn sqlc_at_params_are_opt_in() {
     // Default: `@` is an operator character in Postgres.
     assert_tokens(Postgres, "@name", &[(K::Operator, "@"), (K::Ident, "name")]);
     // With the option, `@name` is a single param token.
-    let tokens = lex_with("@name @> b", Postgres, LexOptions { at_params: true });
+    let tokens = lex_with(
+        "@name @> b",
+        Postgres,
+        LexOptions {
+            at_params: true,
+            pyformat_params: false,
+        },
+    );
     let kinds: Vec<_> = tokens.iter().map(|t| (t.kind, t.text)).collect();
     assert_eq!(
         kinds,
@@ -256,7 +263,14 @@ fn sqlc_at_params_are_opt_in() {
         ]
     );
     // `@ name` (spaced) stays an operator even with the option.
-    let tokens = lex_with("@ name", Postgres, LexOptions { at_params: true });
+    let tokens = lex_with(
+        "@ name",
+        Postgres,
+        LexOptions {
+            at_params: true,
+            pyformat_params: false,
+        },
+    );
     assert_eq!(tokens[0].kind, K::Operator);
 }
 

@@ -25,6 +25,9 @@ pub fn lex(input: &str, dialect: Dialect) -> Vec<Token<'_>> {
 /// Lexer options beyond the dialect.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct LexOptions {
+    /// Lex Python DB-API `pyformat` parameters (`%s`, `%(name)s`) as
+    /// single `Param` tokens (embedded SQL in Python hosts).
+    pub pyformat_params: bool,
     /// Lex sqlc-style `@name` parameters as single `Param` tokens in
     /// Postgres (they are always params in SQLite). Off by default: bare
     /// `@` is a legal Postgres operator, so this is opt-in for sqlc
@@ -239,6 +242,12 @@ impl Lexer<'_> {
                 self.eat_ident();
                 SyntaxKind::Param
             }
+            // Python DB-API `pyformat` params, behind an option.
+            b'%' if self.options.pyformat_params && self.pyformat_param_len().is_some() => {
+                let len = self.pyformat_param_len().expect("checked");
+                self.bump(len);
+                SyntaxKind::Param
+            }
             _ if self.dialect == Dialect::Postgres && is_pg_op_byte(b) => self.pg_operator(),
             // `_` is ASCII punctuation but starts an identifier.
             _ if self.dialect == Dialect::Sqlite && b.is_ascii_punctuation() && b != b'_' => {
@@ -253,6 +262,34 @@ impl Lexer<'_> {
                 SyntaxKind::Error
             }
         }
+    }
+
+    /// Length of a `pyformat` parameter at the cursor (`%s` or
+    /// `%(name)s`, with an identifier boundary after the trailing `s`),
+    /// or `None`.
+    fn pyformat_param_len(&self) -> Option<usize> {
+        if self.at(0) != Some(b'%') {
+            return None;
+        }
+        if self.at(1) == Some(b's') && !self.is_ident_cont_at(2) {
+            return Some(2);
+        }
+        if self.at(1) == Some(b'(') {
+            let mut i = 2;
+            while self
+                .at(i)
+                .is_some_and(|b| b != b')' && b != b'\n' && b != b'%')
+            {
+                i += 1;
+            }
+            if self.at(i) == Some(b')')
+                && self.at(i + 1) == Some(b's')
+                && !self.is_ident_cont_at(i + 2)
+            {
+                return Some(i + 2);
+            }
+        }
+        None
     }
 
     fn line_comment(&mut self) -> SyntaxKind {
@@ -460,6 +497,10 @@ impl Lexer<'_> {
                 break;
             }
             if (b == b'-' && self.at(1) == Some(b'-')) || (b == b'/' && self.at(1) == Some(b'*')) {
+                break;
+            }
+            // `=%s`: the operator run ends where a pyformat param starts.
+            if b == b'%' && self.options.pyformat_params && self.pyformat_param_len().is_some() {
                 break;
             }
             self.bump(1);

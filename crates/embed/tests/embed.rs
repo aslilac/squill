@@ -1,11 +1,16 @@
 //! TREE-100 acceptance: embedded-SQL formatting through tree-sitter
-//! extraction queries. Only multiline string *syntaxes* (raw strings,
-//! Go backticks) are reformatted, quotes on their own lines; plain
-//! quoted strings stay byte-identical.
+//! extraction queries. Only multiline string *syntaxes* (Rust raw
+//! strings, Go backticks, Python triple quotes, JS/TS templates, Gleam
+//! strings) are reformatted, quotes on their own lines; plain quoted
+//! strings stay byte-identical, as do f-strings and `${}` templates
+//! (SQL with holes).
 
 use std::path::Path;
 
-use embed::{GO_DB_QUERY, Host, RUST_SQLX_QUERY, format_embedded};
+use embed::{
+    GLEAM_SQL_QUERY, GO_DB_QUERY, Host, JS_SQL_QUERY, PYTHON_DB_QUERY, RUST_SQLX_QUERY,
+    format_embedded,
+};
 use formatter::Options;
 use parser::lexer::LexOptions;
 
@@ -177,5 +182,94 @@ fn go_smoke_test() {
     assert!(formatted.contains("SELECT   not touched"));
     // Idempotent.
     let twice = format_embedded(&formatted, Host::Go, GO_DB_QUERY, &options()).expect("format");
+    assert_eq!(twice, formatted);
+}
+
+#[test]
+fn python_smoke_test() {
+    let source = "def load(cur, uid):\n    cur.execute(\"\"\"SELECT id,name FROM users WHERE org=%s AND status=%(status)s ORDER BY name\"\"\", args)\n    cur.execute(\"SELECT   1\")\n    cur.execute(f\"SELECT {tbl}\")\n    cur.execute(b\"SELECT 2\")\n";
+    let formatted =
+        format_embedded(source, Host::Python, PYTHON_DB_QUERY, &options()).expect("format");
+    // Triple-quoted strings take the vertical shape; pyformat params
+    // survive byte-exact.
+    assert!(
+        formatted.contains(
+            "\"\"\"\n    select id, name\n    from users\n    where org = %s and status = %(status)s\n    order by name\n    \"\"\""
+        ),
+        "triple-quoted not formatted: {formatted}"
+    );
+    // Single-quoted, f-, and b-strings stay byte-identical.
+    assert!(formatted.contains("cur.execute(\"SELECT   1\")"));
+    assert!(formatted.contains("f\"SELECT {tbl}\""));
+    assert!(formatted.contains("b\"SELECT 2\""));
+    // Idempotent.
+    let twice =
+        format_embedded(&formatted, Host::Python, PYTHON_DB_QUERY, &options()).expect("format");
+    assert_eq!(twice, formatted);
+}
+
+#[test]
+fn js_smoke_test() {
+    let source = "async function f(db, id) {\n  await db.query(`SELECT id,name FROM users WHERE org = $1 ORDER BY name`, [id]);\n  const r = await sql`SELECT count(*) FROM api_keys WHERE user_id = ${id}`;\n  const t = sql`SELECT   3`;\n  db.query('SELECT   2');\n}\n";
+    let formatted =
+        format_embedded(source, Host::JavaScript, JS_SQL_QUERY, &options()).expect("format");
+    // Template literals take the vertical shape.
+    assert!(
+        formatted
+            .contains("`\n  select id, name\n  from users\n  where org = $1\n  order by name\n  `"),
+        "template not formatted: {formatted}"
+    );
+    // Tagged templates format too.
+    assert!(formatted.contains("sql`\n  select 3\n  `"), "{formatted}");
+    // `${}` substitutions and plain quoted strings stay byte-identical.
+    assert!(formatted.contains("sql`SELECT count(*) FROM api_keys WHERE user_id = ${id}`"));
+    assert!(formatted.contains("'SELECT   2'"));
+    // Idempotent.
+    let twice =
+        format_embedded(&formatted, Host::JavaScript, JS_SQL_QUERY, &options()).expect("format");
+    assert_eq!(twice, formatted);
+}
+
+#[test]
+fn typescript_smoke_test() {
+    let source = "const f = async (db: Db): Promise<Row[]> =>\n  db.query(`SELECT id FROM t WHERE  x = $1`);\n";
+    let formatted =
+        format_embedded(source, Host::TypeScript, JS_SQL_QUERY, &options()).expect("format");
+    assert!(
+        formatted.contains("`\n  select id\n  from t\n  where x = $1\n  `"),
+        "ts template not formatted: {formatted}"
+    );
+    let tsx = "export const List = () => {\n  const rows = db.query(`SELECT id,name FROM t`);\n  return <ul>{rows.map((r) => <li key={r.id}>{r.name}</li>)}</ul>;\n};\n";
+    let formatted = format_embedded(tsx, Host::Tsx, JS_SQL_QUERY, &options()).expect("format");
+    assert!(
+        formatted.contains("`\n  select id, name\n  from t\n  `"),
+        "tsx template not formatted: {formatted}"
+    );
+    assert!(
+        formatted.contains("<li key={r.id}>"),
+        "jsx mangled: {formatted}"
+    );
+}
+
+#[test]
+fn gleam_smoke_test() {
+    let source = "pub fn list(db) {\n  sqlight.query(\"select id,name from users where org = ? order by name\", on: db, with: [])\n  pog.query(\"SELECT   1\")\n}\n";
+    let formatted =
+        format_embedded(source, Host::Gleam, GLEAM_SQL_QUERY, &options()).expect("format");
+    // sqlight is SQLite: `?` params lex; strings take the vertical shape.
+    assert!(
+        formatted.contains(
+            "\"\n  select id, name\n  from users\n  where org = ?\n  order by name\n  \""
+        ),
+        "sqlight string not formatted: {formatted}"
+    );
+    // pog goes through the session dialect (postgres by default).
+    assert!(
+        formatted.contains("pog.query(\"\n  select 1\n  \")"),
+        "{formatted}"
+    );
+    // Idempotent.
+    let twice =
+        format_embedded(&formatted, Host::Gleam, GLEAM_SQL_QUERY, &options()).expect("format");
     assert_eq!(twice, formatted);
 }

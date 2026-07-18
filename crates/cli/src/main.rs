@@ -37,9 +37,9 @@ Options:
   --quote-idents <MODE>   unquote-safe (default) | always
   --at-params             Treat sqlc-style @name as parameters (Postgres)
   --no-config             Ignore squill.toml files
-  --embed                 Also format SQL embedded in .rs/.go files when
-                          recursing directories (explicit host paths
-                          always format)
+  --embed                 Also format SQL embedded in host files (.rs,
+                          .go, .py, .js/.ts/.tsx, .gleam) when recursing
+                          directories (explicit host paths always format)
   --embed-query <SCM>     Override the tree-sitter extraction query
   -h, --help              Show this help
 
@@ -54,7 +54,7 @@ struct Args {
     stdin_mode: bool,
     strict: bool,
     no_config: bool,
-    /// Include .rs/.go host files when recursing directories.
+    /// Include host-language files when recursing directories.
     embed: bool,
     /// Override the tree-sitter extraction query (.scm source).
     embed_query: Option<String>,
@@ -172,6 +172,11 @@ fn host_for(path: &Path) -> Option<embed::Host> {
     match path.extension()?.to_str()? {
         "rs" => Some(embed::Host::Rust),
         "go" => Some(embed::Host::Go),
+        "py" => Some(embed::Host::Python),
+        "js" | "mjs" | "cjs" | "jsx" => Some(embed::Host::JavaScript),
+        "ts" | "mts" | "cts" => Some(embed::Host::TypeScript),
+        "tsx" => Some(embed::Host::Tsx),
+        "gleam" => Some(embed::Host::Gleam),
         _ => None,
     }
 }
@@ -181,6 +186,9 @@ fn default_query(host: embed::Host) -> &'static str {
     match host {
         embed::Host::Rust => embed::RUST_SQLX_QUERY,
         embed::Host::Go => embed::GO_DB_QUERY,
+        embed::Host::Python => embed::PYTHON_DB_QUERY,
+        embed::Host::JavaScript | embed::Host::TypeScript | embed::Host::Tsx => embed::JS_SQL_QUERY,
+        embed::Host::Gleam => embed::GLEAM_SQL_QUERY,
     }
 }
 

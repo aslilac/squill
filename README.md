@@ -31,13 +31,19 @@ sqlc-style `@name` parameters, `--strict` to fail on statements that
 could not be parsed.
 
 SQL embedded in host code formats too: `squill fmt src/queries.rs`
-rewrites the string literals inside `sqlx::query!`-family macros (and
-`database/sql` calls in Go). Only multiline string syntaxes — raw
-strings (`r#"..."#`) and Go backticks — are reformatted, always into a
-vertical block: quotes on their own lines, one clause per line. Plain
-`"..."` strings stay byte-identical. Directories include host files with
-`--embed`; `--embed-query custom.scm` swaps the tree-sitter extraction
-query.
+rewrites the string literals inside `sqlx::query!`-family macros, with
+built-in support for Rust, Go (`database/sql` calls), Python
+(`.execute`-family and `text(...)`, with `%s` / `%(name)s` params
+preserved), JavaScript/TypeScript/TSX (`.query`/`.execute`/`.prepare`
+and `sql`-tagged templates), and Gleam (`sqlight.query` as SQLite,
+`pog.query` etc. as the session dialect). Only multiline string
+syntaxes — raw strings, backticks, triple quotes, templates, Gleam
+strings — are reformatted, always into a vertical block: quotes on
+their own lines, one clause per line. Plain single-line strings stay
+byte-identical, and so do Python f-strings and `${}`-interpolated
+templates (SQL with holes is never touched). Directories include host
+files with `--embed`; `--embed-query custom.scm` swaps the tree-sitter
+extraction query.
 
 ## Design
 

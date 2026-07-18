@@ -55,6 +55,9 @@ pub struct Options {
     /// sqlc-style `@name` parameters (see [`LexOptions::at_params`]);
     /// used when re-lexing for the safety check.
     pub at_params: bool,
+    /// Python DB-API `pyformat` parameters (`%s`, `%(name)s`); set by
+    /// embedding for Python hosts. Not part of the CLI/config surface.
+    pub pyformat_params: bool,
     /// Never collapse a statement onto one line (clause-per-line even
     /// when it would fit). Used by embedding for multi-line string
     /// literals, where the author already chose a vertical layout. Not
@@ -71,6 +74,7 @@ impl Default for Options {
             quoting: IdentQuoting::default(),
             dialect: Dialect::default(),
             at_params: false,
+            pyformat_params: false,
             always_break_statements: false,
         }
     }
@@ -80,6 +84,7 @@ impl Options {
     pub fn lex_options(&self) -> LexOptions {
         LexOptions {
             at_params: self.at_params,
+            pyformat_params: self.pyformat_params,
         }
     }
 }

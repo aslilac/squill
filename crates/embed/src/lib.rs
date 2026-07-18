@@ -7,8 +7,9 @@
 //! Snippets that fail to parse cleanly are left byte-identical — a host
 //! file is never a hard error. Edits apply back-to-front by byte range.
 //!
-//! Predicate note: only `#eq?` and `#any-of?` are supported, keeping the
-//! no-regex rule — `#match?` is rejected up front.
+//! Predicate note: only `#eq?`, `#not-eq?`, and `#any-of?` are
+//! supported, keeping the no-regex rule — `#match?` is rejected up
+//! front.
 
 use streaming_iterator::StreamingIterator;
 use tree_sitter::{Language, Parser as TsParser, Query, QueryCursor, QueryPredicateArg};
@@ -21,6 +22,12 @@ use parser::Dialect;
 pub enum Host {
     Rust,
     Go,
+    Python,
+    JavaScript,
+    TypeScript,
+    /// TypeScript with JSX (`.tsx`) — a distinct grammar, same codec.
+    Tsx,
+    Gleam,
 }
 
 impl Host {
@@ -28,6 +35,11 @@ impl Host {
         match self {
             Host::Rust => tree_sitter_rust::LANGUAGE.into(),
             Host::Go => tree_sitter_go::LANGUAGE.into(),
+            Host::Python => tree_sitter_python::LANGUAGE.into(),
+            Host::JavaScript => tree_sitter_javascript::LANGUAGE.into(),
+            Host::TypeScript => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
+            Host::Tsx => tree_sitter_typescript::LANGUAGE_TSX.into(),
+            Host::Gleam => tree_sitter_gleam::LANGUAGE.into(),
         }
     }
 }
@@ -56,6 +68,62 @@ pub const GO_DB_QUERY: &str = r#"
  (#any-of? @_method
    "Query" "QueryRow" "Exec"
    "QueryContext" "QueryRowContext" "ExecContext"))
+"#;
+
+/// Default extraction query for Python: the first string argument of
+/// `.execute`-family method calls (sqlite3 / psycopg / asyncpg style)
+/// and of SQLAlchemy's `text(...)`.
+pub const PYTHON_DB_QUERY: &str = r#"
+((call
+   function: (attribute attribute: (identifier) @_method)
+   arguments: (argument_list . (string) @sql))
+ (#any-of? @_method
+   "execute" "executemany" "executescript"
+   "fetch" "fetchrow" "fetchval"))
+
+((call
+   function: (identifier) @_fn
+   arguments: (argument_list . (string) @sql))
+ (#eq? @_fn "text"))
+"#;
+
+/// Default extraction query for JavaScript/TypeScript: the first string
+/// or template-literal argument of `.query` / `.execute` / `.prepare`
+/// method calls (pg, mysql2, better-sqlite3 style), plus `sql`-tagged
+/// template literals (postgres.js style).
+pub const JS_SQL_QUERY: &str = r#"
+((call_expression
+   function: (member_expression property: (property_identifier) @_method)
+   arguments: (arguments . [(string) (template_string)] @sql))
+ (#any-of? @_method "query" "execute" "prepare"))
+
+((call_expression
+   function: (identifier) @_tag
+   arguments: (template_string) @sql)
+ (#eq? @_tag "sql"))
+"#;
+
+/// Default extraction query for Gleam: the first string argument of
+/// `query` / `exec` / `execute` calls, module-qualified (`sqlight.query`,
+/// `pog.query`) or bare. `sqlight` is a SQLite library, so its calls
+/// carry that dialect; everything else uses the session dialect.
+pub const GLEAM_SQL_QUERY: &str = r#"
+((function_call
+   function: (field_access record: (identifier) @_mod field: (label) @_fn)
+   arguments: (arguments . (argument value: (string) @sql.sqlite)))
+ (#eq? @_mod "sqlight")
+ (#any-of? @_fn "query" "exec" "execute"))
+
+((function_call
+   function: (field_access record: (identifier) @_mod field: (label) @_fn)
+   arguments: (arguments . (argument value: (string) @sql)))
+ (#not-eq? @_mod "sqlight")
+ (#any-of? @_fn "query" "exec" "execute"))
+
+((function_call
+   function: (identifier) @_fn
+   arguments: (arguments . (argument value: (string) @sql)))
+ (#any-of? @_fn "query" "exec" "execute"))
 "#;
 
 #[derive(Debug)]
@@ -102,7 +170,7 @@ pub fn format_embedded(
     for pattern in 0..query.pattern_count() {
         for predicate in query.general_predicates(pattern) {
             match predicate.operator.as_ref() {
-                "eq?" | "any-of?" => {}
+                "eq?" | "not-eq?" | "any-of?" => {}
                 other => {
                     return Err(EmbedError::Query(format!(
                         "unsupported predicate `#{other}?`"
@@ -195,6 +263,10 @@ fn predicates_hold(
                     QueryPredicateArg::String(s) => s.as_ref() == text,
                     QueryPredicateArg::Capture(other) => capture_text(*other) == Some(text),
                 }),
+                "not-eq?" => args.next().is_some_and(|arg| match arg {
+                    QueryPredicateArg::String(s) => s.as_ref() != text,
+                    QueryPredicateArg::Capture(other) => capture_text(*other) != Some(text),
+                }),
                 "any-of?" => args
                     .any(|arg| matches!(arg, QueryPredicateArg::String(s) if s.as_ref() == text)),
                 _ => false,
@@ -216,12 +288,17 @@ fn rewrite_literal(
         return None;
     }
     // Only multiline string *syntaxes* are formatted: raw strings
-    // (`r#"..."#`, Go backticks) natively support multiple lines, so
-    // they always take the vertical shape. Plain `"..."` strings never
-    // reformat — their syntax is single-line-with-escapes territory.
+    // (`r#"..."#`, Go backticks), Python triple quotes, JS templates,
+    // and Gleam strings natively support multiple lines, so they always
+    // take the vertical shape. Plain single-line-with-escapes strings
+    // never reformat.
     if !matches!(
         decoded.kind,
-        LiteralKind::RustRaw { .. } | LiteralKind::GoRaw
+        LiteralKind::RustRaw { .. }
+            | LiteralKind::GoRaw
+            | LiteralKind::PyTriple { .. }
+            | LiteralKind::JsTemplate
+            | LiteralKind::GleamString
     ) {
         return None;
     }
@@ -231,6 +308,11 @@ fn rewrite_literal(
     let host_indent = line_indent(source, literal_start);
     let mut format_options = *options;
     format_options.dialect = dialect;
+    if host == Host::Python {
+        // psycopg-style `%s` / `%(name)s` placeholders must survive
+        // byte-exact; lex them as params.
+        format_options.pyformat_params = true;
+    }
     // The author chose a multi-line literal: keep statements
     // clause-per-line, never collapsed onto one line.
     format_options.always_break_statements = true;
@@ -294,6 +376,12 @@ enum LiteralKind {
     GoRaw,
     /// Go `"..."` (escapes) — single-line only.
     GoPlain,
+    /// Python `'''...'''` / `"""..."""`, optionally r-prefixed.
+    PyTriple { raw: bool, quote: char },
+    /// JS/TS `` `...` `` template literal without substitutions.
+    JsTemplate,
+    /// Gleam `"..."` — escapes, but literal newlines are allowed.
+    GleamString,
 }
 
 fn decode(host: Host, literal: &str) -> Option<Decoded> {
@@ -311,7 +399,7 @@ fn decode(host: Host, literal: &str) -> Option<Decoded> {
             } else {
                 let body = literal.strip_prefix('"')?.strip_suffix('"')?;
                 Some(Decoded {
-                    content: unescape(body, true)?,
+                    content: unescape(body, EscapeMode::Rust)?,
                     kind: LiteralKind::RustPlain,
                 })
             }
@@ -325,18 +413,98 @@ fn decode(host: Host, literal: &str) -> Option<Decoded> {
             } else {
                 let body = literal.strip_prefix('"')?.strip_suffix('"')?;
                 Some(Decoded {
-                    content: unescape(body, false)?,
+                    content: unescape(body, EscapeMode::Go)?,
                     kind: LiteralKind::GoPlain,
                 })
             }
         }
+        Host::Python => {
+            let prefix_len = literal
+                .chars()
+                .take_while(|c| c.is_ascii_alphabetic())
+                .count();
+            let prefix = literal[..prefix_len].to_ascii_lowercase();
+            if prefix.contains('f') || prefix.contains('b') {
+                // f-strings interpolate (SQL with holes) and bytes
+                // literals are not SQL text: never touched.
+                return None;
+            }
+            let raw = prefix.contains('r');
+            let rest = &literal[prefix_len..];
+            for fence in ["'''", "\"\"\""] {
+                if let Some(body) = rest.strip_prefix(fence).and_then(|r| r.strip_suffix(fence)) {
+                    let content = if raw {
+                        body.to_string()
+                    } else {
+                        unescape(body, EscapeMode::Go)?
+                    };
+                    return Some(Decoded {
+                        content,
+                        kind: LiteralKind::PyTriple {
+                            raw,
+                            quote: fence.chars().next()?,
+                        },
+                    });
+                }
+            }
+            // Single-quoted syntax: single-line territory, untouched.
+            None
+        }
+        Host::JavaScript | Host::TypeScript | Host::Tsx => {
+            // Only template literals; `${}` substitutions are SQL with
+            // holes and stay byte-identical. Plain '...'/"..." strings
+            // are single-line syntax, also untouched.
+            let body = literal.strip_prefix('`')?.strip_suffix('`')?;
+            if has_template_substitution(body) {
+                return None;
+            }
+            Some(Decoded {
+                content: unescape(body, EscapeMode::Js)?,
+                kind: LiteralKind::JsTemplate,
+            })
+        }
+        Host::Gleam => {
+            let body = literal.strip_prefix('"')?.strip_suffix('"')?;
+            Some(Decoded {
+                content: unescape(body, EscapeMode::Gleam)?,
+                kind: LiteralKind::GleamString,
+            })
+        }
     }
 }
 
-/// Decode `\`-escapes shared by Rust and Go plain strings. Rust adds the
-/// line-continuation escape (backslash-newline swallows leading
-/// whitespace).
-fn unescape(body: &str, rust: bool) -> Option<String> {
+/// Does a template-literal body contain an unescaped `${`?
+fn has_template_substitution(body: &str) -> bool {
+    let mut chars = body.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' => {
+                chars.next();
+            }
+            '$' if chars.peek() == Some(&'{') => return true,
+            _ => {}
+        }
+    }
+    false
+}
+
+/// Backslash-escape dialects across the host languages.
+#[derive(Clone, Copy, PartialEq)]
+enum EscapeMode {
+    /// `\u{...}` and the line-continuation escape.
+    Rust,
+    /// The shared common escapes only (also used for Python, whose
+    /// extras like `\u####` bail to leave-untouched).
+    Go,
+    /// Adds `` \` `` and `\$`; `\u{...}` or `\u####`.
+    Js,
+    /// `\u{...}`, no line continuation.
+    Gleam,
+}
+
+/// Decode `\`-escapes. Any escape a mode does not know leaves the
+/// literal untouched (`None`), never a guess.
+fn unescape(body: &str, mode: EscapeMode) -> Option<String> {
     let mut out = String::with_capacity(body.len());
     let mut chars = body.chars().peekable();
     while let Some(c) = chars.next() {
@@ -352,18 +520,25 @@ fn unescape(body: &str, rust: bool) -> Option<String> {
             '"' => out.push('"'),
             '\'' => out.push('\''),
             '0' => out.push('\0'),
-            'x' => {
+            '`' if mode == EscapeMode::Js => out.push('`'),
+            '$' if mode == EscapeMode::Js => out.push('$'),
+            'x' if mode != EscapeMode::Gleam => {
                 let hex: String = chars.by_ref().take(2).collect();
                 out.push(u8::from_str_radix(&hex, 16).ok()? as char);
             }
-            'u' if rust => {
-                if chars.next()? != '{' {
+            'u' if matches!(mode, EscapeMode::Rust | EscapeMode::Gleam | EscapeMode::Js) => {
+                if chars.peek() == Some(&'{') {
+                    chars.next();
+                    let hex: String = chars.by_ref().take_while(|&c| c != '}').collect();
+                    out.push(char::from_u32(u32::from_str_radix(&hex, 16).ok()?)?);
+                } else if mode == EscapeMode::Js {
+                    let hex: String = chars.by_ref().take(4).collect();
+                    out.push(char::from_u32(u32::from_str_radix(&hex, 16).ok()?)?);
+                } else {
                     return None;
                 }
-                let hex: String = chars.by_ref().take_while(|&c| c != '}').collect();
-                out.push(char::from_u32(u32::from_str_radix(&hex, 16).ok()?)?);
             }
-            '\n' if rust => {
+            '\n' if mode == EscapeMode::Rust => {
                 // Line continuation: skip following whitespace.
                 while chars.peek().is_some_and(|c| c.is_whitespace()) {
                     chars.next();
@@ -423,6 +598,47 @@ fn encode(decoded: &Decoded, content: &str) -> Option<String> {
                 out.push('"');
                 Some(out)
             }
+        }
+        LiteralKind::PyTriple { raw, quote } => {
+            let fence: String = std::iter::repeat_n(*quote, 3).collect();
+            if content.contains(&fence) || (*raw && content.contains('\\')) {
+                return None; // cannot be represented in this fence
+            }
+            let body = if *raw {
+                content.to_string()
+            } else {
+                content.replace('\\', "\\\\")
+            };
+            let prefix = if *raw { "r" } else { "" };
+            Some(format!("{prefix}{fence}{body}{fence}"))
+        }
+        LiteralKind::JsTemplate => {
+            let mut out = String::with_capacity(content.len() + 2);
+            out.push('`');
+            let mut chars = content.chars().peekable();
+            while let Some(c) = chars.next() {
+                match c {
+                    '\\' => out.push_str("\\\\"),
+                    '`' => out.push_str("\\`"),
+                    '$' if chars.peek() == Some(&'{') => out.push_str("\\$"),
+                    _ => out.push(c),
+                }
+            }
+            out.push('`');
+            Some(out)
+        }
+        LiteralKind::GleamString => {
+            let mut out = String::with_capacity(content.len() + 2);
+            out.push('"');
+            for c in content.chars() {
+                match c {
+                    '\\' => out.push_str("\\\\"),
+                    '"' => out.push_str("\\\""),
+                    _ => out.push(c),
+                }
+            }
+            out.push('"');
+            Some(out)
         }
     }
 }
