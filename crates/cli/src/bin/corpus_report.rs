@@ -11,16 +11,34 @@
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+use parser::Dialect;
+use parser::syntax::SyntaxKind;
+
 /// Pipeline stages, in order.
 const STAGES: [&str; 3] = ["lex", "parse", "emit"];
 
 /// Run one file through the pipeline. Returns the number of stages passed
 /// (0..=3) and the error message of the first failing stage, if any.
+///
+/// The lex stage passes when the token stream round-trips byte-for-byte
+/// (the TREE-93 lossless property) and contains no error tokens.
 fn run_file(source: &str) -> (usize, Option<String>) {
-    let tokens = match parser::lexer::lex(source) {
-        Ok(tokens) => tokens,
-        Err(err) => return (0, Some(err.to_string())),
-    };
+    let tokens = parser::lexer::lex(source, Dialect::Postgres);
+    let rebuilt: String = tokens.iter().map(|t| t.text).collect();
+    if rebuilt != source {
+        return (0, Some("token texts do not round-trip to the input".into()));
+    }
+    let error_count = tokens
+        .iter()
+        .filter(|t| t.kind == SyntaxKind::Error)
+        .count();
+    if let Some(first) = tokens.iter().find(|t| t.kind == SyntaxKind::Error) {
+        let snippet: String = first.text.chars().take(20).collect();
+        return (
+            0,
+            Some(format!("{error_count} error token(s), first: {snippet:?}")),
+        );
+    }
     let cst = match parser::parser::parse(&tokens) {
         Ok(cst) => cst,
         Err(err) => return (1, Some(err.to_string())),

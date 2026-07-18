@@ -1,1 +1,5 @@
 /target
+crates/parser/fuzz/target
+crates/parser/fuzz/corpus
+crates/parser/fuzz/artifacts
+crates/parser/fuzz/Cargo.lock
