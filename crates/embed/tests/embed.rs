@@ -1,5 +1,6 @@
 //! TREE-100 acceptance: embedded-SQL formatting through tree-sitter
-//! extraction queries.
+//! extraction queries. Only multi-line string literals are reformatted
+//! (quotes on their own lines); single-line literals stay byte-identical.
 
 use std::path::Path;
 
@@ -22,16 +23,21 @@ fn rust_sqlx_fixture_formats_and_still_compiles() {
     let formatted =
         format_embedded(&source, Host::Rust, RUST_SQLX_QUERY, &options()).expect("format");
 
-    // SQL got formatted: lowercased keywords, normalized spacing.
+    // The multi-line query formats, quotes on their own lines.
     assert!(
-        formatted.contains("select id, name, created_at"),
-        "first query not formatted: {formatted}"
+        formatted.contains("r#\"\n        select u.id, count(*) as n\n"),
+        "multi-line query not formatted: {formatted}"
     );
     assert!(
-        formatted.contains("select count(*)"),
-        "scalar query not formatted: {formatted}"
+        formatted.contains("group by u.id\n        \"#"),
+        "closing quote must sit on its own line: {formatted}"
     );
-    // ...non-SQL and decoys stayed byte-identical.
+    // Single-line literals stay byte-identical, formatted or not.
+    assert!(
+        formatted.contains("\"SELECT id, name FROM users WHERE org_id = $1 AND deleted = false\"")
+    );
+    assert!(formatted.contains("\"SELECT   count(*) FROM api_keys WHERE user_id = $1\""));
+    // Non-SQL and decoys stay byte-identical.
     assert!(formatted.contains("{not sql at all}"));
     assert!(formatted.contains("SELECT   * FROM decoy"));
 
@@ -75,8 +81,8 @@ fn rust_sqlx_fixture_formats_and_still_compiles() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// Pull string literal contents back out (crudely) for the equivalence
-/// check: everything between the sqlx macro parens.
+/// Pull raw-string contents back out (crudely) for the equivalence
+/// check.
 fn extract_rust_strings(source: &str) -> Vec<String> {
     let mut out = Vec::new();
     let mut rest = source;
@@ -90,36 +96,50 @@ fn extract_rust_strings(source: &str) -> Vec<String> {
 }
 
 #[test]
-fn multiline_output_reanchors_to_host_indent() {
+fn single_line_literals_stay_untouched() {
+    // Even long, badly formatted single-line queries are left alone:
+    // only multi-line literals opt into reformatting.
     let source = "fn main() {\n    let q = sqlx::query!(\n        r#\"SELECT aaaaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbbbb, cccccccccccccccccccc FROM long_table WHERE x = $1 ORDER BY y\"#\n    );\n}\n";
     let formatted =
         format_embedded(source, Host::Rust, RUST_SQLX_QUERY, &options()).expect("format");
-    // Spaces-indented host: continuation lines use spaces, anchored to
-    // the literal's line indentation.
-    assert!(
-        formatted.contains("\n        from long_table"),
-        "continuation lines must anchor to host indent: {formatted}"
+    assert_eq!(formatted, source);
+}
+
+#[test]
+fn multiline_literal_gets_quotes_on_own_lines() {
+    let source = "fn main() {\n    let q = sqlx::query!(\n        r#\"SELECT id,name FROM users\n        WHERE org = $1 ORDER BY name\"#\n    );\n}\n";
+    let formatted =
+        format_embedded(source, Host::Rust, RUST_SQLX_QUERY, &options()).expect("format");
+    // The SQL fits on one line, so it stays one line — but on its own
+    // line between the quotes.
+    assert_eq!(
+        formatted,
+        "fn main() {\n    let q = sqlx::query!(\n        r#\"\n        select id, name from users where org = $1 order by name\n        \"#\n    );\n}\n"
     );
     assert!(
         !formatted.contains('\t'),
-        "no tabs may be injected into a spaces-indented file"
+        "no tabs in a spaces-indented file"
     );
-    // Still idempotent.
+    // Idempotent.
     let twice =
         format_embedded(&formatted, Host::Rust, RUST_SQLX_QUERY, &options()).expect("format");
     assert_eq!(twice, formatted);
 }
 
 #[test]
-fn plain_string_escapes_round_trip() {
+fn multiline_plain_string_escapes_round_trip() {
     let source =
-        r#"fn f() { sqlx::query!("SELECT 'it''s' AS s, \"Weird\" FROM t WHERE x = $1"); }"#;
+        "fn f() { sqlx::query!(\"SELECT 'it''s' AS s, \\\"Weird\\\" FROM t\nWHERE x = $1\"); }";
     let formatted =
         format_embedded(source, Host::Rust, RUST_SQLX_QUERY, &options()).expect("format");
     // The doubled SQL quote and the escaped Rust quotes both survive.
     assert!(
-        formatted.contains(r#"select 'it''s' as s, \"Weird\""#),
+        formatted.contains("select 'it''s' as s, \\\"Weird\\\""),
         "escapes mangled: {formatted}"
+    );
+    assert!(
+        formatted.contains("\"\nselect"),
+        "opening quote must sit on its own line: {formatted}"
     );
 }
 
@@ -132,17 +152,15 @@ fn match_predicate_is_rejected() {
 
 #[test]
 fn go_smoke_test() {
-    let source = "package main\n\nfunc list(db *sql.DB) {\n\trows, _ := db.Query(`SELECT id,name FROM users WHERE active ORDER BY name`)\n\t_, _ = db.Exec(\"DELETE   FROM sessions WHERE expires_at < now()\")\n\tfmt.Println(\"SELECT   not touched\")\n}\n"
+    let source = "package main\n\nfunc list(db *sql.DB) {\n\trows, _ := db.Query(`SELECT id,name FROM users\n\tWHERE active ORDER BY name`)\n\t_, _ = db.Exec(\"DELETE   FROM sessions WHERE expires_at < now()\")\n\tfmt.Println(\"SELECT   not touched\")\n}\n"
         .to_string();
     let formatted = format_embedded(&source, Host::Go, GO_DB_QUERY, &options()).expect("format");
     assert!(
-        formatted.contains("`select id, name from users where active order by name`"),
-        "raw string not formatted: {formatted}"
+        formatted.contains("`\n\tselect id, name from users where active order by name\n\t`"),
+        "multi-line raw string not formatted: {formatted}"
     );
-    assert!(
-        formatted.contains("\"delete from sessions where expires_at < now()\""),
-        "interpreted string not formatted: {formatted}"
-    );
+    // Single-line strings stay byte-identical, even unformatted SQL.
+    assert!(formatted.contains("\"DELETE   FROM sessions WHERE expires_at < now()\""));
     // Non-query call untouched.
     assert!(formatted.contains("SELECT   not touched"));
     // Idempotent.

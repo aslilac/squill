@@ -215,6 +215,12 @@ fn rewrite_literal(
     if decoded.content.trim().is_empty() {
         return None;
     }
+    // Only reformat multi-line literals: the author already opted into a
+    // multi-line string, so reflowing is safe and language-agnostic.
+    // Single-line literals stay byte-identical.
+    if !decoded.content.contains('\n') {
+        return None;
+    }
 
     // Match the host file's indentation character so continuation lines
     // don't mix tabs into a spaces-indented file (or vice versa).
@@ -239,22 +245,19 @@ fn rewrite_literal(
     }
     let sql = formatted.text.trim_end().to_string();
 
-    // Re-anchor continuation lines to the host statement's indentation.
-    let anchored = if sql.contains('\n') {
-        let mut out = String::new();
-        for (index, line) in sql.split('\n').enumerate() {
-            if index > 0 {
-                out.push('\n');
-                if !line.is_empty() {
-                    out.push_str(&host_indent);
-                }
-            }
-            out.push_str(line);
+    // Quotes on their own lines: the SQL starts on the line after the
+    // opening quote, each line anchored to the host statement's
+    // indentation, and the closing quote on its own line at that indent.
+    let mut anchored = String::new();
+    for line in sql.split('\n') {
+        anchored.push('\n');
+        if !line.is_empty() {
+            anchored.push_str(&host_indent);
+            anchored.push_str(line);
         }
-        out
-    } else {
-        sql
-    };
+    }
+    anchored.push('\n');
+    anchored.push_str(&host_indent);
 
     encode(&decoded, &anchored)
 }

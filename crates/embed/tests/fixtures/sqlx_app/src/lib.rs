@@ -30,13 +30,14 @@ pub mod sqlx {
 pub struct User;
 
 pub fn queries() {
-    let _ = sqlx::query!(
-        "SELECT id, name, created_at FROM users WHERE org_id = $1 AND deleted = false ORDER BY created_at DESC LIMIT $2"
-    );
     let _ = sqlx::query_as!(
         User,
-        r#"select u.id,count(*) AS n from users u join orgs o on o.id=u.org_id where o.active group by u.id"#
+        r#"select u.id,count(*) AS n
+        from users u join orgs o on o.id=u.org_id
+        where o.active group by u.id"#
     );
+    // Single-line literals stay byte-identical, even unformatted ones.
+    let _ = sqlx::query!("SELECT id, name FROM users WHERE org_id = $1 AND deleted = false");
     let _ = sqlx::query_scalar!("SELECT   count(*) FROM api_keys WHERE user_id = $1");
     // Not SQL: must stay byte-identical.
     let _ = sqlx::query!("{not sql at all}");

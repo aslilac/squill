@@ -332,7 +332,11 @@ fn stdin_uses_cwd_config() {
 // ---- TREE-108: embedded SQL through the CLI ----
 
 const RS_FIXTURE: &str = r####"fn q(pool: &PgPool) {
-    let _ = sqlx::query!("SELECT id,name FROM users WHERE org=$1 ORDER BY name", org);
+    let _ = sqlx::query!(
+        r#"SELECT id,name FROM users
+        WHERE org=$1 ORDER BY name"#,
+        org
+    );
 }
 "####;
 
@@ -345,7 +349,9 @@ fn explicit_rust_path_formats_sqlx_macros() {
     assert!(status.success());
     let out = std::fs::read_to_string(&file).expect("read");
     assert!(
-        out.contains(r#""select id, name from users where org = $1 order by name""#),
+        out.contains(
+            "r#\"\n        select id, name from users where org = $1 order by name\n        \"#"
+        ),
         "sqlx macro not formatted: {out}"
     );
     // Idempotent second pass.
@@ -418,7 +424,7 @@ fn go_host_files_format() {
     let file = dir.join("q.go");
     std::fs::write(
         &file,
-        "package main\n\nfunc f(db *sql.DB) {\n\tdb.QueryRow(`SELECT count(*) FROM t WHERE  a=1`)\n}\n",
+        "package main\n\nfunc f(db *sql.DB) {\n\tdb.QueryRow(`SELECT count(*)\n\tFROM t WHERE  a=1`)\n}\n",
     )
     .expect("write");
     let status = squill().arg("fmt").arg(&file).status().expect("run");
@@ -426,7 +432,7 @@ fn go_host_files_format() {
     assert!(
         std::fs::read_to_string(&file)
             .expect("read")
-            .contains("`select count(*) from t where a = 1`"),
+            .contains("`\n\tselect count(*) from t where a = 1\n\t`"),
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -443,7 +449,7 @@ fn custom_embed_query_file() {
     let file = dir.join("q.rs");
     std::fs::write(
         &file,
-        "fn f() { my_sql!(\"SELECT   1\"); sqlx::query!(\"SELECT   2\"); }\n",
+        "fn f() {\n    my_sql!(\"SELECT\n    1\");\n    sqlx::query!(\"SELECT\n    2\");\n}\n",
     )
     .expect("write");
     let status = squill()
@@ -455,11 +461,11 @@ fn custom_embed_query_file() {
     assert!(status.success());
     let out = std::fs::read_to_string(&file).expect("read");
     assert!(
-        out.contains("my_sql!(\"select 1\")"),
+        out.contains("my_sql!(\"\n    select 1\n    \")"),
         "custom query missed: {out}"
     );
     assert!(
-        out.contains("SELECT   2"),
+        out.contains("SELECT\n    2"),
         "default macro must be untouched: {out}"
     );
     let _ = std::fs::remove_dir_all(&dir);
