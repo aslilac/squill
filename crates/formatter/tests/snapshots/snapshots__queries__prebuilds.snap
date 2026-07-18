@@ -1,0 +1,466 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- name: ClaimPrebuiltWorkspace :one
+UPDATE workspaces w
+SET owner_id   = @new_user_id::uuid,
+	name       = @new_name::text,
+	updated_at = @now::timestamptz,
+	-- Update autostart_schedule, next_start_at and ttl according to template and workspace-level
+	-- configurations, allowing the workspace to be managed by the lifecycle executor as expected.
+	autostart_schedule = @autostart_schedule,
+	next_start_at = @next_start_at,
+	ttl = @workspace_ttl,
+	-- Update last_used_at during claim to ensure the claimed workspace is treated as recently used.
+	-- This avoids unintended dormancy caused by prebuilds having stale usage timestamps.
+	last_used_at = @now::timestamptz,
+	-- Clear dormant and deletion timestamps as a safeguard to ensure a clean lifecycle state after claim.
+	-- These fields should not be set on prebuilds, but we defensively reset them here to prevent
+	-- accidental dormancy or deletion by the lifecycle executor.
+	dormant_at = NULL,
+	deleting_at = NULL
+WHERE w.id IN (
+	SELECT p.id
+	FROM workspace_prebuilds p
+		INNER JOIN workspace_latest_builds b ON b.workspace_id = p.id
+		INNER JOIN templates t ON p.template_id = t.id
+	WHERE (b.transition = 'start'::workspace_transition
+		AND b.job_status IN ('succeeded'::provisioner_job_status))
+		-- The prebuilds system should never try to claim a prebuild for an inactive template version.
+		-- Nevertheless, this filter is here as a defensive measure:
+		AND b.template_version_id = t.active_version_id
+		AND p.current_preset_id = @preset_id::uuid
+		AND p.ready
+		AND NOT t.deleted
+	LIMIT 1 FOR UPDATE OF p SKIP LOCKED -- Ensure that a concurrent request will not select the same prebuild.
+)
+RETURNING w.id, w.name;
+
+-- name: GetTemplatePresetsWithPrebuilds :many
+-- GetTemplatePresetsWithPrebuilds retrieves template versions with configured presets and prebuilds.
+-- It also returns the number of desired instances for each preset.
+-- If template_id is specified, only template versions associated with that template will be returned.
+select
+	t.id as template_id,
+	t.name as template_name,
+	o.id as organization_id,
+	o.name as organization_name,
+	tv.id as template_version_id,
+	tv.name as template_version_name,
+	tv.id = t.active_version_id as using_active_version,
+	tvp.id,
+	tvp.name,
+	tvp.desired_instances as desired_instances,
+	tvp.scheduling_timezone,
+	tvp.invalidate_after_secs as ttl,
+	tvp.prebuild_status,
+	tvp.last_invalidated_at,
+	t.deleted,
+	t.deprecated != '' as deprecated
+from
+	templates t
+	inner join template_versions tv on tv.template_id = t.id
+	inner join template_version_presets tvp on tvp.template_version_id = tv.id
+	inner join organizations o on o.id = t.organization_id
+where
+	tvp.desired_instances
+	is not null -- Consider only presets that have a prebuild configuration.
+	-- AND NOT t.deleted -- We don't exclude deleted templates because there's no constraint in the DB preventing a soft deletion on a template while workspaces are running.
+	and (
+		t.id = sqlc.narg('template_id')::uuid or sqlc.narg('template_id') is null
+	);
+
+-- name: GetRunningPrebuiltWorkspaces :many
+with
+	latest_prebuilds as (
+		-- All workspaces that match the following criteria:
+		-- 1. Owned by prebuilds user
+		-- 2. Not deleted
+		-- 3. Latest build is a 'start' transition
+		-- 4. Latest build was successful
+		select
+			workspaces.id,
+			workspaces.name,
+			workspaces.template_id,
+			workspace_latest_builds.template_version_id,
+			workspace_latest_builds.job_id,
+			workspaces.created_at
+		from
+			workspace_latest_builds
+			join workspaces on workspaces.id = workspace_latest_builds.workspace_id
+		where
+			workspace_latest_builds.transition = 'start'::workspace_transition
+			and workspace_latest_builds.job_status
+			= 'succeeded'::provisioner_job_status
+			and workspaces.owner_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid
+			and not workspaces.deleted
+	),
+	workspace_latest_presets as (
+		-- For each of the above workspaces, the preset_id of the most recent
+		-- successful start transition.
+		select distinct on (latest_prebuilds.id)
+			latest_prebuilds.id as workspace_id,
+			workspace_builds.template_version_preset_id as current_preset_id
+		from
+			latest_prebuilds
+			join workspace_builds on workspace_builds.workspace_id
+			= latest_prebuilds.id
+		where
+			workspace_builds.transition = 'start'::workspace_transition
+			and workspace_builds.template_version_preset_id is not null
+		order by latest_prebuilds.id, workspace_builds.build_number desc
+	),
+	ready_agents as (
+		-- For each of the above workspaces, check if all agents are ready.
+		select
+			latest_prebuilds.job_id,
+			BOOL_AND(
+				workspace_agents.lifecycle_state
+				= 'ready'::workspace_agent_lifecycle_state
+			)::boolean as ready
+		from
+			latest_prebuilds
+			join workspace_resources on workspace_resources.job_id
+			= latest_prebuilds.job_id
+			join workspace_agents on workspace_agents.resource_id
+			= workspace_resources.id
+		where
+			workspace_agents.deleted = false and workspace_agents.parent_id is null
+		group by latest_prebuilds.job_id
+	)
+select
+	latest_prebuilds.id,
+	latest_prebuilds.name,
+	latest_prebuilds.template_id,
+	latest_prebuilds.template_version_id,
+	workspace_latest_presets.current_preset_id,
+	COALESCE(ready_agents.ready, false)::boolean as ready,
+	latest_prebuilds.created_at
+from
+	latest_prebuilds
+	left join ready_agents on ready_agents.job_id = latest_prebuilds.job_id
+	left join workspace_latest_presets on workspace_latest_presets.workspace_id
+	= latest_prebuilds.id
+order by latest_prebuilds.id;
+
+-- name: CountInProgressPrebuilds :many
+-- CountInProgressPrebuilds returns the number of in-progress prebuilds, grouped by preset ID and transition.
+-- Prebuild considered in-progress if it's in the "pending", "starting", "stopping", or "deleting" state.
+select
+	t.id as template_id,
+	wpb.template_version_id,
+	wpb.transition,
+	COUNT(wpb.transition)::int as count,
+	wlb.template_version_preset_id as preset_id
+from
+	workspace_latest_builds wlb
+	inner join workspace_prebuild_builds wpb on wpb.id = wlb.id
+	-- We only need these counts for active template versions.
+	-- It doesn't influence whether we create or delete prebuilds
+	-- for inactive template versions. This is because we never create
+	-- prebuilds for inactive template versions, we always delete
+	-- running prebuilds for inactive template versions, and we ignore
+	-- prebuilds that are still building.
+	inner join templates t on t.active_version_id = wlb.template_version_id
+where
+	wlb.job_status in (
+		'pending'::provisioner_job_status,
+		'running'::provisioner_job_status
+	)
+-- AND NOT t.deleted -- We don't exclude deleted templates because there's no constraint in the DB preventing a soft deletion on a template while workspaces are running.
+group by
+	t.id, wpb.template_version_id, wpb.transition, wlb.template_version_preset_id;
+
+-- GetPresetsBackoff groups workspace builds by preset ID.
+-- Each preset is associated with exactly one template version ID.
+-- For each group, the query checks up to N of the most recent jobs that occurred within the
+-- lookback period, where N equals the number of desired instances for the corresponding preset.
+-- If at least one of the job within a group has failed, we should backoff on the corresponding preset ID.
+-- Query returns a list of preset IDs for which we should backoff.
+-- Only active template versions with configured presets are considered.
+-- We also return the number of failed workspace builds that occurred during the lookback period.
+--
+-- NOTE:
+-- - To **decide whether to back off**, we look at up to the N most recent builds (within the defined lookback period).
+-- - To **calculate the number of failed builds**, we consider all builds within the defined lookback period.
+--
+-- The number of failed builds is used downstream to determine the backoff duration.
+-- name: GetPresetsBackoff :many
+with
+	filtered_builds as (
+		-- Only select builds which are for prebuild creations
+		select
+			wlb.template_version_id,
+			wlb.created_at,
+			tvp.id as preset_id,
+			wlb.job_status,
+			tvp.desired_instances
+		from
+			template_version_presets tvp
+			inner join workspace_latest_builds wlb on wlb.template_version_preset_id
+			= tvp.id
+			inner join workspaces w on wlb.workspace_id = w.id
+			inner join template_versions tv on wlb.template_version_id = tv.id
+			inner join templates t on tv.template_id = t.id
+			and t.active_version_id = tv.id
+		where
+			tvp.desired_instances
+			is not null -- Consider only presets that have a prebuild configuration.
+			and wlb.transition = 'start'::workspace_transition
+			and w.owner_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0'
+			and not t.deleted
+	),
+	time_sorted_builds as (
+		-- Group builds by preset, then sort each group by created_at.
+		select
+			fb.template_version_id,
+			fb.created_at,
+			fb.preset_id,
+			fb.job_status,
+			fb.desired_instances,
+			ROW_NUMBER() over (
+				partition by fb.preset_id
+				order by fb.created_at desc
+			) as rn
+		from filtered_builds fb
+	),
+	failed_count as (
+		-- Count failed builds per preset in the given period
+		select
+			preset_id, COUNT(*) as num_failed
+		from filtered_builds
+		where
+			job_status = 'failed'::provisioner_job_status
+			and created_at >= @lookback::timestamptz
+		group by preset_id
+	)
+select
+	tsb.template_version_id,
+	tsb.preset_id,
+	COALESCE(fc.num_failed, 0)::int as num_failed,
+	MAX(tsb.created_at)::timestamptz as last_build_at
+from
+	time_sorted_builds tsb
+	left join failed_count fc on fc.preset_id = tsb.preset_id
+where
+	tsb.rn
+	<= tsb.desired_instances -- Fetch the last N builds, where N is the number of desired instances; if any fail, we backoff
+	and tsb.job_status = 'failed'::provisioner_job_status
+	and created_at >= @lookback::timestamptz
+group by tsb.template_version_id, tsb.preset_id, fc.num_failed;
+
+-- GetPresetsAtFailureLimit groups workspace builds by preset ID.
+-- Each preset is associated with exactly one template version ID.
+-- For each preset, the query checks the last hard_limit builds.
+-- If all of them failed, the preset is considered to have hit the hard failure limit.
+-- The query returns a list of preset IDs that have reached this failure threshold.
+-- Only active template versions with configured presets are considered.
+-- name: GetPresetsAtFailureLimit :many
+with
+	filtered_builds as (
+		-- Only select builds which are for prebuild creations
+		select
+			wlb.template_version_id,
+			wlb.created_at,
+			tvp.id as preset_id,
+			wlb.job_status,
+			tvp.desired_instances
+		from
+			template_version_presets tvp
+			inner join workspace_latest_builds wlb on wlb.template_version_preset_id
+			= tvp.id
+			inner join workspaces w on wlb.workspace_id = w.id
+			inner join template_versions tv on wlb.template_version_id = tv.id
+			inner join templates t on tv.template_id = t.id
+			and t.active_version_id = tv.id
+		where
+			tvp.desired_instances
+			is not null -- Consider only presets that have a prebuild configuration.
+			and wlb.transition = 'start'::workspace_transition
+			and w.owner_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0'
+	),
+	time_sorted_builds as (
+		-- Group builds by preset, then sort each group by created_at.
+		select
+			fb.template_version_id,
+			fb.created_at,
+			fb.preset_id,
+			fb.job_status,
+			fb.desired_instances,
+			ROW_NUMBER() over (
+				partition by fb.preset_id
+				order by fb.created_at desc
+			) as rn
+		from filtered_builds fb
+	)
+select tsb.template_version_id, tsb.preset_id
+from time_sorted_builds tsb
+-- For each preset, check the last hard_limit builds.
+-- If all of them failed, the preset is considered to have hit the hard failure limit.
+where
+	tsb.rn <= @hard_limit::bigint
+	and tsb.job_status = 'failed'::provisioner_job_status
+group by tsb.template_version_id, tsb.preset_id
+having COUNT(*) = @hard_limit::bigint;
+
+-- name: GetPrebuildMetrics :many
+SELECT
+	t.name as template_name,
+	tvp.name as preset_name,
+	o.name as organization_name,
+	COUNT(*) as created_count,
+	COUNT(*) FILTER (WHERE pj.job_status = 'failed'::provisioner_job_status) as failed_count,
+	COUNT(*) FILTER (
+			WHERE w.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid -- The system user responsible for prebuilds.
+		) as claimed_count
+FROM workspaces w
+INNER JOIN workspace_prebuild_builds wpb ON wpb.workspace_id = w.id
+INNER JOIN templates t ON t.id = w.template_id
+INNER JOIN template_version_presets tvp ON tvp.id = wpb.template_version_preset_id
+INNER JOIN provisioner_jobs pj ON pj.id = wpb.job_id
+INNER JOIN organizations o ON o.id = w.organization_id
+WHERE NOT t.deleted AND wpb.build_number = 1
+GROUP BY t.name, tvp.name, o.name
+ORDER BY t.name, tvp.name, o.name;
+
+-- name: FindMatchingPresetID :one
+-- FindMatchingPresetID finds a preset ID that is the largest exact subset of the provided parameters.
+-- It returns the preset ID if a match is found, or NULL if no match is found.
+-- The query finds presets where all preset parameters are present in the provided parameters,
+-- and returns the preset with the most parameters (largest subset).
+with
+	provided_params as (
+		select
+			unnest(@parameter_names::text[]) as name,
+			unnest(@parameter_values::text[]) as value
+	),
+	preset_matches as (
+		select
+			tvp.id as template_version_preset_id,
+			COALESCE(COUNT(tvpp.name), 0) as total_preset_params,
+			COALESCE(COUNT(pp.name), 0) as matching_params
+		from
+			template_version_presets tvp
+			left join template_version_preset_parameters tvpp on tvpp.template_version_preset_id
+			= tvp.id
+			left join provided_params pp on pp.name = tvpp.name
+			and pp.value = tvpp.value
+		where tvp.template_version_id = @template_version_id
+		group by tvp.id
+	)
+select pm.template_version_preset_id
+from preset_matches pm
+where
+	pm.total_preset_params
+	= pm.matching_params -- All preset parameters must match
+order by
+	pm.total_preset_params desc -- Return the preset with the most parameters
+limit 1;
+
+-- name: CountPendingNonActivePrebuilds :many
+-- CountPendingNonActivePrebuilds returns the number of pending prebuilds for non-active template versions
+select wpb.template_version_preset_id as preset_id, COUNT(*)::int as count
+from
+	workspace_prebuild_builds wpb
+	inner join provisioner_jobs pj on pj.id = wpb.job_id
+	inner join workspaces w on w.id = wpb.workspace_id
+	inner join templates t on t.id = w.template_id
+where
+	wpb.template_version_id != t.active_version_id
+	-- Only considers initial builds, i.e. created by the reconciliation loop
+	and wpb.build_number = 1
+	-- Only consider 'start' transitions (provisioning), not 'stop'/'delete' (deprovisioning)
+	-- Deprovisioning jobs should complete naturally as they're already cleaning up resources
+	and wpb.transition = 'start'::workspace_transition
+	-- Pending jobs that have not yet been picked up by a provisioner
+	and pj.job_status = 'pending'::provisioner_job_status
+	and pj.worker_id is null
+	and pj.canceled_at is null
+	and pj.completed_at is null
+group by wpb.template_version_preset_id;
+
+-- name: UpdatePrebuildProvisionerJobWithCancel :many
+-- Cancels all pending provisioner jobs for prebuilt workspaces on a specific preset from an
+-- inactive template version.
+-- This is an optimization to clean up stale pending jobs.
+WITH jobs_to_cancel AS (
+	SELECT pj.id, w.id AS workspace_id, w.template_id, wpb.template_version_preset_id
+	FROM provisioner_jobs pj
+	INNER JOIN workspace_prebuild_builds wpb ON wpb.job_id = pj.id
+	INNER JOIN workspaces w ON w.id = wpb.workspace_id
+	INNER JOIN templates t ON t.id = w.template_id
+	WHERE
+		wpb.template_version_id != t.active_version_id
+		AND wpb.template_version_preset_id = @preset_id
+		-- Only considers initial builds, i.e. created by the reconciliation loop
+		AND wpb.build_number = 1
+		-- Only consider 'start' transitions (provisioning), not 'stop'/'delete' (deprovisioning)
+		-- Deprovisioning jobs should complete naturally as they're already cleaning up resources
+		AND wpb.transition = 'start'::workspace_transition
+		-- Pending jobs that have not yet been picked up by a provisioner
+		AND pj.job_status = 'pending'::provisioner_job_status
+		AND pj.worker_id IS NULL
+		AND pj.canceled_at IS NULL
+		AND pj.completed_at IS NULL
+)
+UPDATE provisioner_jobs
+SET
+	canceled_at = @now::timestamptz,
+	completed_at = @now::timestamptz
+FROM jobs_to_cancel
+WHERE provisioner_jobs.id = jobs_to_cancel.id
+RETURNING jobs_to_cancel.id, jobs_to_cancel.workspace_id, jobs_to_cancel.template_id, jobs_to_cancel.template_version_preset_id;
+
+-- name: GetOrganizationsWithPrebuildStatus :many
+-- GetOrganizationsWithPrebuildStatus returns organizations with prebuilds configured and their
+-- membership status for the prebuilds system user (org membership, group existence, group membership).
+with
+	orgs_with_prebuilds as (
+		-- Get unique organizations that have presets with prebuilds configured
+		select distinct
+			o.id, o.name
+		from
+			organizations o
+			inner join templates t on t.organization_id = o.id
+			inner join template_versions tv on tv.template_id = t.id
+			inner join template_version_presets tvp on tvp.template_version_id = tv.id
+		where tvp.desired_instances is not null
+	),
+	prebuild_user_membership as (
+		-- Check if the user is a member of the organizations
+		select
+			om.organization_id
+		from
+			organization_members om
+			inner join orgs_with_prebuilds owp on owp.id = om.organization_id
+		where om.user_id = @user_id::uuid
+	),
+	prebuild_groups as (
+		-- Check if the organizations have the prebuilds group
+		select
+			g.organization_id, g.id as group_id
+		from
+			groups g inner join orgs_with_prebuilds owp on owp.id = g.organization_id
+		where g.name = @group_name::text
+	),
+	prebuild_group_membership as (
+		-- Check if the user is in the prebuilds group
+		select
+			pg.organization_id
+		from
+			prebuild_groups pg
+			inner join group_members gm on gm.group_id = pg.group_id
+		where gm.user_id = @user_id::uuid
+	)
+select
+	owp.id as organization_id,
+	owp.name as organization_name,
+	(pum.organization_id is not null)::boolean as has_prebuild_user,
+	pg.group_id as prebuilds_group_id,
+	(pgm.organization_id is not null)::boolean as has_prebuild_user_in_group
+from
+	orgs_with_prebuilds owp
+	left join prebuild_groups pg on pg.organization_id = owp.id
+	left join prebuild_user_membership pum on pum.organization_id = owp.id
+	left join prebuild_group_membership pgm on pgm.organization_id = owp.id;

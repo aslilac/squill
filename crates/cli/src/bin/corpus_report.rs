@@ -13,7 +13,11 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use parser::Dialect;
+use parser::lexer::LexOptions;
 use parser::syntax::SyntaxKind;
+
+/// The coder corpus is sqlc SQL: `@name` params enabled.
+const LEX_OPTIONS: LexOptions = LexOptions { at_params: true };
 
 /// Pipeline stages, in order.
 const STAGES: [&str; 3] = ["lex", "parse", "emit"];
@@ -44,7 +48,7 @@ fn run_file(source: &str, show_diagnostics: bool) -> FileResult {
         stmts: StmtStats::default(),
     };
 
-    let tokens = parser::lexer::lex(source, Dialect::Postgres);
+    let tokens = parser::lexer::lex_with(source, Dialect::Postgres, LEX_OPTIONS);
     let rebuilt: String = tokens.iter().map(|t| t.text).collect();
     if rebuilt != source {
         return fail(0, "token texts do not round-trip to the input".into());
@@ -138,10 +142,24 @@ fn run_file(source: &str, show_diagnostics: bool) -> FileResult {
         };
     }
 
-    let emit_error = formatter::emit(&parse.cst).err();
+    let format_options = formatter::Options {
+        at_params: true,
+        ..formatter::Options::default()
+    };
+    let formatted = formatter::format_cst(&parse.cst, &format_options);
+    if formatted.fallback_statements > 0 {
+        return FileResult {
+            stages_passed: 2,
+            error: Some(format!(
+                "{} statement(s) fell back to verbatim",
+                formatted.fallback_statements
+            )),
+            stmts,
+        };
+    }
     FileResult {
-        stages_passed: if emit_error.is_none() { 3 } else { 2 },
-        error: emit_error.map(|e| e.to_string()),
+        stages_passed: 3,
+        error: None,
         stmts,
     }
 }

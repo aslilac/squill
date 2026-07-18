@@ -1,0 +1,668 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- name: InsertAIBridgeInterception :one
+INSERT INTO aibridge_interceptions (
+	id, api_key_id, initiator_id, provider, provider_name, model, metadata, started_at, client, client_session_id, thread_parent_id, thread_root_id, credential_kind, credential_hint, agent_firewall_session_id, agent_firewall_sequence_number
+) VALUES (
+	@id, @api_key_id, @initiator_id, @provider, @provider_name, @model, COALESCE(@metadata::jsonb, '{}'::jsonb), @started_at, @client, sqlc.narg('client_session_id'), sqlc.narg('thread_parent_interception_id')::uuid, sqlc.narg('thread_root_interception_id')::uuid, @credential_kind, @credential_hint, sqlc.narg('agent_firewall_session_id')::uuid, sqlc.narg('agent_firewall_sequence_number')
+)
+RETURNING *;
+
+-- name: UpdateAIBridgeInterceptionEnded :one
+UPDATE aibridge_interceptions
+	SET ended_at = @ended_at::timestamptz,
+		-- BYOK records its hint at the start of the interception.
+		-- Centralized uses key failover, so its hint is only known
+		-- at end-of-interception.
+		credential_hint = CASE
+			WHEN credential_kind = 'centralized' THEN @credential_hint::text
+			ELSE credential_hint
+		END,
+		-- Terminal upstream error, only set when the interception failed.
+		-- NULL leaves the columns empty for successful interceptions.
+		error_type = sqlc.narg('error_type')::aibridge_interception_error_type,
+		error_message = sqlc.narg('error_message')::text
+WHERE
+	id = @id::uuid
+	AND ended_at IS NULL
+RETURNING *;
+
+-- name: GetAIBridgeInterceptionLineageByToolCallID :one
+-- Look up the parent interception and the root of the thread by finding
+-- which interception recorded a tool usage with the given tool call ID.
+-- COALESCE ensures that if the parent has no thread_root_id (i.e. it IS
+-- the root), we return its own ID as the root.
+select
+	aibridge_interceptions.id as thread_parent_id,
+	COALESCE(
+		aibridge_interceptions.thread_root_id,
+		aibridge_interceptions.id
+	) as thread_root_id
+from aibridge_interceptions
+where
+	aibridge_interceptions.id
+	= (
+		select interception_id
+		from aibridge_tool_usages
+		where provider_tool_call_id = @tool_call_id::text
+		order by created_at desc
+		limit 1
+	);
+
+-- name: InsertAIBridgeTokenUsage :one
+INSERT INTO aibridge_token_usages (
+  id, interception_id, provider_response_id, input_tokens, output_tokens, cache_read_input_tokens, cache_write_input_tokens, metadata, created_at,
+  effective_group_id, input_price_micros, output_price_micros, cache_read_price_micros, cache_write_price_micros, cost_micros
+) VALUES (
+  @id, @interception_id, @provider_response_id, @input_tokens, @output_tokens, @cache_read_input_tokens, @cache_write_input_tokens, COALESCE(@metadata::jsonb, '{}'::jsonb), @created_at,
+  @effective_group_id, @input_price_micros, @output_price_micros, @cache_read_price_micros, @cache_write_price_micros, @cost_micros
+)
+RETURNING *;
+
+-- name: InsertAIBridgeUserPrompt :one
+INSERT INTO aibridge_user_prompts (
+  id, interception_id, provider_response_id, prompt, metadata, created_at
+) VALUES (
+  @id, @interception_id, @provider_response_id, @prompt, COALESCE(@metadata::jsonb, '{}'::jsonb), @created_at
+)
+RETURNING *;
+
+-- name: InsertAIBridgeToolUsage :one
+INSERT INTO aibridge_tool_usages (
+  id, interception_id, provider_response_id, provider_tool_call_id, provider_item_id, tool, server_url, input, injected, invocation_error, metadata, created_at
+) VALUES (
+  @id, @interception_id, @provider_response_id, @provider_tool_call_id, @provider_item_id, @tool, @server_url, @input, @injected, @invocation_error, COALESCE(@metadata::jsonb, '{}'::jsonb), @created_at
+)
+RETURNING *;
+
+-- name: InsertAIBridgeModelThought :one
+INSERT INTO aibridge_model_thoughts (
+  interception_id, content, metadata, created_at
+) VALUES (
+  @interception_id, @content, COALESCE(@metadata::jsonb, '{}'::jsonb), @created_at
+)
+RETURNING *;
+
+-- name: GetAIBridgeInterceptionByID :one
+select * from aibridge_interceptions where id = @id::uuid;
+
+-- name: GetAIBridgeInterceptions :many
+select * from aibridge_interceptions;
+
+-- name: GetAIBridgeTokenUsagesByInterceptionID :many
+select *
+from aibridge_token_usages
+where interception_id = @interception_id::uuid
+order by created_at asc, id asc;
+
+-- name: GetAIBridgeUserPromptsByInterceptionID :many
+select *
+from aibridge_user_prompts
+where interception_id = @interception_id::uuid
+order by created_at asc, id asc;
+
+-- name: GetAIBridgeToolUsagesByInterceptionID :many
+select *
+from aibridge_tool_usages
+where interception_id = @interception_id::uuid
+order by created_at asc, id asc;
+
+-- name: ListAIBridgeTokenUsagesByInterceptionIDs :many
+select *
+from aibridge_token_usages
+where interception_id = any(@interception_ids::uuid[])
+order by created_at asc, id asc;
+
+-- name: ListAIBridgeUserPromptsByInterceptionIDs :many
+select *
+from aibridge_user_prompts
+where interception_id = any(@interception_ids::uuid[])
+order by created_at asc, id asc;
+
+-- name: ListAIBridgeToolUsagesByInterceptionIDs :many
+select *
+from aibridge_tool_usages
+where interception_id = any(@interception_ids::uuid[])
+order by created_at asc, id asc;
+
+-- name: ListAIBridgeInterceptionsTelemetrySummaries :many
+-- Finds all unique AI Bridge interception telemetry summaries combinations
+-- (provider, model, client) in the given timeframe for telemetry reporting.
+select distinct on (provider,
+model,
+client)
+	provider, model, COALESCE(client, 'Unknown') as client
+from aibridge_interceptions
+where
+	ended_at
+	is not null -- incomplete interceptions are not included in summaries
+	and ended_at >= @ended_at_after::timestamptz
+	and ended_at < @ended_at_before::timestamptz;
+
+-- name: CalculateAIBridgeInterceptionsTelemetrySummary :one
+-- Calculates the telemetry summary for a given provider, model, and client
+-- combination for telemetry reporting.
+with
+	interceptions_in_range as (
+		-- Get all matching interceptions in the given timeframe.
+		select
+			id, initiator_id, (ended_at - started_at) as duration
+		from aibridge_interceptions
+		where
+			provider = @provider::text
+			and model = @model::text
+			and COALESCE(client, 'Unknown') = @client::text
+			and ended_at
+			is not null -- incomplete interceptions are not included in summaries
+			and ended_at >= @ended_at_after::timestamptz
+			and ended_at < @ended_at_before::timestamptz
+	),
+	interception_counts as (
+		select
+			COUNT(id) as interception_count,
+			COUNT(distinct initiator_id) as unique_initiator_count
+		from interceptions_in_range
+	),
+	duration_percentiles as (
+		select
+			(
+				COALESCE(
+					PERCENTILE_CONT(0.50) within group (order by
+						EXTRACT(EPOCH from duration)),
+					0
+				)
+				* 1000
+			)::bigint as interception_duration_p50_millis,
+			(
+				COALESCE(
+					PERCENTILE_CONT(0.90) within group (order by
+						EXTRACT(EPOCH from duration)),
+					0
+				)
+				* 1000
+			)::bigint as interception_duration_p90_millis,
+			(
+				COALESCE(
+					PERCENTILE_CONT(0.95) within group (order by
+						EXTRACT(EPOCH from duration)),
+					0
+				)
+				* 1000
+			)::bigint as interception_duration_p95_millis,
+			(
+				COALESCE(
+					PERCENTILE_CONT(0.99) within group (order by
+						EXTRACT(EPOCH from duration)),
+					0
+				)
+				* 1000
+			)::bigint as interception_duration_p99_millis
+		from interceptions_in_range
+	),
+	token_aggregates as (
+		select
+			COALESCE(SUM(tu.input_tokens), 0) as token_count_input,
+			COALESCE(SUM(tu.output_tokens), 0) as token_count_output,
+			COALESCE(SUM(tu.cache_read_input_tokens), 0) as token_count_cached_read,
+			COALESCE(
+				SUM(tu.cache_write_input_tokens),
+				0
+			) as token_count_cached_written,
+			COUNT(tu.id) as token_usages_count
+		from
+			interceptions_in_range i
+			left join aibridge_token_usages tu on i.id = tu.interception_id
+	),
+	prompt_aggregates as (
+		select COUNT(up.id) as user_prompts_count
+		from
+			interceptions_in_range i
+			left join aibridge_user_prompts up on i.id = up.interception_id
+	),
+	tool_aggregates as (
+		select
+			COUNT(tu.id) filter (where tu.injected
+			= true) as tool_calls_count_injected,
+			COUNT(tu.id) filter (where tu.injected
+			= false) as tool_calls_count_non_injected,
+			COUNT(tu.id) filter (where tu.injected = true
+			and tu.invocation_error is not null) as injected_tool_call_error_count
+		from
+			interceptions_in_range i
+			left join aibridge_tool_usages tu on i.id = tu.interception_id
+	)
+select
+	ic.interception_count::bigint as interception_count,
+	dp.interception_duration_p50_millis::bigint as interception_duration_p50_millis,
+	dp.interception_duration_p90_millis::bigint as interception_duration_p90_millis,
+	dp.interception_duration_p95_millis::bigint as interception_duration_p95_millis,
+	dp.interception_duration_p99_millis::bigint as interception_duration_p99_millis,
+	ic.unique_initiator_count::bigint as unique_initiator_count,
+	pa.user_prompts_count::bigint as user_prompts_count,
+	tok_agg.token_usages_count::bigint as token_usages_count,
+	tok_agg.token_count_input::bigint as token_count_input,
+	tok_agg.token_count_output::bigint as token_count_output,
+	tok_agg.token_count_cached_read::bigint as token_count_cached_read,
+	tok_agg.token_count_cached_written::bigint as token_count_cached_written,
+	tool_agg.tool_calls_count_injected::bigint as tool_calls_count_injected,
+	tool_agg.tool_calls_count_non_injected::bigint as tool_calls_count_non_injected,
+	tool_agg.injected_tool_call_error_count::bigint as injected_tool_call_error_count
+from
+	interception_counts ic,
+	duration_percentiles dp,
+	token_aggregates tok_agg,
+	prompt_aggregates pa,
+	tool_aggregates tool_agg;
+
+-- name: DeleteOldAIBridgeRecords :one
+WITH
+  -- We don't have FK relationships between the dependent tables and aibridge_interceptions, so we can't rely on DELETE CASCADE.
+  to_delete AS (
+    SELECT id FROM aibridge_interceptions
+    WHERE started_at < @before_time::timestamp with time zone
+  ),
+  -- CTEs are executed in order.
+  model_thoughts AS (
+    DELETE FROM aibridge_model_thoughts
+    WHERE interception_id IN (SELECT id FROM to_delete)
+    RETURNING 1
+  ),
+  tool_usages AS (
+    DELETE FROM aibridge_tool_usages
+    WHERE interception_id IN (SELECT id FROM to_delete)
+    RETURNING 1
+  ),
+  token_usages AS (
+    DELETE FROM aibridge_token_usages
+    WHERE interception_id IN (SELECT id FROM to_delete)
+    RETURNING 1
+  ),
+  user_prompts AS (
+    DELETE FROM aibridge_user_prompts
+    WHERE interception_id IN (SELECT id FROM to_delete)
+    RETURNING 1
+  ),
+  interceptions AS (
+    DELETE FROM aibridge_interceptions
+    WHERE id IN (SELECT id FROM to_delete)
+    RETURNING 1
+  )
+-- Cumulative count.
+SELECT (
+  (SELECT COUNT(*) FROM model_thoughts) +
+  (SELECT COUNT(*) FROM tool_usages) +
+  (SELECT COUNT(*) FROM token_usages) +
+  (SELECT COUNT(*) FROM user_prompts) +
+  (SELECT COUNT(*) FROM interceptions)
+)::bigint as total_deleted;
+
+-- name: CountAIBridgeSessions :one
+select
+	COUNT(
+		distinct (
+			aibridge_interceptions.session_id,
+			aibridge_interceptions.initiator_id
+		)
+	)
+from aibridge_interceptions
+where
+	-- Remove inflight interceptions (ones which lack an ended_at value).
+	aibridge_interceptions.ended_at
+	is not null
+	-- Filter by time frame
+	and case
+		when @started_after::timestamptz != '0001-01-01 00:00:00+00'::timestamptz
+			then aibridge_interceptions.started_at >= @started_after::timestamptz
+		else true
+	end
+	and case
+		when @started_before::timestamptz != '0001-01-01 00:00:00+00'::timestamptz
+			then aibridge_interceptions.started_at <= @started_before::timestamptz
+		else true
+	end
+	-- Filter initiator_id
+	and case
+		when @initiator_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
+			then aibridge_interceptions.initiator_id = @initiator_id::uuid
+		else true
+	end
+	-- Filter provider
+	and case
+		when @provider::text != ''
+			then aibridge_interceptions.provider = @provider::text
+		else true
+	end
+	-- Filter provider_name
+	and case
+		when @provider_name::text != ''
+			then aibridge_interceptions.provider_name = @provider_name::text
+		else true
+	end
+	-- Filter model
+	and case
+		when @model::text != '' then aibridge_interceptions.model = @model::text
+		else true
+	end
+	-- Filter client
+	and case
+		when @client::text != ''
+			then COALESCE(aibridge_interceptions.client, 'Unknown') = @client::text
+		else true
+	end
+	-- Filter session_id
+	and case
+		when @session_id::text != ''
+			then aibridge_interceptions.session_id = @session_id::text
+		else true
+	end
+-- Authorize Filter clause will be injected below in CountAuthorizedAIBridgeSessions
+-- @authorize_filter
+;
+
+-- name: ListAIBridgeSessions :many
+-- Returns paginated sessions with aggregated metadata, token counts, and
+-- the most recent user prompt. A "session" is a logical grouping of
+-- interceptions that share the same session_id (set by the client).
+--
+-- Pagination-first strategy: identify the page of sessions cheaply via a
+-- single GROUP BY scan, then do expensive lateral joins (tokens, prompts,
+-- first-interception metadata) only for the ~page-size result set.
+with
+	cursor_pos as (
+		-- Resolve the cursor's last_active_at once, outside the HAVING clause,
+		-- so the planner cannot accidentally re-evaluate it per group. Direct
+		-- LEFT JOIN is safe here since we only use MAX/MIN aggregates (no COUNT
+		-- affected by fan-out from multiple prompts per interception).
+		-- COALESCE falls back to MIN(ai.started_at) so the cursor value is
+		-- never NULL, which would silently drop rows from the HAVING comparison.
+		select
+			COALESCE(MAX(up.created_at), MIN(ai.started_at)) as last_active_at
+		from
+			aibridge_interceptions ai
+			left join aibridge_user_prompts up on up.interception_id = ai.id
+		where ai.session_id = @after_session_id and ai.ended_at is not null
+	),
+	session_page as (
+		-- Paginate at the session level first; only cheap aggregates here.
+		-- A lateral correlated subquery for prompts keeps the join one-to-one
+		-- with aibridge_interceptions so COUNT(*) for thread tallies is not
+		-- inflated. LIMIT 1 combined with the (interception_id, created_at DESC)
+		-- index makes this an index-only lookup per interception row rather than
+		-- a full-table-scan GROUP BY over all prompts.
+		-- last_active_at is the latest prompt timestamp, falling back to
+		-- MIN(started_at) for sessions with no prompts. The COALESCE ensures
+		-- it is never NULL so the HAVING row-value cursor comparison is safe.
+		select
+			ai.session_id,
+			ai.initiator_id,
+			MIN(ai.started_at) as started_at,
+			MAX(ai.ended_at) as ended_at,
+			COUNT(*) filter (where ai.thread_root_id is null) as threads,
+			COALESCE(
+				MAX(latest_prompt.latest_prompt_at),
+				MIN(ai.started_at)
+			)::timestamptz as last_active_at
+		from
+			aibridge_interceptions ai
+			left join LATERAL (
+				select created_at as latest_prompt_at
+				from aibridge_user_prompts
+				where interception_id = ai.id
+				order by created_at desc
+				limit 1
+			) latest_prompt on true
+		where
+			-- Remove inflight interceptions (ones which lack an ended_at value).
+			ai.ended_at
+			is not null
+			-- Filter by time frame
+			and case
+				when @started_after::timestamptz
+				!= '0001-01-01 00:00:00+00'::timestamptz
+					then ai.started_at >= @started_after::timestamptz
+				else true
+			end
+			and case
+				when @started_before::timestamptz
+				!= '0001-01-01 00:00:00+00'::timestamptz
+					then ai.started_at <= @started_before::timestamptz
+				else true
+			end
+			-- Filter initiator_id
+			and case
+				when @initiator_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
+					then ai.initiator_id = @initiator_id::uuid
+				else true
+			end
+			-- Filter provider
+			and case
+				when @provider::text != '' then ai.provider = @provider::text
+				else true
+			end
+			-- Filter provider_name
+			and case
+				when @provider_name::text != ''
+					then ai.provider_name = @provider_name::text
+				else true
+			end
+			-- Filter model
+			and case
+				when @model::text != '' then ai.model = @model::text
+				else true
+			end
+			-- Filter client
+			and case
+				when @client::text != ''
+					then COALESCE(ai.client, 'Unknown') = @client::text
+				else true
+			end
+			-- Filter session_id
+			and case
+				when @session_id::text != '' then ai.session_id = @session_id::text
+				else true
+			end
+		-- Authorize Filter clause will be injected below in ListAuthorizedAIBridgeSessions
+		-- @authorize_filter
+		group by
+			ai.session_id, ai.initiator_id
+		having
+			-- Cursor pagination: uses a composite (last_active_at, session_id) cursor to
+			-- support keyset pagination. The less-than comparison matches the DESC
+			-- sort order so rows after the cursor come later in results. The cursor
+			-- value comes from cursor_pos to guarantee single evaluation.
+			case
+				when @after_session_id::text != ''
+					then (
+						(
+							COALESCE(MAX(latest_prompt.latest_prompt_at), MIN(ai.started_at)),
+							ai.session_id
+						)
+						< ((select last_active_at from cursor_pos), @after_session_id::text)
+					)
+				else true
+			end
+		order by last_active_at desc, ai.session_id desc
+		limit COALESCE(NULLIF(@limit_::integer, 0), 100)
+		offset @offset_
+	)
+select
+	sp.session_id,
+	visible_users.id as user_id,
+	visible_users.username as user_username,
+	visible_users.name as user_name,
+	visible_users.avatar_url as user_avatar_url,
+	sr.providers::text[] as providers,
+	sr.models::text[] as models,
+	COALESCE(sr.client, '')::varchar(64) as client,
+	sr.metadata::jsonb as metadata,
+	sp.started_at::timestamptz as started_at,
+	sp.ended_at::timestamptz as ended_at,
+	sp.threads,
+	COALESCE(st.input_tokens, 0)::bigint as input_tokens,
+	COALESCE(st.output_tokens, 0)::bigint as output_tokens,
+	COALESCE(st.cache_read_input_tokens, 0)::bigint as cache_read_input_tokens,
+	COALESCE(st.cache_write_input_tokens, 0)::bigint as cache_write_input_tokens,
+	COALESCE(slp.prompt, '') as last_prompt,
+	sp.last_active_at as last_active_at
+from
+	session_page sp
+	join visible_users on visible_users.id = sp.initiator_id
+	left join LATERAL (
+		select
+			(ARRAY_AGG(ai.client order by ai.started_at, ai.id))[1] as client,
+			(ARRAY_AGG(ai.metadata order by ai.started_at, ai.id))[1] as metadata,
+			ARRAY_AGG(distinct ai.provider order by ai.provider) as providers,
+			ARRAY_AGG(distinct ai.model order by ai.model) as models,
+			ARRAY_AGG(ai.id) as interception_ids
+		from aibridge_interceptions ai
+		where
+			ai.session_id = sp.session_id
+			and ai.initiator_id = sp.initiator_id
+			and ai.ended_at is not null
+	) sr on true
+	left join LATERAL (
+		-- Aggregate tokens only for this session's interceptions.
+		select
+			COALESCE(SUM(tu.input_tokens), 0)::bigint as input_tokens,
+			COALESCE(SUM(tu.output_tokens), 0)::bigint as output_tokens,
+			COALESCE(
+				SUM(tu.cache_read_input_tokens),
+				0
+			)::bigint as cache_read_input_tokens,
+			COALESCE(
+				SUM(tu.cache_write_input_tokens),
+				0
+			)::bigint as cache_write_input_tokens
+		from aibridge_token_usages tu
+		where tu.interception_id = any(sr.interception_ids)
+	) st on true
+	left join LATERAL (
+		-- Fetch only the most recent user prompt across all interceptions
+		-- in the session.
+		select
+			up.prompt
+		from aibridge_user_prompts up
+		where up.interception_id = any(sr.interception_ids)
+		order by up.created_at desc, up.id desc
+		limit 1
+	) slp on true
+order by sp.last_active_at desc, sp.session_id desc;
+
+-- name: ListAIBridgeSessionThreads :many
+-- Returns all interceptions belonging to paginated threads within a session.
+-- Threads are paginated by (started_at, thread_id) cursor.
+with
+	paginated_threads as (
+		select
+			-- Find thread root interceptions (thread_root_id IS NULL), apply cursor
+			-- pagination, and return the page.
+			aibridge_interceptions.id as thread_id,
+			aibridge_interceptions.started_at
+		from aibridge_interceptions
+		where
+			aibridge_interceptions.session_id = @session_id::text
+			and aibridge_interceptions.ended_at is not null
+			and aibridge_interceptions.thread_root_id is null
+			-- Pagination cursor.
+			and (
+				@after_id::uuid = '00000000-0000-0000-0000-000000000000'::uuid
+				or (aibridge_interceptions.started_at, aibridge_interceptions.id)
+				> (
+					(
+						select started_at
+						from aibridge_interceptions ai2
+						where ai2.id = @after_id
+					),
+					@after_id::uuid
+				)
+			)
+			and (
+				@before_id::uuid = '00000000-0000-0000-0000-000000000000'::uuid
+				or (aibridge_interceptions.started_at, aibridge_interceptions.id)
+				< (
+					(
+						select started_at
+						from aibridge_interceptions ai2
+						where ai2.id = @before_id
+					),
+					@before_id::uuid
+				)
+			)
+		-- @authorize_filter
+		order by
+			aibridge_interceptions.started_at asc, aibridge_interceptions.id asc
+		limit COALESCE(NULLIF(@limit_::integer, 0), 50)
+	)
+select
+	COALESCE(
+		aibridge_interceptions.thread_root_id,
+		aibridge_interceptions.id
+	) as thread_id,
+	sqlc.embed(aibridge_interceptions)
+from
+	aibridge_interceptions
+	join paginated_threads pt on pt.thread_id
+	= COALESCE(aibridge_interceptions.thread_root_id, aibridge_interceptions.id)
+where
+	aibridge_interceptions.session_id = @session_id::text
+	and aibridge_interceptions.ended_at is not null
+-- @authorize_filter
+order by
+	-- Ensure threads and their associated interceptions (agentic loops) are sorted chronologically.
+	pt.started_at asc,
+	pt.thread_id asc,
+	aibridge_interceptions.started_at asc,
+	aibridge_interceptions.id asc;
+
+-- name: ListAIBridgeModelThoughtsByInterceptionIDs :many
+select *
+from aibridge_model_thoughts
+where interception_id = any(@interception_ids::uuid[])
+order by created_at asc;
+
+-- name: ListAIBridgeModels :many
+select model
+from aibridge_interceptions
+where
+	-- Remove inflight interceptions (ones which lack an ended_at value).
+	aibridge_interceptions.ended_at
+	is not null
+	-- Filter model
+	and case
+		when @model::text != ''
+			then aibridge_interceptions.model like @model::text || '%'
+		else true
+	end
+-- We use an `@authorize_filter` as we are attempting to list models that are relevant
+-- to the user and what they are allowed to see.
+-- Authorize Filter clause will be injected below in ListAIBridgeModelsAuthorized
+-- @authorize_filter
+group by
+	model
+order by model asc
+limit COALESCE(NULLIF(@limit_::integer, 0), 100)
+offset @offset_;
+
+-- name: ListAIBridgeClients :many
+select COALESCE(client, 'Unknown') as client
+from aibridge_interceptions
+where
+	ended_at is not null
+	-- Filter client (prefix match to allow B-tree index usage).
+	and case
+		when @client::text != ''
+			then COALESCE(aibridge_interceptions.client, 'Unknown')
+			like @client::text || '%'
+		else true
+	end
+-- We use an `@authorize_filter` as we are attempting to list clients
+-- that are relevant to the user and what they are allowed to see.
+-- Authorize Filter clause will be injected below in
+-- ListAIBridgeClientsAuthorized.
+-- @authorize_filter
+group by
+	client
+limit COALESCE(NULLIF(@limit_::integer, 0), 100)
+offset @offset_;

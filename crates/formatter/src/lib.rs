@@ -1,15 +1,17 @@
-//! Formatter: doc IR and renderer (TREE-96). CST-to-doc lowering for
-//! real SQL lands with TREE-97; `emit` is still a stub until then.
+//! Formatter: doc IR, renderer (TREE-96), and the SELECT formatting
+//! rules with their per-statement safety check (TREE-97).
 
+pub mod check;
 pub mod doc;
 pub mod keywords;
 mod printer;
 mod quoting;
-
-use std::fmt;
+mod rules;
 
 use parser::Dialect;
+use parser::lexer::LexOptions;
 use parser::parser::Cst;
+use parser::syntax::SyntaxKind;
 
 pub use doc::{Doc, IdentPos};
 
@@ -49,6 +51,9 @@ pub struct Options {
     pub quoting: IdentQuoting,
     /// Governs the identifier-quoting safety rules.
     pub dialect: Dialect,
+    /// sqlc-style `@name` parameters (see [`LexOptions::at_params`]);
+    /// used when re-lexing for the safety check.
+    pub at_params: bool,
 }
 
 impl Default for Options {
@@ -59,6 +64,15 @@ impl Default for Options {
             keyword_case: KeywordCase::default(),
             quoting: IdentQuoting::default(),
             dialect: Dialect::default(),
+            at_params: false,
+        }
+    }
+}
+
+impl Options {
+    pub fn lex_options(&self) -> LexOptions {
+        LexOptions {
+            at_params: self.at_params,
         }
     }
 }
@@ -68,24 +82,109 @@ pub fn render(doc: &Doc, options: &Options) -> String {
     printer::render(doc, options)
 }
 
-/// Errors produced while emitting formatted output.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum EmitError {
-    /// The CST-to-doc lowering is not implemented yet.
-    Unimplemented,
+/// The result of formatting a CST.
+#[derive(Debug)]
+pub struct Formatted {
+    pub text: String,
+    /// Statements the rules could format but whose output failed the
+    /// safety check and fell back to verbatim passthrough. Zero for a
+    /// fully formatted file. ErrorStatements are always verbatim and are
+    /// not counted here.
+    pub fallback_statements: usize,
 }
 
-impl fmt::Display for EmitError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            EmitError::Unimplemented => f.write_str("emitter not implemented"),
+/// Format a CST. Statement-by-statement: each formatted statement is
+/// re-lexed and compared against its input (token equivalence + comment
+/// conservation); on any mismatch the original text passes through
+/// verbatim, so output is never less correct than its input.
+pub fn format_cst(cst: &Cst, options: &Options) -> Formatted {
+    let lex_options = options.lex_options();
+    let mut pieces: Vec<(bool, String)> = Vec::new();
+    let mut fallbacks = 0;
+    let mut pending_blank = false;
+
+    for element in cst.root().children_with_tokens() {
+        match element {
+            parser::syntax::SyntaxElement::Node(node) => {
+                let original = node.to_string();
+                let blank = pending_blank || leading_blank(&original);
+                pending_blank = false;
+                match rules::lower_statement(node) {
+                    Some(doc) => {
+                        let rendered = render(&doc, options);
+                        let safe = check::tokens_equivalent(
+                            &original,
+                            &rendered,
+                            options.dialect,
+                            lex_options,
+                        ) && check::comments_conserved(
+                            &original,
+                            &rendered,
+                            options.dialect,
+                            lex_options,
+                        );
+                        if safe {
+                            pieces.push((blank, rendered));
+                        } else {
+                            fallbacks += 1;
+                            if std::env::var_os("SQUILL_DEBUG").is_some() {
+                                eprintln!(
+                                    "== fallback ==\n-- original --\n{original}\n-- rendered --\n{rendered}\n=="
+                                );
+                            }
+                            pieces.push((blank, trim_verbatim(&original)));
+                        }
+                    }
+                    None => pieces.push((blank, trim_verbatim(&original))),
+                }
+            }
+            parser::syntax::SyntaxElement::Token(token) => match token.kind() {
+                SyntaxKind::Whitespace => {
+                    if token.text().matches('\n').count() >= 2 {
+                        pending_blank = true;
+                    }
+                }
+                SyntaxKind::LineComment | SyntaxKind::BlockComment => {
+                    pieces.push((pending_blank, token.text().to_string()));
+                    pending_blank = false;
+                }
+                _ => {
+                    // Stray root-level tokens (shouldn't happen): keep.
+                    pieces.push((pending_blank, token.text().to_string()));
+                    pending_blank = false;
+                }
+            },
         }
+    }
+
+    let mut out = String::new();
+    for (index, (blank, piece)) in pieces.iter().enumerate() {
+        if index > 0 {
+            out.push('\n');
+            if *blank {
+                out.push('\n');
+            }
+        }
+        out.push_str(piece);
+    }
+    if !out.is_empty() && !out.ends_with('\n') {
+        out.push('\n');
+    }
+    Formatted {
+        text: out,
+        fallback_statements: fallbacks,
     }
 }
 
-impl std::error::Error for EmitError {}
+/// Does the statement's own text begin with a blank line (before any
+/// comment or code)?
+fn leading_blank(original: &str) -> bool {
+    let leading: String = original.chars().take_while(|c| c.is_whitespace()).collect();
+    leading.matches('\n').count() >= 2
+}
 
-/// Render a CST as formatted SQL text.
-pub fn emit(_cst: &Cst) -> Result<String, EmitError> {
-    Err(EmitError::Unimplemented)
+/// Verbatim passthrough of a statement, trimmed of the surrounding
+/// whitespace that statement assembly regenerates.
+fn trim_verbatim(original: &str) -> String {
+    original.trim().to_string()
 }

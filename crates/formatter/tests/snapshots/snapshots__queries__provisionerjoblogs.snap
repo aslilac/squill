@@ -1,0 +1,36 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- name: GetProvisionerLogsAfterID :many
+select *
+from provisioner_job_logs
+where job_id = @job_id and (id > @created_after)
+order by id asc;
+
+-- name: InsertProvisionerJobLogs :many
+INSERT INTO
+	provisioner_job_logs
+SELECT
+	@job_id :: uuid AS job_id,
+	unnest(@created_at :: timestamptz [ ]) AS created_at,
+	unnest(@source :: log_source [ ]) AS source,
+	unnest(@level :: log_level [ ]) AS LEVEL,
+	unnest(@stage :: VARCHAR(128) [ ]) AS stage,
+	unnest(@output :: VARCHAR(1024) [ ]) AS output RETURNING *;
+
+-- name: UpdateProvisionerJobLogsOverflowed :exec
+UPDATE
+	provisioner_jobs
+SET
+	logs_overflowed = $2
+WHERE
+	id = $1;
+
+-- name: UpdateProvisionerJobLogsLength :exec
+UPDATE
+	provisioner_jobs
+SET
+	logs_length = logs_length + $2
+WHERE
+	id = $1;

@@ -1,0 +1,137 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- name: GetGroupByID :one
+select * from groups where id = $1 limit 1;
+
+-- name: ValidateGroupIDs :one
+with input as (select unnest(@group_ids::uuid[]) as id)
+select array_agg(input.id)::uuid[] as invalid_group_ids, COUNT(*) = 0 as ok
+from
+	-- Preserve rows where there is not a matching left (groups) row for each
+	-- right (input) row...
+	groups
+	right join input on groups.id = input.id
+where
+	-- ...so that we can retain exactly those rows where an input ID does not
+	-- match an existing group.
+	groups.id
+	is null;
+
+-- name: GetGroupByOrgAndName :one
+select * from groups where organization_id = $1 and name = $2 limit 1;
+
+-- name: GetGroups :many
+select
+	sqlc.embed(groups),
+	organizations.name as organization_name,
+	organizations.display_name as organization_display_name
+from
+	groups inner join organizations on groups.organization_id = organizations.id
+where
+	true
+	and case
+		when @organization_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
+			then groups.organization_id = @organization_id
+		else true
+	end
+	and case
+		-- Filter to only include groups a user is a member of
+		when @has_member_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
+			then exists (
+				select 1
+				from
+					-- this view handles the 'everyone' group in orgs.
+					group_members_expanded
+				where
+					group_members_expanded.group_id = groups.id
+					and group_members_expanded.user_id = @has_member_id
+			)
+		else true
+	end
+	and case
+		when array_length(@group_names::text[], 1) > 0
+			then groups.name = any(@group_names)
+		else true
+	end
+	and case
+		when array_length(@group_ids::uuid[], 1) > 0
+			then groups.id = any(@group_ids)
+		else true
+	end
+	-- Filter by group name or display name (substring, case-insensitive).
+	and case
+		when @search::text != ''
+			then (
+				groups.name ilike concat('%', @search, '%')
+				or groups.display_name ilike concat('%', @search, '%')
+			)
+		else true
+	end
+-- A limit of 0 means "no limit".
+limit
+	NULLIF(@limit_opt::int, 0);
+
+-- name: InsertGroup :one
+INSERT INTO groups (
+	id,
+	name,
+	display_name,
+	organization_id,
+	avatar_url,
+	quota_allowance
+)
+VALUES
+	($1, $2, $3, $4, $5, $6) RETURNING *;
+
+-- name: InsertMissingGroups :many
+-- Inserts any group by name that does not exist. All new groups are given
+-- a random uuid, are inserted into the same organization. They have the default
+-- values for avatar, display name, and quota allowance (all zero values).
+INSERT INTO groups (
+	id,
+	name,
+	organization_id,
+						source
+)
+SELECT
+						gen_random_uuid(),
+						group_name,
+						@organization_id,
+						@source
+FROM
+						UNNEST(@group_names :: text[]) AS group_name
+-- If the name conflicts, do nothing.
+ON CONFLICT DO NOTHING
+RETURNING *;
+
+-- We use the organization_id as the id
+-- for simplicity since all users is
+-- every member of the org.
+-- name: InsertAllUsersGroup :one
+INSERT INTO groups (
+	id,
+	name,
+	organization_id
+)
+VALUES
+	(sqlc.arg(organization_id), 'Everyone', sqlc.arg(organization_id)) RETURNING *;
+
+-- name: UpdateGroupByID :one
+UPDATE
+	groups
+SET
+	name = @name,
+	display_name = @display_name,
+	avatar_url = @avatar_url,
+	quota_allowance = @quota_allowance
+WHERE
+	id = @id
+RETURNING *;
+
+-- name: DeleteGroupByID :exec
+DELETE FROM
+	groups
+WHERE
+	id = $1;

@@ -1,0 +1,87 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- name: GetAIProviderKeyByID :one
+select * from ai_provider_keys where id = @id::uuid;
+
+-- name: GetAIProviderKeysByProviderID :many
+-- Returns all keys for a provider, ordered by created_at ASC so the
+-- oldest key is returned first. AI Bridge currently uses the oldest
+-- key per provider; multiple keys are stored to support future
+-- failover and rotation flows.
+select *
+from ai_provider_keys
+where provider_id = @provider_id::uuid
+order by created_at asc, id asc;
+
+-- name: GetAIProviderKeyPresence :many
+-- Returns the provider IDs that have at least one provider-scoped key.
+select distinct provider_id
+from ai_provider_keys
+where provider_id = any(@provider_ids::uuid[])
+order by provider_id asc;
+
+-- name: GetAIProviderKeysByProviderIDs :many
+-- Returns all keys for the requested providers, ordered by provider then created_at ASC
+-- so callers can select the oldest non-empty key per provider without issuing N queries.
+select *
+from ai_provider_keys
+where provider_id = any(@provider_ids::uuid[])
+order by provider_id asc, created_at asc, id asc;
+
+-- name: GetAIProviderKeys :many
+-- Returns AI provider key rows. By default, only rows whose parent
+-- provider is live (deleted = FALSE) are returned, so the API list
+-- handler can fetch every visible provider's keys in a single query.
+-- The dbcrypt key rotation utility passes include_deleted=TRUE to
+-- re-encrypt rows that belong to soft-deleted providers as well.
+select ai_provider_keys.*
+from
+	ai_provider_keys
+	join ai_providers on ai_providers.id = ai_provider_keys.provider_id
+where @include_deleted::boolean or not ai_providers.deleted
+order by
+	ai_provider_keys.provider_id asc,
+	ai_provider_keys.created_at asc,
+	ai_provider_keys.id asc;
+
+-- name: InsertAIProviderKey :one
+INSERT INTO ai_provider_keys (
+    id,
+    provider_id,
+    api_key,
+    api_key_key_id,
+    created_at,
+    updated_at
+) VALUES (
+    @id::uuid,
+    @provider_id::uuid,
+    @api_key::text,
+    sqlc.narg('api_key_key_id')::text,
+    @created_at::timestamptz,
+    @updated_at::timestamptz
+)
+RETURNING
+    *;
+
+-- name: DeleteAIProviderKey :exec
+DELETE FROM
+    ai_provider_keys
+WHERE
+    id = @id::uuid;
+
+-- name: UpdateEncryptedAIProviderKey :one
+-- Updates only the encrypted columns (api_key, api_key_key_id) and
+-- the updated_at timestamp on a row. Used by the dbcrypt key
+-- rotation utility to re-encrypt or decrypt rows in place.
+UPDATE
+    ai_provider_keys
+SET
+    api_key = @api_key::text,
+    api_key_key_id = sqlc.narg('api_key_key_id')::text,
+    updated_at = NOW()
+WHERE
+    id = @id::uuid
+RETURNING
+    *;

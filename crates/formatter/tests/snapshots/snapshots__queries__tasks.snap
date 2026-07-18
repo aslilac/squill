@@ -1,0 +1,276 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- name: InsertTask :one
+INSERT INTO tasks
+	(id, organization_id, owner_id, name, display_name, workspace_id, template_version_id, template_parameters, prompt, created_at)
+VALUES
+	($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING *;
+
+-- name: UpdateTaskWorkspaceID :one
+UPDATE
+	tasks
+SET
+	workspace_id = $2
+FROM
+	workspaces w
+JOIN
+	template_versions tv
+ON
+	tv.template_id = w.template_id
+WHERE
+	tasks.id = $1
+	AND tasks.workspace_id IS NULL
+	AND w.id = $2
+	AND tv.id = tasks.template_version_id
+RETURNING
+	tasks.*;
+
+-- name: UpsertTaskWorkspaceApp :one
+INSERT INTO task_workspace_apps
+	(task_id, workspace_build_number, workspace_agent_id, workspace_app_id)
+VALUES
+	($1, $2, $3, $4)
+ON CONFLICT (task_id, workspace_build_number)
+DO UPDATE SET
+	workspace_agent_id = EXCLUDED.workspace_agent_id,
+	workspace_app_id = EXCLUDED.workspace_app_id
+RETURNING *;
+
+-- name: GetTaskByID :one
+select * from tasks_with_status where id = @id::uuid;
+
+-- name: GetTaskByWorkspaceID :one
+select * from tasks_with_status where workspace_id = @workspace_id::uuid;
+
+-- name: GetTaskByOwnerIDAndName :one
+select *
+from tasks_with_status
+where
+	owner_id = @owner_id::uuid
+	and deleted_at is null
+	and LOWER(name) = LOWER(@name::text);
+
+-- name: ListTasks :many
+select *
+from tasks_with_status tws
+where
+	tws.deleted_at is null
+	and case
+		when @owner_id::uuid != '00000000-0000-0000-0000-000000000000'
+			then tws.owner_id = @owner_id::uuid
+		else true
+	end
+	and case
+		when @organization_id::uuid != '00000000-0000-0000-0000-000000000000'
+			then tws.organization_id = @organization_id::uuid
+		else true
+	end
+	and case
+		when @status::text != '' then tws.status = @status::task_status
+		else true
+	end
+order by tws.created_at desc;
+
+-- name: DeleteTask :one
+WITH deleted_task AS (
+	UPDATE tasks
+	SET
+		deleted_at = @deleted_at::timestamptz
+	WHERE
+		id = @id::uuid
+		AND deleted_at IS NULL
+	RETURNING id
+), deleted_snapshot AS (
+	DELETE FROM task_snapshots
+	WHERE task_id = @id::uuid
+)
+SELECT id FROM deleted_task;
+
+-- name: UpdateTaskPrompt :one
+UPDATE
+	tasks
+SET
+	prompt = @prompt::text
+WHERE
+	id = @id::uuid
+	AND deleted_at IS NULL
+RETURNING *;
+
+-- name: UpsertTaskSnapshot :exec
+INSERT INTO
+	task_snapshots (task_id, log_snapshot, log_snapshot_created_at)
+VALUES
+	($1, $2, $3)
+ON CONFLICT
+	(task_id)
+DO UPDATE SET
+	log_snapshot = EXCLUDED.log_snapshot,
+	log_snapshot_created_at = EXCLUDED.log_snapshot_created_at;
+
+-- name: GetTaskSnapshot :one
+select * from task_snapshots where task_id = $1;
+
+-- name: GetTelemetryTaskEvents :many
+-- Returns all data needed to build task lifecycle events for telemetry
+-- in a single round-trip. For each task whose workspace is in the
+-- given set, fetches:
+--   - the latest workspace app binding (task_workspace_apps)
+--   - the most recent stop and start builds (workspace_builds)
+--   - the last "working" app status (workspace_app_statuses)
+--   - the first app status after resume, for active workspaces
+--
+-- Assumptions:
+-- - 1:1 relationship between tasks and workspaces. All builds on the
+--   workspace are considered task-related.
+-- - Idle duration approximation: If the agent reports "working", does
+--   work, then reports "done", we miss that working time.
+-- - lws and active_dur join across all historical app IDs for the task,
+--   because each resume cycle provisions a new app ID. This ensures
+--   pre-pause statuses contribute to idle duration and active duration.
+with
+	task_app_ids as (select task_id, workspace_app_id from task_workspace_apps),
+	task_status_timeline as (
+		-- All app statuses across every historical app for each task,
+		-- plus synthetic "boundary" rows at each stop/start build transition.
+		-- This allows us to correctly take gaps due to pause/resume into account.
+		select
+			tai.task_id, was.created_at, was.state::text as state
+		from
+			workspace_app_statuses was
+			join task_app_ids tai on tai.workspace_app_id = was.app_id
+		union
+		all
+		select t.id as task_id, wb.created_at, '_boundary' as state
+		from tasks t join workspace_builds wb on wb.workspace_id = t.workspace_id
+		where
+			t.deleted_at is null
+			and t.workspace_id is not null
+			and wb.build_number > 1
+	),
+	task_event_data as (
+		select
+			t.id as task_id,
+			t.workspace_id,
+			twa.workspace_app_id,
+			-- Latest stop build.
+			stop_build.created_at as stop_build_created_at,
+			stop_build.reason as stop_build_reason,
+			-- Latest start build (task_resume only).
+			start_build.created_at as start_build_created_at,
+			start_build.reason as start_build_reason,
+			start_build.build_number as start_build_number,
+			-- Last "working" app status (for idle duration).
+			lws.created_at as last_working_status_at,
+			-- First app status after resume (for resume-to-status duration).
+			-- Only populated for workspaces in an active phase (started more
+			-- recently than stopped).
+			fsar.created_at as first_status_after_resume_at,
+			-- Cumulative time spent in "working" state.
+			active_dur.total_working_ms as active_duration_ms
+		from
+			tasks t
+			left join LATERAL (
+				select task_app.workspace_app_id
+				from task_workspace_apps task_app
+				where task_app.task_id = t.id
+				order by task_app.workspace_build_number desc
+				limit 1
+			) twa on true
+			left join LATERAL (
+				select wb.created_at, wb.reason, wb.build_number
+				from workspace_builds wb
+				where wb.workspace_id = t.workspace_id and wb.transition = 'stop'
+				order by wb.build_number desc
+				limit 1
+			) stop_build on true
+			left join LATERAL (
+				select wb.created_at, wb.reason, wb.build_number
+				from workspace_builds wb
+				where wb.workspace_id = t.workspace_id and wb.transition = 'start'
+				order by wb.build_number desc
+				limit 1
+			) start_build on true
+			left join LATERAL (
+				select tst.created_at
+				from task_status_timeline tst
+				where
+					tst.task_id = t.id
+					and tst.state = 'working'
+					-- Only consider status before the latest pause so that
+					-- post-resume statuses don't mask pre-pause idle time.
+					and (
+						stop_build.created_at is null
+						or tst.created_at <= stop_build.created_at
+					)
+				order by tst.created_at desc
+				limit 1
+			) lws on true
+			left join LATERAL (
+				select was.created_at
+				from workspace_app_statuses was
+				where
+					was.app_id = twa.workspace_app_id
+					and was.created_at > start_build.created_at
+				order by was.created_at asc
+				limit 1
+			) fsar on twa.workspace_app_id is not null
+			and start_build.created_at is not null
+			and (
+				stop_build.created_at is null
+				or start_build.created_at > stop_build.created_at
+			)
+			-- Active duration: cumulative time spent in "working" state across all
+			-- historical app IDs for this task. Uses LEAD() to convert point-in-time
+			-- statuses into intervals, then sums intervals where state='working'. For
+			-- the last status, falls back to stop_build time (if paused) or @now (if
+			-- still running).
+			left join LATERAL (
+				select
+					COALESCE(
+						SUM(
+							EXTRACT(EPOCH from (interval_end - interval_start)) * 1000
+						)::bigint,
+						0
+					)::bigint as total_working_ms
+				from
+					(
+						select
+							tst.created_at as interval_start,
+							COALESCE(
+								LEAD(tst.created_at) over (
+									order by
+										tst.created_at asc,
+										case when tst.state = '_boundary' then 1 else 0 end asc
+								),
+								case
+									when stop_build.created_at is not null
+									and (
+										start_build.created_at is null
+										or stop_build.created_at > start_build.created_at
+									)
+										then stop_build.created_at
+									else @now::timestamptz
+								end
+							) as interval_end,
+							tst.state
+						from task_status_timeline tst
+						where tst.task_id = t.id
+					) intervals
+				where intervals.state = 'working'
+			) active_dur on true
+		where
+			t.deleted_at is null
+			and t.workspace_id is not null
+			and exists (
+				select 1
+				from workspace_builds wb
+				where
+					wb.workspace_id = t.workspace_id and wb.created_at > @created_after
+			)
+	)
+select *
+from task_event_data
+order by task_id;

@@ -40,6 +40,14 @@ pub enum Doc {
     SoftLineOrSpace,
     /// Always a line break; forces enclosing groups to break.
     HardLine,
+    /// Zero-width; forces enclosing groups to break without emitting
+    /// anything itself. Used after trailing line comments, which must be
+    /// followed by a break of the enclosing structure.
+    BreakParent,
+    /// A line break, unless the output is already at the start of a line.
+    /// Forces enclosing groups to break. Used before leading comments,
+    /// which must begin on their own line wherever they get flushed.
+    FreshLine,
     /// `broken` when the enclosing group breaks, `flat` otherwise.
     IfBreak { broken: Box<Doc>, flat: Box<Doc> },
     /// Alternating content and separator documents; separators break
@@ -98,6 +106,14 @@ pub fn soft_line_or_space() -> Doc {
 
 pub fn hard_line() -> Doc {
     Doc::HardLine
+}
+
+pub fn break_parent() -> Doc {
+    Doc::BreakParent
+}
+
+pub fn fresh_line() -> Doc {
+    Doc::FreshLine
 }
 
 pub fn if_break(broken: Doc, flat: Doc) -> Doc {

@@ -1,0 +1,262 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- name: GetProvisionerDaemons :many
+select * from provisioner_daemons;
+
+-- name: GetProvisionerDaemonsByOrganization :many
+select *
+from provisioner_daemons
+where
+	-- This is the original search criteria:
+	organization_id
+	= @organization_id::uuid
+	and
+	-- adding support for searching by tags:
+	(
+		@want_tags::tagset = 'null'::tagset
+		or provisioner_tagset_contains(
+			provisioner_daemons.tags::tagset,
+			@want_tags::tagset
+		)
+	);
+
+-- name: GetEligibleProvisionerDaemonsByProvisionerJobIDs :many
+select distinct provisioner_jobs.id as job_id, sqlc.embed(provisioner_daemons)
+from
+	provisioner_jobs
+	join provisioner_daemons on provisioner_daemons.organization_id
+	= provisioner_jobs.organization_id
+	and provisioner_tagset_contains(
+		provisioner_daemons.tags::tagset,
+		provisioner_jobs.tags::tagset
+	)
+	and provisioner_jobs.provisioner = any(provisioner_daemons.provisioners)
+where provisioner_jobs.id = any(@provisioner_job_ids::uuid[]);
+
+-- name: GetProvisionerDaemonsWithStatusByOrganization :many
+select
+	sqlc.embed(pd),
+	case
+		when current_job.id is not null then 'busy'::provisioner_daemon_status
+		when (
+			COALESCE(sqlc.narg('offline')::bool, false) = true
+			or 'offline'::provisioner_daemon_status
+			= any(@statuses::provisioner_daemon_status[])
+		)
+		and (
+			pd.last_seen_at is null
+			or pd.last_seen_at
+			< (NOW() - (@stale_interval_ms::bigint || ' ms')::interval)
+		)
+			then 'offline'::provisioner_daemon_status
+		else 'idle'::provisioner_daemon_status
+	end as status,
+	pk.name as key_name,
+	-- NOTE(mafredri): sqlc.embed doesn't support nullable tables nor renaming them.
+	current_job.id as current_job_id,
+	current_job.job_status as current_job_status,
+	previous_job.id as previous_job_id,
+	previous_job.job_status as previous_job_status,
+	COALESCE(current_template.name, ''::text) as current_job_template_name,
+	COALESCE(
+		current_template.display_name,
+		''::text
+	) as current_job_template_display_name,
+	COALESCE(current_template.icon, ''::text) as current_job_template_icon,
+	COALESCE(previous_template.name, ''::text) as previous_job_template_name,
+	COALESCE(
+		previous_template.display_name,
+		''::text
+	) as previous_job_template_display_name,
+	COALESCE(previous_template.icon, ''::text) as previous_job_template_icon
+from
+	provisioner_daemons pd
+	join provisioner_keys pk on pk.id = pd.key_id
+	left join provisioner_jobs current_job on (
+		current_job.worker_id = pd.id
+		and current_job.organization_id = pd.organization_id
+		and current_job.completed_at is null
+	)
+	left join provisioner_jobs previous_job on (
+		previous_job.id
+		= (
+			select id
+			from provisioner_jobs
+			where
+				worker_id = pd.id
+				and organization_id = pd.organization_id
+				and completed_at is not null
+			order by completed_at desc
+			limit 1
+		)
+		and previous_job.organization_id = pd.organization_id
+	)
+	-- Current job information.
+	left join workspace_builds current_build on current_build.id
+	= case
+		when current_job.input ? 'workspace_build_id'
+			then (current_job.input ->> 'workspace_build_id')::uuid
+	end
+	left join
+	-- We should always have a template version, either explicitly or implicitly via workspace build.
+	template_versions current_version on (
+		current_version.id
+		= case
+			when current_job.input ? 'template_version_id'
+				then (current_job.input ->> 'template_version_id')::uuid
+			else current_build.template_version_id
+		end
+		and current_version.organization_id = pd.organization_id
+	)
+	left join templates current_template on (
+		current_template.id = current_version.template_id
+		and current_template.organization_id = pd.organization_id
+	)
+	-- Previous job information.
+	left join workspace_builds previous_build on previous_build.id
+	= case
+		when previous_job.input ? 'workspace_build_id'
+			then (previous_job.input ->> 'workspace_build_id')::uuid
+	end
+	left join
+	-- We should always have a template version, either explicitly or implicitly via workspace build.
+	template_versions previous_version on (
+		previous_version.id
+		= case
+			when previous_job.input ? 'template_version_id'
+				then (previous_job.input ->> 'template_version_id')::uuid
+			else previous_build.template_version_id
+		end
+		and previous_version.organization_id = pd.organization_id
+	)
+	left join templates previous_template on (
+		previous_template.id = previous_version.template_id
+		and previous_template.organization_id = pd.organization_id
+	)
+where
+	pd.organization_id = @organization_id::uuid
+	and (
+		COALESCE(array_length(@ids::uuid[], 1), 0) = 0 or pd.id = any(@ids::uuid[])
+	)
+	and (
+		@tags::tagset = 'null'::tagset
+		or provisioner_tagset_contains(pd.tags::tagset, @tags::tagset)
+	)
+	-- Filter by max age if provided
+	and (
+		sqlc.narg('max_age_ms')::bigint is null
+		or pd.last_seen_at is null
+		or pd.last_seen_at
+		>= (NOW() - (sqlc.narg('max_age_ms')::bigint || ' ms')::interval)
+	)
+	and (
+		-- Always include online daemons
+		(
+			pd.last_seen_at is not null
+			and pd.last_seen_at
+			>= (NOW() - (@stale_interval_ms::bigint || ' ms')::interval)
+		)
+		-- Include offline daemons if offline param is true or 'offline' status is requested
+		or (
+			(
+				pd.last_seen_at is null
+				or pd.last_seen_at
+				< (NOW() - (@stale_interval_ms::bigint || ' ms')::interval)
+			)
+			and (
+				COALESCE(sqlc.narg('offline')::bool, false) = true
+				or 'offline'::provisioner_daemon_status
+				= any(@statuses::provisioner_daemon_status[])
+			)
+		)
+	)
+	and (
+		-- Filter daemons by any statuses if provided
+		COALESCE(array_length(@statuses::provisioner_daemon_status[], 1), 0)
+		= 0
+		or (
+			current_job.id is not null
+			and 'busy'::provisioner_daemon_status
+			= any(@statuses::provisioner_daemon_status[])
+		)
+		or (
+			current_job.id is null
+			and 'idle'::provisioner_daemon_status
+			= any(@statuses::provisioner_daemon_status[])
+		)
+		or (
+			'offline'::provisioner_daemon_status
+			= any(@statuses::provisioner_daemon_status[])
+			and (
+				pd.last_seen_at is null
+				or pd.last_seen_at
+				< (NOW() - (@stale_interval_ms::bigint || ' ms')::interval)
+			)
+		)
+		or (
+			COALESCE(sqlc.narg('offline')::bool, false) = true
+			and (
+				pd.last_seen_at is null
+				or pd.last_seen_at
+				< (NOW() - (@stale_interval_ms::bigint || ' ms')::interval)
+			)
+		)
+	)
+order by pd.created_at desc
+limit sqlc.narg('limit')::int;
+
+-- name: DeleteOldProvisionerDaemons :exec
+-- Delete provisioner daemons that have been created at least a week ago
+-- and have not connected to coderd since a week.
+-- A provisioner daemon with "zeroed" last_seen_at column indicates possible
+-- connectivity issues (no provisioner daemon activity since registration).
+DELETE FROM provisioner_daemons WHERE (
+	(created_at < (NOW() - INTERVAL '7 days') AND last_seen_at IS NULL) OR
+	(last_seen_at IS NOT NULL AND last_seen_at < (NOW() - INTERVAL '7 days'))
+);
+
+-- name: UpsertProvisionerDaemon :one
+INSERT INTO
+	provisioner_daemons (
+		id,
+		created_at,
+		"name",
+		provisioners,
+		tags,
+		last_seen_at,
+		"version",
+		organization_id,
+		api_version,
+		key_id
+	)
+VALUES (
+	gen_random_uuid(),
+	@created_at,
+	@name,
+	@provisioners,
+	@tags,
+	@last_seen_at,
+	@version,
+	@organization_id,
+	@api_version,
+	@key_id
+) ON CONFLICT("organization_id", "name", LOWER(COALESCE(tags ->> 'owner'::text, ''::text))) DO UPDATE SET
+	provisioners = @provisioners,
+	tags = @tags,
+	last_seen_at = @last_seen_at,
+	"version" = @version,
+	api_version = @api_version,
+	organization_id = @organization_id,
+	key_id = @key_id
+RETURNING *;
+
+-- name: UpdateProvisionerDaemonLastSeenAt :exec
+UPDATE provisioner_daemons
+SET
+	last_seen_at = @last_seen_at
+WHERE
+	id = @id
+AND
+	last_seen_at <= @last_seen_at;

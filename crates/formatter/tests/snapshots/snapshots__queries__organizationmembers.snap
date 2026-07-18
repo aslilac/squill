@@ -1,0 +1,216 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- name: OrganizationMembers :many
+-- Arguments are optional with uuid.Nil to ignore.
+--  - Use just 'organization_id' to get all members of an org
+--  - Use just 'user_id' to get all orgs a user is a member of
+--  - Use both to get a specific org member row
+select
+	sqlc.embed(organization_members),
+	users.username,
+	users.avatar_url,
+	users.name,
+	users.email,
+	users.rbac_roles as global_roles,
+	users.last_seen_at,
+	users.status,
+	users.login_type,
+	users.is_service_account,
+	users.created_at as user_created_at,
+	users.updated_at as user_updated_at
+from
+	organization_members
+	inner join users on organization_members.user_id = users.id
+	and users.deleted = false
+where
+	-- Filter by organization id
+	case
+		when @organization_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
+			then organization_id = @organization_id
+		else true
+	end
+	-- Filter by user id
+	and case
+		when @user_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
+			then user_id = @user_id
+		else true
+	end
+	-- Filter by system type
+	and case when @include_system::bool then true else is_system = false end
+	-- Filter by github user ID. Note that this requires a join on the users table.
+	and case
+		when @github_user_id::bigint != 0
+			then users.github_com_user_id = @github_user_id
+		else true
+	end;
+
+-- name: InsertOrganizationMember :one
+INSERT INTO
+	organization_members (
+		organization_id,
+		user_id,
+		created_at,
+		updated_at,
+		roles
+	)
+VALUES
+	($1, $2, $3, $4, $5) RETURNING *;
+
+-- name: DeleteOrganizationMember :exec
+DELETE
+	FROM
+		organization_members
+	WHERE
+		organization_id = @organization_id AND
+		user_id = @user_id
+;
+
+-- name: GetOrganizationIDsByMemberIDs :many
+select user_id, array_agg(organization_id)::uuid[] as "organization_IDs"
+from organization_members
+where user_id = any(@ids::uuid[])
+group by user_id;
+
+-- name: UpdateMemberRoles :one
+UPDATE
+	organization_members
+SET
+	-- Remove all duplicates from the roles.
+	roles = ARRAY(SELECT DISTINCT UNNEST(@granted_roles :: text[]))
+WHERE
+	user_id = @user_id
+	AND organization_id = @org_id
+RETURNING *;
+
+-- name: PaginatedOrganizationMembers :many
+select
+	sqlc.embed(organization_members),
+	users.username,
+	users.avatar_url,
+	users.name,
+	users.email,
+	users.rbac_roles as global_roles,
+	users.last_seen_at,
+	users.status,
+	users.login_type,
+	users.is_service_account,
+	users.created_at as user_created_at,
+	users.updated_at as user_updated_at,
+	COUNT(*) over () as count
+from
+	organization_members
+	inner join users on organization_members.user_id = users.id
+	and users.deleted = false
+where
+	case
+		-- This allows using the last element on a page as effectively a cursor.
+		-- This is an important option for scripts that need to paginate without
+		-- duplicating or missing data.
+		when @after_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
+			then (
+				-- The pagination cursor is the last ID of the previous page.
+				-- The query is ordered by the username field, so select all
+				-- rows after the cursor.
+				(
+					LOWER(users.username)
+				)
+				> (
+					select LOWER(users.username)
+					from
+						organization_members
+						inner join users on organization_members.user_id = users.id
+					where organization_members.user_id = @after_id
+				)
+			)
+		else true
+	end
+	-- Start filters
+	-- Filter by organization id
+	and case
+		when @organization_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
+			then organization_id = @organization_id
+		else true
+	end
+	-- Filter by email or username
+	and case
+		when @search::text != ''
+			then (
+				users.email ilike concat('%', @search, '%')
+				or users.username ilike concat('%', @search, '%')
+			)
+		else true
+	end
+	-- Filter by name (display name)
+	and case
+		when @name::text != '' then users.name ilike concat('%', @name, '%')
+		else true
+	end
+	-- Filter by status
+	and case
+		-- @status needs to be a text because it can be empty, If it was
+		-- user_status enum, it would not.
+		when cardinality(@status::user_status[]) > 0
+			then users.status = any(@status::user_status[])
+		else true
+	end
+	-- Filter by global rbac_roles
+	and case
+		-- @rbac_role allows filtering by rbac roles. If 'member' is included, show everyone, as
+		-- everyone is a member.
+		when cardinality(@rbac_role::text[]) > 0
+		and 'member' != any(@rbac_role::text[])
+			then users.rbac_roles && @rbac_role::text[]
+		else true
+	end
+	-- Filter by last_seen
+	and case
+		when @last_seen_before::timestamp with time zone != '0001-01-01 00:00:00Z'
+			then users.last_seen_at <= @last_seen_before
+		else true
+	end
+	and case
+		when @last_seen_after::timestamp with time zone != '0001-01-01 00:00:00Z'
+			then users.last_seen_at >= @last_seen_after
+		else true
+	end
+	-- Filter by created_at (user creation date, not date added to org)
+	and case
+		when @created_before::timestamp with time zone != '0001-01-01 00:00:00Z'
+			then users.created_at <= @created_before
+		else true
+	end
+	and case
+		when @created_after::timestamp with time zone != '0001-01-01 00:00:00Z'
+			then users.created_at >= @created_after
+		else true
+	end
+	-- Filter by system type
+	and case when @include_system::bool then true else users.is_system = false end
+	-- Filter by github.com user ID
+	and case
+		when @github_com_user_id::bigint != 0
+			then users.github_com_user_id = @github_com_user_id
+		else true
+	end
+	-- Filter by login_type
+	and case
+		when cardinality(@login_type::login_type[]) > 0
+			then users.login_type = any(@login_type::login_type[])
+		else true
+	end
+	-- Filter by service account.
+	and case
+		when sqlc.narg('is_service_account')::boolean is not null
+			then users.is_service_account = sqlc.narg('is_service_account')::boolean
+		else true
+	end
+-- End of filters
+order by
+	-- Deterministic and consistent ordering of all users. This is to ensure consistent pagination.
+	LOWER(users.username) asc
+offset @offset_opt
+limit
+	-- A null limit means "no limit", so 0 means return all
+	NULLIF(@limit_opt::int, 0);

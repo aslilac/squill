@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- name: GetParameterSchemasByJobID :many
+select * from parameter_schemas where job_id = $1 order by index;

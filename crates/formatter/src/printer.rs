@@ -35,6 +35,7 @@ pub(crate) fn render(doc: &Doc, options: &Options) -> String {
         options,
         out: String::new(),
         col: 0,
+        at_line_start: true,
     };
     let mut stack = vec![Cmd {
         indent: 0,
@@ -51,6 +52,8 @@ struct Printer<'o> {
     options: &'o Options,
     out: String,
     col: usize,
+    /// Is the output at the start of a (possibly indented) line?
+    at_line_start: bool,
 }
 
 impl Printer<'_> {
@@ -143,6 +146,12 @@ impl Printer<'_> {
                 Mode::Break => self.newline(indent),
             },
             Doc::HardLine => self.newline(indent),
+            Doc::FreshLine => {
+                if !self.at_line_start {
+                    self.newline(indent);
+                }
+            }
+            Doc::BreakParent => {}
             Doc::IfBreak { broken, flat } => {
                 let chosen = match mode {
                     Mode::Break => broken,
@@ -223,6 +232,9 @@ impl Printer<'_> {
     fn push_text(&mut self, text: &str) {
         self.out.push_str(text);
         self.col += self.width(text);
+        if !text.is_empty() {
+            self.at_line_start = false;
+        }
     }
 
     fn push_verbatim(&mut self, text: &str) {
@@ -231,9 +243,16 @@ impl Printer<'_> {
             Some(pos) => self.col = self.width(&text[pos + 1..]),
             None => self.col += self.width(text),
         }
+        if !text.is_empty() {
+            self.at_line_start = text.ends_with('\n');
+        }
     }
 
     fn newline(&mut self, indent: u16) {
+        // Never leave trailing whitespace on the line being ended.
+        while self.out.ends_with(' ') || self.out.ends_with('\t') {
+            self.out.pop();
+        }
         self.out.push('\n');
         let width = usize::from(self.options.indent_width);
         match self.options.indent_style {
@@ -249,6 +268,7 @@ impl Printer<'_> {
             }
         }
         self.col = usize::from(indent) * width;
+        self.at_line_start = true;
     }
 
     /// Display width: tabs count as the configured tab width, every other
@@ -346,6 +366,16 @@ impl Printer<'_> {
                     Mode::Break => return true,
                 },
                 Doc::HardLine => {
+                    return mode == Mode::Break;
+                }
+                Doc::BreakParent => {
+                    // Zero-width, but a flat layout containing it is
+                    // invalid: the enclosing group must break.
+                    if mode == Mode::Flat {
+                        return false;
+                    }
+                }
+                Doc::FreshLine => {
                     return mode == Mode::Break;
                 }
                 Doc::IfBreak { broken, flat } => {

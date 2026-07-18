@@ -1,0 +1,23 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- name: InsertTemplateVersionWorkspaceTag :one
+INSERT INTO
+    template_version_workspace_tags (
+        template_version_id,
+        key,
+        value
+    )
+VALUES
+    (
+        $1,
+        $2,
+        $3
+    ) RETURNING *;
+
+-- name: GetTemplateVersionWorkspaceTags :many
+select *
+from template_version_workspace_tags
+where template_version_id = $1
+order by LOWER(key) asc;

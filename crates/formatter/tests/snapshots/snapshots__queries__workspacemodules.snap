@@ -1,0 +1,15 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- name: InsertWorkspaceModule :one
+INSERT INTO
+	workspace_modules (id, job_id, transition, source, version, key, created_at)
+VALUES
+	($1, $2, $3, $4, $5, $6, $7) RETURNING *;
+
+-- name: GetWorkspaceModulesByJobID :many
+select * from workspace_modules where job_id = $1;
+
+-- name: GetWorkspaceModulesCreatedAfter :many
+select * from workspace_modules where created_at > $1;

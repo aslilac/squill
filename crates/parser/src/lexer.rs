@@ -19,10 +19,26 @@ pub struct Token<'src> {
 
 /// Lex `input` into a token stream. Infallible and lossless.
 pub fn lex(input: &str, dialect: Dialect) -> Vec<Token<'_>> {
+    lex_with(input, dialect, LexOptions::default())
+}
+
+/// Lexer options beyond the dialect.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct LexOptions {
+    /// Lex sqlc-style `@name` parameters as single `Param` tokens in
+    /// Postgres (they are always params in SQLite). Off by default: bare
+    /// `@` is a legal Postgres operator, so this is opt-in for sqlc
+    /// projects.
+    pub at_params: bool,
+}
+
+/// Lex with explicit [`LexOptions`]. Infallible and lossless.
+pub fn lex_with(input: &str, dialect: Dialect, options: LexOptions) -> Vec<Token<'_>> {
     let mut lexer = Lexer {
         input,
         bytes: input.as_bytes(),
         dialect,
+        options,
         pos: 0,
     };
     let mut tokens = Vec::new();
@@ -58,6 +74,7 @@ struct Lexer<'src> {
     input: &'src str,
     bytes: &'src [u8],
     dialect: Dialect,
+    options: LexOptions,
     pos: usize,
 }
 
@@ -210,6 +227,12 @@ impl Lexer<'_> {
                 } else {
                     SyntaxKind::Error
                 }
+            }
+            // sqlc-style `@name` params in Postgres, behind an option.
+            b'@' if self.options.at_params && self.is_ident_start_at(1) => {
+                self.bump(1);
+                self.eat_ident();
+                SyntaxKind::Param
             }
             _ if self.dialect == Dialect::Postgres && is_pg_op_byte(b) => self.pg_operator(),
             // `_` is ASCII punctuation but starts an identifier.

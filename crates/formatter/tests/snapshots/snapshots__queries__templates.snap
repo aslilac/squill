@@ -1,0 +1,284 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- name: GetTemplateByID :one
+select * from template_with_names where id = $1 limit 1;
+
+-- name: GetTemplatesWithFilter :many
+select t.*
+from
+	template_with_names as t
+	left join template_versions tv on t.active_version_id = tv.id
+where
+	-- Optionally include deleted templates
+	t.deleted
+	= @deleted
+	-- Filter by organization_id
+	and case
+		when @organization_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
+			then t.organization_id = @organization_id
+		else true
+	end
+	-- Filter by exact name
+	and case
+		when @exact_name::text != '' then LOWER(t.name) = LOWER(@exact_name)
+		else true
+	end
+	-- Filter by exact display name
+	and case
+		when @exact_display_name::text != ''
+			then LOWER(t.display_name) = LOWER(@exact_display_name)
+		else true
+	end
+	-- Filter by name, matching on substring
+	and case
+		when @fuzzy_name::text != ''
+			then lower(t.name) ilike '%' || lower(@fuzzy_name) || '%'
+		else true
+	end
+	-- Filter by display_name, matching on substring (fallback to name if display_name is empty)
+	and case
+		when @fuzzy_display_name::text != ''
+			then case
+				when t.display_name is not null and t.display_name != ''
+					then lower(t.display_name)
+					ilike '%' || lower(@fuzzy_display_name) || '%'
+				else
+				-- Remove spaces if present since 't.name' cannot have any spaces
+				lower(t.name)
+				ilike '%' || REPLACE(lower(@fuzzy_display_name), ' ', '') || '%'
+			end
+		else true
+	end
+	-- Filter by ids
+	and case
+		when array_length(@ids::uuid[], 1) > 0 then t.id = any(@ids)
+		else true
+	end
+	-- Filter by deprecated
+	and case
+		when sqlc.narg('deprecated')::boolean is not null
+			then case
+				when sqlc.narg('deprecated')::boolean then t.deprecated != ''
+				else t.deprecated = ''
+			end
+		else true
+	end
+	-- Filter by has_ai_task in latest version
+	and case
+		when sqlc.narg('has_ai_task')::boolean is not null
+			then tv.has_ai_task = sqlc.narg('has_ai_task')::boolean
+		else true
+	end
+	-- Filter by author_id
+	and case
+		when @author_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
+			then t.created_by = @author_id
+		else true
+	end
+	-- Filter by author_username
+	and case
+		when @author_username::text != ''
+			then t.created_by
+			= (
+				select id
+				from users
+				where
+					lower(users.username) = lower(@author_username) and deleted = false
+			)
+		else true
+	end
+
+	-- Filter by has_external_agent in latest version
+	and case
+		when sqlc.narg('has_external_agent')::boolean is not null
+			then tv.has_external_agent = sqlc.narg('has_external_agent')::boolean
+		else true
+	end
+-- Authorize Filter clause will be injected below in GetAuthorizedTemplates
+-- @authorize_filter
+order by
+	(t.name, t.id) asc;
+
+-- name: GetTemplateByOrganizationAndName :one
+select *
+from template_with_names as templates
+where
+	organization_id = @organization_id
+	and deleted = @deleted
+	and LOWER(name) = LOWER(@name)
+limit 1;
+
+-- name: GetTemplates :many
+select * from template_with_names as templates order by (name, id) asc;
+
+-- name: InsertTemplate :exec
+INSERT INTO
+	templates (
+		id,
+		created_at,
+		updated_at,
+		organization_id,
+		"name",
+		provisioner,
+		active_version_id,
+		description,
+		created_by,
+		icon,
+		user_acl,
+		group_acl,
+		display_name,
+		allow_user_cancel_workspace_jobs,
+		max_port_sharing_level,
+		use_classic_parameter_flow,
+		cors_behavior
+	)
+VALUES
+	($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17);
+
+-- name: UpdateTemplateActiveVersionByID :exec
+UPDATE
+	templates
+SET
+	active_version_id = $2,
+	updated_at = $3
+WHERE
+	id = $1;
+
+-- name: UpdateTemplateDeletedByID :exec
+UPDATE
+	templates
+SET
+	deleted = $2,
+	updated_at = $3
+WHERE
+	id = $1;
+
+-- name: UpdateTemplateMetaByID :exec
+UPDATE
+	templates
+SET
+	updated_at = $2,
+	description = $3,
+	name = $4,
+	icon = $5,
+	display_name = $6,
+	allow_user_cancel_workspace_jobs = $7,
+	group_acl = $8,
+	max_port_sharing_level = $9,
+	use_classic_parameter_flow = $10,
+	cors_behavior = $11,
+	disable_module_cache = $12
+WHERE
+	id = $1
+;
+
+-- name: UpdateTemplateScheduleByID :exec
+UPDATE
+	templates
+SET
+	updated_at = $2,
+	allow_user_autostart = $3,
+	allow_user_autostop = $4,
+	default_ttl = $5,
+	activity_bump = $6,
+	autostop_requirement_days_of_week = $7,
+	autostop_requirement_weeks = $8,
+	autostart_block_days_of_week = $9,
+	failure_ttl = $10,
+	time_til_dormant = $11,
+	time_til_dormant_autodelete = $12,
+	time_til_autostop_notify = $13
+WHERE
+	id = $1
+;
+
+-- name: UpdateTemplateACLByID :exec
+UPDATE
+	templates
+SET
+	group_acl = $1,
+	user_acl = $2
+WHERE
+	id = $3
+;
+
+-- name: GetTemplateAverageBuildTime :one
+with
+	build_times as (
+		select
+			EXTRACT(
+				EPOCH from (pj.completed_at - pj.started_at)
+			)::float as exec_time_sec,
+			workspace_builds.transition
+		from
+			workspace_builds
+			join template_versions on workspace_builds.template_version_id
+			= template_versions.id
+			join provisioner_jobs pj on workspace_builds.job_id = pj.id
+		where
+			template_versions.template_id = @template_id
+			and (pj.completed_at is not null)
+			and (pj.started_at is not null)
+			and (pj.canceled_at is null)
+			and ((pj.error is null) or (pj.error = ''))
+		order by workspace_builds.created_at desc
+		limit 100
+	)
+select
+	-- Postgres offers no clear way to DRY this short of a function or other
+	-- complexities.
+	coalesce(
+		(
+			PERCENTILE_DISC(0.5) within group (order by
+				exec_time_sec) filter (where transition = 'start')
+		),
+		-1
+	)::float as start_50,
+	coalesce(
+		(
+			PERCENTILE_DISC(0.5) within group (order by
+				exec_time_sec) filter (where transition = 'stop')
+		),
+		-1
+	)::float as stop_50,
+	coalesce(
+		(
+			PERCENTILE_DISC(0.5) within group (order by
+				exec_time_sec) filter (where transition = 'delete')
+		),
+		-1
+	)::float as delete_50,
+	coalesce(
+		(
+			PERCENTILE_DISC(0.95) within group (order by
+				exec_time_sec) filter (where transition = 'start')
+		),
+		-1
+	)::float as start_95,
+	coalesce(
+		(
+			PERCENTILE_DISC(0.95) within group (order by
+				exec_time_sec) filter (where transition = 'stop')
+		),
+		-1
+	)::float as stop_95,
+	coalesce(
+		(
+			PERCENTILE_DISC(0.95) within group (order by
+				exec_time_sec) filter (where transition = 'delete')
+		),
+		-1
+	)::float as delete_95
+from build_times;
+
+-- name: UpdateTemplateAccessControlByID :exec
+UPDATE
+	templates
+SET
+	require_active_version = $2,
+	deprecated = $3
+WHERE
+	id = $1
+;

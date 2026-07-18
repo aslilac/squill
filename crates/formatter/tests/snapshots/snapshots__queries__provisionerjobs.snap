@@ -1,0 +1,344 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Acquires the lock for a single job that isn't started, completed,
+-- canceled, and that matches an array of provisioner types.
+--
+-- SKIP LOCKED is used to jump over locked rows. This prevents
+-- multiple provisioners from acquiring the same jobs. See:
+-- https://www.postgresql.org/docs/9.5/sql-select.html#SQL-FOR-UPDATE-SHARE
+-- name: AcquireProvisionerJob :one
+UPDATE
+	provisioner_jobs
+SET
+	started_at = @started_at,
+	updated_at = @started_at,
+	worker_id = @worker_id
+WHERE
+	id = (
+		SELECT
+			id
+		FROM
+			provisioner_jobs AS potential_job
+		WHERE
+			potential_job.started_at IS NULL
+			AND potential_job.completed_at IS NULL
+			AND potential_job.organization_id = @organization_id
+			-- Ensure the caller has the correct provisioner.
+			AND potential_job.provisioner = ANY(@types :: provisioner_type [ ])
+			-- elsewhere, we use the tagset type, but here we use jsonb for backward compatibility
+			-- they are aliases and the code that calls this query already relies on a different type
+			AND provisioner_tagset_contains(@provisioner_tags :: jsonb, potential_job.tags :: jsonb)
+		ORDER BY
+			-- Ensure that human-initiated jobs are prioritized over prebuilds.
+			potential_job.initiator_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid ASC,
+			potential_job.created_at ASC
+		FOR UPDATE
+		SKIP LOCKED
+		LIMIT
+			1
+	) RETURNING *;
+
+-- name: GetProvisionerJobByID :one
+select * from provisioner_jobs where id = $1;
+
+-- name: GetProvisionerJobByIDForUpdate :one
+-- Gets a single provisioner job by ID for update.
+-- This is used to securely reap jobs that have been hung/pending for a long time.
+select * from provisioner_jobs where id = $1 for update skip locked;
+
+-- name: GetProvisionerJobByIDWithLock :one
+-- Gets a provisioner job by ID with exclusive lock.
+-- Blocks until the row is available for update.
+select * from provisioner_jobs where id = $1 for update;
+
+-- name: GetProvisionerJobsByIDsWithQueuePosition :many
+WITH filtered_provisioner_jobs AS (
+	-- Step 1: Filter provisioner_jobs
+	SELECT
+		id, created_at, tags
+	FROM
+		provisioner_jobs
+	WHERE
+		id = ANY(@ids :: uuid [ ]) -- Apply filter early to reduce dataset size before expensive JOIN
+),
+pending_jobs AS (
+	-- Step 2: Extract only pending jobs
+	SELECT
+		id, initiator_id, created_at, tags
+	FROM
+		provisioner_jobs
+	WHERE
+		job_status = 'pending'
+),
+unique_daemon_tags AS (
+	SELECT DISTINCT tags FROM provisioner_daemons pd
+	WHERE pd.last_seen_at IS NOT NULL
+	  AND pd.last_seen_at >= (NOW() - (@stale_interval_ms::bigint || ' ms')::interval)
+),
+relevant_daemon_tags AS (
+	SELECT udt.tags
+	FROM unique_daemon_tags udt
+	WHERE EXISTS (
+		SELECT 1 FROM filtered_provisioner_jobs fpj
+		WHERE provisioner_tagset_contains(udt.tags, fpj.tags)
+	)
+),
+ranked_jobs AS (
+	-- Step 3: Rank only pending jobs based on provisioner availability
+	SELECT
+		pj.id,
+		pj.created_at,
+		ROW_NUMBER() OVER (PARTITION BY rdt.tags ORDER BY pj.initiator_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid ASC, pj.created_at ASC) AS queue_position,
+		COUNT(*) OVER (PARTITION BY rdt.tags) AS queue_size
+	FROM
+		pending_jobs pj
+	INNER JOIN
+		relevant_daemon_tags rdt
+	ON
+		provisioner_tagset_contains(rdt.tags, pj.tags)
+),
+final_jobs AS (
+	-- Step 4: Compute best queue position and max queue size per job
+	SELECT
+		fpj.id,
+		fpj.created_at,
+		COALESCE(MIN(rj.queue_position), 0) :: BIGINT AS queue_position, -- Best queue position across provisioners
+		COALESCE(MAX(rj.queue_size), 0) :: BIGINT AS queue_size -- Max queue size across provisioners
+	FROM
+		filtered_provisioner_jobs fpj -- Use the pre-filtered dataset instead of full provisioner_jobs
+			LEFT JOIN ranked_jobs rj
+					ON fpj.id = rj.id -- Join with the ranking jobs CTE to assign a rank to each specified provisioner job.
+	GROUP BY
+		fpj.id, fpj.created_at
+)
+SELECT
+	-- Step 5: Final SELECT with INNER JOIN provisioner_jobs
+	fj.id,
+	fj.created_at,
+	sqlc.embed(pj),
+	fj.queue_position,
+	fj.queue_size
+FROM
+	final_jobs fj
+		INNER JOIN provisioner_jobs pj
+				ON fj.id = pj.id -- Ensure we retrieve full details from `provisioner_jobs`.
+                                 -- JOIN with pj is required for sqlc.embed(pj) to compile successfully.
+ORDER BY
+	fj.created_at;
+
+-- name: GetProvisionerJobsByOrganizationAndStatusWithQueuePositionAndProvisioner :many
+with
+	pending_jobs as (
+		select id, initiator_id, created_at
+		from provisioner_jobs
+		where
+			started_at is null
+			and canceled_at is null
+			and completed_at is null
+			and error is null
+	),
+	queue_position as (
+		select
+			id,
+			ROW_NUMBER() over (
+				order by
+					initiator_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid asc,
+					created_at asc
+			) as queue_position
+		from pending_jobs
+	),
+	queue_size as (select COUNT(*) as count from pending_jobs)
+select
+	sqlc.embed(pj),
+	COALESCE(qp.queue_position, 0) as queue_position,
+	COALESCE(qs.count, 0) as queue_size,
+	-- Use subquery to utilize ORDER BY in array_agg since it cannot be
+	-- combined with FILTER.
+	(
+		select
+			-- Order for stable output.
+			array_agg(pd.id order by pd.created_at asc)::uuid[]
+		from provisioner_daemons pd
+		where
+			-- See AcquireProvisionerJob.
+			pj.started_at
+			is null
+			and pj.organization_id = pd.organization_id
+			and pj.provisioner = any(pd.provisioners)
+			and provisioner_tagset_contains(pd.tags, pj.tags)
+	) as available_workers,
+	-- Include template and workspace information.
+	COALESCE(tv.name, '') as template_version_name,
+	t.id as template_id,
+	COALESCE(t.name, '') as template_name,
+	COALESCE(t.display_name, '') as template_display_name,
+	COALESCE(t.icon, '') as template_icon,
+	w.id as workspace_id,
+	COALESCE(w.name, '') as workspace_name,
+	-- Include the name of the provisioner_daemon associated to the job
+	COALESCE(pd.name, '') as worker_name,
+	wb.transition as workspace_build_transition
+from
+	provisioner_jobs pj
+	left join queue_position qp on qp.id = pj.id
+	left join queue_size qs on true
+	left join workspace_builds wb on wb.id
+	= case
+		when pj.input ? 'workspace_build_id'
+			then (pj.input ->> 'workspace_build_id')::uuid
+	end
+	left join workspaces w on (
+		w.id = wb.workspace_id and w.organization_id = pj.organization_id
+	)
+	left join
+	-- We should always have a template version, either explicitly or implicitly via workspace build.
+	template_versions tv on (
+		tv.id
+		= case
+			when pj.input ? 'template_version_id'
+				then (pj.input ->> 'template_version_id')::uuid
+			else wb.template_version_id
+		end
+		and tv.organization_id = pj.organization_id
+	)
+	left join templates t on (
+		t.id = tv.template_id and t.organization_id = pj.organization_id
+	)
+	left join
+	-- Join to get the daemon name corresponding to the job's worker_id
+	provisioner_daemons pd on pd.id = pj.worker_id
+where
+	pj.organization_id = @organization_id::uuid
+	and (
+		COALESCE(array_length(@ids::uuid[], 1), 0) = 0 or pj.id = any(@ids::uuid[])
+	)
+	and (
+		COALESCE(array_length(@status::provisioner_job_status[], 1), 0) = 0
+		or pj.job_status = any(@status::provisioner_job_status[])
+	)
+	and (
+		@tags::tagset = 'null'::tagset
+		or provisioner_tagset_contains(pj.tags::tagset, @tags::tagset)
+	)
+	and (
+		@initiator_id::uuid = '00000000-0000-0000-0000-000000000000'::uuid
+		or pj.initiator_id = @initiator_id::uuid
+	)
+group by
+	pj.id,
+	qp.queue_position,
+	qs.count,
+	tv.name,
+	t.id,
+	t.name,
+	t.display_name,
+	t.icon,
+	w.id,
+	w.name,
+	pd.name,
+	wb.transition
+order by pj.created_at desc
+limit sqlc.narg('limit')::int;
+
+-- name: GetProvisionerJobsCreatedAfter :many
+select * from provisioner_jobs where created_at > $1;
+
+-- name: InsertProvisionerJob :one
+INSERT INTO
+	provisioner_jobs (
+		id,
+		created_at,
+		updated_at,
+		organization_id,
+		initiator_id,
+		provisioner,
+		storage_method,
+		file_id,
+		"type",
+		"input",
+		tags,
+		trace_metadata,
+		logs_overflowed
+	)
+VALUES
+	($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *;
+
+-- name: UpdateProvisionerJobByID :exec
+UPDATE
+	provisioner_jobs
+SET
+	updated_at = $2
+WHERE
+	id = $1;
+
+-- name: UpdateProvisionerJobWithCancelByID :exec
+UPDATE
+	provisioner_jobs
+SET
+	canceled_at = $2,
+	completed_at = $3
+WHERE
+	id = $1;
+
+-- name: UpdateProvisionerJobWithCompleteByID :exec
+UPDATE
+	provisioner_jobs
+SET
+	updated_at = $2,
+	completed_at = $3,
+	error = $4,
+	error_code = $5
+WHERE
+	id = $1;
+
+-- name: UpdateProvisionerJobWithCompleteWithStartedAtByID :exec
+UPDATE
+	provisioner_jobs
+SET
+	updated_at = $2,
+	completed_at = $3,
+	error = $4,
+	error_code = $5,
+	started_at = $6
+WHERE
+	id = $1;
+
+-- name: GetProvisionerJobsToBeReaped :many
+select *
+from provisioner_jobs
+where
+	(
+		-- If the job has not been started before @pending_since, reap it.
+		updated_at
+		< @pending_since
+		and started_at is null
+		and completed_at is null
+	)
+	or (
+		-- If the job has been started but not completed before @hung_since, reap it.
+		updated_at
+		< @hung_since
+		and started_at is not null
+		and completed_at is null
+	)
+-- To avoid repeatedly attempting to reap the same jobs, we randomly order and limit to @max_jobs.
+order by
+	random()
+limit @max_jobs;
+
+-- name: InsertProvisionerJobTimings :many
+INSERT INTO provisioner_job_timings (job_id, started_at, ended_at, stage, source, action, resource)
+SELECT
+    @job_id::uuid AS provisioner_job_id,
+    unnest(@started_at::timestamptz[]),
+    unnest(@ended_at::timestamptz[]),
+    unnest(@stage::provisioner_job_timing_stage[]),
+    unnest(@source::text[]),
+    unnest(@action::text[]),
+    unnest(@resource::text[])
+RETURNING *;
+
+-- name: GetProvisionerJobTimingsByJobID :many
+select * from provisioner_job_timings where job_id = $1 order by started_at asc;

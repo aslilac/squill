@@ -1,0 +1,355 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- name: GetConnectionLogsOffset :many
+select
+	sqlc.embed(connection_logs),
+	-- sqlc.embed(users) would be nice but it does not seem to play well with
+	-- left joins. This user metadata is necessary for parity with the audit logs
+	-- API.
+	users.username as user_username,
+	users.name as user_name,
+	users.email as user_email,
+	users.created_at as user_created_at,
+	users.updated_at as user_updated_at,
+	users.last_seen_at as user_last_seen_at,
+	users.status as user_status,
+	users.login_type as user_login_type,
+	users.rbac_roles as user_roles,
+	users.avatar_url as user_avatar_url,
+	users.deleted as user_deleted,
+	users.quiet_hours_schedule as user_quiet_hours_schedule,
+	workspace_owner.username as workspace_owner_username,
+	organizations.name as organization_name,
+	organizations.display_name as organization_display_name,
+	organizations.icon as organization_icon
+from
+	connection_logs
+	join users as workspace_owner on connection_logs.workspace_owner_id
+	= workspace_owner.id
+	left join users on connection_logs.user_id = users.id
+	join organizations on connection_logs.organization_id = organizations.id
+where
+	-- Filter organization_id
+	case
+		when @organization_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
+			then connection_logs.organization_id = @organization_id
+		else true
+	end
+	-- Filter by workspace owner username
+	and case
+		when @workspace_owner::text != ''
+			then workspace_owner_id
+			= (
+				select id
+				from users
+				where lower(username) = lower(@workspace_owner) and deleted = false
+			)
+		else true
+	end
+	-- Filter by workspace_owner_id
+	and case
+		when @workspace_owner_id::uuid
+		!= '00000000-0000-0000-0000-000000000000'::uuid
+			then workspace_owner_id = @workspace_owner_id
+		else true
+	end
+	-- Filter by workspace_owner_email
+	and case
+		when @workspace_owner_email::text != ''
+			then workspace_owner_id
+			= (
+				select id
+				from users
+				where email = @workspace_owner_email and deleted = false
+			)
+		else true
+	end
+	-- Filter by type
+	and case
+		when @type::text != '' then type = @type::connection_type
+		else true
+	end
+	-- Filter by user_id
+	and case
+		when @user_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
+			then user_id = @user_id
+		else true
+	end
+	-- Filter by username
+	and case
+		when @username::text != ''
+			then user_id
+			= (
+				select id
+				from users
+				where lower(username) = lower(@username) and deleted = false
+			)
+		else true
+	end
+	-- Filter by user_email
+	and case
+		when @user_email::text != '' then users.email = @user_email
+		else true
+	end
+	-- Filter by connected_after
+	and case
+		when @connected_after::timestamp with time zone != '0001-01-01 00:00:00Z'
+			then connect_time >= @connected_after
+		else true
+	end
+	-- Filter by connected_before
+	and case
+		when @connected_before::timestamp with time zone != '0001-01-01 00:00:00Z'
+			then connect_time <= @connected_before
+		else true
+	end
+	-- Filter by workspace_id
+	and case
+		when @workspace_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
+			then connection_logs.workspace_id = @workspace_id
+		else true
+	end
+	-- Filter by connection_id
+	and case
+		when @connection_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
+			then connection_logs.connection_id = @connection_id
+		else true
+	end
+	-- Filter by whether the session has a disconnect_time
+	and case
+		when @status::text != ''
+			then (
+				(@status = 'ongoing' and disconnect_time is null)
+				or (@status = 'completed' and disconnect_time is not null)
+			)
+			and
+			-- Exclude web events, since we don't know their close time.
+			type not in (
+				'workspace_app',
+				'port_forwarding'
+			)
+		else true
+	end
+-- Authorize Filter clause will be injected below in
+-- GetAuthorizedConnectionLogsOffset
+-- @authorize_filter
+order by
+	connect_time desc
+limit
+	-- a limit of 0 means "no limit". The connection log table is unbounded
+	-- in size, and is expected to be quite large. Implement a default
+	-- limit of 100 to prevent accidental excessively large queries.
+	COALESCE(NULLIF(@limit_opt::int, 0), 100)
+offset @offset_opt;
+
+-- name: CountConnectionLogs :one
+select COUNT(*) as count
+from
+	(
+		select 1
+		from
+			connection_logs
+			join users as workspace_owner on connection_logs.workspace_owner_id
+			= workspace_owner.id
+			left join users on connection_logs.user_id = users.id
+			join organizations on connection_logs.organization_id = organizations.id
+		where
+			-- Filter organization_id
+			case
+				when @organization_id::uuid
+				!= '00000000-0000-0000-0000-000000000000'::uuid
+					then connection_logs.organization_id = @organization_id
+				else true
+			end
+			-- Filter by workspace owner username
+			and case
+				when @workspace_owner::text != ''
+					then workspace_owner_id
+					= (
+						select id
+						from users
+						where lower(username) = lower(@workspace_owner) and deleted = false
+					)
+				else true
+			end
+			-- Filter by workspace_owner_id
+			and case
+				when @workspace_owner_id::uuid
+				!= '00000000-0000-0000-0000-000000000000'::uuid
+					then workspace_owner_id = @workspace_owner_id
+				else true
+			end
+			-- Filter by workspace_owner_email
+			and case
+				when @workspace_owner_email::text != ''
+					then workspace_owner_id
+					= (
+						select id
+						from users
+						where email = @workspace_owner_email and deleted = false
+					)
+				else true
+			end
+			-- Filter by type
+			and case
+				when @type::text != '' then type = @type::connection_type
+				else true
+			end
+			-- Filter by user_id
+			and case
+				when @user_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
+					then user_id = @user_id
+				else true
+			end
+			-- Filter by username
+			and case
+				when @username::text != ''
+					then user_id
+					= (
+						select id
+						from users
+						where lower(username) = lower(@username) and deleted = false
+					)
+				else true
+			end
+			-- Filter by user_email
+			and case
+				when @user_email::text != '' then users.email = @user_email
+				else true
+			end
+			-- Filter by connected_after
+			and case
+				when @connected_after::timestamp with time zone
+				!= '0001-01-01 00:00:00Z'
+					then connect_time >= @connected_after
+				else true
+			end
+			-- Filter by connected_before
+			and case
+				when @connected_before::timestamp with time zone
+				!= '0001-01-01 00:00:00Z'
+					then connect_time <= @connected_before
+				else true
+			end
+			-- Filter by workspace_id
+			and case
+				when @workspace_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
+					then connection_logs.workspace_id = @workspace_id
+				else true
+			end
+			-- Filter by connection_id
+			and case
+				when @connection_id::uuid
+				!= '00000000-0000-0000-0000-000000000000'::uuid
+					then connection_logs.connection_id = @connection_id
+				else true
+			end
+			-- Filter by whether the session has a disconnect_time
+			and case
+				when @status::text != ''
+					then (
+						(@status = 'ongoing' and disconnect_time is null)
+						or (@status = 'completed' and disconnect_time is not null)
+					)
+					and
+					-- Exclude web events, since we don't know their close time.
+					type not in (
+						'workspace_app',
+						'port_forwarding'
+					)
+				else true
+			end
+		-- Authorize Filter clause will be injected below in
+		-- CountAuthorizedConnectionLogs
+		-- @authorize_filter
+		-- NOTE: See the CountAuditLogs LIMIT note.
+		limit
+			NULLIF(@count_cap::int, 0) + 1
+	) as limited_count;
+
+-- name: DeleteOldConnectionLogs :execrows
+WITH old_logs AS (
+	SELECT id
+	FROM connection_logs
+	WHERE connect_time < @before_time::timestamp with time zone
+	ORDER BY connect_time ASC
+	LIMIT @limit_count
+)
+DELETE FROM connection_logs
+USING old_logs
+WHERE connection_logs.id = old_logs.id;
+
+-- name: BatchUpsertConnectionLogs :exec
+INSERT INTO connection_logs (
+    id, connect_time, organization_id, workspace_owner_id, workspace_id,
+    workspace_name, agent_name, type, code, ip, user_agent, user_id,
+    slug_or_port, connection_id, disconnect_reason, disconnect_time
+)
+SELECT
+    u.id,
+    u.connect_time,
+    u.organization_id,
+    u.workspace_owner_id,
+    u.workspace_id,
+    u.workspace_name,
+    u.agent_name,
+    u.type,
+    -- Use the validity flag to distinguish "no code" (NULL) from a
+    -- legitimate zero exit code.
+    CASE WHEN u.code_valid THEN u.code ELSE NULL END,
+    u.ip,
+    NULLIF(u.user_agent, ''),
+    NULLIF(u.user_id, '00000000-0000-0000-0000-000000000000'::uuid),
+    NULLIF(u.slug_or_port, ''),
+    NULLIF(u.connection_id, '00000000-0000-0000-0000-000000000000'::uuid),
+    NULLIF(u.disconnect_reason, ''),
+    NULLIF(u.disconnect_time, '0001-01-01 00:00:00Z'::timestamptz)
+FROM (
+    SELECT
+        unnest(sqlc.arg('id')::uuid[]) AS id,
+        unnest(sqlc.arg('connect_time')::timestamptz[]) AS connect_time,
+        unnest(sqlc.arg('organization_id')::uuid[]) AS organization_id,
+        unnest(sqlc.arg('workspace_owner_id')::uuid[]) AS workspace_owner_id,
+        unnest(sqlc.arg('workspace_id')::uuid[]) AS workspace_id,
+        unnest(sqlc.arg('workspace_name')::text[]) AS workspace_name,
+        unnest(sqlc.arg('agent_name')::text[]) AS agent_name,
+        unnest(sqlc.arg('type')::connection_type[]) AS type,
+        unnest(sqlc.arg('code')::int4[]) AS code,
+        unnest(sqlc.arg('code_valid')::bool[]) AS code_valid,
+        unnest(sqlc.arg('ip')::inet[]) AS ip,
+        unnest(sqlc.arg('user_agent')::text[]) AS user_agent,
+        unnest(sqlc.arg('user_id')::uuid[]) AS user_id,
+        unnest(sqlc.arg('slug_or_port')::text[]) AS slug_or_port,
+        unnest(sqlc.arg('connection_id')::uuid[]) AS connection_id,
+        unnest(sqlc.arg('disconnect_reason')::text[]) AS disconnect_reason,
+        unnest(sqlc.arg('disconnect_time')::timestamptz[]) AS disconnect_time
+) AS u
+ON CONFLICT (connection_id, workspace_id, agent_name)
+DO UPDATE SET
+    -- Pick the earliest real connect_time. The zero sentinel
+    -- ('0001-01-01') means the batch didn't know the connect_time
+    -- (e.g. a pure disconnect event), so we keep the existing value.
+    connect_time = CASE
+        WHEN EXCLUDED.connect_time = '0001-01-01 00:00:00Z'::timestamptz
+        THEN connection_logs.connect_time
+        WHEN connection_logs.connect_time = '0001-01-01 00:00:00Z'::timestamptz
+        THEN EXCLUDED.connect_time
+        ELSE LEAST(connection_logs.connect_time, EXCLUDED.connect_time)
+    END,
+    disconnect_time = CASE
+        WHEN connection_logs.disconnect_time IS NULL
+        THEN EXCLUDED.disconnect_time
+        ELSE connection_logs.disconnect_time
+    END,
+    disconnect_reason = CASE
+        WHEN connection_logs.disconnect_reason IS NULL
+        THEN EXCLUDED.disconnect_reason
+        ELSE connection_logs.disconnect_reason
+    END,
+    code = CASE
+        WHEN connection_logs.code IS NULL
+        THEN EXCLUDED.code
+        ELSE connection_logs.code
+    END;

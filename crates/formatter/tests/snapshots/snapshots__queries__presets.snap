@@ -1,0 +1,120 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- name: InsertPreset :one
+INSERT INTO template_version_presets (
+	id,
+	template_version_id,
+	name,
+	created_at,
+	desired_instances,
+	invalidate_after_secs,
+	scheduling_timezone,
+	is_default,
+	description,
+	icon,
+	last_invalidated_at
+)
+VALUES (
+	@id,
+	@template_version_id,
+	@name,
+	@created_at,
+	@desired_instances,
+	@invalidate_after_secs,
+	@scheduling_timezone,
+	@is_default,
+	@description,
+	@icon,
+	@last_invalidated_at
+) RETURNING *;
+
+-- name: InsertPresetParameters :many
+INSERT INTO
+	template_version_preset_parameters (template_version_preset_id, name, value)
+SELECT
+	@template_version_preset_id,
+	unnest(@names :: TEXT[]),
+	unnest(@values :: TEXT[])
+RETURNING *;
+
+-- name: InsertPresetPrebuildSchedule :one
+INSERT INTO template_version_preset_prebuild_schedules (
+	preset_id,
+	cron_expression,
+	desired_instances
+)
+VALUES (
+	@preset_id,
+	@cron_expression,
+	@desired_instances
+) RETURNING *;
+
+-- name: UpdatePresetPrebuildStatus :exec
+UPDATE template_version_presets
+SET prebuild_status = @status
+WHERE id = @preset_id;
+
+-- name: GetPresetsByTemplateVersionID :many
+select *
+from template_version_presets
+where template_version_id = @template_version_id;
+
+-- name: GetPresetByWorkspaceBuildID :one
+select template_version_presets.*
+from
+	template_version_presets
+	inner join workspace_builds on workspace_builds.template_version_preset_id
+	= template_version_presets.id
+where workspace_builds.id = @workspace_build_id;
+
+-- name: GetPresetParametersByTemplateVersionID :many
+select template_version_preset_parameters.*
+from
+	template_version_preset_parameters
+	inner join template_version_presets on template_version_preset_parameters.template_version_preset_id
+	= template_version_presets.id
+where template_version_presets.template_version_id = @template_version_id;
+
+-- name: GetPresetParametersByPresetID :many
+select tvpp.*
+from template_version_preset_parameters tvpp
+where tvpp.template_version_preset_id = @preset_id;
+
+-- name: GetPresetByID :one
+select tvp.*, tv.template_id, tv.organization_id
+from
+	template_version_presets tvp
+	inner join template_versions tv on tvp.template_version_id = tv.id
+where tvp.id = @preset_id;
+
+-- name: GetActivePresetPrebuildSchedules :many
+select tvpps.*
+from
+	template_version_preset_prebuild_schedules tvpps
+	inner join template_version_presets tvp on tvp.id = tvpps.preset_id
+	inner join template_versions tv on tv.id = tvp.template_version_id
+	inner join templates t on t.id = tv.template_id
+where
+	-- Template version is active, and template is not deleted or deprecated
+	tv.id
+	= t.active_version_id
+	and not t.deleted
+	and t.deprecated = '';
+
+-- name: UpdatePresetsLastInvalidatedAt :many
+UPDATE
+	template_version_presets tvp
+SET
+	last_invalidated_at = @last_invalidated_at
+FROM
+	templates t
+	JOIN template_versions tv ON tv.id = t.active_version_id
+WHERE
+	t.id = @template_id
+	AND tvp.template_version_id = tv.id
+RETURNING
+	t.name AS template_name,
+	tv.name AS template_version_name,
+	tvp.name AS template_version_preset_name;

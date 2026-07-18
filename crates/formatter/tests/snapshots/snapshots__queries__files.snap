@@ -1,0 +1,37 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- name: GetFileByID :one
+select * from files where id = $1 limit 1;
+
+-- name: GetFileByHashAndCreator :one
+select * from files where hash = $1 and created_by = $2 limit 1;
+
+-- name: InsertFile :one
+INSERT INTO
+	files (id, hash, created_at, created_by, mimetype, "data")
+VALUES
+	($1, $2, $3, $4, $5, $6) RETURNING *;
+
+-- name: GetFileTemplates :many
+-- Get all templates that use a file.
+select
+	files.id as file_id,
+	files.created_by as file_created_by,
+	templates.id as template_id,
+	templates.organization_id as template_organization_id,
+	templates.created_by as template_created_by,
+	templates.user_acl,
+	templates.group_acl
+from
+	templates
+	inner join template_versions on templates.id = template_versions.template_id
+	inner join provisioner_jobs on job_id = provisioner_jobs.id
+	inner join files on files.id = provisioner_jobs.file_id
+where
+	-- Only fetch template version associated files.
+	storage_method
+	= 'file'
+	and provisioner_jobs.type = 'template_version_import'
+	and file_id = @file_id;

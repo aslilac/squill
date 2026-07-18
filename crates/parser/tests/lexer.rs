@@ -237,6 +237,29 @@ fn ident_may_contain_dollar() {
     assert_tokens(Postgres, "a$b", &[(K::Ident, "a$b")]);
 }
 
+#[test]
+fn sqlc_at_params_are_opt_in() {
+    use parser::lexer::{LexOptions, lex_with};
+    // Default: `@` is an operator character in Postgres.
+    assert_tokens(Postgres, "@name", &[(K::Operator, "@"), (K::Ident, "name")]);
+    // With the option, `@name` is a single param token.
+    let tokens = lex_with("@name @> b", Postgres, LexOptions { at_params: true });
+    let kinds: Vec<_> = tokens.iter().map(|t| (t.kind, t.text)).collect();
+    assert_eq!(
+        kinds,
+        [
+            (K::Param, "@name"),
+            (K::Whitespace, " "),
+            (K::Operator, "@>"),
+            (K::Whitespace, " "),
+            (K::Ident, "b"),
+        ]
+    );
+    // `@ name` (spaced) stays an operator even with the option.
+    let tokens = lex_with("@ name", Postgres, LexOptions { at_params: true });
+    assert_eq!(tokens[0].kind, K::Operator);
+}
+
 // ---- SQLite ----
 
 #[test]

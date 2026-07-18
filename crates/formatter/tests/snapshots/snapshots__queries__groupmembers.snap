@@ -1,0 +1,189 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- name: GetGroupMembers :many
+select *
+from group_members_expanded
+where case when @include_system::bool then true else user_is_system = false end;
+
+-- name: GetGroupMembersByGroupID :many
+select *
+from group_members_expanded
+where
+	group_id = @group_id
+	-- Filter by system type
+	and case when @include_system::bool then true else user_is_system = false end;
+
+-- name: GetGroupMembersByGroupIDPaginated :many
+select *, COUNT(*) over () as count
+from group_members_expanded
+where
+	group_members_expanded.group_id = @group_id
+	and case
+		-- This allows using the last element on a page as effectively a cursor.
+		-- This is an important option for scripts that need to paginate without
+		-- duplicating or missing data.
+		when @after_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
+			then (
+				-- The pagination cursor is the last ID of the previous page.
+				-- The query is ordered by the username field, so select all
+				-- rows after the cursor.
+				(
+					LOWER(user_username)
+				)
+				> (
+					select LOWER(user_username)
+					from group_members_expanded
+					where group_id = @group_id and user_id = @after_id
+				)
+			)
+		else true
+	end
+	-- Start filters
+	-- Filter by email or username
+	and case
+		when @search::text != ''
+			then (
+				user_email ilike concat('%', @search, '%')
+				or user_username ilike concat('%', @search, '%')
+			)
+		else true
+	end
+	-- Filter by name (display name)
+	and case
+		when @name::text != '' then user_name ilike concat('%', @name, '%')
+		else true
+	end
+	-- Filter by status
+	and case
+		-- @status needs to be a text because it can be empty, If it was
+		-- user_status enum, it would not.
+		when cardinality(@status::user_status[]) > 0
+			then user_status = any(@status::user_status[])
+		else true
+	end
+	-- Filter by rbac_roles
+	and case
+		-- @rbac_role allows filtering by rbac roles. If 'member' is included, show everyone, as
+		-- everyone is a member.
+		when cardinality(@rbac_role::text[]) > 0
+		and 'member' != any(@rbac_role::text[])
+			then user_rbac_roles && @rbac_role::text[]
+		else true
+	end
+	-- Filter by last_seen
+	and case
+		when @last_seen_before::timestamp with time zone != '0001-01-01 00:00:00Z'
+			then user_last_seen_at <= @last_seen_before
+		else true
+	end
+	and case
+		when @last_seen_after::timestamp with time zone != '0001-01-01 00:00:00Z'
+			then user_last_seen_at >= @last_seen_after
+		else true
+	end
+	-- Filter by created_at
+	and case
+		when @created_before::timestamp with time zone != '0001-01-01 00:00:00Z'
+			then user_created_at <= @created_before
+		else true
+	end
+	and case
+		when @created_after::timestamp with time zone != '0001-01-01 00:00:00Z'
+			then user_created_at >= @created_after
+		else true
+	end
+	-- Filter by system type
+	and case when @include_system::bool then true else user_is_system = false end
+	-- Filter by github.com user ID
+	and case
+		when @github_com_user_id::bigint != 0
+			then user_github_com_user_id = @github_com_user_id
+		else true
+	end
+	-- Filter by login_type
+	and case
+		when cardinality(@login_type::login_type[]) > 0
+			then user_login_type = any(@login_type::login_type[])
+		else true
+	end
+	-- Filter by service account.
+	and case
+		when sqlc.narg('is_service_account')::boolean is not null
+			then user_is_service_account = sqlc.narg('is_service_account')::boolean
+		else true
+	end
+-- End of filters
+order by
+	-- Deterministic and consistent ordering of all users. This is to ensure consistent pagination.
+	LOWER(user_username) asc
+offset @offset_opt
+limit
+	-- A null limit means "no limit", so 0 means return all
+	NULLIF(@limit_opt::int, 0);
+
+-- name: GetGroupMembersCountByGroupID :one
+-- Returns the total count of members in a group. Shows the total
+-- count even if the caller does not have read access to ResourceGroupMember.
+-- They only need ResourceGroup read access.
+select COUNT(*)
+from group_members_expanded
+where
+	group_id = @group_id
+	-- Filter by system type
+	and case when @include_system::bool then true else user_is_system = false end;
+
+-- name: GetGroupMembersCountByGroupIDs :many
+-- Returns the total member count for each of the given group IDs in a
+-- single query. Used to avoid N+1 lookups when listing many groups. Like
+-- GetGroupMembersCountByGroupID, the count is returned even when the
+-- caller does not have read access to individual group members.
+select group_id, COUNT(*) as member_count
+from group_members_expanded
+where
+	group_id = any(@group_ids::uuid[])
+	and case when @include_system::bool then true else user_is_system = false end
+group by group_id;
+
+-- InsertUserGroupsByID adds a user to all provided groups, if they exist.
+-- name: InsertUserGroupsByID :many
+WITH groups AS (
+	SELECT
+		id
+	FROM
+		groups
+	WHERE
+		groups.id = ANY(@group_ids :: uuid [])
+)
+INSERT INTO
+	group_members (user_id, group_id)
+SELECT
+	@user_id,
+	groups.id
+FROM
+	groups
+-- If there is a conflict, the user is already a member
+ON CONFLICT DO NOTHING
+RETURNING group_id;
+
+-- name: RemoveUserFromGroups :many
+DELETE FROM
+	group_members
+WHERE
+	user_id = @user_id AND
+	group_id = ANY(@group_ids :: uuid [])
+RETURNING group_id;
+
+-- name: InsertGroupMember :exec
+INSERT INTO
+    group_members (user_id, group_id)
+VALUES
+    ($1, $2);
+
+-- name: DeleteGroupMemberFromGroup :exec
+DELETE FROM
+	group_members
+WHERE
+	user_id = $1 AND
+	group_id = $2;

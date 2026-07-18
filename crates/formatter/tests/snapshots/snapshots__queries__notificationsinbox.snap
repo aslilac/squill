@@ -1,0 +1,101 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- name: GetInboxNotificationsByUserID :many
+-- Fetches inbox notifications for a user filtered by templates and targets
+-- param user_id: The user ID
+-- param read_status: The read status to filter by - can be any of 'ALL', 'UNREAD', 'READ'
+-- param created_at_opt: The created_at timestamp to filter by. This parameter is usd for pagination - it fetches notifications created before the specified timestamp if it is not the zero value
+-- param limit_opt: The limit of notifications to fetch. If the limit is not specified, it defaults to 25
+select *
+from inbox_notifications
+where
+	user_id = @user_id
+	and (
+		@read_status::inbox_notification_read_status = 'all'
+		or (
+			@read_status::inbox_notification_read_status = 'unread'
+			and read_at is null
+		)
+		or (
+			@read_status::inbox_notification_read_status = 'read'
+			and read_at is not null
+		)
+	)
+	and (
+		@created_at_opt::timestamptz = '0001-01-01 00:00:00Z'
+		or created_at < @created_at_opt::timestamptz
+	)
+order by created_at desc
+limit (COALESCE(NULLIF(@limit_opt::int, 0), 25));
+
+-- name: GetFilteredInboxNotificationsByUserID :many
+-- Fetches inbox notifications for a user filtered by templates and targets
+-- param user_id: The user ID
+-- param templates: The template IDs to filter by - the template_id = ANY(@templates::UUID[]) condition checks if the template_id is in the @templates array
+-- param targets: The target IDs to filter by - the targets @> COALESCE(@targets, ARRAY[]::UUID[]) condition checks if the targets array (from the DB) contains all the elements in the @targets array
+-- param read_status: The read status to filter by - can be any of 'ALL', 'UNREAD', 'READ'
+-- param created_at_opt: The created_at timestamp to filter by. This parameter is usd for pagination - it fetches notifications created before the specified timestamp if it is not the zero value
+-- param limit_opt: The limit of notifications to fetch. If the limit is not specified, it defaults to 25
+select *
+from inbox_notifications
+where
+	user_id = @user_id
+	and (@templates::uuid[] is null or template_id = any(@templates::uuid[]))
+	and (@targets::uuid[] is null or targets @> @targets::uuid[])
+	and (
+		@read_status::inbox_notification_read_status = 'all'
+		or (
+			@read_status::inbox_notification_read_status = 'unread'
+			and read_at is null
+		)
+		or (
+			@read_status::inbox_notification_read_status = 'read'
+			and read_at is not null
+		)
+	)
+	and (
+		@created_at_opt::timestamptz = '0001-01-01 00:00:00Z'
+		or created_at < @created_at_opt::timestamptz
+	)
+order by created_at desc
+limit (COALESCE(NULLIF(@limit_opt::int, 0), 25));
+
+-- name: GetInboxNotificationByID :one
+select * from inbox_notifications where id = $1;
+
+-- name: CountUnreadInboxNotificationsByUserID :one
+select COUNT(*) from inbox_notifications where user_id = $1 and read_at is null;
+
+-- name: InsertInboxNotification :one
+INSERT INTO
+    inbox_notifications (
+        id,
+        user_id,
+        template_id,
+        targets,
+        title,
+        content,
+        icon,
+        actions,
+        created_at
+    )
+VALUES
+    ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *;
+
+-- name: UpdateInboxNotificationReadStatus :exec
+UPDATE
+    inbox_notifications
+SET
+    read_at = $1
+WHERE
+    id = $2;
+
+-- name: MarkAllInboxNotificationsAsRead :exec
+UPDATE
+	inbox_notifications
+SET
+	read_at = $1
+WHERE
+	user_id = $2 and read_at IS NULL;

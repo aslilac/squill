@@ -1,0 +1,45 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- name: GetCryptoKeys :many
+select * from crypto_keys where secret is not null;
+
+-- name: GetCryptoKeysByFeature :many
+select *
+from crypto_keys
+where feature = $1 and secret is not null
+order by sequence desc;
+
+-- name: GetLatestCryptoKeyByFeature :one
+select * from crypto_keys where feature = $1 order by sequence desc limit 1;
+
+-- name: GetCryptoKeyByFeatureAndSequence :one
+select *
+from crypto_keys
+where feature = $1 and sequence = $2 and secret is not null;
+
+-- name: DeleteCryptoKey :one
+UPDATE crypto_keys
+SET secret = NULL, secret_key_id = NULL
+WHERE feature = $1 AND sequence = $2 RETURNING *;
+
+-- name: InsertCryptoKey :one
+INSERT INTO crypto_keys (
+    feature,
+    sequence,
+    secret,
+    starts_at,
+    secret_key_id
+) VALUES (
+    $1,
+    $2,
+    $3,
+    $4,
+    $5
+) RETURNING *;
+
+-- name: UpdateCryptoKeyDeletesAt :one
+UPDATE crypto_keys
+SET deletes_at = $3
+WHERE feature = $1 AND sequence = $2 RETURNING *;

@@ -1,0 +1,1159 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- name: GetWorkspaceByID :one
+select * from workspaces_expanded where id = $1 limit 1;
+
+-- name: GetWorkspaceByResourceID :one
+select *
+from workspaces_expanded as workspaces
+where
+	workspaces.id
+	= (
+		select workspace_id
+		from workspace_builds
+		where
+			workspace_builds.job_id
+			= (
+				select job_id
+				from workspace_resources
+				where workspace_resources.id = @resource_id
+			)
+	)
+limit 1;
+
+-- name: GetWorkspaceByWorkspaceAppID :one
+select *
+from workspaces_expanded as workspaces
+where
+	workspaces.id
+	= (
+		select workspace_id
+		from workspace_builds
+		where
+			workspace_builds.job_id
+			= (
+				select job_id
+				from workspace_resources
+				where
+					workspace_resources.id
+					= (
+						select resource_id
+						from workspace_agents
+						where
+							workspace_agents.id
+							= (
+								select agent_id
+								from workspace_apps
+								where workspace_apps.id = @workspace_app_id
+							)
+					)
+			)
+	);
+
+-- name: GetWorkspaceByAgentID :one
+select *
+from workspaces_expanded as workspaces
+where
+	workspaces.id
+	= (
+		select workspace_id
+		from workspace_builds
+		where
+			workspace_builds.job_id
+			= (
+				select job_id
+				from workspace_resources
+				where
+					workspace_resources.id
+					= (
+						select resource_id
+						from workspace_agents
+						where workspace_agents.id = @agent_id
+					)
+			)
+	);
+
+-- name: GetWorkspaces :many
+WITH
+-- build_params is used to filter by build parameters if present.
+-- It has to be a CTE because the set returning function 'unnest' cannot
+-- be used in a WHERE clause.
+build_params AS (
+SELECT
+	LOWER(unnest(@param_names :: text[])) AS name,
+	LOWER(unnest(@param_values :: text[])) AS value
+),
+filtered_workspaces AS (
+SELECT
+	workspaces.*,
+	latest_build.template_version_id,
+	latest_build.template_version_name,
+	latest_build.completed_at as latest_build_completed_at,
+	latest_build.canceled_at as latest_build_canceled_at,
+	latest_build.error as latest_build_error,
+	latest_build.transition as latest_build_transition,
+	latest_build.job_status as latest_build_status,
+	latest_build.has_external_agent as latest_build_has_external_agent
+FROM
+	workspaces_expanded as workspaces
+JOIN
+    users
+ON
+    workspaces.owner_id = users.id
+LEFT JOIN LATERAL (
+	SELECT
+		workspace_builds.id,
+		workspace_builds.transition,
+		workspace_builds.template_version_id,
+		workspace_builds.has_ai_task,
+		workspace_builds.has_external_agent,
+		template_versions.name AS template_version_name,
+		provisioner_jobs.id AS provisioner_job_id,
+		provisioner_jobs.started_at,
+		provisioner_jobs.updated_at,
+		provisioner_jobs.canceled_at,
+		provisioner_jobs.completed_at,
+		provisioner_jobs.error,
+		provisioner_jobs.job_status
+	FROM
+		workspace_builds
+	JOIN
+		provisioner_jobs
+	ON
+		provisioner_jobs.id = workspace_builds.job_id
+	LEFT JOIN
+		template_versions
+	ON
+		template_versions.id = workspace_builds.template_version_id
+	WHERE
+		workspace_builds.workspace_id = workspaces.id
+	ORDER BY
+		build_number DESC
+	LIMIT
+		1
+) latest_build ON TRUE
+LEFT JOIN LATERAL (
+	SELECT
+		*
+	FROM
+		templates
+	WHERE
+		templates.id = workspaces.template_id
+) template ON true
+WHERE
+	-- Optionally include deleted workspaces
+	workspaces.deleted = @deleted
+	AND CASE
+		WHEN @status :: text != '' THEN
+			CASE
+			    -- Some workspace specific status refer to the transition
+			    -- type. By default, the standard provisioner job status
+			    -- search strings are supported.
+			    -- 'running' states
+				WHEN @status = 'starting' THEN
+				    latest_build.job_status = 'running'::provisioner_job_status AND
+					latest_build.transition = 'start'::workspace_transition
+				WHEN @status = 'stopping' THEN
+					latest_build.job_status = 'running'::provisioner_job_status AND
+					latest_build.transition = 'stop'::workspace_transition
+				WHEN @status = 'deleting' THEN
+					latest_build.job_status = 'running' AND
+					latest_build.transition = 'delete'::workspace_transition
+
+			    -- 'succeeded' states
+			    WHEN @status = 'deleted' THEN
+			    	latest_build.job_status = 'succeeded'::provisioner_job_status AND
+			    	latest_build.transition = 'delete'::workspace_transition
+				WHEN @status = 'stopped' THEN
+					latest_build.job_status = 'succeeded'::provisioner_job_status AND
+					latest_build.transition = 'stop'::workspace_transition
+				WHEN @status = 'started' THEN
+					latest_build.job_status = 'succeeded'::provisioner_job_status AND
+					latest_build.transition = 'start'::workspace_transition
+
+			    -- Special case where the provisioner status and workspace status
+			    -- differ. A workspace is "running" if the job is "succeeded" and
+			    -- the transition is "start". This is because a workspace starts
+			    -- running when a job is complete.
+			    WHEN @status = 'running' THEN
+					latest_build.job_status = 'succeeded'::provisioner_job_status AND
+					latest_build.transition = 'start'::workspace_transition
+
+				WHEN @status != '' THEN
+				    -- By default just match the job status exactly
+			    	latest_build.job_status = @status::provisioner_job_status
+				ELSE
+					true
+			END
+		ELSE true
+	END
+	-- Filter by owner_id
+	AND CASE
+		WHEN @owner_id :: uuid != '00000000-0000-0000-0000-000000000000'::uuid THEN
+			workspaces.owner_id = @owner_id
+		ELSE true
+	END
+  	-- Filter by organization_id
+  	AND CASE
+		  WHEN @organization_id :: uuid != '00000000-0000-0000-0000-000000000000'::uuid THEN
+			  workspaces.organization_id = @organization_id
+		  ELSE true
+	END
+	-- Filter by build parameter
+   	-- @has_param will match any build that includes the parameter.
+	AND CASE WHEN array_length(@has_param :: text[], 1) > 0  THEN
+		EXISTS (
+			SELECT
+				1
+			FROM
+				workspace_build_parameters
+			WHERE
+				workspace_build_parameters.workspace_build_id = latest_build.id AND
+				-- ILIKE is case insensitive
+				workspace_build_parameters.name ILIKE ANY(@has_param)
+		)
+		ELSE true
+	END
+	-- @param_value will match param name an value.
+  	-- requires 2 arrays, @param_names and @param_values to be passed in.
+  	-- Array index must match between the 2 arrays for name=value
+  	AND CASE WHEN array_length(@param_names :: text[], 1) > 0  THEN
+		EXISTS (
+			SELECT
+				1
+			FROM
+				workspace_build_parameters
+			INNER JOIN
+				build_params
+			ON
+				LOWER(workspace_build_parameters.name) = build_params.name AND
+				LOWER(workspace_build_parameters.value) = build_params.value AND
+				workspace_build_parameters.workspace_build_id = latest_build.id
+		)
+		ELSE true
+	END
+
+	-- Filter by owner_name
+	AND CASE
+		WHEN @owner_username :: text != '' THEN
+			workspaces.owner_id = (SELECT id FROM users WHERE lower(users.username) = lower(@owner_username) AND deleted = false)
+		ELSE true
+	END
+	-- Filter by template_name
+	-- There can be more than 1 template with the same name across organizations.
+	-- Use the organization filter to restrict to 1 org if needed.
+	AND CASE
+		WHEN @template_name :: text != '' THEN
+			workspaces.template_id = ANY(SELECT id FROM templates WHERE lower(name) = lower(@template_name) AND deleted = false)
+		ELSE true
+	END
+	-- Filter by template_ids
+	AND CASE
+		WHEN array_length(@template_ids :: uuid[], 1) > 0 THEN
+			workspaces.template_id = ANY(@template_ids)
+		ELSE true
+	END
+  	-- Filter by workspace_ids
+  	AND CASE
+		  WHEN array_length(@workspace_ids :: uuid[], 1) > 0 THEN
+			  workspaces.id = ANY(@workspace_ids)
+		  ELSE true
+	END
+	-- Filter by name, matching on substring
+	AND CASE
+		WHEN @name :: text != '' THEN
+			workspaces.name ILIKE '%' || @name || '%'
+		ELSE true
+	END
+	-- Filter by agent status
+	-- has-agent: is only applicable for workspaces in "start" transition. Stopped and deleted workspaces don't have agents.
+	AND CASE
+		WHEN array_length(@has_agent_statuses :: text[], 1) > 0 THEN
+			(
+				SELECT COUNT(*)
+				FROM
+					workspace_resources
+				JOIN
+					workspace_agents
+				ON
+					workspace_agents.resource_id = workspace_resources.id
+				WHERE
+					workspace_resources.job_id = latest_build.provisioner_job_id AND
+					latest_build.transition = 'start'::workspace_transition AND
+					-- Filter out deleted sub agents.
+					workspace_agents.deleted = FALSE AND
+					(
+						CASE
+							WHEN workspace_agents.first_connected_at IS NULL THEN
+								CASE
+									WHEN workspace_agents.connection_timeout_seconds > 0 AND NOW() - workspace_agents.created_at > workspace_agents.connection_timeout_seconds * INTERVAL '1 second' THEN
+										'timeout'
+									ELSE
+										'connecting'
+								END
+							WHEN workspace_agents.disconnected_at > workspace_agents.last_connected_at THEN
+								'disconnected'
+							WHEN NOW() - workspace_agents.last_connected_at > INTERVAL '1 second' * @agent_inactive_disconnect_timeout_seconds :: bigint THEN
+								'disconnected'
+							WHEN workspace_agents.last_connected_at IS NOT NULL THEN
+								'connected'
+							ELSE
+								NULL
+						END
+					) = ANY(@has_agent_statuses :: text[])
+			) > 0
+		ELSE true
+	END
+	-- Filter by dormant workspaces.
+	AND CASE
+		WHEN @dormant :: boolean != 'false' THEN
+			dormant_at IS NOT NULL
+		ELSE true
+	END
+	-- Filter by last_used
+	AND CASE
+		  WHEN @last_used_before :: timestamp with time zone > '0001-01-01 00:00:00Z' THEN
+				  workspaces.last_used_at <= @last_used_before
+		  ELSE true
+	END
+	AND CASE
+		  WHEN @last_used_after :: timestamp with time zone > '0001-01-01 00:00:00Z' THEN
+				  workspaces.last_used_at >= @last_used_after
+		  ELSE true
+	END
+  	AND CASE
+		  WHEN sqlc.narg('using_active') :: boolean IS NOT NULL THEN
+			  (latest_build.template_version_id = template.active_version_id) = sqlc.narg('using_active') :: boolean
+		  ELSE true
+	END
+	-- Filter by has_ai_task, checks if this is a task workspace.
+	AND CASE
+		WHEN sqlc.narg('has_ai_task')::boolean IS NOT NULL
+		THEN sqlc.narg('has_ai_task')::boolean = EXISTS (
+			SELECT
+				1
+			FROM
+				tasks
+			WHERE
+				-- Consider all tasks, deleting a task does not turn the
+				-- workspace into a non-task workspace.
+				tasks.workspace_id = workspaces.id
+		)
+		ELSE true
+	END
+	-- Filter by has_external_agent in latest build
+	AND CASE
+		WHEN sqlc.narg('has_external_agent') :: boolean IS NOT NULL THEN
+			latest_build.has_external_agent = sqlc.narg('has_external_agent') :: boolean
+		ELSE true
+	END
+	-- Filter by shared status
+	AND CASE
+		WHEN sqlc.narg('shared') :: boolean IS NOT NULL THEN
+			(workspaces.user_acl != '{}'::jsonb OR workspaces.group_acl != '{}'::jsonb) = sqlc.narg('shared') :: boolean
+		ELSE true
+	END
+	-- Filter by shared_with_user_id
+	AND CASE
+		WHEN @shared_with_user_id :: uuid != '00000000-0000-0000-0000-000000000000'::uuid THEN
+			workspaces.user_acl ? (@shared_with_user_id :: uuid) :: text
+		ELSE true
+	END
+	-- Filter by shared_with_group_id
+	AND CASE
+		WHEN @shared_with_group_id :: uuid != '00000000-0000-0000-0000-000000000000'::uuid THEN
+			workspaces.group_acl ? (@shared_with_group_id :: uuid) :: text
+		ELSE true
+	END
+
+	-- Authorize Filter clause will be injected below in GetAuthorizedWorkspaces
+	-- @authorize_filter
+), filtered_workspaces_order AS (
+	SELECT
+		fw.*
+	FROM
+		filtered_workspaces fw
+	ORDER BY
+		-- To ensure that 'favorite' workspaces show up first in the list only for their owner.
+		CASE WHEN favorite AND owner_username = (SELECT users.username FROM users WHERE users.id = @requester_id) THEN 0 ELSE 1 END ASC,
+		(latest_build_completed_at IS NOT NULL AND
+			latest_build_canceled_at IS NULL AND
+			latest_build_error IS NULL AND
+			latest_build_transition = 'start'::workspace_transition) DESC,
+		LOWER(owner_username) ASC,
+		LOWER(name) ASC
+	LIMIT
+		CASE
+			WHEN @limit_ :: integer > 0 THEN
+				@limit_
+		END
+	OFFSET
+		@offset_
+), filtered_workspaces_order_with_summary AS (
+	SELECT
+		fwo.*
+	FROM
+		filtered_workspaces_order fwo
+	-- Return a technical summary row with total count of workspaces.
+	-- It is used to present the correct count if pagination goes beyond the offset.
+	UNION ALL
+	SELECT
+		'00000000-0000-0000-0000-000000000000'::uuid, -- id
+		'0001-01-01 00:00:00+00'::timestamptz, -- created_at
+		'0001-01-01 00:00:00+00'::timestamptz, -- updated_at
+		'00000000-0000-0000-0000-000000000000'::uuid, -- owner_id
+		'00000000-0000-0000-0000-000000000000'::uuid, -- organization_id
+		'00000000-0000-0000-0000-000000000000'::uuid, -- template_id
+		false, -- deleted
+		'**TECHNICAL_ROW**', -- name
+		'', -- autostart_schedule
+		0, -- ttl
+		'0001-01-01 00:00:00+00'::timestamptz, -- last_used_at
+		'0001-01-01 00:00:00+00'::timestamptz, -- dormant_at
+		'0001-01-01 00:00:00+00'::timestamptz, -- deleting_at
+		'never'::automatic_updates, -- automatic_updates
+		false, -- favorite
+		'0001-01-01 00:00:00+00'::timestamptz, -- next_start_at
+		'{}'::jsonb, -- group_acl
+		'{}'::jsonb, -- user_acl
+		'', -- owner_avatar_url
+		'', -- owner_username
+		'', -- owner_name
+		'', -- organization_name
+		'', -- organization_display_name
+		'', -- organization_icon
+		'', -- organization_description
+		'', -- template_name
+		'', -- template_display_name
+		'', -- template_icon
+		'', -- template_description
+		'00000000-0000-0000-0000-000000000000'::uuid, -- task_id
+		'{}'::jsonb, -- group_acl_display_info
+		'{}'::jsonb, -- user_acl_display_info
+		-- Extra columns added to `filtered_workspaces`
+		'00000000-0000-0000-0000-000000000000'::uuid, -- template_version_id
+		'', -- template_version_name
+		'0001-01-01 00:00:00+00'::timestamptz, -- latest_build_completed_at,
+		'0001-01-01 00:00:00+00'::timestamptz, -- latest_build_canceled_at,
+		'', -- latest_build_error
+		'start'::workspace_transition, -- latest_build_transition
+		'unknown'::provisioner_job_status, -- latest_build_status
+		false -- latest_build_has_external_agent
+	WHERE
+		@with_summary :: boolean = true
+), total_count AS (
+	SELECT
+		count(*) AS count
+    FROM
+		filtered_workspaces
+)
+SELECT
+	fwos.*,
+	tc.count
+FROM
+	filtered_workspaces_order_with_summary fwos
+CROSS JOIN
+	total_count tc;
+
+-- name: GetWorkspaceByOwnerIDAndName :one
+select *
+from workspaces_expanded as workspaces
+where owner_id = @owner_id and deleted = @deleted and LOWER(name) = LOWER(@name)
+order by created_at desc;
+
+-- name: GetWorkspaceUniqueOwnerCountByTemplateIDs :many
+select
+	templates.id as template_id,
+	COUNT(distinct workspaces.owner_id) as unique_owners_sum
+from
+	templates
+	left join workspaces on workspaces.template_id = templates.id
+	and workspaces.deleted = false
+where templates.id = any(@template_ids::uuid[])
+group by templates.id;
+
+-- name: GetTemplateRankingSignalsByOwnerID :many
+-- GetTemplateRankingSignalsByOwnerID returns raw template-ranking signals for
+-- one owner: in-window active and recently-deleted workspace counts, the last
+-- in-window usage, and distinct active developers per template. The affinity
+-- score is computed in Go (see listtemplates.go) so the ranking policy and
+-- its confidence thresholds live in one place.
+with
+	org_usage as (
+		-- Distinct developers with a non-deleted workspace; the prebuilds system
+		-- user is excluded so unclaimed prebuilds do not inflate popularity.
+		select
+			w.template_id, COUNT(distinct w.owner_id) as org_devs
+		from workspaces w
+		where
+			w.template_id = any(@template_ids::uuid[])
+			and not w.deleted
+			and w.owner_id != @prebuilds_user_id::uuid
+			and case
+				when @organization_id::uuid
+				!= '00000000-0000-0000-0000-000000000000'::uuid
+					then w.organization_id = @organization_id
+				else true
+			end
+		group by w.template_id
+	),
+	user_usage as (
+		-- The owner's workspaces used within the lookback window, split into
+		-- active and recently-deleted counts.
+		select
+			w.template_id,
+			COUNT(*) filter (where not w.deleted) as active_count,
+			COUNT(*) filter (where w.deleted) as deleted_recent_count,
+			MAX(w.last_used_at)::timestamptz as last_used_at
+		from workspaces w
+		where
+			w.owner_id = @owner_id
+			and w.template_id = any(@template_ids::uuid[])
+			and w.last_used_at > @lookback_cutoff::timestamptz
+			and case
+				when @organization_id::uuid
+				!= '00000000-0000-0000-0000-000000000000'::uuid
+					then w.organization_id = @organization_id
+				else true
+			end
+		group by w.template_id
+	)
+select
+	t.template_id::uuid as template_id,
+	COALESCE(u.active_count, 0)::bigint as active_count,
+	COALESCE(u.deleted_recent_count, 0)::bigint as deleted_recent_count,
+	u.last_used_at,
+	COALESCE(o.org_devs, 0)::bigint as org_devs
+from
+	unnest(@template_ids::uuid[]) as t(template_id)
+	left join user_usage u on u.template_id = t.template_id
+	left join org_usage o on o.template_id = t.template_id;
+
+-- name: InsertWorkspace :one
+INSERT INTO
+	workspaces (
+		id,
+		created_at,
+		updated_at,
+		owner_id,
+		organization_id,
+		template_id,
+		name,
+		autostart_schedule,
+		ttl,
+		last_used_at,
+		automatic_updates,
+		next_start_at
+	)
+VALUES
+	($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *;
+
+-- name: UpdateWorkspaceDeletedByID :exec
+UPDATE
+	workspaces
+SET
+	deleted = $2
+WHERE
+	id = $1;
+
+-- name: UpdateWorkspace :one
+UPDATE
+	workspaces
+SET
+	name = $2
+WHERE
+	id = $1
+	AND deleted = false
+RETURNING *;
+
+-- name: UpdateWorkspaceAutostart :exec
+UPDATE
+	workspaces
+SET
+	autostart_schedule = $2,
+	next_start_at = $3
+WHERE
+	id = $1
+	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
+  	-- are managed by the reconciliation loop, not the lifecycle executor which handles
+  	-- autostart_schedule and next_start_at
+  	AND owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID;
+
+-- name: UpdateWorkspaceNextStartAt :exec
+UPDATE
+	workspaces
+SET
+	next_start_at = $2
+WHERE
+	id = $1
+	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
+	-- are managed by the reconciliation loop, not the lifecycle executor which handles
+	-- next_start_at
+	AND owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID;
+
+-- name: BatchUpdateWorkspaceNextStartAt :exec
+UPDATE
+	workspaces
+SET
+	next_start_at = CASE
+		WHEN batch.next_start_at = '0001-01-01 00:00:00+00'::timestamptz THEN NULL
+		ELSE batch.next_start_at
+	END
+FROM (
+	SELECT
+		unnest(sqlc.arg(ids)::uuid[]) AS id,
+		unnest(sqlc.arg(next_start_ats)::timestamptz[]) AS next_start_at
+) AS batch
+WHERE
+	workspaces.id = batch.id;
+
+-- name: UpdateWorkspaceTTL :exec
+UPDATE
+	workspaces
+SET
+	ttl = $2
+WHERE
+	id = $1
+	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
+	-- are managed by the reconciliation loop, not the lifecycle executor which handles
+	-- ttl
+	AND owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID;
+
+-- name: UpdateWorkspacesTTLByTemplateID :exec
+UPDATE
+	workspaces
+SET
+	ttl = $2
+WHERE
+	template_id = $1
+	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
+	-- should not have their TTL updated, as they are handled by the prebuilds
+	-- reconciliation loop.
+	AND workspaces.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID;
+
+-- name: UpdateWorkspaceLastUsedAt :exec
+UPDATE
+	workspaces
+SET
+	last_used_at = $2
+WHERE
+	id = $1;
+
+-- name: BatchUpdateWorkspaceLastUsedAt :exec
+UPDATE
+	workspaces
+SET
+	last_used_at = @last_used_at
+WHERE
+	id = ANY(@ids :: uuid[])
+AND
+  -- Do not overwrite with older data
+  last_used_at < @last_used_at;
+
+-- name: GetDeploymentWorkspaceStats :one
+with
+	workspaces_with_jobs as (
+		select latest_build.*
+		from
+			workspaces
+			left join LATERAL (
+				select
+					workspace_builds.transition,
+					provisioner_jobs.id as provisioner_job_id,
+					provisioner_jobs.started_at,
+					provisioner_jobs.updated_at,
+					provisioner_jobs.canceled_at,
+					provisioner_jobs.completed_at,
+					provisioner_jobs.error
+				from
+					workspace_builds
+					left join provisioner_jobs on provisioner_jobs.id
+					= workspace_builds.job_id
+				where workspace_builds.workspace_id = workspaces.id
+				order by build_number desc
+				limit 1
+			) latest_build on true
+		where deleted = false
+	),
+	pending_workspaces as (
+		select COUNT(*) as count
+		from workspaces_with_jobs
+		where started_at is null
+	),
+	building_workspaces as (
+		select COUNT(*) as count
+		from workspaces_with_jobs
+		where
+			started_at is not null
+			and canceled_at is null
+			and completed_at is null
+			and updated_at - interval '30 seconds' < NOW()
+	),
+	running_workspaces as (
+		select COUNT(*) as count
+		from workspaces_with_jobs
+		where
+			completed_at is not null
+			and canceled_at is null
+			and error is null
+			and transition = 'start'::workspace_transition
+	),
+	failed_workspaces as (
+		select COUNT(*) as count
+		from workspaces_with_jobs
+		where
+			(canceled_at is not null and error is not null)
+			or (completed_at is not null and error is not null)
+	),
+	stopped_workspaces as (
+		select COUNT(*) as count
+		from workspaces_with_jobs
+		where
+			completed_at is not null
+			and canceled_at is null
+			and error is null
+			and transition = 'stop'::workspace_transition
+	)
+select
+	pending_workspaces.count as pending_workspaces,
+	building_workspaces.count as building_workspaces,
+	running_workspaces.count as running_workspaces,
+	failed_workspaces.count as failed_workspaces,
+	stopped_workspaces.count as stopped_workspaces
+from
+	pending_workspaces,
+	building_workspaces,
+	running_workspaces,
+	failed_workspaces,
+	stopped_workspaces;
+
+-- name: GetWorkspacesEligibleForLifecycleAction :many
+-- Returns workspaces the lifecycle executor must act on this tick. An
+-- "action" is a state transition (autostart/autostop/dormancy/delete), a
+-- dormancy mark (which has no build transition), or a one-time autostop
+-- reminder notification (which only stamps a marker, no transition).
+select
+	workspaces.id,
+	workspaces.name,
+	workspace_builds.template_version_id as build_template_version_id
+from
+	workspaces
+	left join workspace_builds on workspace_builds.workspace_id = workspaces.id
+	inner join provisioner_jobs on workspace_builds.job_id = provisioner_jobs.id
+	inner join templates on workspaces.template_id = templates.id
+	inner join users on workspaces.owner_id = users.id
+where
+	workspace_builds.build_number
+	= (
+		select MAX(build_number)
+		from workspace_builds
+		where workspace_builds.workspace_id = workspaces.id
+	)
+	and (
+
+		-- A workspace may be eligible for autostop if the following are true:
+		--   * The provisioner job has not failed.
+		--   * The workspace is not dormant.
+		--   * The workspace build was a start transition.
+		--   * The workspace's owner is suspended OR the workspace build deadline has passed.
+		(
+			provisioner_jobs.job_status != 'failed'::provisioner_job_status
+			and workspaces.dormant_at is null
+			and workspace_builds.transition = 'start'::workspace_transition
+			and (
+				users.status = 'suspended'::user_status
+				or (
+					workspace_builds.deadline != '0001-01-01 00:00:00+00'::timestamptz
+					and workspace_builds.deadline < @now::timestamptz
+				)
+			)
+		)
+		or
+
+		-- A workspace may be eligible for autostart if the following are true:
+		--   * The workspace's owner is active.
+		--   * The provisioner job did not fail.
+		--   * The workspace build was a stop transition.
+		--   * The workspace is not dormant
+		--   * The workspace has an autostart schedule.
+		--   * It is after the workspace's next start time.
+		(
+			users.status = 'active'::user_status
+			and provisioner_jobs.job_status != 'failed'::provisioner_job_status
+			and workspace_builds.transition = 'stop'::workspace_transition
+			and workspaces.dormant_at is null
+			and workspaces.autostart_schedule is not null
+			and (
+				-- next_start_at might be null in these two scenarios:
+				--   * A coder instance was updated and we haven't updated next_start_at yet.
+				--   * A database trigger made it null because of an update to a related column.
+				--
+				-- When this occurs, we return the workspace so the Coder server can
+				-- compute a valid next start at and update it.
+				workspaces.next_start_at
+				is null
+				or workspaces.next_start_at <= @now::timestamptz
+			)
+		)
+		or
+
+		-- A workspace may be eligible for dormant stop if the following are true:
+		--   * The workspace is not dormant.
+		--   * The template has set a time 'til dormant.
+		--   * The workspace has been unused for longer than the time 'til dormancy.
+		(
+			workspaces.dormant_at is null
+			and templates.time_til_dormant > 0
+			and (@now::timestamptz) - workspaces.last_used_at
+			> (interval '1 millisecond' * (templates.time_til_dormant / 1000000))
+		)
+		or
+
+		-- A workspace may be eligible for deletion if the following are true:
+		--   * The workspace is dormant.
+		--   * The workspace is scheduled to be deleted.
+		--   * If there was a prior attempt to delete the workspace that failed:
+		--      * This attempt was at least 24 hours ago.
+		(
+			workspaces.dormant_at is not null
+			and workspaces.deleting_at is not null
+			and workspaces.deleting_at < @now::timestamptz
+			and templates.time_til_dormant_autodelete > 0
+			and case
+				when (
+					workspace_builds.transition = 'delete'::workspace_transition
+					and provisioner_jobs.job_status = 'failed'::provisioner_job_status
+				)
+					then (
+						(
+							provisioner_jobs.canceled_at is not null
+							or provisioner_jobs.completed_at is not null
+						)
+						and (
+							(@now::timestamptz)
+							- (
+								case
+									when provisioner_jobs.canceled_at is not null
+										then provisioner_jobs.canceled_at
+									else provisioner_jobs.completed_at
+								end
+							)
+							> interval '24 hours'
+						)
+					)
+				else true
+			end
+		)
+		or
+
+		-- A workspace may be eligible for failed cleanup if the following are true:
+		--   * The template has a failure ttl set.
+		--   * The workspace build was a start or stop transition. A failed start
+		--     is cleaned up by stopping it; a failed stop is retried by issuing
+		--     another stop.
+		--   * The provisioner job failed.
+		--   * The provisioner job had completed.
+		--   * The provisioner job has been completed for longer than the failure ttl.
+		(
+			templates.failure_ttl > 0
+			and (
+				workspace_builds.transition = 'start'::workspace_transition
+				or workspace_builds.transition = 'stop'::workspace_transition
+			)
+			and provisioner_jobs.job_status = 'failed'::provisioner_job_status
+			and provisioner_jobs.completed_at is not null
+			and (@now::timestamptz) - provisioner_jobs.completed_at
+			> (interval '1 millisecond' * (templates.failure_ttl / 1000000))
+		)
+		or
+
+		-- A workspace may be eligible for an autostop reminder if the following are true:
+		--   * The latest build is a successfully provisioned start build.
+		--   * The workspace is not dormant and its owner is not suspended.
+		--   * The build has a deadline in the future (we never remind about a stop already due).
+		--   * The template opts in (time_til_autostop_notify > 0) and now is within the lead window.
+		--   * The owner is not active in a way that can keep the workspace
+		--     alive: either they have not used it within the active threshold
+		--     (15 minutes), or activity bumps are disabled, or the max_deadline
+		--     ceiling pins the stop inside the lead window so a bump cannot save it.
+		--   * A reminder has not yet been sent for THIS deadline.
+		--
+		-- NOTE: time_til_autostop_notify has no upper bound. If it exceeds a
+		-- workspace's remaining lifetime, the notify window already includes "now"
+		-- at build creation. This arm intentionally still only matches builds whose
+		-- deadline is in the future (deadline > now) and whose marker has not yet
+		-- been stamped (notified_autostop_deadline != deadline), so at most ONE
+		-- reminder is ever produced for a given deadline regardless of how large the
+		-- field is. The field is stored in nanoseconds, so convert to an interval
+		-- the same way the dormancy arm does: nanoseconds / 1000000 yields
+		-- milliseconds.
+		(
+			provisioner_jobs.job_status = 'succeeded'::provisioner_job_status
+			and workspace_builds.transition = 'start'::workspace_transition
+			and workspaces.dormant_at is null
+			and users.status != 'suspended'::user_status
+			and workspace_builds.deadline != '0001-01-01 00:00:00+00'::timestamptz
+			and workspace_builds.deadline > @now::timestamptz
+			and templates.time_til_autostop_notify > 0
+			and workspace_builds.deadline
+			<= (@now::timestamptz)
+			+ (
+				interval '1 millisecond'
+				* (templates.time_til_autostop_notify / 1000000)
+			)
+			and workspace_builds.notified_autostop_deadline
+			!= workspace_builds.deadline
+			and
+			-- Keep the reminder unless the user is active AND an activity bump can
+			-- still move the deadline out of the lead window. This block is the
+			-- exact complement of the skip-guard in shouldRemindAutostop (Go)
+			-- (userActive AND bumpEnabled AND NOT maxDeadlineTraps), so the
+			-- pre-filter and the re-check agree on the boundary.
+			(
+				-- Not used within the active threshold (15 minutes). This is the exact
+				-- complement of the < autostopReminderActiveThreshold guard in
+				-- shouldRemindAutostop (Go); keep the two in sync.
+				(
+					@now::timestamptz
+				)
+				- workspaces.last_used_at
+				>= interval '15 minutes'
+				-- ...or activity bumps are disabled (deadline can't move)...
+				or templates.activity_bump <= 0
+				-- ...or the hard max_deadline ceiling is within the lead window, so
+				-- the workspace will stop regardless of activity.
+				or (
+					workspace_builds.max_deadline != '0001-01-01 00:00:00+00'::timestamptz
+					and workspace_builds.max_deadline
+					<= (@now::timestamptz)
+					+ (
+						interval '1 millisecond'
+						* (templates.time_til_autostop_notify / 1000000)
+					)
+				)
+			)
+		)
+	)
+	and workspaces.deleted = 'false'
+	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
+	-- should not be considered by the lifecycle executor, as they are handled by the
+	-- prebuilds reconciliation loop.
+	and workspaces.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid;
+
+-- name: UpdateWorkspaceDormantDeletingAt :one
+UPDATE
+    workspaces
+SET
+    dormant_at = $2,
+    -- When a workspace is active we want to update the last_used_at to avoid the workspace going
+    -- immediately dormant. If we're transition the workspace to dormant then we leave it alone.
+    last_used_at = CASE WHEN $2::timestamptz IS NULL THEN
+        now() at time zone 'utc'
+    ELSE
+        last_used_at
+    END,
+    -- If dormant_at is null (meaning active) or the template-defined time_til_dormant_autodelete is 0 we should set
+    -- deleting_at to NULL else set it to the dormant_at + time_til_dormant_autodelete duration.
+    deleting_at = CASE WHEN $2::timestamptz IS NULL OR templates.time_til_dormant_autodelete = 0 THEN
+        NULL
+    ELSE
+        $2::timestamptz + (INTERVAL '1 millisecond' * (templates.time_til_dormant_autodelete / 1000000))
+    END
+FROM
+    templates
+WHERE
+    workspaces.id = $1
+    AND templates.id = workspaces.template_id
+	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
+	-- are managed by the reconciliation loop, not the lifecycle executor which handles
+	-- dormant_at and deleting_at
+	AND owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID
+RETURNING
+    workspaces.*;
+
+-- name: UpdateWorkspacesDormantDeletingAtByTemplateID :many
+UPDATE workspaces
+SET
+    deleting_at = CASE
+        WHEN @time_til_dormant_autodelete_ms::bigint = 0 THEN NULL
+        WHEN @dormant_at::timestamptz > '0001-01-01 00:00:00+00'::timestamptz THEN (@dormant_at::timestamptz) + interval '1 milliseconds' * @time_til_dormant_autodelete_ms::bigint
+        ELSE dormant_at + interval '1 milliseconds' * @time_til_dormant_autodelete_ms::bigint
+    END,
+    dormant_at = CASE WHEN @dormant_at::timestamptz > '0001-01-01 00:00:00+00'::timestamptz THEN @dormant_at::timestamptz ELSE dormant_at END
+WHERE
+    template_id = @template_id
+	AND dormant_at IS NOT NULL
+	AND deleted = false
+	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
+	-- should not have their dormant or deleting at set, as these are handled by the
+    -- prebuilds reconciliation loop.
+	AND workspaces.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID
+RETURNING *;
+
+-- name: UpdateTemplateWorkspacesLastUsedAt :exec
+UPDATE workspaces
+SET
+	last_used_at = @last_used_at::timestamptz
+WHERE
+	template_id = @template_id;
+
+-- name: UpdateWorkspaceAutomaticUpdates :exec
+UPDATE
+	workspaces
+SET
+	automatic_updates = $2
+WHERE
+		id = $1;
+
+-- name: FavoriteWorkspace :exec
+UPDATE workspaces SET favorite = true WHERE id = @id;
+
+-- name: UnfavoriteWorkspace :exec
+UPDATE workspaces SET favorite = false WHERE id = @id;
+
+-- name: GetWorkspacesAndAgentsByOwnerID :many
+select
+	workspaces.id as id,
+	workspaces.name as name,
+	job_status,
+	transition,
+	(
+		array_agg(
+			row(agent_id, agent_name)::agent_id_name_pair
+		) filter (where agent_id is not null)
+	)::agent_id_name_pair[] as agents
+from
+	workspaces
+	left join LATERAL (
+		select workspace_id, job_id, transition, job_status
+		from
+			workspace_builds
+			join provisioner_jobs on provisioner_jobs.id = workspace_builds.job_id
+		where workspace_builds.workspace_id = workspaces.id
+		order by build_number desc
+		limit 1
+	) latest_build on true
+	left join LATERAL (
+		select
+			workspace_agents.id as agent_id,
+			workspace_agents.name as agent_name,
+			job_id
+		from
+			workspace_resources
+			join workspace_agents on (
+				workspace_agents.resource_id = workspace_resources.id
+				-- Filter out deleted sub agents.
+				and workspace_agents.deleted = false
+			)
+		where job_id = latest_build.job_id
+	) resources on true
+where
+	-- Filter by owner_id
+	workspaces.owner_id
+	= @owner_id::uuid
+	and workspaces.deleted = false
+-- Authorize Filter clause will be injected below in GetAuthorizedWorkspacesAndAgentsByOwnerID
+-- @authorize_filter
+group by
+	workspaces.id,
+	workspaces.name,
+	latest_build.job_status,
+	latest_build.job_id,
+	latest_build.transition;
+
+-- name: GetWorkspacesByTemplateID :many
+select * from workspaces where template_id = $1 and deleted = false;
+
+-- name: GetWorkspaceACLByID :one
+select group_acl as groups, user_acl as users from workspaces where id = @id;
+
+-- name: UpdateWorkspaceACLByID :exec
+UPDATE
+	workspaces
+SET
+	group_acl = @group_acl,
+	user_acl = @user_acl
+WHERE
+	id = @id;
+
+-- name: DeleteWorkspaceACLByID :exec
+UPDATE
+	workspaces
+SET
+	group_acl = '{}'::json,
+	user_acl = '{}'::json
+WHERE
+	id = @id;
+
+-- name: DeleteWorkspaceACLsByOrganization :exec
+UPDATE
+	workspaces
+SET
+	group_acl = '{}'::jsonb,
+	user_acl = '{}'::jsonb
+WHERE
+	organization_id = @organization_id
+	AND (
+		NOT @exclude_service_accounts::boolean
+		OR owner_id NOT IN (
+			SELECT id FROM users WHERE is_service_account = true
+		)
+	);
+
+-- name: GetRegularWorkspaceCreateMetrics :many
+-- Count regular workspaces: only those whose first successful 'start' build
+-- was not initiated by the prebuild system user.
+with
+	first_success_build as (
+		-- Earliest successful 'start' build per workspace
+		select distinct on (wb.workspace_id)
+			wb.workspace_id, wb.template_version_preset_id, wb.initiator_id
+		from workspace_builds wb join provisioner_jobs pj on pj.id = wb.job_id
+		where
+			wb.transition = 'start'::workspace_transition
+			and pj.job_status = 'succeeded'::provisioner_job_status
+		order by wb.workspace_id, wb.build_number, wb.id
+	)
+select
+	t.name as template_name,
+	COALESCE(tvp.name, '') as preset_name,
+	o.name as organization_name,
+	COUNT(*) as created_count
+from
+	first_success_build fsb
+	join workspaces w on w.id = fsb.workspace_id
+	join templates t on t.id = w.template_id
+	left join template_version_presets tvp on tvp.id
+	= fsb.template_version_preset_id
+	join organizations o on o.id = w.organization_id
+where
+	not t.deleted
+	-- Exclude workspaces whose first successful start was the prebuilds system user
+	and fsb.initiator_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid
+group by t.name, COALESCE(tvp.name, ''), o.name
+order by t.name, preset_name, o.name;
+
+-- name: GetWorkspacesForWorkspaceMetrics :many
+select
+	u.username as owner_username,
+	t.name as template_name,
+	tv.name as template_version_name,
+	pj.job_status as latest_build_status,
+	wb.transition as latest_build_transition
+from
+	workspaces w
+	join users u on w.owner_id = u.id
+	join templates t on w.template_id = t.id
+	join workspace_builds wb on w.id = wb.workspace_id
+	join provisioner_jobs pj on wb.job_id = pj.id
+	left join template_versions tv on wb.template_version_id = tv.id
+where
+	w.deleted = false
+	and wb.build_number
+	= (
+		select MAX(wb2.build_number)
+		from workspace_builds wb2
+		where wb2.workspace_id = w.id
+	);
