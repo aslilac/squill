@@ -2,7 +2,9 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-create unique index idx_provisioner_daemons_org_name_owner_key on provisioner_daemons using btree(
+create unique index idx_provisioner_daemons_org_name_owner_key
+on provisioner_daemons
+using btree(
 	organization_id,
 	name,
 	lower(COALESCE((tags ->> 'owner'::text), ''::text))

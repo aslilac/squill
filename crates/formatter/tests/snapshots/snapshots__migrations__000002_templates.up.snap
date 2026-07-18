@@ -13,7 +13,10 @@ create table files (
 	primary key (hash)
 );
 
-create type provisioner_type as enum ('echo', 'terraform');
+create type provisioner_type as enum (
+	'echo',
+	'terraform'
+);
 
 -- Template defines infrastructure that your software template
 -- requires for development.
@@ -37,9 +40,9 @@ create table templates (
 
 -- Enforces no active templates have the same name.
 create unique index on templates (organization_id, name) where deleted = false;
-create unique index idx_templates_name_lower on templates using btree(
-	lower(name)
-);
+create unique index idx_templates_name_lower
+on templates
+using btree(lower(name));
 
 -- Template Versions store historical template data. When a Template Version is imported,
 -- an "import" job is queued to parse parameters. A Template Version

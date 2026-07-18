@@ -2,7 +2,10 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-create type chat_client_type as enum ('ui', 'api');
+create type chat_client_type as enum (
+	'ui',
+	'api'
+);
 
 alter table chats
 	add column client_type chat_client_type not null default 'api'::chat_client_type;

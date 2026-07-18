@@ -24,8 +24,7 @@ set
 	end;
 
 -- Enforce unique linked_id constraint on non-empty linked_id
-create unique index user_links_linked_id_login_type_idx on user_links using btree(
-	linked_id,
-	login_type
-)
+create unique index user_links_linked_id_login_type_idx
+on user_links
+using btree(linked_id, login_type)
 where (linked_id != '');

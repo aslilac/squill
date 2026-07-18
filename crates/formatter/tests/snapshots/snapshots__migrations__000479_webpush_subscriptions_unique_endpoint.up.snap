@@ -22,7 +22,5 @@ where
 	and a.endpoint = b.endpoint
 	and (a.created_at, a.id) < (b.created_at, b.id);
 
-create unique index webpush_subscriptions_user_id_endpoint_idx on webpush_subscriptions (
-	user_id,
-	endpoint
-);
+create unique index webpush_subscriptions_user_id_endpoint_idx
+on webpush_subscriptions (user_id, endpoint);

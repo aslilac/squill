@@ -32,7 +32,8 @@ comment on column workspace_app_audit_sessions.status_code is 'The HTTP status p
 comment on column workspace_app_audit_sessions.started_at is 'The time the user started the session.';
 comment on column workspace_app_audit_sessions.updated_at is 'The time the session was last updated.';
 
-create unique index workspace_app_audit_sessions_unique_index on workspace_app_audit_sessions (
+create unique index workspace_app_audit_sessions_unique_index
+on workspace_app_audit_sessions (
 	agent_id,
 	app_id,
 	user_id,

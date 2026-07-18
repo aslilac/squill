@@ -33,6 +33,5 @@ comment on column workspace_app_stats.session_ended_at is 'The time the session 
 comment on column workspace_app_stats.requests is 'The number of requests made during the session, a number larger than 1 indicates that multiple sessions were rolled up into one';
 
 -- Create index on workspace_id for joining/filtering by templates.
-create index workspace_app_stats_workspace_id_idx on workspace_app_stats (
-	workspace_id
-);
+create index workspace_app_stats_workspace_id_idx
+on workspace_app_stats (workspace_id);

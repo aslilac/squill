@@ -12,7 +12,10 @@ drop function delete_deleted_user_api_keys;
 
 -- When we soft-delete a user, we also want to delete their API key.
 -- The previous function deleted all api keys. This extends that with user_links.
-create function delete_deleted_user_resources() returns trigger language plpgsql as $$
+create function delete_deleted_user_resources()
+returns trigger
+language plpgsql
+as $$
 	declare
 	begin
 		if (NEW.deleted) then
@@ -32,12 +35,17 @@ create function delete_deleted_user_resources() returns trigger language plpgsql
 $$;
 
 -- Update it to the new trigger
-create trigger trigger_update_users after insert or update on users for each row when (
-	NEW.deleted = true
-) execute procedure delete_deleted_user_resources();
+create trigger trigger_update_users
+after insert or update on users
+for each row
+when (NEW.deleted = true)
+execute procedure delete_deleted_user_resources();
 
 -- Prevent adding new user_links for soft-deleted users
-create function insert_user_links_fail_if_user_deleted() returns trigger language plpgsql as $$
+create function insert_user_links_fail_if_user_deleted()
+returns trigger
+language plpgsql
+as $$
 	declare
 	begin
 		if (NEW.user_id is not null) then
@@ -49,4 +57,7 @@ create function insert_user_links_fail_if_user_deleted() returns trigger languag
 	end;
 $$;
 
-create trigger trigger_upsert_user_links before insert or update on user_links for each row execute procedure insert_user_links_fail_if_user_deleted();
+create trigger trigger_upsert_user_links
+before insert or update on user_links
+for each row
+execute procedure insert_user_links_fail_if_user_deleted();

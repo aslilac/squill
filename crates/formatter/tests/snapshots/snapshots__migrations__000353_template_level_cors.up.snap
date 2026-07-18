@@ -2,7 +2,10 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-create type cors_behavior as enum ('simple', 'passthru');
+create type cors_behavior as enum (
+	'simple',
+	'passthru'
+);
 
 alter table templates
 	add column cors_behavior cors_behavior not null default 'simple'::cors_behavior;

@@ -2,9 +2,11 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-create function chat_message_search_text (
-	content jsonb
-) returns text language sql immutable parallel safe as $$
+create function chat_message_search_text (content jsonb)
+returns text
+language sql
+immutable parallel safe
+as $$
 	select
 		case
 			when jsonb_typeof(content) = 'array'
@@ -24,7 +26,9 @@ alter table chat_messages add column search_tsv tsvector;
 
 comment on column chat_messages.search_tsv is 'Used for full text search. NULL initially, populated async via background job.';
 
-create index idx_chat_messages_search_tsv on chat_messages using GIN(search_tsv)
+create index idx_chat_messages_search_tsv
+on chat_messages
+using GIN(search_tsv)
 where
 	(
 		(search_tsv is not null)
@@ -43,9 +47,9 @@ where
 
 comment on index idx_chat_messages_search_tsv is 'Partial index over chat_messages used for full text search. Only defined over ''searchable'' rows of chat_messages.';
 
-create index idx_chat_messages_search_tsv_pending on chat_messages using btree (
-	id desc
-)
+create index idx_chat_messages_search_tsv_pending
+on chat_messages
+using btree (id desc)
 where
 	(
 		(search_tsv is null)
@@ -64,19 +68,21 @@ where
 
 comment on index idx_chat_messages_search_tsv is 'Partial index over chat_messages used for populating search_tsv in the background. Only defined over ''searchable'' rows of chat_messages where search_tsv is NULL.';
 
-create index idx_chats_title_fts on chats using GIN(
-	to_tsvector('simple', title)
-);
+create index idx_chats_title_fts
+on chats
+using GIN(to_tsvector('simple', title));
 
 comment on index idx_chats_title_fts is 'Used for full text search. Defined over all rows of the chats table.';
 
-create index idx_chat_diff_statuses_pr_title_fts on chat_diff_statuses using GIN(
-	to_tsvector('simple', pull_request_title)
-);
+create index idx_chat_diff_statuses_pr_title_fts
+on chat_diff_statuses
+using GIN(to_tsvector('simple', pull_request_title));
 
 comment on index idx_chats_title_fts is 'Used for full text search. Defined over all rows of the chats table.';
 
-create or replace function set_chat_message_revision_before() returns trigger as $$
+create or replace function set_chat_message_revision_before()
+returns trigger
+as $$
 	declare
 		chat_snapshot_version bigint;
 		cmp chat_messages;
@@ -107,11 +113,14 @@ create or replace function set_chat_message_revision_before() returns trigger as
 		new.revision = chat_snapshot_version;
 		return NEW;
 	end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
 comment on function set_chat_message_revision_before is 'Component of chatd. Updates chat_snapshot_version when any fields of chat_messages change. Excludes changes to search_tsv as it is not relevant to chatd''s processing loop.';
 
-create or replace function update_chat_history_after_message_update() returns trigger as $$
+create or replace function update_chat_history_after_message_update()
+returns trigger
+as $$
 	begin
 		update chats c
 		set history_version = c.snapshot_version, generation_attempt = 0
@@ -133,6 +142,7 @@ create or replace function update_chat_history_after_message_update() returns tr
 			);
 		return null;
 	end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
 comment on function update_chat_history_after_message_update is 'Component of chatd. Updates history_version and generation_attempt on chats when chat_messages is updated. Excludes changes to search_tsv.';

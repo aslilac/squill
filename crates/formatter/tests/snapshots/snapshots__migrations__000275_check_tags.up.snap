@@ -9,7 +9,9 @@ comment on domain tagset is 'A set of tags that match provisioner daemons to pro
 create or replace function provisioner_tagset_contains (
 	provisioner_tags tagset,
 	job_tags tagset
-) returns boolean as $$
+)
+returns boolean
+as $$
 	begin
 		return case
 			-- Special case for untagged provisioners, where only an exact match should count
@@ -19,7 +21,8 @@ create or replace function provisioner_tagset_contains (
 			else job_tags::jsonb <@ provisioner_tags::jsonb
 		end;
 	end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
 comment on function provisioner_tagset_contains (
 	tagset,

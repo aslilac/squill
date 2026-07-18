@@ -30,14 +30,10 @@ create table chat_debug_runs (
 	finished_at timestamptz
 );
 
-create unique index idx_chat_debug_runs_id_chat on chat_debug_runs (
-	id,
-	chat_id
-);
-create index idx_chat_debug_runs_chat_started on chat_debug_runs (
-	chat_id,
-	started_at desc
-);
+create unique index idx_chat_debug_runs_id_chat
+on chat_debug_runs (id, chat_id);
+create index idx_chat_debug_runs_chat_started
+on chat_debug_runs (chat_id, started_at desc);
 
 create table chat_debug_steps (
 	id uuid primary key default gen_random_uuid(),
@@ -63,23 +59,19 @@ create table chat_debug_steps (
 	) references chat_debug_runs (id, chat_id) on delete cascade
 );
 
-create unique index idx_chat_debug_steps_run_step on chat_debug_steps (
-	run_id,
-	step_number
-);
-create index idx_chat_debug_steps_chat_tip on chat_debug_steps (
-	chat_id,
-	history_tip_message_id
-);
+create unique index idx_chat_debug_steps_run_step
+on chat_debug_steps (run_id, step_number);
+create index idx_chat_debug_steps_chat_tip
+on chat_debug_steps (chat_id, history_tip_message_id);
 -- Supports DeleteChatDebugDataAfterMessageID assistant_message_id branch.
-create index idx_chat_debug_steps_chat_assistant_msg on chat_debug_steps (
-	chat_id,
-	assistant_message_id
-)
+create index idx_chat_debug_steps_chat_assistant_msg
+on chat_debug_steps (chat_id, assistant_message_id)
 where assistant_message_id is not null;
 
 -- Supports FinalizeStaleChatDebugRows worker query.
-create index idx_chat_debug_runs_stale on chat_debug_runs (updated_at)
+create index idx_chat_debug_runs_stale
+on chat_debug_runs (updated_at)
 where finished_at is null;
-create index idx_chat_debug_steps_stale on chat_debug_steps (updated_at)
+create index idx_chat_debug_steps_stale
+on chat_debug_steps (updated_at)
 where finished_at is null;

@@ -39,15 +39,18 @@ create table tailnet_client_subscriptions (
 );
 
 -- Create indexes.
-create index idx_tailnet_agents_coordinator on tailnet_agents using btree(
-	coordinator_id
-);
-create index idx_tailnet_clients_coordinator on tailnet_clients using btree(
-	coordinator_id
-);
+create index idx_tailnet_agents_coordinator
+on tailnet_agents
+using btree(coordinator_id);
+create index idx_tailnet_clients_coordinator
+on tailnet_clients
+using btree(coordinator_id);
 
 -- Create trigger functions.
-create function tailnet_notify_agent_change() returns trigger language plpgsql as $$
+create function tailnet_notify_agent_change()
+returns trigger
+language plpgsql
+as $$
 	begin
 		if (OLD is not null) then
 			perform pg_notify('tailnet_agent_update', OLD.id::text);
@@ -60,7 +63,10 @@ create function tailnet_notify_agent_change() returns trigger language plpgsql a
 	end;
 $$;
 
-create function tailnet_notify_client_change() returns trigger language plpgsql as $$
+create function tailnet_notify_client_change()
+returns trigger
+language plpgsql
+as $$
 	declare
 		var_client_id uuid;
 		var_coordinator_id uuid;
@@ -100,7 +106,10 @@ create function tailnet_notify_client_change() returns trigger language plpgsql 
 	end;
 $$;
 
-create function tailnet_notify_client_subscription_change() returns trigger language plpgsql as $$
+create function tailnet_notify_client_subscription_change()
+returns trigger
+language plpgsql
+as $$
 	begin
 		if (NEW is not null) then
 			perform pg_notify(
@@ -119,8 +128,17 @@ create function tailnet_notify_client_subscription_change() returns trigger lang
 $$;
 
 -- Create triggers.
-create trigger tailnet_notify_agent_change after insert or delete or update on tailnet_agents for each row execute function tailnet_notify_agent_change();
+create trigger tailnet_notify_agent_change
+after insert or delete or update on tailnet_agents
+for each row
+execute function tailnet_notify_agent_change();
 
-create trigger tailnet_notify_client_change after insert or delete or update on tailnet_clients for each row execute function tailnet_notify_client_change();
+create trigger tailnet_notify_client_change
+after insert or delete or update on tailnet_clients
+for each row
+execute function tailnet_notify_client_change();
 
-create trigger tailnet_notify_client_subscription_change after insert or delete or update on tailnet_client_subscriptions for each row execute function tailnet_notify_client_subscription_change();
+create trigger tailnet_notify_client_subscription_change
+after insert or delete or update on tailnet_client_subscriptions
+for each row
+execute function tailnet_notify_client_subscription_change();

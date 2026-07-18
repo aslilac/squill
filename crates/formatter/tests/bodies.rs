@@ -18,9 +18,10 @@ fn format(source: &str) -> String {
 #[test]
 fn language_sql_body_formats_and_anchors() {
     let out = format("CREATE FUNCTION one() RETURNS int LANGUAGE sql AS $$SELECT   1$$;");
+    // Multi-line bodies break the function header clause-per-line.
     assert_eq!(
         out,
-        "create function one() returns int language sql as $$\n\tselect 1\n$$;\n"
+        "create function one()\nreturns int\nlanguage sql\nas $$\n\tselect 1\n$$;\n"
     );
 }
 
@@ -29,7 +30,7 @@ fn language_before_as_also_detected() {
     let out = format("CREATE FUNCTION two() RETURNS int AS $$SELECT   2$$ LANGUAGE sql;");
     assert_eq!(
         out,
-        "create function two() returns int as $$\n\tselect 2\n$$ language sql;\n"
+        "create function two()\nreturns int\nas $$\n\tselect 2\n$$\nlanguage sql;\n"
     );
 }
 
@@ -49,7 +50,7 @@ fn plpgsql_bodies_format() {
     let out = format(source);
     assert_eq!(
         out,
-        "create function f() returns int language plpgsql as $$\n\
+        "create function f()\nreturns int\nlanguage plpgsql\nas $$\n\
          \tbegin\n\
          \t\treturn 1;\n\
          \tend;\n\
@@ -83,7 +84,7 @@ fn plpgsql_control_flow_layout() {
     let out = format(source);
     assert_eq!(
         out,
-        "create function guard() returns trigger language plpgsql as $fn$\n\
+        "create function guard()\nreturns trigger\nlanguage plpgsql\nas $fn$\n\
          \tdeclare\n\
          \t\tn int := 0;\n\
          \tbegin\n\
@@ -145,7 +146,7 @@ fn multi_statement_sql_body() {
     );
     assert_eq!(
         out,
-        "create function f() returns void language sql as $$\n\
+        "create function f()\nreturns void\nlanguage sql\nas $$\n\
          \tinsert into audit (kind) values ('x');\n\
          \tdelete from audit where created_at < now() - interval '90 days';\n\
          $$;\n"

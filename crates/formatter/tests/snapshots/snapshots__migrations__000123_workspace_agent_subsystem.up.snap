@@ -2,6 +2,10 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-create type workspace_agent_subsystem as enum ('envbuilder', 'envbox', 'none');
+create type workspace_agent_subsystem as enum (
+	'envbuilder',
+	'envbox',
+	'none'
+);
 alter table workspace_agents
 	add column subsystem workspace_agent_subsystem not null default 'none';

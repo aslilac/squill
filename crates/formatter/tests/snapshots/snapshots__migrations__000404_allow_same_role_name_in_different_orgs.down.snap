@@ -7,6 +7,6 @@ drop index if exists idx_custom_roles_name_lower_organization_id;
 
 alter table custom_roles drop constraint if exists organization_id_not_zero;
 
-create unique index idx_custom_roles_name_lower on custom_roles using btree(
-	LOWER(name)
-);
+create unique index idx_custom_roles_name_lower
+on custom_roles
+using btree(LOWER(name));

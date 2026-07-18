@@ -81,9 +81,8 @@ create table workspace_build_orchestrations (
 
 -- The orchestrator scans eligible pending rows oldest first and skips
 -- terminal rows and retry rows whose delay has not elapsed.
-create index idx_workspace_build_orchestrations_pending on workspace_build_orchestrations (
-	created_at
-)
+create index idx_workspace_build_orchestrations_pending
+on workspace_build_orchestrations (created_at)
 where status = 'pending';
 
 comment on table workspace_build_orchestrations is 'Tracks durable follow-up workspace build operations, such as server-side restart, where one child build is created after a parent build completes successfully.';

@@ -21,7 +21,5 @@ comment on column ai_user_daily_spend.day is 'UTC calendar day the spend was inc
 comment on column ai_user_daily_spend.spend_micros is 'Accumulated spend in micro-units (1 unit = 1,000,000).';
 
 -- For queries filtering by effective_group_id alone.
-create index idx_ai_user_daily_spend_effective_group_id_day on ai_user_daily_spend (
-	effective_group_id,
-	day
-);
+create index idx_ai_user_daily_spend_effective_group_id_day
+on ai_user_daily_spend (effective_group_id, day);

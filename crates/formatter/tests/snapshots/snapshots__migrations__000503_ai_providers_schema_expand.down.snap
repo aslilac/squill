@@ -6,7 +6,10 @@ drop index if exists idx_chat_model_configs_ai_provider_id;
 
 alter table chat_model_configs drop column if exists ai_provider_id;
 
-create or replace function delete_deleted_user_resources() returns trigger language plpgsql as $$
+create or replace function delete_deleted_user_resources()
+returns trigger
+language plpgsql
+as $$
 	declare
 	begin
 		if (NEW.deleted) then

@@ -9,7 +9,10 @@ drop function IF exists insert_user_skill_fail_if_user_deleted;
 
 -- Restore the previous body of delete_deleted_user_resources() from
 -- migration 000492 (without the user_skills cleanup).
-create or replace function delete_deleted_user_resources() returns trigger language plpgsql as $$
+create or replace function delete_deleted_user_resources()
+returns trigger
+language plpgsql
+as $$
 	declare
 	begin
 		if (NEW.deleted) then

@@ -13,9 +13,8 @@ create table if not exists aibridge_interceptions (
 comment on table aibridge_interceptions is 'Audit log of requests intercepted by AI Bridge';
 comment on column aibridge_interceptions.initiator_id is 'Relates to a users record, but FK is elided for performance.';
 
-create index idx_aibridge_interceptions_initiator_id on aibridge_interceptions (
-	initiator_id
-);
+create index idx_aibridge_interceptions_initiator_id
+on aibridge_interceptions (initiator_id);
 
 create table if not exists aibridge_token_usages (
 	id uuid primary key,
@@ -30,13 +29,11 @@ create table if not exists aibridge_token_usages (
 comment on table aibridge_token_usages is 'Audit log of tokens used by intercepted requests in AI Bridge';
 comment on column aibridge_token_usages.provider_response_id is 'The ID for the response in which the tokens were used, produced by the provider.';
 
-create index idx_aibridge_token_usages_interception_id on aibridge_token_usages (
-	interception_id
-);
+create index idx_aibridge_token_usages_interception_id
+on aibridge_token_usages (interception_id);
 
-create index idx_aibridge_token_usages_provider_response_id on aibridge_token_usages (
-	provider_response_id
-);
+create index idx_aibridge_token_usages_provider_response_id
+on aibridge_token_usages (provider_response_id);
 
 create table if not exists aibridge_user_prompts (
 	id uuid primary key,
@@ -50,13 +47,11 @@ create table if not exists aibridge_user_prompts (
 comment on table aibridge_user_prompts is 'Audit log of prompts used by intercepted requests in AI Bridge';
 comment on column aibridge_user_prompts.provider_response_id is 'The ID for the response to the given prompt, produced by the provider.';
 
-create index idx_aibridge_user_prompts_interception_id on aibridge_user_prompts (
-	interception_id
-);
+create index idx_aibridge_user_prompts_interception_id
+on aibridge_user_prompts (interception_id);
 
-create index idx_aibridge_user_prompts_provider_response_id on aibridge_user_prompts (
-	provider_response_id
-);
+create index idx_aibridge_user_prompts_provider_response_id
+on aibridge_user_prompts (provider_response_id);
 
 create table if not exists aibridge_tool_usages (
 	id uuid primary key,
@@ -77,10 +72,8 @@ comment on column aibridge_tool_usages.server_url is 'The name of the MCP server
 comment on column aibridge_tool_usages.injected is 'Whether this tool was injected; i.e. Bridge injected these tools into the request from an MCP server. If false it means a tool was defined by the client and already existed in the request (MCP or built-in).';
 comment on column aibridge_tool_usages.invocation_error is 'Only injected tools are invoked.';
 
-create index idx_aibridge_tool_usages_interception_id on aibridge_tool_usages (
-	interception_id
-);
+create index idx_aibridge_tool_usages_interception_id
+on aibridge_tool_usages (interception_id);
 
-create index idx_aibridge_tool_usagesprovider_response_id on aibridge_tool_usages (
-	provider_response_id
-);
+create index idx_aibridge_tool_usagesprovider_response_id
+on aibridge_tool_usages (provider_response_id);

@@ -2,6 +2,6 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-create index workspace_agents_resource_id_idx on workspace_agents using btree(
-	resource_id
-);
+create index workspace_agents_resource_id_idx
+on workspace_agents
+using btree(resource_id);

@@ -4,7 +4,10 @@ expression: formatted
 ---
 -- Restore the previous body of delete_deleted_user_resources() from
 -- migration 000490 (without the organization_members cleanup).
-create or replace function delete_deleted_user_resources() returns trigger language plpgsql as $$
+create or replace function delete_deleted_user_resources()
+returns trigger
+language plpgsql
+as $$
 	declare
 	begin
 		if (NEW.deleted) then

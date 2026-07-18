@@ -37,8 +37,6 @@ alter table groups
 	);
 
 -- Speed up per-user spend aggregation in the usage-limit hot path.
-create index idx_chat_messages_owner_spend on chat_messages (
-	chat_id,
-	created_at
-)
+create index idx_chat_messages_owner_spend
+on chat_messages (chat_id, created_at)
 where total_cost_micros is not null;

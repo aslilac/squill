@@ -4,9 +4,8 @@ expression: formatted
 ---
 drop index if exists idx_provisioner_daemons_name_owner_key;
 
-create unique index if not exists idx_provisioner_daemons_name_owner_key on provisioner_daemons using btree(
-	name,
-	LOWER(COALESCE(tags ->> 'owner', '')::text)
-);
+create unique index if not exists idx_provisioner_daemons_name_owner_key
+on provisioner_daemons
+using btree(name, LOWER(COALESCE(tags ->> 'owner', '')::text));
 
 comment on index idx_provisioner_daemons_name_owner_key is 'Allow unique provisioner daemon names by user';

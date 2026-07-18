@@ -2,7 +2,11 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-create type inbox_notification_read_status as enum ('all', 'unread', 'read');
+create type inbox_notification_read_status as enum (
+	'all',
+	'unread',
+	'read'
+);
 
 create table inbox_notifications (
 	id uuid primary key,
@@ -19,12 +23,7 @@ create table inbox_notifications (
 	created_at timestamp with time zone not null default NOW()
 );
 
-create index idx_inbox_notifications_user_id_read_at on inbox_notifications (
-	user_id,
-	read_at
-);
-create index idx_inbox_notifications_user_id_template_id_targets on inbox_notifications (
-	user_id,
-	template_id,
-	targets
-);
+create index idx_inbox_notifications_user_id_read_at
+on inbox_notifications (user_id, read_at);
+create index idx_inbox_notifications_user_id_template_id_targets
+on inbox_notifications (user_id, template_id, targets);

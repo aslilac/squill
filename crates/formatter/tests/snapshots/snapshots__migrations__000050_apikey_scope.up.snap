@@ -2,6 +2,9 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-create type api_key_scope as enum ('all', 'application_connect');
+create type api_key_scope as enum (
+	'all',
+	'application_connect'
+);
 
 alter table api_keys add column scope api_key_scope not null default 'all';

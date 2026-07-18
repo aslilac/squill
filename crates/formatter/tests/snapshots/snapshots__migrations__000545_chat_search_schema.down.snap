@@ -3,7 +3,9 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- Restore the original trigger bodies from 000519.
-create or replace function set_chat_message_revision_before() returns trigger as $$
+create or replace function set_chat_message_revision_before()
+returns trigger
+as $$
 	declare
 		chat_snapshot_version bigint;
 	begin
@@ -31,9 +33,12 @@ create or replace function set_chat_message_revision_before() returns trigger as
 		new.revision = chat_snapshot_version;
 		return NEW;
 	end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
-create or replace function update_chat_history_after_message_update() returns trigger as $$
+create or replace function update_chat_history_after_message_update()
+returns trigger
+as $$
 	begin
 		update chats c
 		set history_version = c.snapshot_version, generation_attempt = 0
@@ -53,7 +58,8 @@ create or replace function update_chat_history_after_message_update() returns tr
 			);
 		return null;
 	end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
 drop index if exists idx_chat_diff_statuses_pr_title_fts;
 

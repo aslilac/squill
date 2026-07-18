@@ -2,6 +2,8 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-create type chat_mode as enum ('computer_use');
+create type chat_mode as enum (
+	'computer_use'
+);
 
 alter table chats add column mode chat_mode;

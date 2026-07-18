@@ -26,7 +26,7 @@ create table custom_roles (
 );
 
 -- Ensure no case variants of the same roles
-create unique index idx_custom_roles_name_lower on custom_roles using btree(
-	lower(name)
-);
+create unique index idx_custom_roles_name_lower
+on custom_roles
+using btree(lower(name));
 comment on table custom_roles is 'Custom roles allow dynamic roles expanded at runtime';

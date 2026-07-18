@@ -51,7 +51,9 @@ where
 
 -- When we insert a new organization, we also want to create a
 -- placeholder org-member system role for it.
-create or replace function insert_org_member_system_role() returns trigger as $$
+create or replace function insert_org_member_system_role()
+returns trigger
+as $$
 	begin
 		insert into custom_roles (name,
 		display_name,
@@ -76,6 +78,10 @@ create or replace function insert_org_member_system_role() returns trigger as $$
 			NOW());
 		return NEW;
 	end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
-create trigger trigger_insert_org_member_system_role after insert on organizations for each row execute function insert_org_member_system_role();
+create trigger trigger_insert_org_member_system_role
+after insert on organizations
+for each row
+execute function insert_org_member_system_role();

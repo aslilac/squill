@@ -23,7 +23,10 @@ comment on table user_ai_budget_overrides is 'Per-user AI spend override that su
 -- the "Everyone" group (whose membership lives in organization_members)
 -- is correctly handled. Raises check_violation with a constraint name
 -- so callers can match it via database.IsCheckViolation in Go.
-create function enforce_user_ai_budget_override_membership() returns trigger language plpgsql as $$
+create function enforce_user_ai_budget_override_membership()
+returns trigger
+language plpgsql
+as $$
 	begin
 		if not exists (
 			select 1
@@ -40,11 +43,17 @@ create function enforce_user_ai_budget_override_membership() returns trigger lan
 	end;
 $$;
 
-create trigger trigger_enforce_user_ai_budget_override_membership before insert or update on user_ai_budget_overrides for each row execute procedure enforce_user_ai_budget_override_membership();
+create trigger trigger_enforce_user_ai_budget_override_membership
+before insert or update on user_ai_budget_overrides
+for each row
+execute procedure enforce_user_ai_budget_override_membership();
 
 -- When a user is removed from a regular group (any group except
 -- "Everyone"), delete any override attributed to that group.
-create function delete_user_ai_budget_overrides_on_group_member_delete() returns trigger language plpgsql as $$
+create function delete_user_ai_budget_overrides_on_group_member_delete()
+returns trigger
+language plpgsql
+as $$
 	begin
 		delete from user_ai_budget_overrides
 		where user_id = OLD.user_id and group_id = OLD.group_id;
@@ -52,12 +61,18 @@ create function delete_user_ai_budget_overrides_on_group_member_delete() returns
 	end;
 $$;
 
-create trigger trigger_delete_user_ai_budget_overrides_on_group_member_delete before delete on group_members for each row execute procedure delete_user_ai_budget_overrides_on_group_member_delete();
+create trigger trigger_delete_user_ai_budget_overrides_on_group_member_delete
+before delete on group_members
+for each row
+execute procedure delete_user_ai_budget_overrides_on_group_member_delete();
 
 -- When a user is removed from an organization, delete any override
 -- attributed to that organization's "Everyone" group (which has
 -- id == organization_id).
-create function delete_user_ai_budget_overrides_on_org_member_delete() returns trigger language plpgsql as $$
+create function delete_user_ai_budget_overrides_on_org_member_delete()
+returns trigger
+language plpgsql
+as $$
 	begin
 		delete from user_ai_budget_overrides
 		where user_id = OLD.user_id and group_id = OLD.organization_id;
@@ -65,4 +80,7 @@ create function delete_user_ai_budget_overrides_on_org_member_delete() returns t
 	end;
 $$;
 
-create trigger trigger_delete_user_ai_budget_overrides_on_org_member_delete before delete on organization_members for each row execute procedure delete_user_ai_budget_overrides_on_org_member_delete();
+create trigger trigger_delete_user_ai_budget_overrides_on_org_member_delete
+before delete on organization_members
+for each row
+execute procedure delete_user_ai_budget_overrides_on_org_member_delete();

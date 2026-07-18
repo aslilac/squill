@@ -10,7 +10,6 @@ create table provisioner_keys (
 	hashed_secret bytea not null
 );
 
-create unique index provisioner_keys_organization_id_name_idx on provisioner_keys using btree(
-	organization_id,
-	lower(name)
-);
+create unique index provisioner_keys_organization_id_name_idx
+on provisioner_keys
+using btree(organization_id, lower(name));

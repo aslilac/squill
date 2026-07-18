@@ -5,7 +5,11 @@ expression: formatted
 -- We no longer support org or user scoped values, so delete them
 delete from parameter_values where scope in ('organization', 'user');
 
-create type new_parameter_scope as enum ('template', 'import_job', 'workspace');
+create type new_parameter_scope as enum (
+	'template',
+	'import_job',
+	'workspace'
+);
 alter table parameter_values
 	alter column scope type new_parameter_scope using (
 		scope::text::new_parameter_scope

@@ -20,7 +20,10 @@ create table tailnet_client_subscriptions (
 	-- its first node update, which can take an undetermined amount of time.
 );
 
-create function tailnet_notify_client_subscription_change() returns trigger language plpgsql as $$
+create function tailnet_notify_client_subscription_change()
+returns trigger
+language plpgsql
+as $$
 	begin
 		if (NEW is not null) then
 			perform pg_notify(
@@ -38,9 +41,15 @@ create function tailnet_notify_client_subscription_change() returns trigger lang
 	end;
 $$;
 
-create trigger tailnet_notify_client_subscription_change after insert or update or delete on tailnet_client_subscriptions for each row execute procedure tailnet_notify_client_subscription_change();
+create trigger tailnet_notify_client_subscription_change
+after insert or update or delete on tailnet_client_subscriptions
+for each row
+execute procedure tailnet_notify_client_subscription_change();
 
-create or replace function tailnet_notify_client_change() returns trigger language plpgsql as $$
+create or replace function tailnet_notify_client_change()
+returns trigger
+language plpgsql
+as $$
 	declare
 		var_client_id uuid;
 		var_coordinator_id uuid;

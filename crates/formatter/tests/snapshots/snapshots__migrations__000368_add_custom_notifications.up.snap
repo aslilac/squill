@@ -3,7 +3,10 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- Create new enum with 'custom' value
-create type new_notification_template_kind as enum ('system', 'custom');
+create type new_notification_template_kind as enum (
+	'system',
+	'custom'
+);
 
 -- Update the notification_templates table to use new enum
 alter table notification_templates

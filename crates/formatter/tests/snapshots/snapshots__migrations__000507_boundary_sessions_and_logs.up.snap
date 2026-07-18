@@ -41,9 +41,7 @@ comment on column boundary_logs.detail is 'Protocol-specific detail. e.g. the fu
 comment on column boundary_logs.matched_rule is 'The allow-list rule that matched. NULL when the request was denied; non-NULL implies the request was allowed.';
 
 -- Ordering query path: list events for a session, sorted by sequence number.
-create index idx_boundary_logs_session_seq on boundary_logs (
-	session_id,
-	sequence_number
-);
+create index idx_boundary_logs_session_seq
+on boundary_logs (session_id, sequence_number);
 -- Retention purge path: delete old rows by capture time.
 create index idx_boundary_logs_captured_at on boundary_logs (captured_at);

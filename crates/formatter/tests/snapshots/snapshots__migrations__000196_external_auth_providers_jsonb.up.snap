@@ -7,9 +7,10 @@ drop view template_version_with_user;
 
 -- Turns the list of provider names into JSONB with the type `Array<{ id: string; optional?: boolean }>`
 -- eg. `'{github,gitlab}'::text[]` would become `'[{"id": "github"}, {"id": "gitlab"}]'::jsonb`
-create or replace function migrate_external_auth_providers_to_jsonb(
-	text[]
-) returns jsonb language plpgsql as $$
+create or replace function migrate_external_auth_providers_to_jsonb(text[])
+returns jsonb
+language plpgsql
+as $$
 	declare
 		result jsonb;
 	begin

@@ -3,14 +3,13 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 drop index templates_organization_id_name_idx;
-create unique index templates_organization_id_name_idx on templates using btree(
-	organization_id,
-	name
-)
+create unique index templates_organization_id_name_idx
+on templates
+using btree(organization_id, name)
 where deleted = false;
-create unique index idx_templates_name_lower on templates using btree(
-	lower(name)
-);
+create unique index idx_templates_name_lower
+on templates
+using btree(lower(name));
 
 alter table only templates
 	add constraint templates_organization_id_name_key unique (

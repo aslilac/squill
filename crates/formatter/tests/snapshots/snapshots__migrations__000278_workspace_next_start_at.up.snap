@@ -5,14 +5,19 @@ expression: formatted
 alter table only workspaces
 	add column if not exists next_start_at timestamptz default null;
 
-create index workspace_next_start_at_idx on workspaces using btree(
-	next_start_at
-)
+create index workspace_next_start_at_idx
+on workspaces
+using btree(next_start_at)
 where (deleted = false);
-create index workspace_template_id_idx on workspaces using btree(template_id)
+create index workspace_template_id_idx
+on workspaces
+using btree(template_id)
 where (deleted = false);
 
-create function nullify_next_start_at_on_workspace_autostart_modification() returns trigger language plpgsql as $$
+create function nullify_next_start_at_on_workspace_autostart_modification()
+returns trigger
+language plpgsql
+as $$
 	declare
 	begin
 		-- A workspace's next_start_at might be invalidated by the following:
@@ -29,7 +34,10 @@ create function nullify_next_start_at_on_workspace_autostart_modification() retu
 	end;
 $$;
 
-create trigger trigger_nullify_next_start_at_on_workspace_autostart_modification after update on workspaces for each row execute procedure nullify_next_start_at_on_workspace_autostart_modification();
+create trigger trigger_nullify_next_start_at_on_workspace_autostart_modification
+after update on workspaces
+for each row
+execute procedure nullify_next_start_at_on_workspace_autostart_modification();
 
 -- Recreate view
 drop view workspaces_expanded;

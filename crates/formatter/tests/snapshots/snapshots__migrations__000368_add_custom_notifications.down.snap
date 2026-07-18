@@ -7,7 +7,9 @@ delete from notification_templates
 where id = '39b1e189-c857-4b0c-877a-511144c18516';
 
 -- Recreate the old enum without 'custom'
-create type old_notification_template_kind as enum ('system');
+create type old_notification_template_kind as enum (
+	'system'
+);
 
 -- Update notification_templates to use the old enum
 alter table notification_templates

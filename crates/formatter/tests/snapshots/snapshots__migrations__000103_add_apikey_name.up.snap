@@ -9,8 +9,7 @@ update api_keys
 set token_name = gen_random_uuid()::text
 where login_type = 'token';
 
-create unique index idx_api_key_name on api_keys using btree(
-	user_id,
-	token_name
-)
+create unique index idx_api_key_name
+on api_keys
+using btree(user_id, token_name)
 where (login_type = 'token');

@@ -11,9 +11,8 @@ create table user_status_changes (
 
 comment on table user_status_changes is 'Tracks the history of user status changes';
 
-create index idx_user_status_changes_changed_at on user_status_changes (
-	changed_at
-);
+create index idx_user_status_changes_changed_at
+on user_status_changes (changed_at);
 
 insert into user_status_changes (user_id,
 new_status,
@@ -38,7 +37,9 @@ select id, updated_at
 from users
 where deleted;
 
-create or replace function record_user_status_change() returns trigger as $$
+create or replace function record_user_status_change()
+returns trigger
+as $$
 	begin
 		if TG_OP = 'INSERT' or OLD.status is distinct from NEW.status then
 			insert into user_status_changes (user_id,
@@ -53,6 +54,10 @@ create or replace function record_user_status_change() returns trigger as $$
 		end if;
 		return NEW;
 	end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
-create trigger user_status_change_trigger after insert or update on users for each row execute function record_user_status_change();
+create trigger user_status_change_trigger
+after insert or update on users
+for each row
+execute function record_user_status_change();

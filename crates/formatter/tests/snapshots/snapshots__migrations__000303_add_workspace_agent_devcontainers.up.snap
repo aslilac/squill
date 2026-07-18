@@ -20,8 +20,7 @@ comment on column workspace_agent_devcontainers.created_at is 'Creation timestam
 comment on column workspace_agent_devcontainers.workspace_folder is 'Workspace folder';
 comment on column workspace_agent_devcontainers.config_path is 'Path to devcontainer.json.';
 
-create index workspace_agent_devcontainers_workspace_agent_id on workspace_agent_devcontainers (
-	workspace_agent_id
-);
+create index workspace_agent_devcontainers_workspace_agent_id
+on workspace_agent_devcontainers (workspace_agent_id);
 
 comment on index workspace_agent_devcontainers_workspace_agent_id is 'Workspace agent foreign key and query index';

@@ -2,14 +2,20 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-create function tailnet_notify_coordinator_heartbeat() returns trigger language plpgsql as $$
+create function tailnet_notify_coordinator_heartbeat()
+returns trigger
+language plpgsql
+as $$
 	begin
 		perform pg_notify('tailnet_coordinator_heartbeat', NEW.id::text);
 		return null;
 	end;
 $$;
 
-create function tailnet_notify_peer_change() returns trigger language plpgsql as $$
+create function tailnet_notify_peer_change()
+returns trigger
+language plpgsql
+as $$
 	begin
 		if (OLD is not null) then
 			perform pg_notify('tailnet_peer_update', OLD.id::text);
@@ -22,7 +28,10 @@ create function tailnet_notify_peer_change() returns trigger language plpgsql as
 	end;
 $$;
 
-create function tailnet_notify_tunnel_change() returns trigger language plpgsql as $$
+create function tailnet_notify_tunnel_change()
+returns trigger
+language plpgsql
+as $$
 	begin
 		if (NEW is not null) then
 			perform pg_notify('tailnet_tunnel_update', NEW.src_id || ',' || NEW.dst_id);
@@ -34,8 +43,17 @@ create function tailnet_notify_tunnel_change() returns trigger language plpgsql 
 	end;
 $$;
 
-create trigger tailnet_notify_coordinator_heartbeat after insert or update on tailnet_coordinators for each row execute function tailnet_notify_coordinator_heartbeat();
+create trigger tailnet_notify_coordinator_heartbeat
+after insert or update on tailnet_coordinators
+for each row
+execute function tailnet_notify_coordinator_heartbeat();
 
-create trigger tailnet_notify_peer_change after insert or delete or update on tailnet_peers for each row execute function tailnet_notify_peer_change();
+create trigger tailnet_notify_peer_change
+after insert or delete or update on tailnet_peers
+for each row
+execute function tailnet_notify_peer_change();
 
-create trigger tailnet_notify_tunnel_change after insert or delete or update on tailnet_tunnels for each row execute function tailnet_notify_tunnel_change();
+create trigger tailnet_notify_tunnel_change
+after insert or delete or update on tailnet_tunnels
+for each row
+execute function tailnet_notify_tunnel_change();

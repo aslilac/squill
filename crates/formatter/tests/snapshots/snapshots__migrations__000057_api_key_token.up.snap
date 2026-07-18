@@ -2,7 +2,12 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-create type new_logintype as enum ('password', 'github', 'oidc', 'token');
+create type new_logintype as enum (
+	'password',
+	'github',
+	'oidc',
+	'token'
+);
 
 alter table users
 	alter column login_type drop default,

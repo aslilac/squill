@@ -27,8 +27,5 @@ comment on column usage_events.failure_message is 'Set to an error message when 
 
 -- Create an index with all three fields used by the
 -- SelectUsageEventsForPublishing query.
-create index idx_usage_events_select_for_publishing on usage_events (
-	published_at,
-	publish_started_at,
-	created_at
-);
+create index idx_usage_events_select_for_publishing
+on usage_events (published_at, publish_started_at, created_at);

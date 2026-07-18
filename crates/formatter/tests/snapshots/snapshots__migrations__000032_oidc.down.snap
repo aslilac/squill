@@ -2,7 +2,10 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-create type old_login_type as enum ('password', 'github');
+create type old_login_type as enum (
+	'password',
+	'github'
+);
 alter table api_keys
 	alter column login_type type old_login_type using (
 		login_type::text::old_login_type

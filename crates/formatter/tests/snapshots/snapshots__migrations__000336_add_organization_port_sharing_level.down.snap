@@ -6,7 +6,11 @@ expression: formatted
 drop view template_with_names;
 
 -- Remove 'organization' from the app_sharing_level enum
-create type new_app_sharing_level as enum ('owner', 'authenticated', 'public');
+create type new_app_sharing_level as enum (
+	'owner',
+	'authenticated',
+	'public'
+);
 
 -- Update workspace_agent_port_share table to use old enum
 -- Convert any 'organization' values to 'authenticated' during downgrade

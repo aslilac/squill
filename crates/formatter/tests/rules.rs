@@ -127,11 +127,11 @@ fn dml_and_ddl_format() {
          INSERT INTO t (a, b) VALUES (1, 2) ON CONFLICT (a) DO NOTHING;\n\
          CREATE TABLE t (id uuid NOT NULL, PRIMARY KEY (id));",
     );
-    // Short statements collapse; the parens stay tight.
+    // Short DML collapses; CREATE TABLE column lists always break.
     assert_eq!(
         out,
         "update users set name = 'x', updated_at = NOW() where id = @id returning *;\n\
          insert into t (a, b) values (1, 2) on conflict (a) do nothing;\n\
-         create table t (id uuid not null, primary key (id));\n"
+         create table t (\n\tid uuid not null,\n\tprimary key (id)\n);\n"
     );
 }

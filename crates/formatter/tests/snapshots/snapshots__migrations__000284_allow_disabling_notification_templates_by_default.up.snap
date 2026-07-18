@@ -5,7 +5,9 @@ expression: formatted
 alter table notification_templates
 	add column enabled_by_default boolean default true not null;
 
-create or replace function inhibit_enqueue_if_disabled() returns trigger as $$
+create or replace function inhibit_enqueue_if_disabled()
+returns trigger
+as $$
 	begin
 		-- Fail the insertion if one of the following:
 		--  * the user has disabled this notification.
@@ -36,4 +38,5 @@ create or replace function inhibit_enqueue_if_disabled() returns trigger as $$
 		end if;
 		return NEW;
 	end;
-$$ language plpgsql;
+$$
+language plpgsql;

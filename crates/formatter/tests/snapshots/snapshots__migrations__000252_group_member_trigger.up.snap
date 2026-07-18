@@ -2,7 +2,10 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-create function delete_group_members_on_org_member_delete() returns trigger language plpgsql as $$
+create function delete_group_members_on_org_member_delete()
+returns trigger
+language plpgsql
+as $$
 	declare
 	begin
 		-- Remove the user from all groups associated with the same
@@ -19,4 +22,7 @@ create function delete_group_members_on_org_member_delete() returns trigger lang
 	end;
 $$;
 
-create trigger trigger_delete_group_members_on_org_member_delete before delete on organization_members for each row execute procedure delete_group_members_on_org_member_delete();
+create trigger trigger_delete_group_members_on_org_member_delete
+before delete on organization_members
+for each row
+execute procedure delete_group_members_on_org_member_delete();

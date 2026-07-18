@@ -2,6 +2,6 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-create index idx_provisioner_jobs_status on provisioner_jobs using btree(
-	job_status
-);
+create index idx_provisioner_jobs_status
+on provisioner_jobs
+using btree(job_status);

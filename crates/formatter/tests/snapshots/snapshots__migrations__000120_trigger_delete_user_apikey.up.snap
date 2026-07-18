@@ -6,7 +6,10 @@ expression: formatted
 delete from api_keys where user_id in (select id from users where deleted);
 
 -- When we soft-delete a user, we also want to delete their API key.
-create function delete_deleted_user_api_keys() returns trigger language plpgsql as $$
+create function delete_deleted_user_api_keys()
+returns trigger
+language plpgsql
+as $$
 	declare
 	begin
 		if (NEW.deleted) then
@@ -16,12 +19,17 @@ create function delete_deleted_user_api_keys() returns trigger language plpgsql 
 	end;
 $$;
 
-create trigger trigger_update_users after insert or update on users for each row when (
-	NEW.deleted = true
-) execute procedure delete_deleted_user_api_keys();
+create trigger trigger_update_users
+after insert or update on users
+for each row
+when (NEW.deleted = true)
+execute procedure delete_deleted_user_api_keys();
 
 -- When we insert a new api key, we want to fail if the user is soft-deleted.
-create function insert_apikey_fail_if_user_deleted() returns trigger language plpgsql as $$
+create function insert_apikey_fail_if_user_deleted()
+returns trigger
+language plpgsql
+as $$
 	declare
 	begin
 		if (NEW.user_id is not null) then
@@ -33,4 +41,7 @@ create function insert_apikey_fail_if_user_deleted() returns trigger language pl
 	end;
 $$;
 
-create trigger trigger_insert_apikeys before insert on api_keys for each row execute procedure insert_apikey_fail_if_user_deleted();
+create trigger trigger_insert_apikeys
+before insert on api_keys
+for each row
+execute procedure insert_apikey_fail_if_user_deleted();

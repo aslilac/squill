@@ -3,7 +3,10 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- Create the enum type for API key scope
-create type agent_key_scope_enum as enum ('all', 'no_user_data');
+create type agent_key_scope_enum as enum (
+	'all',
+	'no_user_data'
+);
 
 -- Add the api_key_scope column to the workspace_agents table
 -- It defaults to 'all' to maintain existing behavior for current agents.

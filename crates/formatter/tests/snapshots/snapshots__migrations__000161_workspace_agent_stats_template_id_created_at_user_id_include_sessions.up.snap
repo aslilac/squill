@@ -4,11 +4,9 @@ expression: formatted
 ---
 drop index workspace_agent_stats_template_id_created_at_user_id_idx;
 
-create index workspace_agent_stats_template_id_created_at_user_id_idx on workspace_agent_stats (
-	template_id,
-	created_at,
-	user_id
-) include (
+create index workspace_agent_stats_template_id_created_at_user_id_idx
+on workspace_agent_stats (template_id, created_at, user_id)
+include (
 	session_count_vscode,
 	session_count_jetbrains,
 	session_count_reconnecting_pty,

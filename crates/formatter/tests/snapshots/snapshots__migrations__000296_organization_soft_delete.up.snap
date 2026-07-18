@@ -7,14 +7,16 @@ alter table organizations add column deleted boolean default false not null;
 drop index if exists idx_organization_name;
 drop index if exists idx_organization_name_lower;
 
-create unique index if not exists idx_organization_name_lower on organizations using btree(
-	lower(name)
-)
+create unique index if not exists idx_organization_name_lower
+on organizations
+using btree(lower(name))
 where deleted = false;
 
 alter table only organizations drop constraint if exists organizations_name;
 
-create function protect_deleting_organizations() returns trigger as $$
+create function protect_deleting_organizations()
+returns trigger
+as $$
 	declare
 		workspace_count int;
 		template_count int;
@@ -74,9 +76,12 @@ create function protect_deleting_organizations() returns trigger as $$
 		end if;
 		return NEW;
 	end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
 -- Trigger to protect organizations from being soft deleted with existing resources
-create trigger protect_deleting_organizations before update on organizations for each row when (
-	NEW.deleted = true and OLD.deleted = false
-) execute function protect_deleting_organizations();
+create trigger protect_deleting_organizations
+before update on organizations
+for each row
+when (NEW.deleted = true and OLD.deleted = false)
+execute function protect_deleting_organizations();

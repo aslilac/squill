@@ -11,7 +11,10 @@ create type notification_message_status as enum (
 	'unknown'
 );
 
-create type notification_method as enum ('smtp', 'webhook');
+create type notification_method as enum (
+	'smtp',
+	'webhook'
+);
 
 create table notification_templates (
 	id uuid not null,

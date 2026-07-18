@@ -2,8 +2,7 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-create index workspace_agent_scripts_workspace_agent_id_idx on workspace_agent_scripts (
-	workspace_agent_id
-);
+create index workspace_agent_scripts_workspace_agent_id_idx
+on workspace_agent_scripts (workspace_agent_id);
 
 comment on index workspace_agent_scripts_workspace_agent_id_idx is 'Foreign key support index for faster lookups';

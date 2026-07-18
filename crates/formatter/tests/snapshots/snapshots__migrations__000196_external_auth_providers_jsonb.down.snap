@@ -9,7 +9,10 @@ drop view template_version_with_user;
 -- eg. `'[{"id": "github"}, {"id": "gitlab"}]'::jsonb` would become `'{github,gitlab}'::text[]`
 create or replace function revert_migrate_external_auth_providers_to_jsonb(
 	jsonb
-) returns text[] language plpgsql as $$
+)
+returns text[]
+language plpgsql
+as $$
 	declare
 		result text[];
 	begin

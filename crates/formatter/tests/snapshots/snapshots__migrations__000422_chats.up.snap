@@ -11,7 +11,11 @@ create type chat_status as enum (
 	'error'
 );
 
-create type chat_message_visibility as enum ('user', 'model', 'both');
+create type chat_message_visibility as enum (
+	'user',
+	'model',
+	'both'
+);
 
 create table chats (
 	id uuid primary key default gen_random_uuid(),
@@ -56,15 +60,10 @@ create table chat_messages (
 );
 
 create index idx_chat_messages_chat on chat_messages (chat_id);
-create index idx_chat_messages_chat_created on chat_messages (
-	chat_id,
-	created_at
-);
-create index idx_chat_messages_compressed_summary_boundary on chat_messages (
-	chat_id,
-	created_at desc,
-	id desc
-)
+create index idx_chat_messages_chat_created
+on chat_messages (chat_id, created_at);
+create index idx_chat_messages_compressed_summary_boundary
+on chat_messages (chat_id, created_at desc, id desc)
 where compressed = true and role = 'system' and visibility in ('model', 'both');
 
 create table chat_diff_statuses (
@@ -141,13 +140,10 @@ create table chat_model_configs (
 
 create index idx_chat_model_configs_enabled on chat_model_configs (enabled);
 create index idx_chat_model_configs_provider on chat_model_configs (provider);
-create index idx_chat_model_configs_provider_model on chat_model_configs (
-	provider,
-	model
-);
-create unique index idx_chat_model_configs_single_default on chat_model_configs (
-	(1)
-)
+create index idx_chat_model_configs_provider_model
+on chat_model_configs (provider, model);
+create unique index idx_chat_model_configs_single_default
+on chat_model_configs ((1))
 where is_default = true and deleted = false;
 
 alter table chat_messages

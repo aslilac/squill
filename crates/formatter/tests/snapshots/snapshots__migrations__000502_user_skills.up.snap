@@ -24,7 +24,10 @@ create unique index user_skills_user_id_name_idx on user_skills (user_id, name);
 -- Enforces the per-user personal-skill cap at the schema level so the
 -- invariant survives any future refactor of InsertUserSkill. The cap
 -- value must stay in sync with skills.MaxPersonalSkillsPerUser in Go.
-create function enforce_user_skills_per_user_limit() returns trigger language plpgsql as $$
+create function enforce_user_skills_per_user_limit()
+returns trigger
+language plpgsql
+as $$
 	declare
 		skill_count int;
 		skill_limit constant int := 100;
@@ -48,7 +51,10 @@ create function enforce_user_skills_per_user_limit() returns trigger language pl
 	end;
 $$;
 
-create trigger trigger_user_skills_per_user_limit before insert on user_skills for each row execute procedure enforce_user_skills_per_user_limit();
+create trigger trigger_user_skills_per_user_limit
+before insert on user_skills
+for each row
+execute procedure enforce_user_skills_per_user_limit();
 
 -- Extend the soft-delete cleanup trigger to also wipe user_skills.
 -- user_skills.user_id has ON DELETE CASCADE, but Coder soft-deletes
@@ -56,7 +62,10 @@ create trigger trigger_user_skills_per_user_limit before insert on user_skills f
 -- FK cascade never fires and skills would otherwise survive deletion.
 delete from user_skills where user_id in (select id from users where deleted);
 
-create or replace function delete_deleted_user_resources() returns trigger language plpgsql as $$
+create or replace function delete_deleted_user_resources()
+returns trigger
+language plpgsql
+as $$
 	declare
 	begin
 		if (NEW.deleted) then
@@ -96,7 +105,10 @@ $$;
 -- Prevent adding new user_skills for soft-deleted users.
 -- Closes the window between an in-flight CreateUserSkill request and
 -- the soft-delete UPDATE committing.
-create function insert_user_skill_fail_if_user_deleted() returns trigger language plpgsql as $$
+create function insert_user_skill_fail_if_user_deleted()
+returns trigger
+language plpgsql
+as $$
 	begin
 		perform 1 from users where id = NEW.user_id and deleted = true limit 1;
 		if FOUND then
@@ -108,7 +120,10 @@ create function insert_user_skill_fail_if_user_deleted() returns trigger languag
 	end;
 $$;
 
-create trigger trigger_upsert_user_skills before insert or update on user_skills for each row execute procedure insert_user_skill_fail_if_user_deleted();
+create trigger trigger_upsert_user_skills
+before insert or update on user_skills
+for each row
+execute procedure insert_user_skill_fail_if_user_deleted();
 
 -- Adds the user skill audit resource type.
 alter type resource_type add value if not exists 'user_skill';

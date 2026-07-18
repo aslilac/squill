@@ -2,7 +2,10 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-create type tailnet_status as enum ('ok', 'lost');
+create type tailnet_status as enum (
+	'ok',
+	'lost'
+);
 
 create table tailnet_peers (
 	id uuid not null,
@@ -20,7 +23,10 @@ create table tailnet_peers (
 create index idx_tailnet_peers_coordinator on tailnet_peers (coordinator_id);
 
 -- Any time tailnet_peers table changes, send an update with the affected peer ID.
-create function tailnet_notify_peer_change() returns trigger language plpgsql as $$
+create function tailnet_notify_peer_change()
+returns trigger
+language plpgsql
+as $$
 	begin
 		if (OLD is not null) then
 			perform pg_notify('tailnet_peer_update', OLD.id::text);
@@ -33,7 +39,10 @@ create function tailnet_notify_peer_change() returns trigger language plpgsql as
 	end;
 $$;
 
-create trigger tailnet_notify_peer_change after insert or update or delete on tailnet_peers for each row execute procedure tailnet_notify_peer_change();
+create trigger tailnet_notify_peer_change
+after insert or update or delete on tailnet_peers
+for each row
+execute procedure tailnet_notify_peer_change();
 
 create table tailnet_tunnels (
 	coordinator_id uuid not null,
@@ -48,7 +57,10 @@ create table tailnet_tunnels (
 	) on delete cascade
 );
 
-create function tailnet_notify_tunnel_change() returns trigger language plpgsql as $$
+create function tailnet_notify_tunnel_change()
+returns trigger
+language plpgsql
+as $$
 	begin
 		if (NEW is not null) then
 			perform pg_notify('tailnet_tunnel_update', NEW.src_id || ',' || NEW.dst_id);
@@ -60,4 +72,7 @@ create function tailnet_notify_tunnel_change() returns trigger language plpgsql 
 	end;
 $$;
 
-create trigger tailnet_notify_tunnel_change after insert or update or delete on tailnet_tunnels for each row execute procedure tailnet_notify_tunnel_change();
+create trigger tailnet_notify_tunnel_change
+after insert or update or delete on tailnet_tunnels
+for each row
+execute procedure tailnet_notify_tunnel_change();

@@ -59,7 +59,9 @@ from organizations;
 drop trigger if exists trigger_insert_org_member_system_role on organizations;
 drop function IF exists insert_org_member_system_role;
 
-create or replace function insert_organization_system_roles() returns trigger as $$
+create or replace function insert_organization_system_roles()
+returns trigger
+as $$
 	begin
 		insert into custom_roles (name,
 		display_name,
@@ -94,6 +96,10 @@ create or replace function insert_organization_system_roles() returns trigger as
 			NOW());
 		return NEW;
 	end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
-create trigger trigger_insert_organization_system_roles after insert on organizations for each row execute function insert_organization_system_roles();
+create trigger trigger_insert_organization_system_roles
+after insert on organizations
+for each row
+execute function insert_organization_system_roles();

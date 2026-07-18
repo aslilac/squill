@@ -2,7 +2,10 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-create type startup_script_behavior as enum ('blocking', 'non-blocking');
+create type startup_script_behavior as enum (
+	'blocking',
+	'non-blocking'
+);
 alter table workspace_agents
 	add column startup_script_behavior startup_script_behavior not null default 'non-blocking';
 

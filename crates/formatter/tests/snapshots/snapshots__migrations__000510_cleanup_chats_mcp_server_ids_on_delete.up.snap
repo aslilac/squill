@@ -32,15 +32,21 @@ where
 			)
 	);
 
-create or replace function remove_mcp_server_config_id_from_chats() returns trigger as $$
+create or replace function remove_mcp_server_config_id_from_chats()
+returns trigger
+as $$
 	begin
 		update chats
 		set mcp_server_ids = array_remove(mcp_server_ids, OLD.id)
 		where OLD.id = any(mcp_server_ids);
 		return OLD;
 	end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
-create trigger remove_chat_mcp_server_config_id before delete on mcp_server_configs for each row execute procedure remove_mcp_server_config_id_from_chats();
+create trigger remove_chat_mcp_server_config_id
+before delete on mcp_server_configs
+for each row
+execute procedure remove_mcp_server_config_id_from_chats();
 
 comment on trigger remove_chat_mcp_server_config_id on mcp_server_configs is 'When an MCP server config is deleted, this trigger removes its ID from all chats.';

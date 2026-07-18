@@ -113,9 +113,8 @@ create unlogged table if not exists chat_heartbeats (
 
 comment on table chat_heartbeats is 'Ephemeral runner ownership leases for runnable chats. The table is unlogged because losing heartbeat rows after a crash is safe: missing heartbeats are treated as stale ownership and cause workers to reacquire runnable chats.';
 
-create index if not exists chat_heartbeats_heartbeat_at_idx on chat_heartbeats (
-	heartbeat_at
-);
+create index if not exists chat_heartbeats_heartbeat_at_idx
+on chat_heartbeats (heartbeat_at);
 
 -- 12. Message revision trigger.
 -- The BEFORE-trigger only assigns NEW.revision from chats.snapshot_version
@@ -124,7 +123,9 @@ create index if not exists chat_heartbeats_heartbeat_at_idx on chat_heartbeats (
 -- so it doesn't conflict with CTE updates on the chats row in the same
 -- command (the legacy InsertChatMessages query updates last_model_config_id
 -- in a CTE on chats and then inserts messages).
-create function set_chat_message_revision_before() returns trigger as $$
+create function set_chat_message_revision_before()
+returns trigger
+as $$
 	declare
 		chat_snapshot_version bigint;
 	begin
@@ -152,7 +153,8 @@ create function set_chat_message_revision_before() returns trigger as $$
 		new.revision = chat_snapshot_version;
 		return NEW;
 	end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
 -- AFTER STATEMENT trigger functions. Use the transition tables to
 -- update chats.history_version / generation_attempt once per chat per
@@ -166,7 +168,9 @@ $$ language plpgsql;
 -- chat_messages row (one whose OLD IS NOT DISTINCT FROM NEW) would
 -- still advance chats.history_version whenever the chat's snapshot
 -- had previously been bumped.
-create function update_chat_history_after_message_insert() returns trigger as $$
+create function update_chat_history_after_message_insert()
+returns trigger
+as $$
 	begin
 		update chats c
 		set history_version = c.snapshot_version, generation_attempt = 0
@@ -179,9 +183,12 @@ create function update_chat_history_after_message_insert() returns trigger as $$
 			);
 		return null;
 	end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
-create function update_chat_history_after_message_update() returns trigger as $$
+create function update_chat_history_after_message_update()
+returns trigger
+as $$
 	begin
 		update chats c
 		set history_version = c.snapshot_version, generation_attempt = 0
@@ -201,18 +208,33 @@ create function update_chat_history_after_message_update() returns trigger as $$
 			);
 		return null;
 	end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
-create trigger trigger_set_chat_message_revision_on_insert before insert on chat_messages for each row execute function set_chat_message_revision_before();
+create trigger trigger_set_chat_message_revision_on_insert
+before insert on chat_messages
+for each row
+execute function set_chat_message_revision_before();
 
-create trigger trigger_set_chat_message_revision_on_update before update on chat_messages for each row execute function set_chat_message_revision_before();
+create trigger trigger_set_chat_message_revision_on_update
+before update on chat_messages
+for each row
+execute function set_chat_message_revision_before();
 
-create trigger trigger_update_chat_history_after_message_insert after insert on chat_messages referencing new table as chat_message_history_new_rows for each statement execute function update_chat_history_after_message_insert();
+create trigger trigger_update_chat_history_after_message_insert
+after insert on chat_messages referencing new table as chat_message_history_new_rows
+for each statement
+execute function update_chat_history_after_message_insert();
 
-create trigger trigger_update_chat_history_after_message_update after update on chat_messages referencing old table as chat_message_history_old_rows new table as chat_message_history_new_rows for each statement execute function update_chat_history_after_message_update();
+create trigger trigger_update_chat_history_after_message_update
+after update on chat_messages referencing old table as chat_message_history_old_rows new table as chat_message_history_new_rows
+for each statement
+execute function update_chat_history_after_message_update();
 
 -- 13. Queue version trigger function.
-create function bump_chat_queue_version_on_queued_message_change() returns trigger as $$
+create function bump_chat_queue_version_on_queued_message_change()
+returns trigger
+as $$
 	declare
 		changed_chat_id uuid;
 	begin
@@ -227,19 +249,31 @@ create function bump_chat_queue_version_on_queued_message_change() returns trigg
 		end if;
 		return NEW;
 	end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
-create trigger trigger_bump_chat_queue_version_on_queued_message_insert after insert on chat_queued_messages for each row execute function bump_chat_queue_version_on_queued_message_change();
+create trigger trigger_bump_chat_queue_version_on_queued_message_insert
+after insert on chat_queued_messages
+for each row
+execute function bump_chat_queue_version_on_queued_message_change();
 
-create trigger trigger_bump_chat_queue_version_on_queued_message_update after update of content,
+create trigger trigger_bump_chat_queue_version_on_queued_message_update
+after update of content,
 model_config_id,
 position,
-created_by on chat_queued_messages for each row execute function bump_chat_queue_version_on_queued_message_change();
+created_by on chat_queued_messages
+for each row
+execute function bump_chat_queue_version_on_queued_message_change();
 
-create trigger trigger_bump_chat_queue_version_on_queued_message_delete after delete on chat_queued_messages for each row execute function bump_chat_queue_version_on_queued_message_change();
+create trigger trigger_bump_chat_queue_version_on_queued_message_delete
+after delete on chat_queued_messages
+for each row
+execute function bump_chat_queue_version_on_queued_message_change();
 
 -- 14. Retry state trigger function.
-create function sync_chat_retry_state() returns trigger as $$
+create function sync_chat_retry_state()
+returns trigger
+as $$
 	begin
 		if OLD.retry_state_version is distinct from NEW.retry_state_version then
 			raise exception 'chats.retry_state_version must be assigned by trigger';
@@ -252,11 +286,15 @@ create function sync_chat_retry_state() returns trigger as $$
 		end if;
 		return NEW;
 	end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
-create trigger trigger_sync_chat_retry_state before update of retry_state,
+create trigger trigger_sync_chat_retry_state
+before update of retry_state,
 retry_state_version,
-generation_attempt on chats for each row execute function sync_chat_retry_state();
+generation_attempt on chats
+for each row
+execute function sync_chat_retry_state();
 
 -- 15. Index for the chat worker acquisition scan, which runs every 30
 -- seconds per replica plus on every worker wake. Leading on status lets
@@ -265,11 +303,9 @@ generation_attempt on chats for each row execute function sync_chat_retry_state(
 -- intentionally not part of the index predicate: 'interrupting' is added
 -- to chat_status above, and Postgres forbids using a new enum value in
 -- the same transaction, which all migrations share.
-create index idx_chats_worker_acquisition_candidates on chats using btree(
-	status,
-	updated_at,
-	id
-)
+create index idx_chats_worker_acquisition_candidates
+on chats
+using btree(status, updated_at, id)
 where archived = false;
 
 -- 16. Refresh chats_expanded to include the new chat fields. Drop and

@@ -4,10 +4,8 @@ expression: formatted
 ---
 drop index idx_templates_name_lower;
 drop index templates_organization_id_name_idx;
-create unique index templates_organization_id_name_idx on templates (
-	organization_id,
-	lower(name)
-)
+create unique index templates_organization_id_name_idx
+on templates (organization_id, lower(name))
 where deleted = false;
 
 alter table only templates drop constraint templates_organization_id_name_key;

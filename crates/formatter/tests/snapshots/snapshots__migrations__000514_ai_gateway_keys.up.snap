@@ -23,15 +23,15 @@ create table ai_gateway_keys (
 comment on table ai_gateway_keys is 'Hashed bearer secrets used by AI Gateway standalone replicas to authenticate into coderd.';
 comment on column ai_gateway_keys.secret_prefix is 'Public token prefix for display and audit correlation. Auth uses hashed_secret.';
 
-create unique index ai_gateway_keys_name_idx on ai_gateway_keys using btree(
-	lower(name)
-);
-create unique index ai_gateway_keys_secret_prefix_idx on ai_gateway_keys using btree(
-	secret_prefix
-);
-create unique index ai_gateway_keys_hashed_secret_idx on ai_gateway_keys using btree(
-	hashed_secret
-);
+create unique index ai_gateway_keys_name_idx
+on ai_gateway_keys
+using btree(lower(name));
+create unique index ai_gateway_keys_secret_prefix_idx
+on ai_gateway_keys
+using btree(secret_prefix);
+create unique index ai_gateway_keys_hashed_secret_idx
+on ai_gateway_keys
+using btree(hashed_secret);
 
 alter type resource_type add value if not exists 'ai_gateway_key';
 

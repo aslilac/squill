@@ -6,7 +6,9 @@ expression: formatted
 -- from all organization members that have it.
 -- This action cannot be reverted, so deleting a custom role should be
 -- done with caution.
-create or replace function remove_organization_member_role() returns trigger as $$
+create or replace function remove_organization_member_role()
+returns trigger
+as $$
 	begin
 		-- Delete the role from all organization members that have it.
 		-- TODO: When site wide custom roles are supported, if the
@@ -24,9 +26,13 @@ create or replace function remove_organization_member_role() returns trigger as 
 		end if;
 		return OLD;
 	end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
 -- Attach the function to deleting the custom role
-create trigger remove_organization_member_custom_role before delete on custom_roles for each row execute procedure remove_organization_member_role();
+create trigger remove_organization_member_custom_role
+before delete on custom_roles
+for each row
+execute procedure remove_organization_member_role();
 
 comment on trigger remove_organization_member_custom_role on custom_roles is 'When a custom_role is deleted, this trigger removes the role from all organization members.';

@@ -2,7 +2,9 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-create or replace function check_workspace_agent_name_unique() returns trigger as $$
+create or replace function check_workspace_agent_name_unique()
+returns trigger
+as $$
 	declare
 		workspace_build_id uuid;
 		agents_with_name int;
@@ -45,10 +47,14 @@ create or replace function check_workspace_agent_name_unique() returns trigger a
 		end if;
 		return NEW;
 	end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
-create trigger workspace_agent_name_unique_trigger before insert or update of name,
-resource_id on workspace_agents for each row execute function check_workspace_agent_name_unique();
+create trigger workspace_agent_name_unique_trigger
+before insert or update of name,
+resource_id on workspace_agents
+for each row
+execute function check_workspace_agent_name_unique();
 
 comment on trigger workspace_agent_name_unique_trigger on workspace_agents is 'Use a trigger instead of a unique constraint because existing data may violate
 the uniqueness requirement. A trigger allows us to enforce uniqueness going

@@ -19,7 +19,9 @@ create type provisioner_job_type as enum (
 	'workspace_build'
 );
 
-create type provisioner_storage_method as enum ('file');
+create type provisioner_storage_method as enum (
+	'file'
+);
 
 create table if not exists provisioner_jobs (
 	id uuid not null,
@@ -41,9 +43,18 @@ create table if not exists provisioner_jobs (
 	primary key (id)
 );
 
-create type log_level as enum ('trace', 'debug', 'info', 'warn', 'error');
+create type log_level as enum (
+	'trace',
+	'debug',
+	'info',
+	'warn',
+	'error'
+);
 
-create type log_source as enum ('provisioner_daemon', 'provisioner');
+create type log_source as enum (
+	'provisioner_daemon',
+	'provisioner'
+);
 
 create table if not exists provisioner_job_logs (
 	id uuid not null,
@@ -97,10 +108,16 @@ create type parameter_scope as enum (
 );
 
 -- Types of parameters the automator supports.
-create type parameter_type_system as enum ('none', 'hcl');
+create type parameter_type_system as enum (
+	'none',
+	'hcl'
+);
 
 -- Supported schemes for a parameter source.
-create type parameter_source_scheme as enum ('none', 'data');
+create type parameter_source_scheme as enum (
+	'none',
+	'data'
+);
 
 -- Supported schemes for a parameter destination.
 create type parameter_destination_scheme as enum (

@@ -5,9 +5,8 @@ expression: formatted
 alter table only provisioner_daemons
 	drop constraint if exists provisioner_daemons_name_key;
 
-create unique index if not exists idx_provisioner_daemons_name_owner_key on provisioner_daemons using btree(
-	name,
-	lower((tags ->> 'owner')::text)
-);
+create unique index if not exists idx_provisioner_daemons_name_owner_key
+on provisioner_daemons
+using btree(name, lower((tags ->> 'owner')::text));
 
 comment on index idx_provisioner_daemons_name_owner_key is 'Relax uniqueness constraint for provisioner daemon names';

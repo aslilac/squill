@@ -6,7 +6,9 @@ expression: formatted
 drop trigger if exists protect_deleting_organizations on organizations;
 
 -- Revert the function to its original implementation
-create or replace function protect_deleting_organizations() returns trigger as $$
+create or replace function protect_deleting_organizations()
+returns trigger
+as $$
 	declare
 		workspace_count int;
 		template_count int;
@@ -66,7 +68,11 @@ create or replace function protect_deleting_organizations() returns trigger as $
 		end if;
 		return NEW;
 	end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
 -- Re-create trigger that uses this function
-create trigger protect_deleting_organizations before delete on organizations for each row execute function protect_deleting_organizations();
+create trigger protect_deleting_organizations
+before delete on organizations
+for each row
+execute function protect_deleting_organizations();

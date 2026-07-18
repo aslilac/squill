@@ -11,8 +11,8 @@
 use parser::syntax::{SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
 
 use crate::doc::{
-    Doc, IdentPos, concat, fresh_line, group, hard_line, ident, if_break, indent, keyword, nil,
-    soft_line, soft_line_or_space, space, text, verbatim,
+    Doc, IdentPos, break_parent, concat, fresh_line, group, hard_line, ident, if_break, indent,
+    keyword, nil, soft_line, soft_line_or_space, space, text, verbatim,
 };
 
 /// Lower one statement node to a document. Returns `None` for kinds the
@@ -82,6 +82,7 @@ pub(crate) fn lower_statement(stmt: &SyntaxNode) -> Option<Doc> {
                 pending_blank: false,
                 emitted_any: false,
                 skip_trivia,
+                force_first_element_list: false,
             };
             let mut docs = Vec::new();
             match stmt.kind() {
@@ -118,6 +119,9 @@ struct Lowerer {
     emitted_any: bool,
     /// Statement-leading trivia already emitted by `lower_statement`.
     skip_trivia: usize,
+    /// The next `ElementList` renders always-broken (CREATE TABLE column
+    /// lists, CREATE TYPE ... AS ENUM variants).
+    force_first_element_list: bool,
 }
 
 impl Lowerer {
@@ -397,16 +401,74 @@ impl Lowerer {
     /// level, one action per line when broken; everything else uses the
     /// plain DML flow.
     fn ddl_statement(&mut self, docs: &mut Vec<Doc>, node: &SyntaxNode) {
-        let is_alter = node
+        // Classify by the leading keyword run for statement-specific
+        // soft-break points and always-broken element lists.
+        let words: Vec<String> = node
             .children_with_tokens()
             .filter_map(|el| el.into_token())
-            .find(|t| !t.kind().is_trivia())
-            .is_some_and(|t| t.text().eq_ignore_ascii_case("alter"));
-        if is_alter {
+            .filter(|t| t.kind() == SyntaxKind::Ident)
+            .take(6)
+            .map(|t| t.text().to_ascii_lowercase())
+            .collect();
+        if words.first().is_some_and(|w| w == "alter") {
             self.alter_flow(docs, node);
-        } else {
-            self.dml_flow(docs, node);
+            return;
         }
+        // The object type is the first word after CREATE and its
+        // modifiers (`RETURNS trigger` must not classify as a trigger).
+        const MODIFIERS: &[&str] = &[
+            "or",
+            "replace",
+            "unique",
+            "temp",
+            "temporary",
+            "unlogged",
+            "materialized",
+            "if",
+            "not",
+            "exists",
+            "concurrently",
+            "recursive",
+        ];
+        let object = words
+            .iter()
+            .skip(1)
+            .find(|w| !MODIFIERS.contains(&w.as_str()))
+            .map(String::as_str);
+        let mut break_before: &[&str] = &[];
+        if words.first().is_some_and(|w| w == "create") {
+            match object {
+                Some("trigger") => {
+                    break_before = &["before", "after", "instead", "for", "when", "execute"];
+                }
+                Some("index") => {
+                    break_before = &["on", "using", "include"];
+                }
+                Some("function" | "procedure") => {
+                    break_before = &[
+                        "returns",
+                        "language",
+                        "as",
+                        "security",
+                        "immutable",
+                        "stable",
+                        "volatile",
+                        "strict",
+                    ];
+                }
+                Some("table") => {
+                    // CREATE TABLE column lists always break.
+                    self.force_first_element_list = true;
+                }
+                Some("type") if words.iter().any(|w| w == "enum") => {
+                    // CREATE TYPE ... AS ENUM variants always break.
+                    self.force_first_element_list = true;
+                }
+                _ => {}
+            }
+        }
+        self.dml_flow_with(docs, node, break_before);
+        self.force_first_element_list = false;
     }
 
     /// `ALTER TABLE name` head, then each action on its own (indented)
@@ -527,6 +589,16 @@ impl Lowerer {
     /// children on soft lines, top-level commas (ALTER action lists,
     /// multiple targets) breaking softly, `;` attached tight.
     fn dml_flow(&mut self, docs: &mut Vec<Doc>, node: &SyntaxNode) {
+        let break_before: &[&str] = match node.kind() {
+            // `RAISE ... USING` / `EXECUTE ... USING` can break before
+            // the USING keyword.
+            SyntaxKind::PlRaise | SyntaxKind::PlExecute => &["using"],
+            _ => &[],
+        };
+        self.dml_flow_with(docs, node, break_before);
+    }
+
+    fn dml_flow_with(&mut self, docs: &mut Vec<Doc>, node: &SyntaxNode, break_before: &[&str]) {
         let mut first = true;
         let mut pending_sls = false;
         let mut tight = false;
@@ -553,9 +625,10 @@ impl Lowerer {
                         );
                     // `RAISE ... USING` / `EXECUTE ... USING` can break
                     // before the USING keyword.
-                    let soft_break =
-                        matches!(node.kind(), SyntaxKind::PlRaise | SyntaxKind::PlExecute)
-                            && token.text().eq_ignore_ascii_case("using");
+                    let soft_break = token.kind() == SyntaxKind::Ident
+                        && break_before
+                            .iter()
+                            .any(|kw| token.text().eq_ignore_ascii_case(kw));
                     if (soft_break && !first) || (pending_sls && !tight_before) {
                         docs.push(soft_line_or_space());
                     } else if !first && !tight_before {
@@ -953,6 +1026,8 @@ impl Lowerer {
     /// A parenthesized block: `(` soft-indented contents `)`. Used for
     /// subqueries, arg lists, window specs, paren/row/array expressions.
     fn paren_block(&mut self, node: &SyntaxNode) -> Doc {
+        let force_break = node.kind() == SyntaxKind::ElementList
+            && std::mem::take(&mut self.force_first_element_list);
         let mut head = Vec::new();
         let mut inner = Vec::new();
         let mut tail = Vec::new();
@@ -1060,10 +1135,12 @@ impl Lowerer {
             // Empty parens never benefit from breaking: `f()`.
             return group(concat([head_doc, attach, open, close, concat(tail)]));
         }
+        let forced = if force_break { break_parent() } else { nil() };
         group(concat([
             head_doc,
             attach,
             open,
+            forced,
             indent(concat(
                 [soft_line()].into_iter().chain(inner).collect::<Vec<_>>(),
             )),
