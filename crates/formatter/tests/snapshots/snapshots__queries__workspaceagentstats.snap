@@ -256,23 +256,18 @@ with
 				SUM(session_count_reconnecting_pty),
 				0
 			)::bigint as session_count_reconnecting_pty
-		from
-			(
-				select
-					*,
-					ROW_NUMBER() over (
-						partition by agent_id
-						order by created_at desc
-					) as rn
-				from workspace_agent_stats
-				where created_at > $1
-			) as a
+		from (
+			select
+				*,
+				ROW_NUMBER() over (partition by agent_id order by created_at desc) as rn
+			from workspace_agent_stats
+			where created_at > $1
+		) as a
 		where a.rn = 1
 		group by a.user_id, a.agent_id, a.workspace_id, a.template_id
 	)
 select *
-from
-	agent_stats
+from agent_stats
 	join latest_agent_stats on agent_stats.agent_id = latest_agent_stats.agent_id;
 
 -- name: GetWorkspaceAgentUsageStats :many
@@ -361,8 +356,7 @@ select
 		session_count_reconnecting_pty,
 		0
 	)::bigint as session_count_reconnecting_pty
-from
-	agent_stats
+from agent_stats
 	left join latest_buckets on agent_stats.agent_id = latest_buckets.agent_id;
 
 -- name: GetWorkspaceAgentStatsAndLabels :many
@@ -396,19 +390,15 @@ with
 				MAX(connection_median_latency_ms),
 				0
 			)::float as connection_median_latency_ms
-		from
-			(
-				select
-					*,
-					ROW_NUMBER() over (
-						partition by agent_id
-						order by created_at desc
-					) as rn
-				from workspace_agent_stats
-				-- The greater than 0 is to support legacy agents that don't report connection_median_latency_ms.
-				where
-					created_at > $1 and connection_median_latency_ms > 0
-			) as a
+		from (
+			select
+				*,
+				ROW_NUMBER() over (partition by agent_id order by created_at desc) as rn
+			from workspace_agent_stats
+			-- The greater than 0 is to support legacy agents that don't report connection_median_latency_ms.
+			where
+				created_at > $1 and connection_median_latency_ms > 0
+		) as a
 		where a.rn = 1
 		group by a.user_id, a.agent_id, a.workspace_id
 	)
@@ -424,8 +414,7 @@ select
 	session_count_reconnecting_pty,
 	connection_count,
 	connection_median_latency_ms
-from
-	agent_stats
+from agent_stats
 	join latest_agent_stats on agent_stats.agent_id = latest_agent_stats.agent_id
 	join users on users.id = agent_stats.user_id
 	join workspace_agents on workspace_agents.id = agent_stats.agent_id
@@ -486,8 +475,7 @@ select
 	)::bigint as session_count_reconnecting_pty,
 	coalesce(connection_count, 0)::bigint as connection_count,
 	connection_median_latency_ms
-from
-	agent_stats
+from agent_stats
 	left join latest_agent_stats on agent_stats.agent_id
 	= latest_agent_stats.agent_id
 	join users on users.id = agent_stats.user_id

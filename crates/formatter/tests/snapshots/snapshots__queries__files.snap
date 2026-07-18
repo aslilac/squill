@@ -23,8 +23,7 @@ select
 	templates.created_by as template_created_by,
 	templates.user_acl,
 	templates.group_acl
-from
-	templates
+from templates
 	inner join template_versions on templates.id = template_versions.template_id
 	inner join provisioner_jobs on job_id = provisioner_jobs.id
 	inner join files on files.id = provisioner_jobs.file_id

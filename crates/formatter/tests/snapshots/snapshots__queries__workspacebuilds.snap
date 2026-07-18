@@ -122,13 +122,12 @@ where id = @id::uuid;
 
 -- name: GetActiveWorkspaceBuildsByTemplateID :many
 select wb.*
-from
-	(
-		select workspace_id, MAX(build_number) as max_build_number
-		from workspace_build_with_user as workspace_builds
-		where workspace_id in (select id from workspaces where template_id = $1)
-		group by workspace_id
-	) m
+from (
+	select workspace_id, MAX(build_number) as max_build_number
+	from workspace_build_with_user as workspace_builds
+	where workspace_id in (select id from workspaces where template_id = $1)
+	group by workspace_id
+) m
 	join workspace_build_with_user as wb on m.workspace_id = wb.workspace_id
 	and m.max_build_number = wb.build_number
 	join provisioner_jobs as pj on wb.job_id = pj.id
@@ -143,8 +142,7 @@ select
 	t.organization_id as template_organization_id,
 	COUNT(*) as total_builds,
 	COUNT(case when pj.job_status = 'failed' then 1 end) as failed_builds
-from
-	workspace_build_with_user as wb
+from workspace_build_with_user as wb
 	join workspaces as w on wb.workspace_id = w.id
 	join provisioner_jobs as pj on wb.job_id = pj.id
 	join templates as t on w.template_id = t.id
@@ -160,8 +158,7 @@ select
 	w.name as workspace_name,
 	w.id as workspace_id,
 	wb.build_number as workspace_build_number
-from
-	workspace_build_with_user as wb
+from workspace_build_with_user as wb
 	join workspaces as w on wb.workspace_id = w.id
 	join users as u on w.owner_id = u.id
 	join provisioner_jobs as pj on wb.job_id = pj.id
@@ -202,8 +199,7 @@ select
 		when bool_or(wa.lifecycle_state = 'start_timeout') then 'timeout'
 		else 'success'
 	end as worst_status
-from
-	workspace_builds wb
+from workspace_builds wb
 	join workspaces w on wb.workspace_id = w.id
 	join templates t on w.template_id = t.id
 	join organizations o on t.organization_id = o.id
@@ -225,8 +221,7 @@ select
 	templates.organization_id as template_organization_id,
 	templates.user_acl,
 	templates.group_acl
-from
-	workspace_builds
+from workspace_builds
 	inner join workspaces on workspaces.id = workspace_builds.workspace_id
 	inner join templates on templates.id = workspaces.template_id
 where workspace_builds.id = @workspace_build_id;
@@ -239,8 +234,7 @@ select
 	sqlc.embed(
 		workspaces
 	) -- Used for dbauthz fetch() checks
-from
-	workspace_builds
+from workspace_builds
 	inner join provisioner_jobs on workspace_builds.job_id = provisioner_jobs.id
 	inner join workspaces on workspace_builds.workspace_id = workspaces.id
 where workspace_builds.workspace_id = $1 and workspaces.deleted = false

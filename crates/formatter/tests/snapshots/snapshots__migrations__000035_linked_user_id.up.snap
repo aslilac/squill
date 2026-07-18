@@ -35,17 +35,16 @@ select
 	keys.oauth_access_token,
 	keys.oauth_refresh_token,
 	keys.oauth_expiry
-from
-	(
-		select
-			row_number() over (
-				partition by user_id,
-				login_type
-				order by last_used desc
-			) as x,
-			api_keys.*
-		from api_keys
-	) as keys
+from (
+	select
+		row_number() over (
+			partition by user_id,
+			login_type
+			order by last_used desc
+		) as x,
+		api_keys.*
+	from api_keys
+) as keys
 where x = 1 and keys.login_type != 'password';
 
 -- Drop columns that have been migrated to user_links.

@@ -254,8 +254,7 @@ with
 			)
 		union
 		select distinct step.run_id as id
-		from
-			chat_debug_steps step
+		from chat_debug_steps step
 			join chat_debug_runs run on run.id = step.run_id
 			and run.chat_id = step.chat_id
 		where

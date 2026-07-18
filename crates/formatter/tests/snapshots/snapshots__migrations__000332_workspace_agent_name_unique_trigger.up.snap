@@ -13,8 +13,7 @@ as $$
 		select
 			workspace_builds.id
 		into workspace_build_id
-		from
-			workspace_resources
+		from workspace_resources
 			join workspace_builds on workspace_builds.job_id
 			= workspace_resources.job_id
 		where workspace_resources.id = NEW.resource_id;
@@ -28,8 +27,7 @@ as $$
 		select
 			COUNT(*)
 		into agents_with_name
-		from
-			workspace_agents
+		from workspace_agents
 			join workspace_resources on workspace_resources.id
 			= workspace_agents.resource_id
 			join workspace_builds on workspace_builds.job_id

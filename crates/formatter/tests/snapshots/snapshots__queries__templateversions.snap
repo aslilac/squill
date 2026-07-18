@@ -124,63 +124,62 @@ where id = sqlc.arg('template_version_id');
 update template_versions
 set archived = true, updated_at = sqlc.arg('updated_at')
 from
-	-- Archive all versions that are returned from this query.
+-- Archive all versions that are returned from this query.
+(
+	select scoped_template_versions.id
+	from
+	-- Scope an archive to a single template and ignore already archived template versions
 	(
-		select scoped_template_versions.id
-		from
-			-- Scope an archive to a single template and ignore already archived template versions
-			(
-				select *
-				from template_versions
-				where
-					template_versions.template_id = sqlc.arg('template_id')::uuid
-					and archived = false
-					and
-					-- This allows archiving a specific template version.
-					case
-						when sqlc.arg('template_version_id')::uuid
-						!= '00000000-0000-0000-0000-000000000000'::uuid
-							then template_versions.id = sqlc.arg('template_version_id')::uuid
-						else true
-					end
-			) as scoped_template_versions
-			left join provisioner_jobs on scoped_template_versions.job_id
-			= provisioner_jobs.id
-			left join templates on scoped_template_versions.template_id = templates.id
+		select *
+		from template_versions
 		where
-			-- Actively used template versions (meaning the latest build is using
-			-- the version) are never archived. A "restart" command on the workspace,
-			-- even if failed, would use the version. So it cannot be archived until
-			-- the build is outdated.
-			not exists (
-				-- Return all "used" versions, where "used" is defined as being
-				-- used by a latest workspace build.
-				select
-					template_version_id
-				from
-					(
-						select distinct on (workspace_id) template_version_id, transition
-						from workspace_builds
-						order by workspace_id, build_number desc
-					) as used_versions
-				where
-					used_versions.transition != 'delete'
-					and scoped_template_versions.id = used_versions.template_version_id
-			)
-			-- Also never archive the active template version
-			and active_version_id != scoped_template_versions.id
-			and case
-				-- Optionally, only archive versions that match a given
-				-- job status like 'failed'.
-				when sqlc.narg('job_status')::provisioner_job_status is not null
-					then provisioner_jobs.job_status
-					= sqlc.narg('job_status')::provisioner_job_status
+			template_versions.template_id = sqlc.arg('template_id')::uuid
+			and archived = false
+			and
+			-- This allows archiving a specific template version.
+			case
+				when sqlc.arg('template_version_id')::uuid
+				!= '00000000-0000-0000-0000-000000000000'::uuid
+					then template_versions.id = sqlc.arg('template_version_id')::uuid
 				else true
 			end
-			-- Pending or running jobs should not be archived, as they are "in progress"
-			and provisioner_jobs.job_status != 'running'
-			and provisioner_jobs.job_status != 'pending'
-	) as archived_versions
+	) as scoped_template_versions
+		left join provisioner_jobs on scoped_template_versions.job_id
+		= provisioner_jobs.id
+		left join templates on scoped_template_versions.template_id = templates.id
+	where
+		-- Actively used template versions (meaning the latest build is using
+		-- the version) are never archived. A "restart" command on the workspace,
+		-- even if failed, would use the version. So it cannot be archived until
+		-- the build is outdated.
+		not exists (
+			-- Return all "used" versions, where "used" is defined as being
+			-- used by a latest workspace build.
+			select
+				template_version_id
+			from (
+				select distinct on (workspace_id) template_version_id, transition
+				from workspace_builds
+				order by workspace_id, build_number desc
+			) as used_versions
+			where
+				used_versions.transition != 'delete'
+				and scoped_template_versions.id = used_versions.template_version_id
+		)
+		-- Also never archive the active template version
+		and active_version_id != scoped_template_versions.id
+		and case
+			-- Optionally, only archive versions that match a given
+			-- job status like 'failed'.
+			when sqlc.narg('job_status')::provisioner_job_status is not null
+				then provisioner_jobs.job_status
+				= sqlc.narg('job_status')::provisioner_job_status
+			else true
+		end
+		-- Pending or running jobs should not be archived, as they are "in progress"
+		and provisioner_jobs.job_status != 'running'
+		and provisioner_jobs.job_status != 'pending'
+) as archived_versions
 where template_versions.id in (archived_versions.id)
 returning template_versions.id;
 

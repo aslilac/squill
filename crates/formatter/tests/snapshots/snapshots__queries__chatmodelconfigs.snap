@@ -10,8 +10,8 @@ select * from chat_model_configs where is_default = true and deleted = false;
 
 -- name: GetChatModelConfigs :many
 select cmc.*
-from
-	chat_model_configs cmc left join ai_providers ap on ap.id = cmc.ai_provider_id
+from chat_model_configs cmc
+	left join ai_providers ap on ap.id = cmc.ai_provider_id
 where cmc.deleted = false
 order by ap.type::text asc, cmc.model asc, cmc.updated_at desc, cmc.id desc;
 
@@ -27,8 +27,7 @@ order by ap.type::text asc, cmc.model asc, cmc.updated_at desc, cmc.id desc;
 
 -- name: GetEnabledChatModelConfigByID :one
 select cmc.*
-from
-	chat_model_configs cmc
+from chat_model_configs cmc
 	-- Providers can be disabled independently of their model configs.
 	-- Check both to ensure the selected config is actually usable.
 	join ai_providers ap on ap.id = cmc.ai_provider_id

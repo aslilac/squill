@@ -44,8 +44,7 @@ select
 	agent_raw.lifecycle_state as workspace_agent_lifecycle_state,
 	app_raw.health as workspace_app_health,
 	task_owner.*
-from
-	tasks
+from tasks
 	left join workspaces on workspaces.id = tasks.workspace_id
 	cross join LATERAL (
 		select
@@ -72,8 +71,7 @@ from
 			workspace_build.transition,
 			provisioner_job.job_status,
 			workspace_build.job_id
-		from
-			workspace_builds workspace_build
+		from workspace_builds workspace_build
 			join provisioner_jobs provisioner_job on provisioner_job.id
 			= workspace_build.job_id
 		where

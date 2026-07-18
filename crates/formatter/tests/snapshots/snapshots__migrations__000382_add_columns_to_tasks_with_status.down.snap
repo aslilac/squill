@@ -34,8 +34,7 @@ select
 			end
 		else 'unknown'::task_status
 	end as status
-from
-	tasks
+from tasks
 	left join LATERAL (
 		select workspace_build_number, workspace_agent_id, workspace_app_id
 		from task_workspace_apps task_app
@@ -48,8 +47,7 @@ from
 			workspace_build.transition,
 			provisioner_job.job_status,
 			workspace_build.job_id
-		from
-			workspace_builds workspace_build
+		from workspace_builds workspace_build
 			join provisioner_jobs provisioner_job on provisioner_job.id
 			= workspace_build.job_id
 		where

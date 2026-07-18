@@ -114,8 +114,7 @@ with
 	),
 	stale_prebuilds_workspace_session_tokens as (
 		select upwst.id
-		from
-			unexpired_prebuilds_workspace_session_tokens upwst
+		from unexpired_prebuilds_workspace_session_tokens upwst
 			left join workspaces w on w.id = upwst.workspace_id
 		where w.owner_id <> 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid
 	),

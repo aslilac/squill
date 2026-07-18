@@ -20,8 +20,7 @@ select
 	users.is_service_account,
 	users.created_at as user_created_at,
 	users.updated_at as user_updated_at
-from
-	organization_members
+from organization_members
 	inner join users on organization_members.user_id = users.id
 	and users.deleted = false
 where
@@ -90,8 +89,7 @@ select
 	users.created_at as user_created_at,
 	users.updated_at as user_updated_at,
 	COUNT(*) over () as count
-from
-	organization_members
+from organization_members
 	inner join users on organization_members.user_id = users.id
 	and users.deleted = false
 where
@@ -109,8 +107,7 @@ where
 				)
 				> (
 					select LOWER(users.username)
-					from
-						organization_members
+					from organization_members
 						inner join users on organization_members.user_id = users.id
 					where organization_members.user_id = @after_id
 				)

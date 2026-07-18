@@ -25,27 +25,25 @@ with
 			bool_and(
 				(wa.lifecycle_state = 'ready'::workspace_agent_lifecycle_state)
 			) as ready
-		from
+		from (
 			(
 				(
-					(
-						workspaces w
+					workspaces w
 						join workspace_latest_builds wlb on ((wlb.workspace_id = w.id))
-					)
-					join workspace_resources wr on ((wr.job_id = wlb.job_id))
 				)
-				join workspace_agents wa on ((wa.resource_id = wr.id))
+					join workspace_resources wr on ((wr.job_id = wlb.job_id))
 			)
+				join workspace_agents wa on ((wa.resource_id = wr.id))
+		)
 		where (w.owner_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid)
 		group by w.id
 	),
 	current_presets as (
 		select w.id as prebuild_id, wlp.template_version_preset_id
-		from
-			(
-				workspaces w
+		from (
+			workspaces w
 				join workspaces_with_latest_presets wlp on ((wlp.workspace_id = w.id))
-			)
+		)
 		where (w.owner_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid)
 	)
 select
@@ -55,14 +53,13 @@ select
 	p.created_at,
 	COALESCE(a.ready, false) as ready,
 	cp.template_version_preset_id as current_preset_id
-from
+from (
 	(
-		(
-			all_prebuilds p
+		all_prebuilds p
 			left join workspaces_with_agents_status a on ((a.workspace_id = p.id))
-		)
+	)
 		join current_presets cp on ((cp.prebuild_id = p.id))
-	);
+);
 
 -- Restore trigger without deleted check.
 drop trigger if exists workspace_agent_name_unique_trigger on workspace_agents;
@@ -79,8 +76,7 @@ as $$
 		select
 			workspace_builds.id
 		into workspace_build_id
-		from
-			workspace_resources
+		from workspace_resources
 			join workspace_builds on workspace_builds.job_id
 			= workspace_resources.job_id
 		where workspace_resources.id = NEW.resource_id;
@@ -94,8 +90,7 @@ as $$
 		select
 			COUNT(*)
 		into agents_with_name
-		from
-			workspace_agents
+		from workspace_agents
 			join workspace_resources on workspace_resources.id
 			= workspace_agents.resource_id
 			join workspace_builds on workspace_builds.job_id

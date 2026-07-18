@@ -299,7 +299,7 @@ impl Lowerer {
             SyntaxKind::Cte => self.cte(node),
             SyntaxKind::SelectList => self.comma_list(node),
             SyntaxKind::SelectItem => self.select_item(node),
-            SyntaxKind::FromClause => self.kw_clause(node),
+            SyntaxKind::FromClause => self.from_clause(node),
             SyntaxKind::TableRef => self.table_ref(node),
             SyntaxKind::ParenTableRef => self.paren_block(node),
             SyntaxKind::JoinExpr => self.join_expr(node),
@@ -854,6 +854,50 @@ impl Lowerer {
         clause(head, content)
     }
 
+    /// `FROM first_item, ...`: the first table stays on the `from` line
+    /// (`from a`, never `from` alone above `a`); joins and further
+    /// comma'd items break onto indented lines when the clause is too
+    /// long.
+    fn from_clause(&mut self, node: &SyntaxNode) -> Doc {
+        let mut head = Vec::new();
+        let mut content = Vec::new();
+        let mut in_head = true;
+        let mut head_first = true;
+        let mut items = ListJoiner::new();
+        for element in node.children_with_tokens() {
+            match element {
+                SyntaxElement::Token(token) if token.kind().is_trivia() => {
+                    let docs = if in_head { &mut head } else { &mut content };
+                    self.trivia(docs, token);
+                }
+                SyntaxElement::Token(token) if in_head && token.kind() == SyntaxKind::Ident => {
+                    if !head_first {
+                        head.push(space());
+                    }
+                    self.push(&mut head, keyword(token.text()));
+                    head_first = false;
+                }
+                element => {
+                    in_head = false;
+                    self.list_element(&mut content, &mut items, element);
+                }
+            }
+        }
+        if content.is_empty() {
+            return group(concat(head));
+        }
+        let split = content
+            .iter()
+            .position(|doc| matches!(doc, Doc::SoftLineOrSpace))
+            .unwrap_or(content.len());
+        let rest = content.split_off(split);
+        let mut docs = vec![concat(head), space(), concat(content)];
+        if !rest.is_empty() {
+            docs.push(indent(concat(rest)));
+        }
+        group(concat(docs))
+    }
+
     /// Comma-separated list content (select lists, from lists, CTE lists).
     fn comma_list(&mut self, node: &SyntaxNode) -> Doc {
         let mut docs = Vec::new();
@@ -1044,7 +1088,17 @@ impl Lowerer {
     fn join_expr(&mut self, node: &SyntaxNode) -> Doc {
         let mut docs = Vec::new();
         self.join_segments(&mut docs, node);
-        group(concat(docs))
+        // The primary table stays glued to whatever precedes the join
+        // chain (`from templates`); the join segments indent below it.
+        let split = docs
+            .iter()
+            .position(|doc| matches!(doc, Doc::SoftLineOrSpace))
+            .unwrap_or(docs.len());
+        let rest = docs.split_off(split);
+        if rest.is_empty() {
+            return group(concat(docs));
+        }
+        group(concat([concat(docs), indent(concat(rest))]))
     }
 
     fn join_segments(&mut self, docs: &mut Vec<Doc>, node: &SyntaxNode) {

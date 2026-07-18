@@ -24,8 +24,7 @@ returning *;
 
 -- name: GetBoundarySessionByID :one
 select bs.*, w.id as workspace_id, w.owner_id as workspace_owner_id
-from
-	boundary_sessions bs
+from boundary_sessions bs
 	join workspace_agents wa on wa.id = bs.workspace_agent_id
 	join workspace_resources wr on wr.id = wa.resource_id
 	join workspace_builds wb on wb.job_id = wr.job_id

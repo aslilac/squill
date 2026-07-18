@@ -15,22 +15,20 @@ select * from workspace_build_parameters where workspace_build_id = $1;
 
 -- name: GetUserWorkspaceBuildParameters :many
 select name, value
-from
-	(
-		select distinct on (tvp.name) tvp.name, wbp.value, wb.created_at
-		from
-			workspace_build_parameters wbp
-			join workspace_builds wb on wb.id = wbp.workspace_build_id
-			join workspaces w on w.id = wb.workspace_id
-			join template_version_parameters tvp on tvp.template_version_id
-			= wb.template_version_id
-		where
-			w.owner_id = $1
-			and wb.transition = 'start'
-			and w.template_id = $2
-			and tvp.ephemeral = false
-			and tvp.name = wbp.name
-		order by tvp.name, wb.created_at desc
-	) q1
+from (
+	select distinct on (tvp.name) tvp.name, wbp.value, wb.created_at
+	from workspace_build_parameters wbp
+		join workspace_builds wb on wb.id = wbp.workspace_build_id
+		join workspaces w on w.id = wb.workspace_id
+		join template_version_parameters tvp on tvp.template_version_id
+		= wb.template_version_id
+	where
+		w.owner_id = $1
+		and wb.transition = 'start'
+		and w.template_id = $2
+		and tvp.ephemeral = false
+		and tvp.name = wbp.name
+	order by tvp.name, wb.created_at desc
+) q1
 order by created_at desc, name
 limit 100;

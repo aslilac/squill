@@ -105,14 +105,13 @@ select
 	tp.node,
 	tp.status,
 	tunnels.lookup_id
-from
-	(
-		select dst_id as peer_id, src_id as lookup_id
-		from tailnet_tunnels
-		where src_id = any(@ids::uuid[])
-		union
-		select src_id as peer_id, dst_id as lookup_id
-		from tailnet_tunnels
-		where dst_id = any(@ids::uuid[])
-	) tunnels
+from (
+	select dst_id as peer_id, src_id as lookup_id
+	from tailnet_tunnels
+	where src_id = any(@ids::uuid[])
+	union
+	select src_id as peer_id, dst_id as lookup_id
+	from tailnet_tunnels
+	where dst_id = any(@ids::uuid[])
+) tunnels
 	inner join tailnet_peers tp on tp.id = tunnels.peer_id;

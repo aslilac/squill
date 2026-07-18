@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 alter table only workspaces
@@ -59,8 +58,7 @@ select
 	templates.display_name as template_display_name,
 	templates.icon as template_icon,
 	templates.description as template_description
-from
-	workspaces
+from workspaces
 	inner join visible_users on workspaces.owner_id = visible_users.id
 	inner join organizations on workspaces.organization_id = organizations.id
 	inner join templates on workspaces.template_id = templates.id;

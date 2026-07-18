@@ -9,9 +9,9 @@ select * from groups where id = $1 limit 1;
 with input as (select unnest(@group_ids::uuid[]) as id)
 select array_agg(input.id)::uuid[] as invalid_group_ids, COUNT(*) = 0 as ok
 from
-	-- Preserve rows where there is not a matching left (groups) row for each
-	-- right (input) row...
-	groups
+-- Preserve rows where there is not a matching left (groups) row for each
+-- right (input) row...
+groups
 	right join input on groups.id = input.id
 where
 	-- ...so that we can retain exactly those rows where an input ID does not
@@ -27,8 +27,8 @@ select
 	sqlc.embed(groups),
 	organizations.name as organization_name,
 	organizations.display_name as organization_display_name
-from
-	groups inner join organizations on groups.organization_id = organizations.id
+from groups
+	inner join organizations on groups.organization_id = organizations.id
 where
 	true
 	and case
@@ -42,8 +42,8 @@ where
 			then exists (
 				select 1
 				from
-					-- this view handles the 'everyone' group in orgs.
-					group_members_expanded
+				-- this view handles the 'everyone' group in orgs.
+				group_members_expanded
 				where
 					group_members_expanded.group_id = groups.id
 					and group_members_expanded.user_id = @has_member_id

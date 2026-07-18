@@ -18,8 +18,7 @@ with
 				+ COALESCE(msg.cache_creation_tokens, 0)::numeric
 				* COALESCE(pricing.cache_write_price, 0)
 			)::bigint as total_cost_micros
-		from
-			chat_messages as msg
+		from chat_messages as msg
 			join chat_model_configs as cfg on cfg.id = msg.model_config_id
 			cross join LATERAL (
 				select

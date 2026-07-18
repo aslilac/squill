@@ -24,10 +24,9 @@ select
 	template_versions.archived,
 	COALESCE(visible_users.avatar_url, ''::text) as created_by_avatar_url,
 	COALESCE(visible_users.username, ''::text) as created_by_username
-from
-	(
-		template_versions
+from (
+	template_versions
 		left join visible_users on (template_versions.created_by = visible_users.id)
-	);
+);
 
 comment on view template_version_with_user is 'Joins in the username + avatar url of the created by user.';

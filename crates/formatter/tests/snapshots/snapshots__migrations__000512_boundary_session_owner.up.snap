@@ -13,8 +13,7 @@ comment on column boundary_sessions.owner_id is 'The ID of the user who owns the
 -- data is preserved.
 update boundary_sessions bs
 set owner_id = w.owner_id
-from
-	workspace_agents wa
+from workspace_agents wa
 	join workspace_resources wr on wa.resource_id = wr.id
 	join provisioner_jobs pj on wr.job_id = pj.id
 	join workspace_builds wb on pj.id = wb.job_id

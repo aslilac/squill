@@ -8,8 +8,7 @@ select
 	workspace_builds.*,
 	coalesce(visible_users.avatar_url, '') as initiator_by_avatar_url,
 	coalesce(visible_users.username, '') as initiator_by_username
-from
-	workspace_builds
+from workspace_builds
 	left join visible_users on workspace_builds.initiator_id = visible_users.id;
 
 comment on view workspace_build_with_user is 'Joins in the username + avatar url of the initiated by user.';
@@ -20,8 +19,7 @@ select
 	template_versions.*,
 	coalesce(visible_users.avatar_url, '') as created_by_avatar_url,
 	coalesce(visible_users.username, '') as created_by_username
-from
-	template_versions
+from template_versions
 	left join visible_users on template_versions.created_by = visible_users.id;
 
 comment on view template_version_with_user is 'Joins in the username + avatar url of the created by user.';

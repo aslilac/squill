@@ -180,8 +180,7 @@ select * from oauth2_provider_app_tokens where api_key_id = $1;
 select
 	COUNT(distinct oauth2_provider_app_tokens.id) as token_count,
 	sqlc.embed(oauth2_provider_apps)
-from
-	oauth2_provider_app_tokens
+from oauth2_provider_app_tokens
 	inner join oauth2_provider_app_secrets on oauth2_provider_app_secrets.id
 	= oauth2_provider_app_tokens.app_secret_id
 	inner join oauth2_provider_apps on oauth2_provider_apps.id

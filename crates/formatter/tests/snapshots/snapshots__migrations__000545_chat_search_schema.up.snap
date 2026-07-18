@@ -12,8 +12,9 @@ as $$
 			when jsonb_typeof(content) = 'array'
 				then (
 					select string_agg(part ->> 'text', ' ' order by ordinality)
-					from
-						jsonb_array_elements(content) with ordinality as t(part, ordinality)
+					from jsonb_array_elements(
+						content
+					) with ordinality as t(part, ordinality)
 					where part ->> 'type' = 'text'
 				)
 		end
@@ -130,16 +131,13 @@ as $$
 	begin
 		update chats c
 		set history_version = c.snapshot_version, generation_attempt = 0
-		from
-			(
-				select distinct n.chat_id
-				from
-					chat_message_history_new_rows n
-					join chat_message_history_old_rows o on o.id = n.id
-				where
-					(to_jsonb(o) - 'search_tsv')
-					is distinct from (to_jsonb(n) - 'search_tsv')
-			) as affected
+		from (
+			select distinct n.chat_id
+			from chat_message_history_new_rows n
+				join chat_message_history_old_rows o on o.id = n.id
+			where
+				(to_jsonb(o) - 'search_tsv') is distinct from (to_jsonb(n) - 'search_tsv')
+		) as affected
 		where
 			c.id = affected.chat_id
 			and (

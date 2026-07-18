@@ -4,25 +4,23 @@ expression: formatted
 ---
 -- name: GetQuotaAllowanceForUser :one
 select coalesce(SUM(groups.quota_allowance), 0)::bigint
-from
-	(
-		-- Select all groups this user is a member of. This will also include
-		-- the "Everyone" group for organizations the user is a member of.
-		select
-			*
-		from group_members_expanded
-		where
-			@user_id = user_id
-			and @organization_id = group_members_expanded.organization_id
-	) as members
+from (
+	-- Select all groups this user is a member of. This will also include
+	-- the "Everyone" group for organizations the user is a member of.
+	select
+		*
+	from group_members_expanded
+	where
+		@user_id = user_id
+		and @organization_id = group_members_expanded.organization_id
+) as members
 	inner join groups on members.group_id = groups.id;
 
 -- name: GetQuotaConsumedForUser :one
 with
 	latest_builds as (
 		select distinct on (wb.workspace_id) wb.workspace_id, wb.daily_cost
-		from
-			workspace_builds wb
+		from workspace_builds wb
 			-- This INNER JOIN prevents a seq scan of the workspace_builds table.
 			-- Limit the rows to the absolute minimum required, which is all workspaces
 			-- in a given organization for a given user.

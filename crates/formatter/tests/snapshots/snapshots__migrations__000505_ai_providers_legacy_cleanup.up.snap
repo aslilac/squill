@@ -6,8 +6,7 @@ do $$
 	begin
 		if exists (
 			select 1
-			from
-				chat_providers cp
+			from chat_providers cp
 				join ai_providers ap on ap.name = 'agents-' || cp.provider
 			where ap.deleted = false and ap.id != cp.id
 		) then

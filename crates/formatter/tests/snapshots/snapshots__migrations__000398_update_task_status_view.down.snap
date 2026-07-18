@@ -36,8 +36,7 @@ select
 	end as status,
 	task_app.*,
 	task_owner.*
-from
-	tasks
+from tasks
 	cross join LATERAL (
 		select
 			vu.username as owner_username,
@@ -58,8 +57,7 @@ from
 			workspace_build.transition,
 			provisioner_job.job_status,
 			workspace_build.job_id
-		from
-			workspace_builds workspace_build
+		from workspace_builds workspace_build
 			join provisioner_jobs provisioner_job on provisioner_job.id
 			= workspace_build.job_id
 		where

@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 -- Restore the original trigger bodies from 000519.
@@ -43,14 +42,12 @@ as $$
 	begin
 		update chats c
 		set history_version = c.snapshot_version, generation_attempt = 0
-		from
-			(
-				select distinct n.chat_id
-				from
-					chat_message_history_new_rows n
-					join chat_message_history_old_rows o on o.id = n.id
-				where o is distinct from n
-			) as affected
+		from (
+			select distinct n.chat_id
+			from chat_message_history_new_rows n
+				join chat_message_history_old_rows o on o.id = n.id
+			where o is distinct from n
+		) as affected
 		where
 			c.id = affected.chat_id
 			and (

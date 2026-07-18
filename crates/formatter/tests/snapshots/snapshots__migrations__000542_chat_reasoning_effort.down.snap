@@ -61,13 +61,12 @@ select
 	c.context_dirty_since,
 	c.context_dirty_resources,
 	c.context_error
-from
+from (
 	(
-		(
-			chats c
+		chats c
 			left join chats root on (
 				(root.id = COALESCE(c.root_chat_id, c.parent_chat_id))
 			)
-		)
+	)
 		join visible_users owner on ((owner.id = c.owner_id))
-	);
+);

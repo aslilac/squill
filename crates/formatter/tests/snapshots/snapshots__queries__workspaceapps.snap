@@ -94,8 +94,7 @@ on conflict
 		-- rejection.
 		not exists (
 			select 1
-			from
-				workspace_agents as existing_agent
+			from workspace_agents as existing_agent
 				inner join workspace_resources as existing_resource on existing_agent.resource_id
 				= existing_resource.id
 				inner join workspace_builds as existing_build on existing_resource.job_id
@@ -104,8 +103,7 @@ on conflict
 		)
 		or exists (
 			select 1
-			from
-				workspace_agents as existing_agent
+			from workspace_agents as existing_agent
 				inner join workspace_resources as existing_resource on existing_agent.resource_id
 				= existing_resource.id
 				inner join workspace_builds as existing_build on existing_resource.job_id

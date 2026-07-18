@@ -26,8 +26,7 @@ select
 	sqlc.embed(workspace_agents),
 	workspace_builds.id as workspace_build_id,
 	sqlc.embed(workspaces)
-from
-	workspace_agents
+from workspace_agents
 	join workspace_resources on workspace_resources.id
 	= workspace_agents.resource_id
 	join workspace_builds on workspace_builds.job_id = workspace_resources.job_id
@@ -249,8 +248,7 @@ with
 	),
 	old_agents as (
 		select wa.id
-		from
-			workspace_agents as wa
+		from workspace_agents as wa
 			join workspace_resources as wr on wa.resource_id = wr.id
 			join workspace_builds as wb on wb.job_id = wr.job_id
 			left join latest_builds on latest_builds.workspace_id = wb.workspace_id
@@ -271,8 +269,7 @@ where agent_id in (select id from old_agents);
 
 -- name: GetWorkspaceAgentsInLatestBuildByWorkspaceID :many
 select workspace_agents.*
-from
-	workspace_agents
+from workspace_agents
 	join workspace_resources on workspace_agents.resource_id
 	= workspace_resources.id
 	join workspace_builds on workspace_resources.job_id = workspace_builds.job_id
@@ -289,8 +286,7 @@ where
 
 -- name: GetWorkspaceAgentsInLatestBuildByWorkspaceIDs :many
 select workspace_builds.workspace_id, sqlc.embed(workspace_agents)
-from
-	workspace_agents
+from workspace_agents
 	join workspace_resources on workspace_agents.resource_id
 	= workspace_resources.id
 	join workspace_builds on workspace_resources.job_id = workspace_builds.job_id
@@ -306,8 +302,7 @@ where workspace_agents.deleted = false;
 
 -- name: GetWorkspaceAgentsByWorkspaceAndBuildNumber :many
 select workspace_agents.*
-from
-	workspace_agents
+from workspace_agents
 	join workspace_resources on workspace_agents.resource_id
 	= workspace_resources.id
 	join workspace_builds on workspace_resources.job_id = workspace_builds.job_id
@@ -332,8 +327,7 @@ select
 	workspace_agents.id as agent_id,
 	workspace_agents.name as agent_name,
 	workspace_agents.auth_token as agent_token
-from
-	workspaces
+from workspaces
 	join (
 		-- latest build per workspace
 		select distinct on (workspace_id)
@@ -368,8 +362,7 @@ select
 	sqlc.embed(workspace_agents),
 	sqlc.embed(workspace_build_with_user),
 	tasks.id as task_id
-from
-	workspace_agents
+from workspace_agents
 	join workspace_resources on workspace_agents.resource_id
 	= workspace_resources.id
 	join workspace_build_with_user on workspace_resources.job_id
@@ -407,8 +400,7 @@ where
 		-- and agent's build is immediately previous.
 		and exists (
 			select 1
-			from
-				workspace_builds latest
+			from workspace_builds latest
 				join provisioner_jobs pj on pj.id = latest.job_id
 			where
 				latest.workspace_id = workspace_build_with_user.workspace_id
@@ -444,8 +436,7 @@ select distinct on (workspace_agent_script_timings.script_id)
 	workspace_agent_scripts.display_name,
 	workspace_agents.id as workspace_agent_id,
 	workspace_agents.name as workspace_agent_name
-from
-	workspace_agent_script_timings
+from workspace_agent_script_timings
 	inner join workspace_agent_scripts on workspace_agent_scripts.id
 	= workspace_agent_script_timings.script_id
 	inner join workspace_agents on workspace_agents.id
@@ -495,8 +486,7 @@ select
 	t.name as template_name,
 	tv.name as template_version_name,
 	sqlc.embed(workspace_agents)
-from
-	workspaces w
+from workspaces w
 	join users u on w.owner_id = u.id
 	join templates t on w.template_id = t.id
 	join workspace_builds wb on w.id = wb.workspace_id
@@ -518,8 +508,7 @@ select
 	sqlc.embed(workspace_agents),
 	sqlc.embed(workspaces),
 	users.username as owner_username
-from
-	workspace_agents
+from workspace_agents
 	join workspace_resources on workspace_agents.resource_id
 	= workspace_resources.id
 	join provisioner_jobs on workspace_resources.job_id = provisioner_jobs.id
@@ -552,8 +541,7 @@ with
 		where
 			id in (
 				select wa.id
-				from
-					workspace_agents wa
+				from workspace_agents wa
 					join workspace_resources wr on wr.id = wa.resource_id
 					join workspace_builds wb on wb.job_id = wr.job_id
 				where
@@ -585,8 +573,7 @@ with
 		where
 			id in (
 				select wa.id
-				from
-					workspace_agents wa
+				from workspace_agents wa
 					join workspace_resources wr on wr.id = wa.resource_id
 					join workspace_builds wb on wb.job_id = wr.job_id
 				where wb.workspace_id = @workspace_id and wa.deleted = false

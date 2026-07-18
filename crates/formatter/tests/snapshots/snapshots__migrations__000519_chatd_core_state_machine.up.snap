@@ -194,14 +194,12 @@ as $$
 	begin
 		update chats c
 		set history_version = c.snapshot_version, generation_attempt = 0
-		from
-			(
-				select distinct n.chat_id
-				from
-					chat_message_history_new_rows n
-					join chat_message_history_old_rows o on o.id = n.id
-				where o is distinct from n
-			) as affected
+		from (
+			select distinct n.chat_id
+			from chat_message_history_new_rows n
+				join chat_message_history_old_rows o on o.id = n.id
+			where o is distinct from n
+		) as affected
 		where
 			c.id = affected.chat_id
 			and (
@@ -355,7 +353,6 @@ select
 	COALESCE(root.group_acl, c.group_acl) as group_acl,
 	owner.username as owner_username,
 	owner.name as owner_name
-from
-	chats c
+from chats c
 	left join chats root on root.id = COALESCE(c.root_chat_id, c.parent_chat_id)
 	join visible_users owner on owner.id = c.owner_id;

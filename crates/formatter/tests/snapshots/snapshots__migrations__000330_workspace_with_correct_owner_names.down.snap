@@ -39,13 +39,12 @@ select
 	workspace_builds.template_version_preset_id,
 	COALESCE(visible_users.avatar_url, ''::text) as initiator_by_avatar_url,
 	COALESCE(visible_users.username, ''::text) as initiator_by_username
-from
-	(
-		workspace_builds
+from (
+	workspace_builds
 		left join visible_users on (
 			(workspace_builds.initiator_id = visible_users.id)
 		)
-	);
+);
 
 comment on view workspace_build_with_user is 'Joins in the username + avatar url of the initiated by user.';
 
@@ -86,14 +85,13 @@ select
 	COALESCE(organizations.name, ''::text) as organization_name,
 	COALESCE(organizations.display_name, ''::text) as organization_display_name,
 	COALESCE(organizations.icon, ''::text) as organization_icon
-from
+from (
 	(
-		(
-			templates
+		templates
 			left join visible_users on ((templates.created_by = visible_users.id))
-		)
+	)
 		left join organizations on ((templates.organization_id = organizations.id))
-	);
+);
 
 comment on view template_with_names is 'Joins in the display name information such as username, avatar, and organization name.';
 
@@ -115,11 +113,10 @@ select
 	template_versions.source_example_id,
 	COALESCE(visible_users.avatar_url, ''::text) as created_by_avatar_url,
 	COALESCE(visible_users.username, ''::text) as created_by_username
-from
-	(
-		template_versions
+from (
+	template_versions
 		left join visible_users on (template_versions.created_by = visible_users.id)
-	);
+);
 
 comment on view template_version_with_user is 'Joins in the username + avatar url of the created by user.';
 
@@ -152,16 +149,15 @@ select
 	templates.display_name as template_display_name,
 	templates.icon as template_icon,
 	templates.description as template_description
-from
+from (
 	(
 		(
-			(
-				workspaces
+			workspaces
 				join visible_users on ((workspaces.owner_id = visible_users.id))
-			)
-			join organizations on ((workspaces.organization_id = organizations.id))
 		)
+			join organizations on ((workspaces.organization_id = organizations.id))
+	)
 		join templates on ((workspaces.template_id = templates.id))
-	);
+);
 
 comment on view workspaces_expanded is 'Joins in the display name information such as username, avatar, and organization name.';

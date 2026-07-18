@@ -32,8 +32,7 @@ as $$
 		);
 		member_count := (
 			select count(*) as count
-			from
-				organization_members
+			from organization_members
 				left join users on users.id = organization_members.user_id
 			where
 				organization_members.organization_id = OLD.id and users.deleted = false

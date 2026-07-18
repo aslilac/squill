@@ -70,8 +70,7 @@ select
 	u.avatar_url,
 	t.ids::uuid[] as template_ids,
 	(SUM(ds.usage_mins) * 60)::bigint as usage_seconds
-from
-	deployment_stats ds
+from deployment_stats ds
 	join users u on u.id = ds.user_id
 	join template_ids t on ds.user_id = t.user_id
 group by ds.user_id, u.username, u.avatar_url, t.ids
@@ -257,8 +256,7 @@ with
 		select distinct on (ws.template_id,
 		app.slug)
 			ws.template_id, app.slug, app.display_name, app.icon
-		from
-			workspaces ws
+		from workspaces ws
 			join workspace_builds as build on build.workspace_id = ws.id
 			join workspace_resources as resource on resource.job_id = build.job_id
 			join workspace_agents as agent on agent.resource_id = resource.id
@@ -286,8 +284,7 @@ with
 			apps.display_name,
 			apps.icon,
 			(tus.app_usage_mins -> apps.slug)::smallint as usage_mins
-		from
-			apps
+		from apps
 			join template_usage_stats as tus on
 			-- Query parameter filter.
 			tus.start_time
@@ -377,8 +374,7 @@ select
 		),
 		0
 	)::bigint as times_used
-from
-	app_insights as ai
+from app_insights as ai
 	join templates as t on t.slug = ai.slug
 	and t.display_name = ai.display_name
 	and t.icon = ai.icon
@@ -421,8 +417,7 @@ with
 			COALESCE(wa.display_name, '') as display_name,
 			(wa.slug is not null)::boolean as is_app,
 			COUNT(distinct s.minute_bucket) as app_minutes
-		from
-			filtered_stats as fs
+		from filtered_stats as fs
 			join workspaces as w on w.id = fs.workspace_id
 			-- We do a left join here because we want to include user IDs that have used
 			-- e.g. ports when counting active users.
@@ -472,16 +467,15 @@ with
 				)::timestamptz,
 				@end_time::timestamptz
 			)::timestamptz as to_
-		from
-			generate_series(
-				@start_time::timestamptz,
-				-- Subtract 1 μs to avoid creating an extra series.
-				(
-					@end_time::timestamptz
-				)
-				- '1 microsecond'::interval,
-				(@interval_days::int || ' day')::interval
-			) as d
+		from generate_series(
+			@start_time::timestamptz,
+			-- Subtract 1 μs to avoid creating an extra series.
+			(
+				@end_time::timestamptz
+			)
+			- '1 microsecond'::interval,
+			(@interval_days::int || ' day')::interval
+		) as d
 	)
 select
 	ts.from_ as start_time,
@@ -491,8 +485,7 @@ select
 		null
 	)::uuid[] as template_ids,
 	COUNT(distinct tus.user_id) as active_users
-from
-	ts
+from ts
 	left join template_usage_stats as tus on tus.start_time >= ts.from_
 	and tus.start_time
 	< ts.to_ -- End time exclusion criteria optimization for index.
@@ -574,8 +567,7 @@ with
 			COUNT(distinct s.minute_bucket) as app_minutes,
 			-- Store each unique minute bucket for later merge between datasets.
 			array_agg(distinct s.minute_bucket) as minute_buckets
-		from
-			filtered_app_stats as fas
+		from filtered_app_stats as fas
 			join workspaces as w on w.id = fas.workspace_id
 			-- Generate a series of minute buckets for each session for computing the
 			-- mintes/bucket.
@@ -690,41 +682,40 @@ with
 				stats.app_name,
 				stats.app_minutes
 			) filter (where stats.app_name is not null) as app_usage_mins
-		from
-			(
-				select
-					time_bucket,
-					template_id,
-					user_id,
-					0 as ssh_mins,
-					0 as sftp_mins,
-					0 as reconnecting_pty_mins,
-					0 as vscode_mins,
-					0 as jetbrains_mins,
-					app_name,
-					app_minutes,
-					minute_buckets
-				from workspace_app_stat_buckets
-				union
-				all
-				select
-					time_bucket,
-					template_id,
-					user_id,
-					ssh_mins,
-					-- TODO(mafredri): Enable when we have the column.
-					0 as sftp_mins,
-					reconnecting_pty_mins,
-					vscode_mins,
-					jetbrains_mins,
-					null as app_name,
-					null as app_minutes,
-					minute_buckets
-				from agent_stats_buckets
-				where
-					-- See note in the agent_stats_buckets CTE.
-					has_connection
-			) as stats,
+		from (
+			select
+				time_bucket,
+				template_id,
+				user_id,
+				0 as ssh_mins,
+				0 as sftp_mins,
+				0 as reconnecting_pty_mins,
+				0 as vscode_mins,
+				0 as jetbrains_mins,
+				app_name,
+				app_minutes,
+				minute_buckets
+			from workspace_app_stat_buckets
+			union
+			all
+			select
+				time_bucket,
+				template_id,
+				user_id,
+				ssh_mins,
+				-- TODO(mafredri): Enable when we have the column.
+				0 as sftp_mins,
+				reconnecting_pty_mins,
+				vscode_mins,
+				jetbrains_mins,
+				null as app_name,
+				null as app_minutes,
+				minute_buckets
+			from agent_stats_buckets
+			where
+				-- See note in the agent_stats_buckets CTE.
+				has_connection
+		) as stats,
 			unnest(minute_buckets) as minute_bucket
 		group by stats.time_bucket, stats.template_id, stats.user_id
 	),
@@ -749,8 +740,7 @@ with
 			-- improve upon this at some point.
 			PERCENTILE_CONT(0.5) within group (order by
 				was.connection_median_latency_ms)::real as median_latency_ms
-		from
-			minute_buckets as mb
+		from minute_buckets as mb
 			join workspace_agent_stats as was on was.created_at
 			>= (select t from latest_start)
 			and was.created_at < NOW()
@@ -786,8 +776,7 @@ with
 		stats.vscode_mins,
 		stats.jetbrains_mins,
 		stats.app_usage_mins
-	from
-		stats
+	from stats
 		left join latencies on
 		-- The latencies group-by ensures there at most one row.
 		latencies.start_time
@@ -817,25 +806,23 @@ on conflict
 with
 	latest_workspace_builds as (
 		select wb.id, wbmax.template_id, wb.template_version_id
-		from
-			(
-				select
-					tv.template_id,
-					wbmax.workspace_id,
-					MAX(wbmax.build_number) as max_build_number
-				from
-					workspace_builds wbmax
-					join template_versions tv on (tv.id = wbmax.template_version_id)
-				where
-					wbmax.created_at >= @start_time::timestamptz
-					and wbmax.created_at < @end_time::timestamptz
-					and case
-						when COALESCE(array_length(@template_ids::uuid[], 1), 0) > 0
-							then tv.template_id = any(@template_ids::uuid[])
-						else true
-					end
-				group by tv.template_id, wbmax.workspace_id
-			) wbmax
+		from (
+			select
+				tv.template_id,
+				wbmax.workspace_id,
+				MAX(wbmax.build_number) as max_build_number
+			from workspace_builds wbmax
+				join template_versions tv on (tv.id = wbmax.template_version_id)
+			where
+				wbmax.created_at >= @start_time::timestamptz
+				and wbmax.created_at < @end_time::timestamptz
+				and case
+					when COALESCE(array_length(@template_ids::uuid[], 1), 0) > 0
+						then tv.template_id = any(@template_ids::uuid[])
+					else true
+				end
+			group by tv.template_id, wbmax.workspace_id
+		) wbmax
 			join workspace_builds wb on (
 				wb.workspace_id = wbmax.workspace_id
 				and wb.build_number = wbmax.max_build_number
@@ -851,8 +838,7 @@ with
 			tvp.display_name,
 			tvp.description,
 			tvp.options
-		from
-			latest_workspace_builds wb
+		from latest_workspace_builds wb
 			join template_version_parameters tvp on (
 				tvp.template_version_id = wb.template_version_id
 			)
@@ -868,8 +854,7 @@ select
 	utp.options,
 	wbp.value,
 	COUNT(wbp.value) as count
-from
-	unique_template_params utp
+from unique_template_params utp
 	join workspace_build_parameters wbp on (
 		utp.workspace_build_ids @> array [wbp.workspace_build_id]
 		and utp.name = wbp.name
@@ -892,19 +877,17 @@ with
 	-- dates_of_interest generates the dates that will represent the horizontal axis of the chart.
 	dates_of_interest as (
 		select timezone(@tz::text, gs_local) as date
-		from
-			generate_series(
-				timezone(@tz::text, @start_time::timestamptz),
-				timezone(@tz::text, @end_time::timestamptz),
-				interval '1 day'
-			) as gs_local
+		from generate_series(
+			timezone(@tz::text, @start_time::timestamptz),
+			timezone(@tz::text, @end_time::timestamptz),
+			interval '1 day'
+		) as gs_local
 	),
 	-- latest_status_before_range selects the last status of each user before the start_time.
 	-- This represents the status of all users at the start of the time range.
 	latest_status_before_range as (
 		select distinct usc.user_id, usc.new_status, usc.changed_at
-		from
-			user_status_changes usc
+		from user_status_changes usc
 			left join LATERAL (
 				select COUNT(*) > 0 as deleted
 				from user_deleted ud
@@ -921,8 +904,7 @@ with
 	-- status_changes_during_range selects the statuses of each user during the start_time and end_time.
 	status_changes_during_range as (
 		select usc.user_id, usc.new_status, usc.changed_at
-		from
-			user_status_changes usc
+		from user_status_changes usc
 			left join LATERAL (
 				select COUNT(*) > 0 as deleted
 				from user_deleted ud
@@ -957,8 +939,7 @@ with
 				order by rsc1.changed_at desc
 			) as rn,
 			rsc1.new_status
-		from
-			dates_of_interest d
+		from dates_of_interest d
 			left join relevant_status_changes rsc1 on rsc1.changed_at <= d.date
 	)
 select

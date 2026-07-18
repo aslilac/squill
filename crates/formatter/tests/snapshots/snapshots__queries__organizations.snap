@@ -63,8 +63,7 @@ select
 	) as template_count,
 	(
 		select count(*)
-		from
-			organization_members
+		from organization_members
 			left join users on organization_members.user_id = users.id
 		where organization_members.organization_id = $1 and users.deleted = false
 	) as member_count,

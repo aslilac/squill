@@ -10,8 +10,7 @@ select
 	coalesce(visible_users.avatar_url, '') as created_by_avatar_url,
 	coalesce(visible_users.username, '') as created_by_username,
 	coalesce(organizations.name, '') as organization_name
-from
-	templates
+from templates
 	left join visible_users on templates.created_by = visible_users.id
 	left join organizations on templates.organization_id = organizations.id;
 

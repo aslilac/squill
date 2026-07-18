@@ -30,8 +30,7 @@ select
 	COALESCE(ai_prompt.value, '') as prompt,
 	w.created_at,
 	case when w.deleted = true then w.deleting_at else null end as deleted_at
-from
-	workspaces w
+from workspaces w
 	inner join LATERAL (
 		-- Find the latest build for this workspace that has has_ai_task = true.
 		select
@@ -96,8 +95,7 @@ select
 	latest_build.build_number as workspace_build_number,
 	sidebar_app.agent_id as workspace_agent_id,
 	sidebar_app.id as workspace_app_id
-from
-	tasks t
+from tasks t
 	inner join LATERAL (
 		-- Find the latest build for this tasks workspace.
 		select

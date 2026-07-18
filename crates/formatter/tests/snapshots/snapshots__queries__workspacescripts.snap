@@ -37,8 +37,7 @@ select distinct on (workspace_agent_scripts.id)
 	workspace_agent_scripts.*,
 	workspace_agent_script_timings.exit_code,
 	workspace_agent_script_timings.status
-from
-	workspace_agent_scripts
+from workspace_agent_scripts
 	left join workspace_agent_script_timings on workspace_agent_script_timings.script_id
 	= workspace_agent_scripts.id
 where workspace_agent_scripts.workspace_agent_id = any(@ids::uuid[])

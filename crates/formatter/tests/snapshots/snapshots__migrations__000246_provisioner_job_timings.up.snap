@@ -116,8 +116,7 @@ select
 		),
 		0
 	) as apply_secs
-from
-	provisioner_jobs pj
+from provisioner_jobs pj
 	join workspace_builds wb on wb.job_id = pj.id
 	left join provisioner_job_timings pjt on pjt.job_id = pj.id
 group by pj.id, wb.workspace_id;

@@ -64,8 +64,7 @@ select *
 -- Note that this selects from the CTE, not the original table. The CTE is named
 -- the same as the original table to trick sqlc into reusing the existing struct
 -- for the table.
-from
-	usage_events
+from usage_events
 -- The CTE and the reorder is required because UPDATE doesn't guarantee order.
 order by
 	created_at asc;
@@ -79,13 +78,12 @@ set
 		else null
 	end,
 	failure_message = NULLIF(input.failure_message, '')
-from
-	(
-		select
-			UNNEST(@ids::text[]) as id,
-			UNNEST(@failure_messages::text[]) as failure_message,
-			UNNEST(@set_published_ats::boolean[]) as set_published_at
-	) input
+from (
+	select
+		UNNEST(@ids::text[]) as id,
+		UNNEST(@failure_messages::text[]) as failure_message,
+		UNNEST(@set_published_ats::boolean[]) as set_published_at
+) input
 where
 	input.id = usage_events.id
 	-- If the number of ids, failure messages, and set published ats are not the

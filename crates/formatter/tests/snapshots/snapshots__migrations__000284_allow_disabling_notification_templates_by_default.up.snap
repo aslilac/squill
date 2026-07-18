@@ -15,8 +15,7 @@ as $$
 		--    been explicitly enabled by the user.
 		if exists (
 			select 1
-			from
-				notification_templates
+			from notification_templates
 				left join notification_preferences on notification_preferences.notification_template_id
 				= notification_templates.id
 				and notification_preferences.user_id = NEW.user_id

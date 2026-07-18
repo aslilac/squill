@@ -56,8 +56,7 @@ with
 			updated_chats.context_dirty_since,
 			updated_chats.context_dirty_resources,
 			updated_chats.context_error
-		from
-			updated_chats
+		from updated_chats
 			left join chats root on root.id
 			= COALESCE(updated_chats.root_chat_id, updated_chats.parent_chat_id)
 			join visible_users owner on owner.id = updated_chats.owner_id
@@ -127,8 +126,7 @@ with
 			updated_chats.context_dirty_since,
 			updated_chats.context_dirty_resources,
 			updated_chats.context_error
-		from
-			updated_chats
+		from updated_chats
 			left join chats root on root.id
 			= COALESCE(updated_chats.root_chat_id, updated_chats.parent_chat_id)
 			join visible_users owner on owner.id = updated_chats.owner_id
@@ -367,8 +365,7 @@ limit COALESCE(NULLIF(@limit_val::int, 0), 50);
 -- jsonb_array_elements never raises "cannot extract elements from a
 -- scalar". Backed by idx_chat_messages_user_prompts.
 select cm.id, string_agg(part ->> 'text', '' order by ordinality)::text as text
-from
-	chat_messages cm,
+from chat_messages cm,
 	jsonb_array_elements(cm.content) with ordinality as t(part, ordinality)
 where
 	cm.chat_id = @chat_id::uuid
@@ -765,8 +762,7 @@ with
 			inserted_chat.context_dirty_since,
 			inserted_chat.context_dirty_resources,
 			inserted_chat.context_error
-		from
-			inserted_chat
+		from inserted_chat
 			left join chats root on root.id
 			= COALESCE(inserted_chat.root_chat_id, inserted_chat.parent_chat_id)
 			join visible_users owner on owner.id = inserted_chat.owner_id
@@ -922,8 +918,7 @@ with
 			updated_chat.context_dirty_since,
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
-		from
-			updated_chat
+		from updated_chat
 			left join chats root on root.id
 			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
@@ -989,8 +984,7 @@ with
 			updated_chat.context_dirty_since,
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
-		from
-			updated_chat
+		from updated_chat
 			left join chats root on root.id
 			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
@@ -1054,8 +1048,7 @@ with
 			updated_chat.context_dirty_since,
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
-		from
-			updated_chat
+		from updated_chat
 			left join chats root on root.id
 			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
@@ -1119,8 +1112,7 @@ with
 			updated_chat.context_dirty_since,
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
-		from
-			updated_chat
+		from updated_chat
 			left join chats root on root.id
 			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
@@ -1182,8 +1174,7 @@ with
 			updated_chat.context_dirty_since,
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
-		from
-			updated_chat
+		from updated_chat
 			left join chats root on root.id
 			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
@@ -1249,8 +1240,7 @@ with
 			updated_chat.context_dirty_since,
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
-		from
-			updated_chat
+		from updated_chat
 			left join chats root on root.id
 			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
@@ -1315,8 +1305,7 @@ with
 			updated_chat.context_dirty_since,
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
-		from
-			updated_chat
+		from updated_chat
 			left join chats root on root.id
 			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
@@ -1399,8 +1388,7 @@ with
 			updated_chat.context_dirty_since,
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
-		from
-			updated_chat
+		from updated_chat
 			left join chats root on root.id
 			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
@@ -1635,8 +1623,7 @@ with
 			updated_chat.context_dirty_since,
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
-		from
-			updated_chat
+		from updated_chat
 			left join chats root on root.id
 			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
@@ -1912,8 +1899,7 @@ with
 			locked_chat.context_dirty_since,
 			locked_chat.context_dirty_resources,
 			locked_chat.context_error
-		from
-			locked_chat
+		from locked_chat
 			left join chats root on root.id
 			= COALESCE(locked_chat.root_chat_id, locked_chat.parent_chat_id)
 			join visible_users owner on owner.id = locked_chat.owner_id
@@ -1970,8 +1956,7 @@ with
 			shared_chat.context_dirty_since,
 			shared_chat.context_dirty_resources,
 			shared_chat.context_error
-		from
-			shared_chat
+		from shared_chat
 			left join chats root on root.id
 			= COALESCE(shared_chat.root_chat_id, shared_chat.parent_chat_id)
 			join visible_users owner on owner.id = shared_chat.owner_id
@@ -2103,8 +2088,7 @@ select
 		0
 	)::bigint as total_cache_creation_tokens,
 	COALESCE(SUM(cm.runtime_ms), 0)::bigint as total_runtime_ms
-from
-	chat_messages cm
+from chat_messages cm
 	join chats c on c.id = cm.chat_id
 	join chat_model_configs cmc on cmc.id = cm.model_config_id
 	left join ai_providers ap on ap.id = cmc.ai_provider_id
@@ -2184,8 +2168,7 @@ with
 				0
 			)::bigint as total_cache_creation_tokens,
 			COALESCE(SUM(cm.runtime_ms), 0)::bigint as total_runtime_ms
-		from
-			chat_messages cm
+		from chat_messages cm
 			join chats c on c.id = cm.chat_id
 			join users u on u.id = c.owner_id
 		where
@@ -2385,8 +2368,7 @@ select
 		when gl.limit_micros is not null then 'group'
 		else 'default'
 	end as limit_source
-from
-	chat_usage_limit_config cfg
+from chat_usage_limit_config cfg
 	cross join users u
 	left join LATERAL (
 		select MIN(g.chat_spend_limit_micros) as limit_micros
@@ -2529,8 +2511,7 @@ select
 			and current_lease.heartbeat_at
 			> NOW() - (interval '1 second' * @stale_seconds::int)
 	) as heartbeat_stale
-from
-	chats_expanded
+from chats_expanded
 	left join chat_heartbeats on chat_heartbeats.chat_id = chats_expanded.id
 	and chat_heartbeats.runner_id = chats_expanded.runner_id
 where
@@ -2562,8 +2543,7 @@ select * from chats_expanded where id = any(@ids::uuid[]) order by id asc;
 -- name: BatchUpsertChatHeartbeats :exec
 insert into chat_heartbeats (chat_id, runner_id, heartbeat_at)
 select chat_ids.chat_id, runner_ids.runner_id, NOW()
-from
-	unnest(@chat_ids::uuid[]) with ordinality as chat_ids(chat_id, ord)
+from unnest(@chat_ids::uuid[]) with ordinality as chat_ids(chat_id, ord)
 	join unnest(
 		@runner_ids::uuid[]
 	) with ordinality as runner_ids(runner_id, ord) using (ord)
@@ -2584,12 +2564,10 @@ select
 		activity.last_activity_at,
 		chats_expanded.created_at
 	)::timestamptz as last_activity_at
-from
-	chats_expanded
+from chats_expanded
 	left join LATERAL (
 		select MAX(chat_messages.created_at) as last_activity_at
-		from
-			chat_messages
+		from chat_messages
 			join chats family_chat on family_chat.id = chat_messages.chat_id
 		where
 			(
@@ -2671,8 +2649,7 @@ with
 			bumped_chat.context_dirty_since,
 			bumped_chat.context_dirty_resources,
 			bumped_chat.context_error
-		from
-			bumped_chat
+		from bumped_chat
 			left join chats root on root.id
 			= COALESCE(bumped_chat.root_chat_id, bumped_chat.parent_chat_id)
 			join visible_users owner on owner.id = bumped_chat.owner_id
@@ -2748,8 +2725,7 @@ with
 			updated_chat.context_dirty_since,
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
-		from
-			updated_chat
+		from updated_chat
 			left join chats root on root.id
 			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
@@ -2813,8 +2789,7 @@ with
 			updated_chat.context_dirty_since,
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
-		from
-			updated_chat
+		from updated_chat
 			left join chats root on root.id
 			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
@@ -2955,9 +2930,9 @@ select
 delete from chat_heartbeats
 using
 	unnest(@chat_ids::uuid[]) with ordinality as chat_ids(chat_id, ord)
-	join unnest(
-		@runner_ids::uuid[]
-	) with ordinality as runner_ids(runner_id, ord) using (ord)
+		join unnest(
+			@runner_ids::uuid[]
+		) with ordinality as runner_ids(runner_id, ord) using (ord)
 where
 	chat_heartbeats.chat_id = chat_ids.chat_id
 	and chat_heartbeats.runner_id = runner_ids.runner_id;
@@ -2994,8 +2969,7 @@ with
 			-- Activity = MAX(cm.created_at) across the family, or c.created_at
 			-- when the family has no non-deleted messages.
 			COALESCE(activity.last_activity_at, c.created_at) as last_activity_at
-		from
-			chats c
+		from chats c
 			left join LATERAL (
 				select MAX(cm.created_at) as last_activity_at
 				from chat_messages cm join chats fc on fc.id = cm.chat_id

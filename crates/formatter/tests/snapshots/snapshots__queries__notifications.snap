@@ -119,8 +119,7 @@ select
 	(
 		case when np.disabled is null then false else np.disabled end
 	)::bool as disabled
-from
-	acquired nm
+from acquired nm
 	join notification_templates nt on nm.notification_template_id = nt.id
 	left join notification_preferences as np on (
 		np.user_id = nm.user_id
@@ -143,14 +142,13 @@ set
 		when (attempt_count + 1 < @max_attempts::int)
 			then NOW() + CONCAT(@retry_interval::int, ' seconds')::interval
 	end
-from
-	(
-		select
-			UNNEST(@ids::uuid[]) as id,
-			UNNEST(@failed_ats::timestamptz[]) as failed_at,
-			UNNEST(@statuses::notification_message_status[]) as status,
-			UNNEST(@status_reasons::text[]) as status_reason
-	) as subquery
+from (
+	select
+		UNNEST(@ids::uuid[]) as id,
+		UNNEST(@failed_ats::timestamptz[]) as failed_at,
+		UNNEST(@statuses::notification_message_status[]) as status,
+		UNNEST(@status_reasons::text[]) as status_reason
+) as subquery
 where notification_messages.id = subquery.id;
 
 -- name: BulkMarkNotificationMessagesSent :execrows
@@ -163,11 +161,9 @@ set
 	status_reason = null,
 	leased_until = null,
 	next_retry_after = null
-from
-	(
-		select
-			UNNEST(@ids::uuid[]) as id, UNNEST(@sent_ats::timestamptz[]) as sent_at
-	) as new_values
+from (
+	select UNNEST(@ids::uuid[]) as id, UNNEST(@sent_ats::timestamptz[]) as sent_at
+) as new_values
 where notification_messages.id = new_values.id;
 
 -- Delete all notification messages which have not been updated for over a week.
@@ -196,12 +192,11 @@ insert into notification_preferences (
 	disabled
 )
 select @user_id::uuid, new_values.notification_template_id, new_values.disabled
-from
-	(
-		select
-			UNNEST(@notification_template_ids::uuid[]) as notification_template_id,
-			UNNEST(@disableds::bool[]) as disabled
-	) as new_values
+from (
+	select
+		UNNEST(@notification_template_ids::uuid[]) as notification_template_id,
+		UNNEST(@disableds::bool[]) as disabled
+) as new_values
 on conflict
 	(user_id,
 	notification_template_id) do update set

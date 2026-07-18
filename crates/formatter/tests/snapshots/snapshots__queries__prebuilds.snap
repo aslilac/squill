@@ -24,8 +24,7 @@ set
 where
 	w.id in (
 		select p.id
-		from
-			workspace_prebuilds p
+		from workspace_prebuilds p
 			inner join workspace_latest_builds b on b.workspace_id = p.id
 			inner join templates t on p.template_id = t.id
 		where
@@ -65,8 +64,7 @@ select
 	tvp.last_invalidated_at,
 	t.deleted,
 	t.deprecated != '' as deprecated
-from
-	templates t
+from templates t
 	inner join template_versions tv on tv.template_id = t.id
 	inner join template_version_presets tvp on tvp.template_version_id = tv.id
 	inner join organizations o on o.id = t.organization_id
@@ -93,8 +91,7 @@ with
 			workspace_latest_builds.template_version_id,
 			workspace_latest_builds.job_id,
 			workspaces.created_at
-		from
-			workspace_latest_builds
+		from workspace_latest_builds
 			join workspaces on workspaces.id = workspace_latest_builds.workspace_id
 		where
 			workspace_latest_builds.transition = 'start'::workspace_transition
@@ -109,8 +106,7 @@ with
 		select distinct on (latest_prebuilds.id)
 			latest_prebuilds.id as workspace_id,
 			workspace_builds.template_version_preset_id as current_preset_id
-		from
-			latest_prebuilds
+		from latest_prebuilds
 			join workspace_builds on workspace_builds.workspace_id
 			= latest_prebuilds.id
 		where
@@ -126,8 +122,7 @@ with
 				workspace_agents.lifecycle_state
 				= 'ready'::workspace_agent_lifecycle_state
 			)::boolean as ready
-		from
-			latest_prebuilds
+		from latest_prebuilds
 			join workspace_resources on workspace_resources.job_id
 			= latest_prebuilds.job_id
 			join workspace_agents on workspace_agents.resource_id
@@ -144,8 +139,7 @@ select
 	workspace_latest_presets.current_preset_id,
 	COALESCE(ready_agents.ready, false)::boolean as ready,
 	latest_prebuilds.created_at
-from
-	latest_prebuilds
+from latest_prebuilds
 	left join ready_agents on ready_agents.job_id = latest_prebuilds.job_id
 	left join workspace_latest_presets on workspace_latest_presets.workspace_id
 	= latest_prebuilds.id
@@ -160,8 +154,7 @@ select
 	wpb.transition,
 	COUNT(wpb.transition)::int as count,
 	wlb.template_version_preset_id as preset_id
-from
-	workspace_latest_builds wlb
+from workspace_latest_builds wlb
 	inner join workspace_prebuild_builds wpb on wpb.id = wlb.id
 	-- We only need these counts for active template versions.
 	-- It doesn't influence whether we create or delete prebuilds
@@ -203,8 +196,7 @@ with
 			tvp.id as preset_id,
 			wlb.job_status,
 			tvp.desired_instances
-		from
-			template_version_presets tvp
+		from template_version_presets tvp
 			inner join workspace_latest_builds wlb on wlb.template_version_preset_id
 			= tvp.id
 			inner join workspaces w on wlb.workspace_id = w.id
@@ -247,8 +239,7 @@ select
 	tsb.preset_id,
 	COALESCE(fc.num_failed, 0)::int as num_failed,
 	MAX(tsb.created_at)::timestamptz as last_build_at
-from
-	time_sorted_builds tsb
+from time_sorted_builds tsb
 	left join failed_count fc on fc.preset_id = tsb.preset_id
 where
 	tsb.rn
@@ -273,8 +264,7 @@ with
 			tvp.id as preset_id,
 			wlb.job_status,
 			tvp.desired_instances
-		from
-			template_version_presets tvp
+		from template_version_presets tvp
 			inner join workspace_latest_builds wlb on wlb.template_version_preset_id
 			= tvp.id
 			inner join workspaces w on wlb.workspace_id = w.id
@@ -322,8 +312,7 @@ select
 	COUNT(*) filter (where w.owner_id
 	!= 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid -- The system user responsible for prebuilds.
 	) as claimed_count
-from
-	workspaces w
+from workspaces w
 	inner join workspace_prebuild_builds wpb on wpb.workspace_id = w.id
 	inner join templates t on t.id = w.template_id
 	inner join template_version_presets tvp on tvp.id
@@ -350,8 +339,7 @@ with
 			tvp.id as template_version_preset_id,
 			COALESCE(COUNT(tvpp.name), 0) as total_preset_params,
 			COALESCE(COUNT(pp.name), 0) as matching_params
-		from
-			template_version_presets tvp
+		from template_version_presets tvp
 			left join template_version_preset_parameters tvpp on tvpp.template_version_preset_id
 			= tvp.id
 			left join provided_params pp on pp.name = tvpp.name
@@ -371,8 +359,7 @@ limit 1;
 -- name: CountPendingNonActivePrebuilds :many
 -- CountPendingNonActivePrebuilds returns the number of pending prebuilds for non-active template versions
 select wpb.template_version_preset_id as preset_id, COUNT(*)::int as count
-from
-	workspace_prebuild_builds wpb
+from workspace_prebuild_builds wpb
 	inner join provisioner_jobs pj on pj.id = wpb.job_id
 	inner join workspaces w on w.id = wpb.workspace_id
 	inner join templates t on t.id = w.template_id
@@ -398,8 +385,7 @@ with
 	jobs_to_cancel as (
 		select
 			pj.id, w.id as workspace_id, w.template_id, wpb.template_version_preset_id
-		from
-			provisioner_jobs pj
+		from provisioner_jobs pj
 			inner join workspace_prebuild_builds wpb on wpb.job_id = pj.id
 			inner join workspaces w on w.id = wpb.workspace_id
 			inner join templates t on t.id = w.template_id
@@ -434,8 +420,7 @@ with
 		-- Get unique organizations that have presets with prebuilds configured
 		select distinct
 			o.id, o.name
-		from
-			organizations o
+		from organizations o
 			inner join templates t on t.organization_id = o.id
 			inner join template_versions tv on tv.template_id = t.id
 			inner join template_version_presets tvp on tvp.template_version_id = tv.id
@@ -445,8 +430,7 @@ with
 		-- Check if the user is a member of the organizations
 		select
 			om.organization_id
-		from
-			organization_members om
+		from organization_members om
 			inner join orgs_with_prebuilds owp on owp.id = om.organization_id
 		where om.user_id = @user_id::uuid
 	),
@@ -454,16 +438,15 @@ with
 		-- Check if the organizations have the prebuilds group
 		select
 			g.organization_id, g.id as group_id
-		from
-			groups g inner join orgs_with_prebuilds owp on owp.id = g.organization_id
+		from groups g
+			inner join orgs_with_prebuilds owp on owp.id = g.organization_id
 		where g.name = @group_name::text
 	),
 	prebuild_group_membership as (
 		-- Check if the user is in the prebuilds group
 		select
 			pg.organization_id
-		from
-			prebuild_groups pg
+		from prebuild_groups pg
 			inner join group_members gm on gm.group_id = pg.group_id
 		where gm.user_id = @user_id::uuid
 	)
@@ -473,8 +456,7 @@ select
 	(pum.organization_id is not null)::boolean as has_prebuild_user,
 	pg.group_id as prebuilds_group_id,
 	(pgm.organization_id is not null)::boolean as has_prebuild_user_in_group
-from
-	orgs_with_prebuilds owp
+from orgs_with_prebuilds owp
 	left join prebuild_groups pg on pg.organization_id = owp.id
 	left join prebuild_user_membership pum on pum.organization_id = owp.id
 	left join prebuild_group_membership pgm on pgm.organization_id = owp.id;

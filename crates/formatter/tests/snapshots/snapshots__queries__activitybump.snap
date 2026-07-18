@@ -62,8 +62,7 @@ with
 					)::interval
 				end
 			) as ttl_interval
-		from
-			workspace_builds
+		from workspace_builds
 			join provisioner_jobs on provisioner_jobs.id = workspace_builds.job_id
 			join workspaces on workspaces.id = workspace_builds.workspace_id
 			join templates on templates.id = workspaces.template_id

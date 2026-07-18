@@ -314,14 +314,12 @@ with
 				0
 			) as token_count_cached_written,
 			COUNT(tu.id) as token_usages_count
-		from
-			interceptions_in_range i
+		from interceptions_in_range i
 			left join aibridge_token_usages tu on i.id = tu.interception_id
 	),
 	prompt_aggregates as (
 		select COUNT(up.id) as user_prompts_count
-		from
-			interceptions_in_range i
+		from interceptions_in_range i
 			left join aibridge_user_prompts up on i.id = up.interception_id
 	),
 	tool_aggregates as (
@@ -332,8 +330,7 @@ with
 			= false) as tool_calls_count_non_injected,
 			COUNT(tu.id) filter (where tu.injected = true
 			and tu.invocation_error is not null) as injected_tool_call_error_count
-		from
-			interceptions_in_range i
+		from interceptions_in_range i
 			left join aibridge_tool_usages tu on i.id = tu.interception_id
 	)
 select
@@ -352,8 +349,7 @@ select
 	tool_agg.tool_calls_count_injected::bigint as tool_calls_count_injected,
 	tool_agg.tool_calls_count_non_injected::bigint as tool_calls_count_non_injected,
 	tool_agg.injected_tool_call_error_count::bigint as injected_tool_call_error_count
-from
-	interception_counts ic,
+from interception_counts ic,
 	duration_percentiles dp,
 	token_aggregates tok_agg,
 	prompt_aggregates pa,
@@ -483,8 +479,7 @@ with
 		-- never NULL, which would silently drop rows from the HAVING comparison.
 		select
 			COALESCE(MAX(up.created_at), MIN(ai.started_at)) as last_active_at
-		from
-			aibridge_interceptions ai
+		from aibridge_interceptions ai
 			left join aibridge_user_prompts up on up.interception_id = ai.id
 		where ai.session_id = @after_session_id and ai.ended_at is not null
 	),
@@ -508,8 +503,7 @@ with
 				MAX(latest_prompt.latest_prompt_at),
 				MIN(ai.started_at)
 			)::timestamptz as last_active_at
-		from
-			aibridge_interceptions ai
+		from aibridge_interceptions ai
 			left join LATERAL (
 				select created_at as latest_prompt_at
 				from aibridge_user_prompts
@@ -610,8 +604,7 @@ select
 	COALESCE(st.cache_write_input_tokens, 0)::bigint as cache_write_input_tokens,
 	COALESCE(slp.prompt, '') as last_prompt,
 	sp.last_active_at as last_active_at
-from
-	session_page sp
+from session_page sp
 	join visible_users on visible_users.id = sp.initiator_id
 	left join LATERAL (
 		select
@@ -705,8 +698,7 @@ select
 		aibridge_interceptions.id
 	) as thread_id,
 	sqlc.embed(aibridge_interceptions)
-from
-	aibridge_interceptions
+from aibridge_interceptions
 	join paginated_threads pt on pt.thread_id
 	= COALESCE(aibridge_interceptions.thread_root_id, aibridge_interceptions.id)
 where

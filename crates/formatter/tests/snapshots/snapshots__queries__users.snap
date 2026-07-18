@@ -23,9 +23,9 @@ select * from users where id = $1 limit 1;
 with input as (select unnest(@user_ids::uuid[]) as id)
 select array_agg(input.id)::uuid[] as invalid_user_ids, COUNT(*) = 0 as ok
 from
-	-- Preserve rows where there is not a matching left (users) row for each
-	-- right (input) row...
-	users
+-- Preserve rows where there is not a matching left (users) row for each
+-- right (input) row...
+users
 	right join input on users.id = input.id
 where
 	-- ...so that we can retain exactly those rows where an input ID does not
@@ -526,8 +526,7 @@ select
 				array_agg(
 					org_roles || ':' || organization_members.organization_id::text
 				)
-			from
-				organization_members
+			from organization_members
 				join organizations on organizations.id
 				= organization_members.organization_id,
 				-- All org members get an implied role for their orgs. Most members

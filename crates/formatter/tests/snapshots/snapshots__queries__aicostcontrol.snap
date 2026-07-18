@@ -72,8 +72,7 @@ delete from user_ai_budget_overrides where user_id = @user_id returning *;
 -- Returns no rows when the user has no budgeted groups; callers should treat
 -- sql.ErrNoRows as "no group budget".
 select gaib.group_id, gaib.spend_limit_micros
-from
-	group_ai_budgets gaib
+from group_ai_budgets gaib
 	join group_members_expanded gme on gme.group_id = gaib.group_id
 where gme.user_id = @user_id
 order by

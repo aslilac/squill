@@ -24,8 +24,7 @@ select
 	organizations.name as organization_name,
 	organizations.display_name as organization_display_name,
 	organizations.icon as organization_icon
-from
-	connection_logs
+from connection_logs
 	join users as workspace_owner on connection_logs.workspace_owner_id
 	= workspace_owner.id
 	left join users on connection_logs.user_id = users.id
@@ -146,128 +145,123 @@ offset @offset_opt;
 
 -- name: CountConnectionLogs :one
 select COUNT(*) as count
-from
-	(
-		select 1
-		from
-			connection_logs
-			join users as workspace_owner on connection_logs.workspace_owner_id
-			= workspace_owner.id
-			left join users on connection_logs.user_id = users.id
-			join organizations on connection_logs.organization_id = organizations.id
-		where
-			-- Filter organization_id
-			case
-				when @organization_id::uuid
-				!= '00000000-0000-0000-0000-000000000000'::uuid
-					then connection_logs.organization_id = @organization_id
-				else true
-			end
-			-- Filter by workspace owner username
-			and case
-				when @workspace_owner::text != ''
-					then workspace_owner_id
-					= (
-						select id
-						from users
-						where lower(username) = lower(@workspace_owner) and deleted = false
-					)
-				else true
-			end
-			-- Filter by workspace_owner_id
-			and case
-				when @workspace_owner_id::uuid
-				!= '00000000-0000-0000-0000-000000000000'::uuid
-					then workspace_owner_id = @workspace_owner_id
-				else true
-			end
-			-- Filter by workspace_owner_email
-			and case
-				when @workspace_owner_email::text != ''
-					then workspace_owner_id
-					= (
-						select id
-						from users
-						where email = @workspace_owner_email and deleted = false
-					)
-				else true
-			end
-			-- Filter by type
-			and case
-				when @type::text != '' then type = @type::connection_type
-				else true
-			end
-			-- Filter by user_id
-			and case
-				when @user_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
-					then user_id = @user_id
-				else true
-			end
-			-- Filter by username
-			and case
-				when @username::text != ''
-					then user_id
-					= (
-						select id
-						from users
-						where lower(username) = lower(@username) and deleted = false
-					)
-				else true
-			end
-			-- Filter by user_email
-			and case
-				when @user_email::text != '' then users.email = @user_email
-				else true
-			end
-			-- Filter by connected_after
-			and case
-				when @connected_after::timestamp with time zone
-				!= '0001-01-01 00:00:00Z'
-					then connect_time >= @connected_after
-				else true
-			end
-			-- Filter by connected_before
-			and case
-				when @connected_before::timestamp with time zone
-				!= '0001-01-01 00:00:00Z'
-					then connect_time <= @connected_before
-				else true
-			end
-			-- Filter by workspace_id
-			and case
-				when @workspace_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
-					then connection_logs.workspace_id = @workspace_id
-				else true
-			end
-			-- Filter by connection_id
-			and case
-				when @connection_id::uuid
-				!= '00000000-0000-0000-0000-000000000000'::uuid
-					then connection_logs.connection_id = @connection_id
-				else true
-			end
-			-- Filter by whether the session has a disconnect_time
-			and case
-				when @status::text != ''
-					then (
-						(@status = 'ongoing' and disconnect_time is null)
-						or (@status = 'completed' and disconnect_time is not null)
-					)
-					and
-					-- Exclude web events, since we don't know their close time.
-					type not in (
-						'workspace_app',
-						'port_forwarding'
-					)
-				else true
-			end
-		-- Authorize Filter clause will be injected below in
-		-- CountAuthorizedConnectionLogs
-		-- @authorize_filter
-		-- NOTE: See the CountAuditLogs LIMIT note.
-		limit
-			NULLIF(@count_cap::int, 0) + 1
-	) as limited_count;
+from (
+	select 1
+	from connection_logs
+		join users as workspace_owner on connection_logs.workspace_owner_id
+		= workspace_owner.id
+		left join users on connection_logs.user_id = users.id
+		join organizations on connection_logs.organization_id = organizations.id
+	where
+		-- Filter organization_id
+		case
+			when @organization_id::uuid
+			!= '00000000-0000-0000-0000-000000000000'::uuid
+				then connection_logs.organization_id = @organization_id
+			else true
+		end
+		-- Filter by workspace owner username
+		and case
+			when @workspace_owner::text != ''
+				then workspace_owner_id
+				= (
+					select id
+					from users
+					where lower(username) = lower(@workspace_owner) and deleted = false
+				)
+			else true
+		end
+		-- Filter by workspace_owner_id
+		and case
+			when @workspace_owner_id::uuid
+			!= '00000000-0000-0000-0000-000000000000'::uuid
+				then workspace_owner_id = @workspace_owner_id
+			else true
+		end
+		-- Filter by workspace_owner_email
+		and case
+			when @workspace_owner_email::text != ''
+				then workspace_owner_id
+				= (
+					select id
+					from users
+					where email = @workspace_owner_email and deleted = false
+				)
+			else true
+		end
+		-- Filter by type
+		and case
+			when @type::text != '' then type = @type::connection_type
+			else true
+		end
+		-- Filter by user_id
+		and case
+			when @user_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
+				then user_id = @user_id
+			else true
+		end
+		-- Filter by username
+		and case
+			when @username::text != ''
+				then user_id
+				= (
+					select id
+					from users
+					where lower(username) = lower(@username) and deleted = false
+				)
+			else true
+		end
+		-- Filter by user_email
+		and case
+			when @user_email::text != '' then users.email = @user_email
+			else true
+		end
+		-- Filter by connected_after
+		and case
+			when @connected_after::timestamp with time zone != '0001-01-01 00:00:00Z'
+				then connect_time >= @connected_after
+			else true
+		end
+		-- Filter by connected_before
+		and case
+			when @connected_before::timestamp with time zone != '0001-01-01 00:00:00Z'
+				then connect_time <= @connected_before
+			else true
+		end
+		-- Filter by workspace_id
+		and case
+			when @workspace_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
+				then connection_logs.workspace_id = @workspace_id
+			else true
+		end
+		-- Filter by connection_id
+		and case
+			when @connection_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
+				then connection_logs.connection_id = @connection_id
+			else true
+		end
+		-- Filter by whether the session has a disconnect_time
+		and case
+			when @status::text != ''
+				then (
+					(@status = 'ongoing' and disconnect_time is null)
+					or (@status = 'completed' and disconnect_time is not null)
+				)
+				and
+				-- Exclude web events, since we don't know their close time.
+				type not in (
+					'workspace_app',
+					'port_forwarding'
+				)
+			else true
+		end
+	-- Authorize Filter clause will be injected below in
+	-- CountAuthorizedConnectionLogs
+	-- @authorize_filter
+	-- NOTE: See the CountAuditLogs LIMIT note.
+	limit
+		NULLIF(@count_cap::int, 0) + 1
+) as limited_count;
 
 -- name: DeleteOldConnectionLogs :execrows
 with
@@ -322,27 +316,26 @@ select
 	NULLIF(u.connection_id, '00000000-0000-0000-0000-000000000000'::uuid),
 	NULLIF(u.disconnect_reason, ''),
 	NULLIF(u.disconnect_time, '0001-01-01 00:00:00Z'::timestamptz)
-from
-	(
-		select
-			unnest(sqlc.arg('id')::uuid[]) as id,
-			unnest(sqlc.arg('connect_time')::timestamptz[]) as connect_time,
-			unnest(sqlc.arg('organization_id')::uuid[]) as organization_id,
-			unnest(sqlc.arg('workspace_owner_id')::uuid[]) as workspace_owner_id,
-			unnest(sqlc.arg('workspace_id')::uuid[]) as workspace_id,
-			unnest(sqlc.arg('workspace_name')::text[]) as workspace_name,
-			unnest(sqlc.arg('agent_name')::text[]) as agent_name,
-			unnest(sqlc.arg('type')::connection_type[]) as type,
-			unnest(sqlc.arg('code')::int4[]) as code,
-			unnest(sqlc.arg('code_valid')::bool[]) as code_valid,
-			unnest(sqlc.arg('ip')::inet[]) as ip,
-			unnest(sqlc.arg('user_agent')::text[]) as user_agent,
-			unnest(sqlc.arg('user_id')::uuid[]) as user_id,
-			unnest(sqlc.arg('slug_or_port')::text[]) as slug_or_port,
-			unnest(sqlc.arg('connection_id')::uuid[]) as connection_id,
-			unnest(sqlc.arg('disconnect_reason')::text[]) as disconnect_reason,
-			unnest(sqlc.arg('disconnect_time')::timestamptz[]) as disconnect_time
-	) as u
+from (
+	select
+		unnest(sqlc.arg('id')::uuid[]) as id,
+		unnest(sqlc.arg('connect_time')::timestamptz[]) as connect_time,
+		unnest(sqlc.arg('organization_id')::uuid[]) as organization_id,
+		unnest(sqlc.arg('workspace_owner_id')::uuid[]) as workspace_owner_id,
+		unnest(sqlc.arg('workspace_id')::uuid[]) as workspace_id,
+		unnest(sqlc.arg('workspace_name')::text[]) as workspace_name,
+		unnest(sqlc.arg('agent_name')::text[]) as agent_name,
+		unnest(sqlc.arg('type')::connection_type[]) as type,
+		unnest(sqlc.arg('code')::int4[]) as code,
+		unnest(sqlc.arg('code_valid')::bool[]) as code_valid,
+		unnest(sqlc.arg('ip')::inet[]) as ip,
+		unnest(sqlc.arg('user_agent')::text[]) as user_agent,
+		unnest(sqlc.arg('user_id')::uuid[]) as user_id,
+		unnest(sqlc.arg('slug_or_port')::text[]) as slug_or_port,
+		unnest(sqlc.arg('connection_id')::uuid[]) as connection_id,
+		unnest(sqlc.arg('disconnect_reason')::text[]) as disconnect_reason,
+		unnest(sqlc.arg('disconnect_time')::timestamptz[]) as disconnect_time
+) as u
 on conflict
 	(connection_id,
 	workspace_id,

@@ -33,11 +33,10 @@ select
 	groups.organization_id,
 	groups.name as group_name,
 	all_members.group_id
-from
-	(
-		(all_members join users on ((users.id = all_members.user_id)))
+from (
+	(all_members join users on ((users.id = all_members.user_id)))
 		join groups on ((groups.id = all_members.group_id))
-	)
+)
 where (users.deleted = false);
 
 comment on view group_members_expanded is 'Joins group members with user information, organization ID, group name. Includes both regular group members and organization members (as part of the "Everyone" group).';

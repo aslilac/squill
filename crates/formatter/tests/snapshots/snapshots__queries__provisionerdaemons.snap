@@ -24,8 +24,7 @@ where
 
 -- name: GetEligibleProvisionerDaemonsByProvisionerJobIDs :many
 select distinct provisioner_jobs.id as job_id, sqlc.embed(provisioner_daemons)
-from
-	provisioner_jobs
+from provisioner_jobs
 	join provisioner_daemons on provisioner_daemons.organization_id
 	= provisioner_jobs.organization_id
 	and provisioner_tagset_contains(
@@ -71,8 +70,7 @@ select
 		''::text
 	) as previous_job_template_display_name,
 	COALESCE(previous_template.icon, ''::text) as previous_job_template_icon
-from
-	provisioner_daemons pd
+from provisioner_daemons pd
 	join provisioner_keys pk on pk.id = pd.key_id
 	left join provisioner_jobs current_job on (
 		current_job.worker_id = pd.id

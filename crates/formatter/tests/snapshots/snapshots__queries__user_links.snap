@@ -89,10 +89,9 @@ distinct
 			= 'array'
 				then (
 					select jsonb_agg(element)
-					from
-						jsonb_array_elements(
-							claims -> 'merged_claims' -> sqlc.arg('claim_field')::text
-						) as element
+					from jsonb_array_elements(
+						claims -> 'merged_claims' -> sqlc.arg('claim_field')::text
+					) as element
 					where
 						-- Filtering out non-string elements
 						jsonb_typeof(element)

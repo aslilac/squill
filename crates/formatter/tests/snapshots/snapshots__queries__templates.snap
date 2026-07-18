@@ -7,8 +7,7 @@ select * from template_with_names where id = $1 limit 1;
 
 -- name: GetTemplatesWithFilter :many
 select t.*
-from
-	template_with_names as t
+from template_with_names as t
 	left join template_versions tv on t.active_version_id = tv.id
 where
 	-- Optionally include deleted templates
@@ -186,8 +185,7 @@ with
 				EPOCH from (pj.completed_at - pj.started_at)
 			)::float as exec_time_sec,
 			workspace_builds.transition
-		from
-			workspace_builds
+		from workspace_builds
 			join template_versions on workspace_builds.template_version_id
 			= template_versions.id
 			join provisioner_jobs pj on workspace_builds.job_id = pj.id

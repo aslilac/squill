@@ -33,8 +33,7 @@ values
 select
 	exists (
 		select 1
-		from
-			template_version_terraform_values tvtv
+		from template_version_terraform_values tvtv
 			join template_versions tv on tv.id = tvtv.template_version_id
 		where
 			tvtv.cached_module_files = @file_id::uuid

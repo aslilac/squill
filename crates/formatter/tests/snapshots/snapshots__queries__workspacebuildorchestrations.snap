@@ -40,8 +40,7 @@ returning *;
 -- Must be called from within a transaction. The row lock is released
 -- when the transaction ends.
 select wbo.*
-from
-	workspace_build_orchestrations wbo
+from workspace_build_orchestrations wbo
 	join workspace_builds wb on wbo.parent_build_id = wb.id
 	join provisioner_jobs pj on wb.job_id = pj.id
 where

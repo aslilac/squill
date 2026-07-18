@@ -96,8 +96,7 @@ with
 			latest_build.transition as latest_build_transition,
 			latest_build.job_status as latest_build_status,
 			latest_build.has_external_agent as latest_build_has_external_agent
-		from
-			workspaces_expanded as workspaces
+		from workspaces_expanded as workspaces
 			join users on workspaces.owner_id = users.id
 			left join LATERAL (
 				select
@@ -114,8 +113,7 @@ with
 					provisioner_jobs.completed_at,
 					provisioner_jobs.error,
 					provisioner_jobs.job_status
-				from
-					workspace_builds
+				from workspace_builds
 					join provisioner_jobs on provisioner_jobs.id = workspace_builds.job_id
 					left join template_versions on template_versions.id
 					= workspace_builds.template_version_id
@@ -212,8 +210,7 @@ with
 				when array_length(@param_names::text[], 1) > 0
 					then exists (
 						select 1
-						from
-							workspace_build_parameters
+						from workspace_build_parameters
 							inner join build_params on LOWER(workspace_build_parameters.name)
 							= build_params.name
 							and LOWER(workspace_build_parameters.value) = build_params.value
@@ -271,8 +268,7 @@ with
 				when array_length(@has_agent_statuses::text[], 1) > 0
 					then (
 						select COUNT(*)
-						from
-							workspace_resources
+						from workspace_resources
 							join workspace_agents on workspace_agents.resource_id
 							= workspace_resources.id
 						where
@@ -471,8 +467,7 @@ order by created_at desc;
 select
 	templates.id as template_id,
 	COUNT(distinct workspaces.owner_id) as unique_owners_sum
-from
-	templates
+from templates
 	left join workspaces on workspaces.template_id = templates.id
 	and workspaces.deleted = false
 where templates.id = any(@template_ids::uuid[])
@@ -530,8 +525,7 @@ select
 	COALESCE(u.deleted_recent_count, 0)::bigint as deleted_recent_count,
 	u.last_used_at,
 	COALESCE(o.org_devs, 0)::bigint as org_devs
-from
-	unnest(@template_ids::uuid[]) as t(template_id)
+from unnest(@template_ids::uuid[]) as t(template_id)
 	left join user_usage u on u.template_id = t.template_id
 	left join org_usage o on o.template_id = t.template_id;
 
@@ -586,12 +580,11 @@ set
 		when batch.next_start_at = '0001-01-01 00:00:00+00'::timestamptz then null
 		else batch.next_start_at
 	end
-from
-	(
-		select
-			unnest(sqlc.arg(ids)::uuid[]) as id,
-			unnest(sqlc.arg(next_start_ats)::timestamptz[]) as next_start_at
-	) as batch
+from (
+	select
+		unnest(sqlc.arg(ids)::uuid[]) as id,
+		unnest(sqlc.arg(next_start_ats)::timestamptz[]) as next_start_at
+) as batch
 where workspaces.id = batch.id;
 
 -- name: UpdateWorkspaceTTL :exec
@@ -631,8 +624,7 @@ where
 with
 	workspaces_with_jobs as (
 		select latest_build.*
-		from
-			workspaces
+		from workspaces
 			left join LATERAL (
 				select
 					workspace_builds.transition,
@@ -642,8 +634,7 @@ with
 					provisioner_jobs.canceled_at,
 					provisioner_jobs.completed_at,
 					provisioner_jobs.error
-				from
-					workspace_builds
+				from workspace_builds
 					left join provisioner_jobs on provisioner_jobs.id
 					= workspace_builds.job_id
 				where workspace_builds.workspace_id = workspaces.id
@@ -697,8 +688,7 @@ select
 	running_workspaces.count as running_workspaces,
 	failed_workspaces.count as failed_workspaces,
 	stopped_workspaces.count as stopped_workspaces
-from
-	pending_workspaces,
+from pending_workspaces,
 	building_workspaces,
 	running_workspaces,
 	failed_workspaces,
@@ -713,8 +703,7 @@ select
 	workspaces.id,
 	workspaces.name,
 	workspace_builds.template_version_id as build_template_version_id
-from
-	workspaces
+from workspaces
 	left join workspace_builds on workspace_builds.workspace_id = workspaces.id
 	inner join provisioner_jobs on workspace_builds.job_id = provisioner_jobs.id
 	inner join templates on workspaces.template_id = templates.id
@@ -999,12 +988,10 @@ select
 			row(agent_id, agent_name)::agent_id_name_pair
 		) filter (where agent_id is not null)
 	)::agent_id_name_pair[] as agents
-from
-	workspaces
+from workspaces
 	left join LATERAL (
 		select workspace_id, job_id, transition, job_status
-		from
-			workspace_builds
+		from workspace_builds
 			join provisioner_jobs on provisioner_jobs.id = workspace_builds.job_id
 		where workspace_builds.workspace_id = workspaces.id
 		order by build_number desc
@@ -1015,8 +1002,7 @@ from
 			workspace_agents.id as agent_id,
 			workspace_agents.name as agent_name,
 			job_id
-		from
-			workspace_resources
+		from workspace_resources
 			join workspace_agents on (
 				workspace_agents.resource_id = workspace_resources.id
 				-- Filter out deleted sub agents.
@@ -1083,8 +1069,7 @@ select
 	COALESCE(tvp.name, '') as preset_name,
 	o.name as organization_name,
 	COUNT(*) as created_count
-from
-	first_success_build fsb
+from first_success_build fsb
 	join workspaces w on w.id = fsb.workspace_id
 	join templates t on t.id = w.template_id
 	left join template_version_presets tvp on tvp.id
@@ -1104,8 +1089,7 @@ select
 	tv.name as template_version_name,
 	pj.job_status as latest_build_status,
 	wb.transition as latest_build_transition
-from
-	workspaces w
+from workspaces w
 	join users u on w.owner_id = u.id
 	join templates t on w.template_id = t.id
 	join workspace_builds wb on w.id = wb.workspace_id

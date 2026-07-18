@@ -15,8 +15,7 @@ select
 	coalesce(organizations.name, '') as organization_name,
 	coalesce(organizations.display_name, '') as organization_display_name,
 	coalesce(organizations.icon, '') as organization_icon
-from
-	templates
+from templates
 	left join visible_users on templates.created_by = visible_users.id
 	left join organizations on templates.organization_id = organizations.id;
 

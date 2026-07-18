@@ -71,16 +71,15 @@ select
 	c.context_dirty_since,
 	c.context_dirty_resources,
 	c.context_error
-from
+from (
 	(
-		(
-			chats c
+		chats c
 			left join chats root on (
 				(root.id = COALESCE(c.root_chat_id, c.parent_chat_id))
 			)
-		)
+	)
 		join visible_users owner on ((owner.id = c.owner_id))
-	);
+);
 
 -- Copy legacy per-provider effort values to top-level
 -- reasoning_effort. Preserve legacy keys so the down migration can
@@ -92,46 +91,42 @@ set
 		'reasoning_effort',
 		jsonb_build_object('default', legacy.effort, 'max', legacy.effort)
 	)
-from
-	(
-		select
-			id,
-			COALESCE(
-				NULLIF(
-					lower(trim(options #>> '{provider_options,openai,reasoning_effort}')),
-					''
+from (
+	select
+		id,
+		COALESCE(
+			NULLIF(
+				lower(trim(options #>> '{provider_options,openai,reasoning_effort}')),
+				''
+			),
+			NULLIF(
+				lower(trim(options #>> '{provider_options,azure,reasoning_effort}')),
+				''
+			),
+			NULLIF(
+				lower(trim(options #>> '{provider_options,anthropic,effort}')),
+				''
+			),
+			NULLIF(lower(trim(options #>> '{provider_options,bedrock,effort}')), ''),
+			NULLIF(
+				lower(
+					trim(options #>> '{provider_options,openaicompat,reasoning_effort}')
 				),
-				NULLIF(
-					lower(trim(options #>> '{provider_options,azure,reasoning_effort}')),
-					''
+				''
+			),
+			NULLIF(
+				lower(
+					trim(options #>> '{provider_options,openrouter,reasoning,effort}')
 				),
-				NULLIF(
-					lower(trim(options #>> '{provider_options,anthropic,effort}')),
-					''
-				),
-				NULLIF(
-					lower(trim(options #>> '{provider_options,bedrock,effort}')),
-					''
-				),
-				NULLIF(
-					lower(
-						trim(options #>> '{provider_options,openaicompat,reasoning_effort}')
-					),
-					''
-				),
-				NULLIF(
-					lower(
-						trim(options #>> '{provider_options,openrouter,reasoning,effort}')
-					),
-					''
-				),
-				NULLIF(
-					lower(trim(options #>> '{provider_options,vercel,reasoning,effort}')),
-					''
-				)
-			) as effort
-		from chat_model_configs
-	) legacy
+				''
+			),
+			NULLIF(
+				lower(trim(options #>> '{provider_options,vercel,reasoning,effort}')),
+				''
+			)
+		) as effort
+	from chat_model_configs
+) legacy
 where
 	chat_model_configs.id = legacy.id
 	and legacy.effort is not null

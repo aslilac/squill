@@ -9,10 +9,9 @@ set
 	mcp_server_ids = (
 		select
 			COALESCE(array_agg(ids.mcp_server_id order by ids.position), '{}'::uuid[])
-		from
-			unnest(
-				chats.mcp_server_ids
-			) with ordinality as ids(mcp_server_id, position)
+		from unnest(
+			chats.mcp_server_ids
+		) with ordinality as ids(mcp_server_id, position)
 		where
 			exists (
 				select 1

@@ -51,8 +51,7 @@ select
 						COALESCE(g.avatar_url, '')
 					)
 				)
-			from
-				jsonb_each(workspaces.group_acl) as acl
+			from jsonb_each(workspaces.group_acl) as acl
 				left join groups g on g.id = acl.key::uuid
 		),
 		'{}'::jsonb
@@ -69,25 +68,23 @@ select
 						COALESCE(vu.avatar_url, '')
 					)
 				)
-			from
-				jsonb_each(workspaces.user_acl) as acl
+			from jsonb_each(workspaces.user_acl) as acl
 				left join visible_users vu on vu.id = acl.key::uuid
 		),
 		'{}'::jsonb
 	) as user_acl_display_info
-from
+from (
 	(
 		(
 			(
-				(
-					workspaces
+				workspaces
 					join visible_users on ((workspaces.owner_id = visible_users.id))
-				)
-				join organizations on ((workspaces.organization_id = organizations.id))
 			)
-			join templates on ((workspaces.template_id = templates.id))
+				join organizations on ((workspaces.organization_id = organizations.id))
 		)
+			join templates on ((workspaces.template_id = templates.id))
+	)
 		left join tasks on ((workspaces.id = tasks.workspace_id))
-	);
+);
 
 comment on view workspaces_expanded is 'Joins in the display name information such as username, avatar, and organization name.';

@@ -35,16 +35,15 @@ select
 	templates.display_name as template_display_name,
 	templates.icon as template_icon,
 	templates.description as template_description
-from
+from (
 	(
 		(
-			(
-				workspaces
+			workspaces
 				join visible_users on ((workspaces.owner_id = visible_users.id))
-			)
-			join organizations on ((workspaces.organization_id = organizations.id))
 		)
+			join organizations on ((workspaces.organization_id = organizations.id))
+	)
 		join templates on ((workspaces.template_id = templates.id))
-	);
+);
 
 comment on view workspaces_expanded is 'Joins in the display name information such as username, avatar, and organization name.';
