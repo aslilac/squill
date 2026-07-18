@@ -98,6 +98,13 @@ pub struct Formatted {
 /// conservation); on any mismatch the original text passes through
 /// verbatim, so output is never less correct than its input.
 pub fn format_cst(cst: &Cst, options: &Options) -> Formatted {
+    format_cst_at(cst, options, 0)
+}
+
+/// Recursion bound for procedural bodies nested inside procedural bodies.
+const MAX_BODY_DEPTH: u32 = 3;
+
+fn format_cst_at(cst: &Cst, options: &Options, depth: u32) -> Formatted {
     let lex_options = options.lex_options();
     let mut pieces: Vec<(bool, String)> = Vec::new();
     let mut fallbacks = 0;
@@ -127,7 +134,19 @@ pub fn format_cst(cst: &Cst, options: &Options) -> Formatted {
                             // Statement assembly owns inter-statement
                             // newlines; drop any the doc produced (e.g. a
                             // trailing comment's fresh line).
-                            pieces.push((blank, rendered.trim_end().to_string()));
+                            let piece = rendered.trim_end().to_string();
+                            // TREE-101: recursively format `LANGUAGE sql`
+                            // procedural bodies inside the statement. If a
+                            // body changed shape, re-lay the statement once
+                            // so line measurement sees the real multi-line
+                            // body (this is the fixed point).
+                            let spliced = splice_sql_bodies(&piece, options, depth);
+                            let piece = if spliced != piece {
+                                relayout_statement(&spliced, options, depth).unwrap_or(spliced)
+                            } else {
+                                spliced
+                            };
+                            pieces.push((blank, piece));
                         } else {
                             fallbacks += 1;
                             if std::env::var_os("SQUILL_DEBUG").is_some() {
@@ -190,6 +209,137 @@ fn leading_blank(original: &str) -> bool {
 /// whitespace that statement assembly regenerates.
 fn trim_verbatim(original: &str) -> String {
     original.trim().to_string()
+}
+
+/// Recursively format `LANGUAGE sql` dollar-quoted bodies inside a
+/// rendered statement, re-anchoring them to the statement's indentation
+/// (TREE-101). `LANGUAGE plpgsql` bodies (and `DO` blocks, which default
+/// to plpgsql) stay byte-identical until the plpgsql formatter lands.
+/// Every splice is individually guarded: a body that fails to parse,
+/// trips the self-check, or would collide with its own tag is left
+/// untouched.
+fn splice_sql_bodies(statement: &str, options: &Options, depth: u32) -> String {
+    if depth >= MAX_BODY_DEPTH {
+        return statement.to_string();
+    }
+    let lex_options = options.lex_options();
+    let tokens = parser::lexer::lex_with(statement, options.dialect, lex_options);
+
+    // The statement's language marker: `LANGUAGE sql` / `LANGUAGE
+    // plpgsql` (position-independent; LANGUAGE may precede or follow AS).
+    let non_trivia: Vec<_> = tokens.iter().filter(|t| !t.kind.is_trivia()).collect();
+    let is_sql_body = non_trivia
+        .iter()
+        .zip(non_trivia.iter().skip(1))
+        .any(|(a, b)| {
+            a.kind == SyntaxKind::Ident
+                && a.text.eq_ignore_ascii_case("language")
+                && b.kind == SyntaxKind::Ident
+                && b.text.eq_ignore_ascii_case("sql")
+        });
+    if !is_sql_body {
+        return statement.to_string();
+    }
+
+    // Collect (offset, token) for dollar-quoted bodies.
+    let mut edits: Vec<(std::ops::Range<usize>, String)> = Vec::new();
+    let mut offset = 0;
+    for token in &tokens {
+        let range = offset..offset + token.text.len();
+        offset = range.end;
+        if token.kind != SyntaxKind::DollarString {
+            continue;
+        }
+        let Some((tag, content)) = check::split_dollar(token.text) else {
+            continue;
+        };
+        if content.trim().is_empty() {
+            continue;
+        }
+        let body_tokens = parser::lexer::lex_with(content, options.dialect, lex_options);
+        let parse = parser::parser::parse(&body_tokens, options.dialect);
+        if !parse.diagnostics.is_empty() {
+            continue; // not (entirely) SQL: leave byte-identical
+        }
+        let formatted = format_cst_at(&parse.cst, options, depth + 1);
+        if formatted.fallback_statements > 0 {
+            continue;
+        }
+        let body = formatted.text.trim_end();
+        // Belt-and-suspenders: the reformatted body must still be the
+        // same SQL, and must not collide with its own closing tag.
+        if body.contains(tag)
+            || !check::tokens_equivalent(content, body, options.dialect, lex_options)
+            || !check::comments_conserved(content, body, options.dialect, lex_options)
+        {
+            continue;
+        }
+        // Re-anchor: body lines one indent unit under the line holding
+        // the opening tag; closing tag on its own line at that indent.
+        let anchor = line_indent(statement, range.start);
+        let unit = match options.indent_style {
+            IndentStyle::Tab => "\t".to_string(),
+            IndentStyle::Spaces => " ".repeat(usize::from(options.indent_width)),
+        };
+        let mut replacement = String::from(tag);
+        for line in body.split('\n') {
+            replacement.push('\n');
+            if !line.is_empty() {
+                replacement.push_str(&anchor);
+                replacement.push_str(&unit);
+                replacement.push_str(line);
+            }
+        }
+        replacement.push('\n');
+        replacement.push_str(&anchor);
+        replacement.push_str(tag);
+        if replacement != token.text {
+            edits.push((range, replacement));
+        }
+    }
+
+    let mut out = statement.to_string();
+    for (range, replacement) in edits.into_iter().rev() {
+        out.replace_range(range, &replacement);
+    }
+    out
+}
+
+/// Re-parse and re-render a single spliced statement so group layout
+/// accounts for the (now multi-line) body token. Falls back to the input
+/// on any surprise, and re-checks safety on the result.
+fn relayout_statement(statement: &str, options: &Options, depth: u32) -> Option<String> {
+    let lex_options = options.lex_options();
+    let tokens = parser::lexer::lex_with(statement, options.dialect, lex_options);
+    let parse = parser::parser::parse(&tokens, options.dialect);
+    if !parse.diagnostics.is_empty() {
+        return None;
+    }
+    let mut nodes = parse.cst.root().children();
+    let node = nodes.next()?;
+    if nodes.next().is_some() {
+        return None; // expected exactly one statement
+    }
+    let doc = rules::lower_statement(node)?;
+    let rendered = render(&doc, options);
+    let piece = rendered.trim_end().to_string();
+    if !check::tokens_equivalent(statement, &piece, options.dialect, lex_options)
+        || !check::comments_conserved(statement, &piece, options.dialect, lex_options)
+    {
+        return None;
+    }
+    // Bodies are already formatted; this splice only re-anchors and is
+    // expected to be a no-op or a stable rewrite.
+    Some(splice_sql_bodies(&piece, options, depth))
+}
+
+/// Leading whitespace of the line containing `offset`.
+fn line_indent(source: &str, offset: usize) -> String {
+    let line_start = source[..offset].rfind('\n').map_or(0, |pos| pos + 1);
+    source[line_start..]
+        .chars()
+        .take_while(|&c| c == ' ' || c == '\t')
+        .collect()
 }
 
 /// Dev-tool access to the statement lowering (see examples/).

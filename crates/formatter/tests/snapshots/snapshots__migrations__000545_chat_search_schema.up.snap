@@ -5,11 +5,16 @@ expression: formatted
 create function chat_message_search_text (
 	content jsonb
 ) returns text language sql immutable parallel safe as $$
-    SELECT CASE WHEN jsonb_typeof(content) = 'array' THEN (
-        SELECT string_agg(part->>'text', ' ' ORDER BY ordinality)
-        FROM jsonb_array_elements(content) WITH ORDINALITY AS t(part, ordinality)
-        WHERE part->>'type' = 'text'
-    ) END
+	select
+		case
+			when jsonb_typeof(content) = 'array'
+				then (
+					select string_agg(part ->> 'text', ' ' order by ordinality)
+					from
+						jsonb_array_elements(content) with ordinality as t(part, ordinality)
+					where part ->> 'type' = 'text'
+				)
+		end
 $$;
 
 comment on function chat_message_search_text is 'Extracts searchable content from chat_messages. Returns NULL for scalar JSON strings (content_version=0). Immutable as it is used in indexes.';
