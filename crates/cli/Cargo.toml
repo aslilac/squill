@@ -1,0 +1,16 @@
+[package]
+name = "cli"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+parser.workspace = true
+formatter.workspace = true
+
+[[bin]]
+name = "squill"
+path = "src/main.rs"
+
+[[bin]]
+name = "corpus-report"
+path = "src/bin/corpus_report.rs"

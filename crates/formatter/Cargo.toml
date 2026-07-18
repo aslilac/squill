@@ -1,0 +1,10 @@
+[package]
+name = "formatter"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+parser.workspace = true
+
+[dev-dependencies]
+insta.workspace = true

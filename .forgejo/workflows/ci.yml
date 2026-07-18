@@ -1,0 +1,19 @@
+name: ci
+
+on:
+  push:
+    branches: [trunk]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-26.04
+    container: rust:1.97
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup component add rustfmt clippy
+      - run: cargo fmt --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+      - name: corpus report (informational)
+        run: cargo run -p cli --bin corpus-report -- --summary

@@ -1,0 +1,10 @@
+[package]
+name = "parser"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+cstree.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
