@@ -1,6 +1,7 @@
 //! TREE-100 acceptance: embedded-SQL formatting through tree-sitter
-//! extraction queries. Only multi-line string literals are reformatted
-//! (quotes on their own lines); single-line literals stay byte-identical.
+//! extraction queries. Only multiline string *syntaxes* (raw strings,
+//! Go backticks) are reformatted, quotes on their own lines; plain
+//! quoted strings stay byte-identical.
 
 use std::path::Path;
 
@@ -97,7 +98,7 @@ fn extract_rust_strings(source: &str) -> Vec<String> {
 
 #[test]
 fn single_line_plain_strings_stay_untouched() {
-    // Plain quoted strings only reformat when already multi-line.
+    // Plain quoted strings never reformat.
     let source = "fn main() {\n    let q = sqlx::query!(\"SELECT   id FROM t WHERE x = $1\");\n}\n";
     let formatted =
         format_embedded(source, Host::Rust, RUST_SQLX_QUERY, &options()).expect("format");
@@ -143,20 +144,14 @@ fn multiline_literal_gets_quotes_on_own_lines() {
 }
 
 #[test]
-fn multiline_plain_string_escapes_round_trip() {
+fn plain_strings_never_reformat() {
+    // Plain `"..."` syntax is single-line-with-escapes territory: left
+    // byte-identical even when the content already spans lines.
     let source =
         "fn f() { sqlx::query!(\"SELECT 'it''s' AS s, \\\"Weird\\\" FROM t\nWHERE x = $1\"); }";
     let formatted =
         format_embedded(source, Host::Rust, RUST_SQLX_QUERY, &options()).expect("format");
-    // The doubled SQL quote and the escaped Rust quotes both survive.
-    assert!(
-        formatted.contains("select 'it''s' as s, \\\"Weird\\\""),
-        "escapes mangled: {formatted}"
-    );
-    assert!(
-        formatted.contains("\"\nselect"),
-        "opening quote must sit on its own line: {formatted}"
-    );
+    assert_eq!(formatted, source);
 }
 
 #[test]

@@ -443,13 +443,13 @@ fn custom_embed_query_file() {
     // A query that only matches `my_sql!` macros.
     std::fs::write(
         dir.join("only_mine.scm"),
-        "((macro_invocation macro: (identifier) @_name (token_tree (string_literal) @sql.postgres)) (#eq? @_name \"my_sql\"))",
+        "((macro_invocation macro: (identifier) @_name (token_tree (raw_string_literal) @sql.postgres)) (#eq? @_name \"my_sql\"))",
     )
     .expect("write");
     let file = dir.join("q.rs");
     std::fs::write(
         &file,
-        "fn f() {\n    my_sql!(\"SELECT\n    1\");\n    sqlx::query!(\"SELECT\n    2\");\n}\n",
+        "fn f() {\n    my_sql!(r#\"SELECT   1\"#);\n    sqlx::query!(r#\"SELECT   2\"#);\n}\n",
     )
     .expect("write");
     let status = squill()
@@ -461,11 +461,11 @@ fn custom_embed_query_file() {
     assert!(status.success());
     let out = std::fs::read_to_string(&file).expect("read");
     assert!(
-        out.contains("my_sql!(\"\n    select 1\n    \")"),
+        out.contains("my_sql!(r#\"\n    select 1\n    \"#)"),
         "custom query missed: {out}"
     );
     assert!(
-        out.contains("SELECT\n    2"),
+        out.contains("r#\"SELECT   2\"#"),
         "default macro must be untouched: {out}"
     );
     let _ = std::fs::remove_dir_all(&dir);
