@@ -1,8 +1,9 @@
 //! Corpus coverage harness.
 //!
 //! Runs every `.sql` file under `corpus/` through lex -> parse -> emit and
-//! reports pass/fail per file and per pipeline stage. Later issues use this
-//! report to measure grammar coverage.
+//! reports pass/fail per file and per pipeline stage, plus statement-level
+//! parse coverage (SELECT-ish statements tracked separately until DML/DDL
+//! land with TREE-98).
 //!
 //! Usage: `corpus-report [--summary] [CORPUS_DIR]`
 //!
@@ -17,35 +18,131 @@ use parser::syntax::SyntaxKind;
 /// Pipeline stages, in order.
 const STAGES: [&str; 3] = ["lex", "parse", "emit"];
 
-/// Run one file through the pipeline. Returns the number of stages passed
-/// (0..=3) and the error message of the first failing stage, if any.
+#[derive(Default)]
+struct StmtStats {
+    total: usize,
+    ok: usize,
+    select_total: usize,
+    select_ok: usize,
+}
+
+struct FileResult {
+    stages_passed: usize,
+    error: Option<String>,
+    stmts: StmtStats,
+}
+
+/// Run one file through the pipeline.
 ///
-/// The lex stage passes when the token stream round-trips byte-for-byte
-/// (the TREE-93 lossless property) and contains no error tokens.
-fn run_file(source: &str) -> (usize, Option<String>) {
+/// Lex passes when the token stream round-trips byte-for-byte with no
+/// error tokens; parse passes when no statement lands as ErrorStatement;
+/// emit passes when the formatter renders the tree.
+fn run_file(source: &str, show_diagnostics: bool) -> FileResult {
+    let fail = |stages_passed: usize, error: String| FileResult {
+        stages_passed,
+        error: Some(error),
+        stmts: StmtStats::default(),
+    };
+
     let tokens = parser::lexer::lex(source, Dialect::Postgres);
     let rebuilt: String = tokens.iter().map(|t| t.text).collect();
     if rebuilt != source {
-        return (0, Some("token texts do not round-trip to the input".into()));
+        return fail(0, "token texts do not round-trip to the input".into());
     }
-    let error_count = tokens
-        .iter()
-        .filter(|t| t.kind == SyntaxKind::Error)
-        .count();
     if let Some(first) = tokens.iter().find(|t| t.kind == SyntaxKind::Error) {
         let snippet: String = first.text.chars().take(20).collect();
-        return (
-            0,
-            Some(format!("{error_count} error token(s), first: {snippet:?}")),
-        );
+        return fail(0, format!("error token: {snippet:?}"));
     }
-    let cst = match parser::parser::parse(&tokens) {
-        Ok(cst) => cst,
-        Err(err) => return (1, Some(err.to_string())),
-    };
-    match formatter::emit(&cst) {
-        Ok(_) => (3, None),
-        Err(err) => (2, Some(err.to_string())),
+
+    let parse = parser::parser::parse(&tokens, Dialect::Postgres);
+    if parse.cst.text() != source {
+        return fail(1, "parse tree does not round-trip to the input".into());
+    }
+    let mut stmts = StmtStats::default();
+    for child in parse.cst.root().children() {
+        match child.kind() {
+            SyntaxKind::ErrorStatement => {
+                stmts.total += 1;
+                let tokens: Vec<_> = child
+                    .children_with_tokens()
+                    .filter_map(|element| element.into_token())
+                    .filter(|token| !token.kind().is_trivia())
+                    .collect();
+                let starts_selectish = tokens.first().is_some_and(|token| {
+                    token.kind() == SyntaxKind::LParen
+                        || ["select", "with", "values", "table"]
+                            .iter()
+                            .any(|kw| token.text().eq_ignore_ascii_case(kw))
+                });
+                // Statements that involve DML — top-level (`WITH ...
+                // UPDATE`) or in a data-modifying CTE (`AS (UPDATE ...)`)
+                // — are TREE-98's problem, not SELECT failures. Careful
+                // not to trip on `FOR [NO KEY] UPDATE` locking clauses.
+                let mut depth = 0i32;
+                let mut prev = String::new();
+                let mut has_dml = false;
+                for token in &tokens {
+                    if token.kind() == SyntaxKind::LParen {
+                        depth += 1;
+                    } else if token.kind() == SyntaxKind::RParen {
+                        depth -= 1;
+                    } else if token.kind() == SyntaxKind::Ident {
+                        let text = token.text().to_ascii_lowercase();
+                        let is_dml_kw =
+                            ["insert", "update", "delete", "merge"].contains(&text.as_str());
+                        let after_lock_kws = ["for", "key", "no"].contains(&prev.as_str());
+                        if is_dml_kw && (prev == "(" || (depth == 0 && !after_lock_kws)) {
+                            has_dml = true;
+                            break;
+                        }
+                    }
+                    prev = token.text().to_ascii_lowercase();
+                }
+                if starts_selectish && !has_dml {
+                    stmts.select_total += 1;
+                    if show_diagnostics {
+                        let snippet: String = child
+                            .to_string()
+                            .split_whitespace()
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                            .chars()
+                            .take(120)
+                            .collect();
+                        println!("  select-ish failure: {snippet}");
+                    }
+                }
+            }
+            SyntaxKind::EmptyStmt => {}
+            _ => {
+                stmts.total += 1;
+                stmts.ok += 1;
+                stmts.select_total += 1;
+                stmts.select_ok += 1;
+            }
+        }
+    }
+    if stmts.ok < stmts.total {
+        let first = parse.diagnostics.first().expect("diagnostic per error");
+        return FileResult {
+            stages_passed: 1,
+            error: Some(format!(
+                "{}/{} statements failed; first at {}..{}: {}",
+                stmts.total - stmts.ok,
+                stmts.total,
+                first.start,
+                first.end,
+                first.message
+            )),
+            stmts,
+        };
+    }
+
+    let emit_error = formatter::emit(&parse.cst).err();
+    FileResult {
+        stages_passed: if emit_error.is_none() { 3 } else { 2 },
+        error: emit_error.map(|e| e.to_string()),
+        stmts,
     }
 }
 
@@ -64,10 +161,12 @@ fn collect_sql_files(dir: &Path, out: &mut Vec<PathBuf>) -> std::io::Result<()> 
 
 fn main() -> ExitCode {
     let mut summary_only = false;
+    let mut show_diagnostics = false;
     let mut root = PathBuf::from("corpus");
     for arg in std::env::args().skip(1) {
         match arg.as_str() {
             "--summary" => summary_only = true,
+            "--diagnostics" => show_diagnostics = true,
             other => root = PathBuf::from(other),
         }
     }
@@ -88,6 +187,7 @@ fn main() -> ExitCode {
 
     // stage_passes[i] counts files that passed stage i.
     let mut stage_passes = [0usize; STAGES.len()];
+    let mut totals = StmtStats::default();
     let mut unreadable = 0usize;
     for path in &files {
         let source = match std::fs::read_to_string(path) {
@@ -100,16 +200,22 @@ fn main() -> ExitCode {
                 continue;
             }
         };
-        let (passed, error) = run_file(&source);
-        for count in stage_passes.iter_mut().take(passed) {
+        let result = run_file(&source, show_diagnostics);
+        for count in stage_passes.iter_mut().take(result.stages_passed) {
             *count += 1;
         }
+        totals.total += result.stmts.total;
+        totals.ok += result.stmts.ok;
+        totals.select_total += result.stmts.select_total;
+        totals.select_ok += result.stmts.select_ok;
         if !summary_only {
-            match error {
+            match result.error {
                 None => println!("ok          {}", path.display()),
-                Some(msg) => {
-                    println!("fail:{:<6} {} ({msg})", STAGES[passed], path.display());
-                }
+                Some(msg) => println!(
+                    "fail:{:<6} {} ({msg})",
+                    STAGES[result.stages_passed],
+                    path.display()
+                ),
             }
         }
     }
@@ -120,6 +226,11 @@ fn main() -> ExitCode {
         let pct = 100.0 * passes as f64 / total as f64;
         println!("{stage:<6} {passes:>5}/{total} ({pct:.1}%)");
     }
+    println!("statements  {:>5}/{} parsed", totals.ok, totals.total);
+    println!(
+        "select-ish  {:>5}/{} parsed",
+        totals.select_ok, totals.select_total
+    );
     if unreadable > 0 {
         println!("unreadable: {unreadable}");
     }

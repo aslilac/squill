@@ -1,28 +1,327 @@
-//! Parser: tokens to a concrete syntax tree.
+//! Recursive descent parser: tokens to a concrete syntax tree.
+//!
+//! Statements are keyword-dispatched; expressions use Pratt parsing with a
+//! dialect-parameterized precedence table (see `parser::expr`). The parser
+//! emits [`Event`]s over the non-trivia tokens; trivia attachment happens
+//! in the tree sink (TREE-94).
+//!
+//! Error recovery: a statement that fails to parse becomes an
+//! `ErrorStatement` node containing its raw tokens verbatim plus a
+//! [`Diagnostic`], and parsing resumes at the next top-level `;`. The tree
+//! never drops tokens.
 
-use std::fmt;
+mod expr;
+mod grammar;
 
+use crate::dialect::Dialect;
 use crate::lexer::Token;
+use crate::syntax::SyntaxKind;
 pub use crate::tree::Cst;
+use crate::tree::{Event, build_tree};
 
-/// Errors produced while parsing.
+/// A parse problem, with byte offsets into the source.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ParseError {
-    /// The parser is not implemented yet.
-    Unimplemented,
+pub struct Diagnostic {
+    pub message: String,
+    pub start: usize,
+    pub end: usize,
 }
 
-impl fmt::Display for ParseError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ParseError::Unimplemented => f.write_str("parser not implemented"),
+/// The result of parsing: always a full, lossless tree, plus diagnostics
+/// for every statement that landed as an `ErrorStatement`.
+#[derive(Debug)]
+pub struct Parse {
+    pub cst: Cst,
+    pub diagnostics: Vec<Diagnostic>,
+}
+
+/// Parse a lexed token stream (trivia included) into a CST.
+pub fn parse(tokens: &[Token<'_>], dialect: Dialect) -> Parse {
+    let mut toks = Vec::new();
+    let mut offset = 0;
+    for token in tokens {
+        let end = offset + token.text.len();
+        if !token.kind.is_trivia() {
+            toks.push(Tok {
+                kind: token.kind,
+                text: token.text,
+                start: offset,
+                end,
+            });
         }
+        offset = end;
+    }
+    let eof = offset;
+    let mut parser = Parser {
+        toks,
+        pos: 0,
+        events: Vec::new(),
+        diagnostics: Vec::new(),
+        dialect,
+        eof,
+    };
+    parser.events.push(Event::StartNode(SyntaxKind::Root));
+    while !parser.at_eof() {
+        parser.statement();
+    }
+    parser.events.push(Event::FinishNode);
+    Parse {
+        cst: build_tree(tokens, &parser.events),
+        diagnostics: parser.diagnostics,
     }
 }
 
-impl std::error::Error for ParseError {}
+/// A non-trivia token with its byte span.
+struct Tok<'src> {
+    kind: SyntaxKind,
+    text: &'src str,
+    start: usize,
+    end: usize,
+}
 
-/// Parse a token stream into a CST.
-pub fn parse(_tokens: &[Token<'_>]) -> Result<Cst, ParseError> {
-    Err(ParseError::Unimplemented)
+/// An error inside one statement; triggers rollback to `ErrorStatement`.
+pub(crate) struct StmtError {
+    message: String,
+    /// Index into `toks` where the error occurred.
+    at: usize,
+}
+
+pub(crate) type PResult = Result<(), StmtError>;
+
+pub(crate) struct Parser<'src> {
+    toks: Vec<Tok<'src>>,
+    pos: usize,
+    events: Vec<Event>,
+    diagnostics: Vec<Diagnostic>,
+    dialect: Dialect,
+    eof: usize,
+}
+
+impl Parser<'_> {
+    // ---- cursor ----
+
+    pub(crate) fn at_eof(&self) -> bool {
+        self.pos >= self.toks.len()
+    }
+
+    pub(crate) fn kind(&self) -> Option<SyntaxKind> {
+        self.toks.get(self.pos).map(|t| t.kind)
+    }
+
+    pub(crate) fn nth_kind(&self, n: usize) -> Option<SyntaxKind> {
+        self.toks.get(self.pos + n).map(|t| t.kind)
+    }
+
+    pub(crate) fn text(&self) -> &str {
+        self.toks.get(self.pos).map_or("", |t| t.text)
+    }
+
+    pub(crate) fn at(&self, kind: SyntaxKind) -> bool {
+        self.kind() == Some(kind)
+    }
+
+    pub(crate) fn nth_at(&self, n: usize, kind: SyntaxKind) -> bool {
+        self.nth_kind(n) == Some(kind)
+    }
+
+    /// Is the current token the given keyword? Keywords are bare `Ident`
+    /// tokens compared case-insensitively; quoted identifiers never match.
+    pub(crate) fn at_kw(&self, kw: &str) -> bool {
+        self.nth_at_kw(0, kw)
+    }
+
+    pub(crate) fn nth_at_kw(&self, n: usize, kw: &str) -> bool {
+        self.toks
+            .get(self.pos + n)
+            .is_some_and(|t| t.kind == SyntaxKind::Ident && t.text.eq_ignore_ascii_case(kw))
+    }
+
+    pub(crate) fn at_any_kw(&self, kws: &[&str]) -> bool {
+        kws.iter().any(|kw| self.at_kw(kw))
+    }
+
+    /// Is the current token an operator with exactly this text?
+    pub(crate) fn at_op(&self, op: &str) -> bool {
+        self.toks
+            .get(self.pos)
+            .is_some_and(|t| t.kind == SyntaxKind::Operator && t.text == op)
+    }
+
+    // ---- events ----
+
+    pub(crate) fn bump(&mut self) {
+        debug_assert!(!self.at_eof());
+        self.events.push(Event::Token);
+        self.pos += 1;
+    }
+
+    pub(crate) fn start(&mut self, kind: SyntaxKind) {
+        self.events.push(Event::StartNode(kind));
+    }
+
+    pub(crate) fn finish(&mut self) {
+        self.events.push(Event::FinishNode);
+    }
+
+    /// A position in the event stream that a later `open_at` can
+    /// retroactively enclose in a new node (Pratt-style left recursion).
+    pub(crate) fn checkpoint(&self) -> usize {
+        self.events.len()
+    }
+
+    /// Retroactively open a node at `checkpoint`, so everything emitted
+    /// since becomes its first children. The caller parses the rest of the
+    /// node and closes it with `finish`. Wrapping repeatedly at the same
+    /// checkpoint nests left-associatively.
+    pub(crate) fn open_at(&mut self, checkpoint: usize, kind: SyntaxKind) {
+        self.events.insert(checkpoint, Event::StartNode(kind));
+    }
+
+    /// Change the kind of a `StartNode` event already emitted at
+    /// `checkpoint` (e.g. a `ParenExpr` that turned out to be a `RowExpr`).
+    pub(crate) fn rewrite_start(&mut self, checkpoint: usize, kind: SyntaxKind) {
+        debug_assert!(matches!(self.events[checkpoint], Event::StartNode(_)));
+        self.events[checkpoint] = Event::StartNode(kind);
+    }
+
+    /// Snapshot for speculative parsing; pair with `backtrack` on failure.
+    pub(crate) fn state(&self) -> (usize, usize) {
+        (self.events.len(), self.pos)
+    }
+
+    pub(crate) fn backtrack(&mut self, state: (usize, usize)) {
+        self.events.truncate(state.0);
+        self.pos = state.1;
+    }
+
+    // ---- eating ----
+
+    pub(crate) fn eat(&mut self, kind: SyntaxKind) -> bool {
+        if self.at(kind) {
+            self.bump();
+            true
+        } else {
+            false
+        }
+    }
+
+    pub(crate) fn eat_kw(&mut self, kw: &str) -> bool {
+        if self.at_kw(kw) {
+            self.bump();
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Eat each keyword in order; all-or-nothing is not checked — callers
+    /// use this for fixed keyword runs after peeking the first word.
+    pub(crate) fn expect_kws(&mut self, kws: &[&str]) -> PResult {
+        for kw in kws {
+            self.expect_kw(kw)?;
+        }
+        Ok(())
+    }
+
+    pub(crate) fn expect(&mut self, kind: SyntaxKind, what: &str) -> PResult {
+        if self.eat(kind) {
+            Ok(())
+        } else {
+            Err(self.error(&format!("expected {what}")))
+        }
+    }
+
+    pub(crate) fn expect_kw(&mut self, kw: &str) -> PResult {
+        if self.eat_kw(kw) {
+            Ok(())
+        } else {
+            Err(self.error(&format!("expected `{}`", kw.to_uppercase())))
+        }
+    }
+
+    pub(crate) fn error(&self, message: &str) -> StmtError {
+        let found = match self.toks.get(self.pos) {
+            Some(t) => format!("`{}`", t.text),
+            None => "end of input".to_string(),
+        };
+        StmtError {
+            message: format!("{message}, found {found}"),
+            at: self.pos,
+        }
+    }
+
+    // ---- statements & recovery ----
+
+    fn statement(&mut self) {
+        if self.at(SyntaxKind::Semicolon) {
+            self.start(SyntaxKind::EmptyStmt);
+            self.bump();
+            self.finish();
+            return;
+        }
+        let events_checkpoint = self.events.len();
+        let pos_checkpoint = self.pos;
+        if let Err(error) = self.statement_inner() {
+            self.events.truncate(events_checkpoint);
+            self.pos = pos_checkpoint;
+            self.error_statement(error);
+        }
+    }
+
+    fn statement_inner(&mut self) -> PResult {
+        if self.at_any_kw(&["select", "with", "values", "table"]) || self.at(SyntaxKind::LParen) {
+            grammar::select_stmt(self)
+        } else {
+            Err(self.error("expected a statement"))
+        }
+    }
+
+    /// Emit an `ErrorStatement` holding every token up to and including the
+    /// next top-level `;`, and record the diagnostic. Top-level means:
+    /// dollar-quoted bodies are already single tokens, and in SQLite a
+    /// `BEGIN ... END` trigger body does not end the statement.
+    fn error_statement(&mut self, error: StmtError) {
+        let (start, end) = match self.toks.get(error.at) {
+            Some(t) => (t.start, t.end),
+            None => (self.eof, self.eof),
+        };
+        self.diagnostics.push(Diagnostic {
+            message: error.message,
+            start,
+            end,
+        });
+
+        self.start(SyntaxKind::ErrorStatement);
+        let mut begin_depth = 0u32;
+        while !self.at_eof() {
+            if self.dialect == Dialect::Sqlite {
+                if self.at_kw("begin") && !self.begin_is_transaction() {
+                    begin_depth += 1;
+                } else if self.at_kw("end") {
+                    begin_depth = begin_depth.saturating_sub(1);
+                }
+            }
+            let at_semicolon = self.at(SyntaxKind::Semicolon);
+            self.bump();
+            if at_semicolon && begin_depth == 0 {
+                break;
+            }
+        }
+        self.finish();
+    }
+
+    /// Distinguish SQLite `BEGIN [DEFERRED|IMMEDIATE|EXCLUSIVE]
+    /// [TRANSACTION]` from a trigger body's `BEGIN stmt; ... END`.
+    fn begin_is_transaction(&self) -> bool {
+        self.nth_at(1, SyntaxKind::Semicolon)
+            || self.nth_at_kw(1, "transaction")
+            || self.nth_at_kw(1, "deferred")
+            || self.nth_at_kw(1, "immediate")
+            || self.nth_at_kw(1, "exclusive")
+            || self.nth_kind(1).is_none()
+    }
+
+    pub(crate) fn dialect(&self) -> Dialect {
+        self.dialect
+    }
 }

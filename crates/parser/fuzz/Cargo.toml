@@ -18,5 +18,12 @@ test = false
 doc = false
 bench = false
 
+[[bin]]
+name = "parse_roundtrip"
+path = "fuzz_targets/parse_roundtrip.rs"
+test = false
+doc = false
+bench = false
+
 [workspace]
 members = ["."]

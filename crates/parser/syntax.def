@@ -49,7 +49,86 @@ token Operator
 node Root
   many statements Statement
 
-# Placeholder statement node for the toy grammar; TREE-95 introduces the
-# real statement kinds.
+# Generic statement node, used by the tree-builder tests' toy grammar.
 node Statement
   token semicolon Semicolon
+
+# A statement that failed to parse; contains its raw tokens verbatim.
+node ErrorStatement
+# A bare `;` with nothing before it.
+node EmptyStmt
+
+# ---- SELECT statements ----
+
+node SelectStmt
+  one with_clause WithClause
+  one order_by OrderByClause
+  one limit_clause LimitClause
+  one offset_clause OffsetClause
+  one fetch_clause FetchClause
+  token semicolon Semicolon
+node WithClause
+  many ctes Cte
+node Cte
+node SearchClause
+node CycleClause
+node SelectCore
+  one select_list SelectList
+  one from_clause FromClause
+  one where_clause WhereClause
+  one group_by GroupByClause
+  one having HavingClause
+  one window_clause WindowClause
+node SetOperation
+node ParenSelect
+node ValuesClause
+node TableCore
+node SelectList
+  many items SelectItem
+node SelectItem
+node FromClause
+node TableRef
+node ParenTableRef
+node JoinExpr
+node JoinCondition
+node Alias
+node WhereClause
+node GroupByClause
+node GroupingElement
+node HavingClause
+node WindowClause
+node WindowDef
+node WindowSpec
+node FrameClause
+node OrderByClause
+  many terms OrderingTerm
+node OrderingTerm
+node LimitClause
+node OffsetClause
+node FetchClause
+node LockingClause
+
+# ---- expressions ----
+
+node Literal
+node ColumnRef
+node ParenExpr
+node RowExpr
+node ArrayExpr
+node SubqueryExpr
+node QuantifiedExpr
+node CaseExpr
+node WhenClause
+node FunctionCall
+node ArgList
+node FilterClause
+node WithinGroupClause
+node OverClause
+node CastExpr
+node TypeName
+node PrefixExpr
+node BinaryExpr
+node IsExpr
+node BetweenExpr
+node InExpr
+node SubscriptExpr
