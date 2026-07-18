@@ -1,5 +1,6 @@
-//! TREE-101: recursive formatting of `LANGUAGE sql` procedural bodies;
-//! plpgsql bodies stay byte-identical until their formatter lands.
+//! TREE-101/103: recursive formatting of procedural bodies — `LANGUAGE
+//! sql` through the SQL grammar, `LANGUAGE plpgsql` and `DO` blocks
+//! through the PL/pgSQL grammar.
 
 use formatter::{Options, format_cst};
 use parser::Dialect;
