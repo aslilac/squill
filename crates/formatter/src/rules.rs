@@ -269,7 +269,7 @@ impl Lowerer {
                 self.dml_flow(&mut docs, node);
                 group(concat(docs))
             }
-            SyntaxKind::PlInto => self.kw_clause(node),
+            SyntaxKind::PlInto => self.pl_into(node),
             // Nested error statements pass through verbatim.
             SyntaxKind::ErrorStatement => verbatim(node.to_string().trim().to_string()),
             // DML nested in CTE bodies.
@@ -794,6 +794,44 @@ impl Lowerer {
         clause(head, content)
     }
 
+    /// PL/pgSQL `INTO [STRICT] target, ...`: the head is exactly `into`
+    /// and an optional `strict` — targets are Ident tokens too, so the
+    /// generic keyword-head split of [`Self::kw_clause`] would swallow
+    /// the first target (`into new .a`).
+    fn pl_into(&mut self, node: &SyntaxNode) -> Doc {
+        let mut head = Vec::new();
+        let mut content = Vec::new();
+        let mut head_words = 0usize;
+        let mut in_head = true;
+        let mut items = ListJoiner::new();
+        for element in node.children_with_tokens() {
+            match element {
+                SyntaxElement::Token(token) if token.kind().is_trivia() => {
+                    let docs = if in_head { &mut head } else { &mut content };
+                    self.trivia(docs, token);
+                }
+                SyntaxElement::Token(token)
+                    if in_head
+                        && token.kind() == SyntaxKind::Ident
+                        && (head_words == 0
+                            || (head_words == 1
+                                && token.text().eq_ignore_ascii_case("strict"))) =>
+                {
+                    if head_words > 0 {
+                        head.push(space());
+                    }
+                    self.push(&mut head, keyword(token.text()));
+                    head_words += 1;
+                }
+                element => {
+                    in_head = false;
+                    self.list_element(&mut content, &mut items, element);
+                }
+            }
+        }
+        clause(head, content)
+    }
+
     /// Comma-separated list content (select lists, from lists, CTE lists).
     fn comma_list(&mut self, node: &SyntaxNode) -> Doc {
         let mut docs = Vec::new();
@@ -830,6 +868,17 @@ impl Lowerer {
                 items.tight_next = true;
                 items.sep(docs);
                 self.push(docs, text(")"));
+            }
+            SyntaxElement::Token(token)
+                if matches!(token.kind(), SyntaxKind::Dot | SyntaxKind::ColonColon) =>
+            {
+                // Qualified names and casts join tight: `new.a`, not
+                // `new . a`.
+                items.next_sep = None;
+                items.tight_next = true;
+                items.sep(docs);
+                self.push(docs, token_leaf(token));
+                items.tight_next = true;
             }
             SyntaxElement::Token(token) => {
                 items.sep(docs);
