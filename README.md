@@ -32,9 +32,10 @@ could not be parsed.
 
 SQL embedded in host code formats too: `squill fmt src/queries.rs`
 rewrites the string literals inside `sqlx::query!`-family macros (and
-`database/sql` calls in Go). Only multi-line literals are reformatted —
-single-line strings stay byte-identical — and the quotes sit on their
-own lines around the SQL. Directories include host files with
+`database/sql` calls in Go). Raw strings (`r#"..."#`, backticks) always
+reformat into a vertical block — quotes on their own lines, one clause
+per line; plain `"..."` strings are only reformatted when already
+multi-line. Directories include host files with
 `--embed`; `--embed-query custom.scm` swaps the tree-sitter extraction
 query.
 

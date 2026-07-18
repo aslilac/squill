@@ -215,10 +215,15 @@ fn rewrite_literal(
     if decoded.content.trim().is_empty() {
         return None;
     }
-    // Only reformat multi-line literals: the author already opted into a
-    // multi-line string, so reflowing is safe and language-agnostic.
-    // Single-line literals stay byte-identical.
-    if !decoded.content.contains('\n') {
+    // Multiline-capable literal kinds (raw strings, Go backticks) always
+    // reformat into the vertical shape — even when currently single-line.
+    // Plain quoted strings only reformat if the author already made them
+    // multi-line; single-line plain strings stay byte-identical.
+    let multiline_capable = matches!(
+        decoded.kind,
+        LiteralKind::RustRaw { .. } | LiteralKind::GoRaw
+    );
+    if !multiline_capable && !decoded.content.contains('\n') {
         return None;
     }
 

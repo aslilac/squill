@@ -96,13 +96,29 @@ fn extract_rust_strings(source: &str) -> Vec<String> {
 }
 
 #[test]
-fn single_line_literals_stay_untouched() {
-    // Even long, badly formatted single-line queries are left alone:
-    // only multi-line literals opt into reformatting.
-    let source = "fn main() {\n    let q = sqlx::query!(\n        r#\"SELECT aaaaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbbbb, cccccccccccccccccccc FROM long_table WHERE x = $1 ORDER BY y\"#\n    );\n}\n";
+fn single_line_plain_strings_stay_untouched() {
+    // Plain quoted strings only reformat when already multi-line.
+    let source = "fn main() {\n    let q = sqlx::query!(\"SELECT   id FROM t WHERE x = $1\");\n}\n";
     let formatted =
         format_embedded(source, Host::Rust, RUST_SQLX_QUERY, &options()).expect("format");
     assert_eq!(formatted, source);
+}
+
+#[test]
+fn single_line_raw_strings_reformat_vertically() {
+    // Raw strings are multiline-capable, so they always take the
+    // vertical shape — even when currently single-line.
+    let source = "fn main() {\n    let q = sqlx::query!(\n        r#\"delete from team_auto_add_rules where team_id = $1 and id = $2\"#\n    );\n}\n";
+    let formatted =
+        format_embedded(source, Host::Rust, RUST_SQLX_QUERY, &options()).expect("format");
+    assert_eq!(
+        formatted,
+        "fn main() {\n    let q = sqlx::query!(\n        r#\"\n        delete from team_auto_add_rules\n        where team_id = $1 and id = $2\n        \"#\n    );\n}\n"
+    );
+    // Idempotent.
+    let twice =
+        format_embedded(&formatted, Host::Rust, RUST_SQLX_QUERY, &options()).expect("format");
+    assert_eq!(twice, formatted);
 }
 
 #[test]
