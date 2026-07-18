@@ -79,7 +79,9 @@ alter table chat_queued_messages
 -- 9. Default sequence for new queued-message positions.
 -- A global sequence is acceptable because ordering only needs to be
 -- stable within a chat.
-create sequence if not exists chat_queued_messages_position_seq as bigint start with 1;
+create sequence if not exists chat_queued_messages_position_seq
+	as bigint
+	start with 1;
 select
 	setval(
 		'chat_queued_messages_position_seq',

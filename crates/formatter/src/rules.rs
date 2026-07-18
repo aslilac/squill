@@ -476,6 +476,20 @@ impl Lowerer {
                     break_before = &["on", "using", "include"];
                     indent_continuations = true;
                 }
+                Some("sequence") => {
+                    break_before = &[
+                        "as",
+                        "start",
+                        "increment",
+                        "no",
+                        "minvalue",
+                        "maxvalue",
+                        "cache",
+                        "cycle",
+                        "owned",
+                    ];
+                    indent_continuations = true;
+                }
                 Some("function" | "procedure") => {
                     // Declarations always break: `returns`, `language`,
                     // and friends land in consistent positions rather
@@ -683,6 +697,7 @@ impl Lowerer {
         let mut pending_sls = false;
         let mut tight = false;
         let mut prev_name = false;
+        let mut after_no = false;
         for &element in elements {
             match element {
                 SyntaxElement::Token(token) if token.kind().is_trivia() => self.trivia(docs, token),
@@ -708,8 +723,14 @@ impl Lowerer {
                         )
                         || (tight_call_parens && token.kind() == SyntaxKind::LParen && prev_name);
                     // `RAISE ... USING` / `EXECUTE ... USING` can break
-                    // before the USING keyword.
+                    // before the USING keyword. When `no` is itself a
+                    // break keyword (CREATE SEQUENCE), the word after it
+                    // completes a phrase (`no minvalue`) — never break
+                    // inside it.
+                    let in_no_phrase =
+                        after_no && break_before.iter().any(|kw| kw.eq_ignore_ascii_case("no"));
                     let soft_break = token.kind() == SyntaxKind::Ident
+                        && !in_no_phrase
                         && break_before
                             .iter()
                             .any(|kw| token.text().eq_ignore_ascii_case(kw));
@@ -727,6 +748,8 @@ impl Lowerer {
                             | SyntaxKind::ColonColon
                     );
                     prev_name = matches!(token.kind(), SyntaxKind::Ident | SyntaxKind::QuotedIdent);
+                    after_no = token.kind() == SyntaxKind::Ident
+                        && token.text().eq_ignore_ascii_case("no");
                     let leaf = match token.kind() {
                         SyntaxKind::QuotedIdent => name_leaf(token, IdentPos::ColumnOrTable),
                         _ => token_leaf(token),
