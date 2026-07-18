@@ -10,10 +10,35 @@
 
 use parser::syntax::{SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
 
+use crate::attr_order;
+
 use crate::doc::{
     Doc, IdentPos, break_parent, concat, fresh_line, group, hard_line, ident, if_break, indent,
     keyword, nil, soft_line, soft_line_or_space, space, text, verbatim,
 };
+
+/// Does this node's first non-trivia token open a paren group?
+fn starts_with_lparen(node: &SyntaxNode) -> bool {
+    node.children_with_tokens()
+        .find(|element| match element {
+            SyntaxElement::Token(token) => !token.kind().is_trivia(),
+            SyntaxElement::Node(_) => true,
+        })
+        .is_some_and(
+            |element| matches!(element, SyntaxElement::Token(token) if token.kind() == SyntaxKind::LParen),
+        )
+}
+
+/// Does this element carry a comment anywhere inside it?
+fn element_has_comment(element: SyntaxElement) -> bool {
+    match element {
+        SyntaxElement::Token(token) => matches!(
+            token.kind(),
+            SyntaxKind::LineComment | SyntaxKind::BlockComment
+        ),
+        SyntaxElement::Node(node) => node.children_with_tokens().any(element_has_comment),
+    }
+}
 
 /// Lower one statement node to a document. Returns `None` for kinds the
 /// rules do not format (ErrorStatement — handled as verbatim upstream).
@@ -450,6 +475,10 @@ impl Lowerer {
                     break_before = &["on", "using", "include"];
                 }
                 Some("function" | "procedure") => {
+                    // Declarations always break: `returns`, `language`,
+                    // and friends land in consistent positions rather
+                    // than shifting with line width.
+                    docs.push(break_parent());
                     break_before = &[
                         "returns",
                         "language",
@@ -472,7 +501,32 @@ impl Lowerer {
                 _ => {}
             }
         }
-        self.dml_flow_with(docs, node, break_before);
+        if matches!(object, Some("function" | "procedure")) {
+            // Attribute clauses land in canonical (pg_dump) order:
+            // returns, language, modifiers, the body last. Skipped when
+            // a comment would move with a segment — comment order is
+            // oracle-checked and must survive byte-for-byte.
+            let mut elements: Vec<SyntaxElement> = node.children_with_tokens().collect();
+            let words: Vec<attr_order::W> = elements
+                .iter()
+                .map(|element| match element {
+                    SyntaxElement::Token(token) => attr_order::classify(token.kind(), token.text()),
+                    SyntaxElement::Node(_) => attr_order::W::Other,
+                })
+                .collect();
+            if let Some(perm) = attr_order::canonical_order(&words) {
+                let moves_comment = perm
+                    .iter()
+                    .enumerate()
+                    .any(|(at, &from)| at != from && element_has_comment(elements[from]));
+                if !moves_comment {
+                    elements = perm.iter().map(|&from| elements[from]).collect();
+                }
+            }
+            self.dml_flow_elements(docs, &elements, break_before, true);
+        } else {
+            self.dml_flow_with(docs, node, break_before);
+        }
         self.force_first_element_list = false;
     }
 
@@ -604,10 +658,22 @@ impl Lowerer {
     }
 
     fn dml_flow_with(&mut self, docs: &mut Vec<Doc>, node: &SyntaxNode, break_before: &[&str]) {
+        let elements: Vec<SyntaxElement> = node.children_with_tokens().collect();
+        self.dml_flow_elements(docs, &elements, break_before, false);
+    }
+
+    fn dml_flow_elements(
+        &mut self,
+        docs: &mut Vec<Doc>,
+        elements: &[SyntaxElement],
+        break_before: &[&str],
+        tight_call_parens: bool,
+    ) {
         let mut first = true;
         let mut pending_sls = false;
         let mut tight = false;
-        for element in node.children_with_tokens() {
+        let mut prev_name = false;
+        for &element in elements {
             match element {
                 SyntaxElement::Token(token) if token.kind().is_trivia() => self.trivia(docs, token),
                 SyntaxElement::Token(token) if token.kind() == SyntaxKind::Semicolon => {
@@ -619,6 +685,8 @@ impl Lowerer {
                 }
                 SyntaxElement::Token(token) => {
                     // Inline parens (INSERT column lists): tight inside.
+                    // In call position (`create function f(...)`), the
+                    // opening paren also glues to the preceding name.
                     let tight_before = tight
                         || matches!(
                             token.kind(),
@@ -627,7 +695,8 @@ impl Lowerer {
                                 | SyntaxKind::LBracket
                                 | SyntaxKind::Dot
                                 | SyntaxKind::ColonColon
-                        );
+                        )
+                        || (tight_call_parens && token.kind() == SyntaxKind::LParen && prev_name);
                     // `RAISE ... USING` / `EXECUTE ... USING` can break
                     // before the USING keyword.
                     let soft_break = token.kind() == SyntaxKind::Ident
@@ -647,6 +716,7 @@ impl Lowerer {
                             | SyntaxKind::Dot
                             | SyntaxKind::ColonColon
                     );
+                    prev_name = matches!(token.kind(), SyntaxKind::Ident | SyntaxKind::QuotedIdent);
                     let leaf = match token.kind() {
                         SyntaxKind::QuotedIdent => name_leaf(token, IdentPos::ColumnOrTable),
                         _ => token_leaf(token),
@@ -656,12 +726,16 @@ impl Lowerer {
                 }
                 SyntaxElement::Node(child) => {
                     let clause = is_clause_level(child.kind());
+                    // A paren group in call position glues to the name
+                    // before it (`create function f(...)`).
+                    let call_parens = tight_call_parens && prev_name && starts_with_lparen(child);
+                    prev_name = false;
                     if clause {
                         if !first {
                             docs.push(soft_line_or_space());
                         }
                         pending_sls = false;
-                    } else if tight {
+                    } else if tight || call_parens {
                         pending_sls = false;
                     } else if pending_sls {
                         docs.push(soft_line_or_space());

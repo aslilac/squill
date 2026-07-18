@@ -9,6 +9,8 @@ use parser::Dialect;
 use parser::lexer::{LexOptions, lex_with};
 use parser::syntax::SyntaxKind;
 
+use crate::attr_order;
+
 /// Recursion bound for dollar-quoted bodies nested inside dollar-quoted
 /// bodies.
 const MAX_BODY_DEPTH: u32 = 4;
@@ -36,10 +38,41 @@ fn tokens_equivalent_at(
     let b = lex_with(output, dialect, lex_options);
     let a: Vec<_> = a.iter().filter(|t| !t.kind.is_trivia()).collect();
     let b: Vec<_> = b.iter().filter(|t| !t.kind.is_trivia()).collect();
+    // CREATE FUNCTION attribute clauses are sanctioned to move (the
+    // formatter emits them in canonical order); canonicalize both sides
+    // with the same permutation the formatter uses before comparing.
+    let a = canonical_token_order(&a);
+    let b = canonical_token_order(&b);
     a.len() == b.len()
         && a.iter().zip(&b).all(|(x, y)| {
             token_equivalent(x.kind, x.text, y.kind, y.text, dialect, lex_options, depth)
         })
+}
+
+/// Reorder each statement's tokens into canonical attribute order, so a
+/// sanctioned `CREATE FUNCTION` clause reordering compares as equal.
+fn canonical_token_order<'a, 'src>(
+    tokens: &[&'a parser::lexer::Token<'src>],
+) -> Vec<&'a parser::lexer::Token<'src>> {
+    let mut out: Vec<_> = tokens.to_vec();
+    let mut chunk = 0usize;
+    for i in 0..=tokens.len() {
+        let boundary = i == tokens.len() || tokens[i].kind == SyntaxKind::Semicolon;
+        if !boundary {
+            continue;
+        }
+        let words: Vec<attr_order::W> = tokens[chunk..i]
+            .iter()
+            .map(|t| attr_order::classify(t.kind, t.text))
+            .collect();
+        if let Some(perm) = attr_order::canonical_order(&words) {
+            for (at, &from) in perm.iter().enumerate() {
+                out[chunk + at] = tokens[chunk + from];
+            }
+        }
+        chunk = i + 1;
+    }
+    out
 }
 
 fn token_equivalent(

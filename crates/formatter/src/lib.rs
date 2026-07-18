@@ -1,6 +1,7 @@
 //! Formatter: doc IR, renderer (TREE-96), and the SELECT formatting
 //! rules with their per-statement safety check (TREE-97).
 
+mod attr_order;
 pub mod check;
 pub mod doc;
 pub mod keywords;

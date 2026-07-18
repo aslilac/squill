@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 -- Rollback for the chatd core state machine foundation migration.
@@ -14,28 +15,28 @@ drop index if exists idx_chats_worker_acquisition_candidates;
 
 -- 3. Drop the retry state trigger and function.
 drop trigger if exists trigger_sync_chat_retry_state on chats;
-drop function IF exists sync_chat_retry_state ();
+drop function IF exists sync_chat_retry_state();
 
 -- 4. Drop the queue version triggers and function.
 drop trigger if exists trigger_bump_chat_queue_version_on_queued_message_delete on chat_queued_messages;
 drop trigger if exists trigger_bump_chat_queue_version_on_queued_message_update on chat_queued_messages;
 drop trigger if exists trigger_bump_chat_queue_version_on_queued_message_insert on chat_queued_messages;
-drop function IF exists bump_chat_queue_version_on_queued_message_change ();
+drop function IF exists bump_chat_queue_version_on_queued_message_change();
 
 -- 5. Drop the message revision triggers and functions.
 drop trigger if exists trigger_update_chat_history_after_message_update on chat_messages;
 drop trigger if exists trigger_update_chat_history_after_message_insert on chat_messages;
 drop trigger if exists trigger_set_chat_message_revision_on_update on chat_messages;
 drop trigger if exists trigger_set_chat_message_revision_on_insert on chat_messages;
-drop function IF exists update_chat_history_after_message_update ();
-drop function IF exists update_chat_history_after_message_insert ();
+drop function IF exists update_chat_history_after_message_update();
+drop function IF exists update_chat_history_after_message_insert();
 -- The pre-split function name is kept here for backward compatibility
 -- with environments that may have applied an earlier draft of the up
 -- migration. DROP FUNCTION IF EXISTS is a no-op if the function is
 -- absent.
-drop function IF exists update_chat_history_after_message_changes ();
-drop function IF exists set_chat_message_revision_before ();
-drop function IF exists set_chat_message_revision ();
+drop function IF exists update_chat_history_after_message_changes();
+drop function IF exists set_chat_message_revision_before();
+drop function IF exists set_chat_message_revision();
 
 -- 6. Drop chat_heartbeats (and its index by association).
 drop table if exists chat_heartbeats;

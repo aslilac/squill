@@ -1,8 +1,9 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
-create function chat_message_search_text (content jsonb)
+create function chat_message_search_text(content jsonb)
 returns text
 language sql
 immutable parallel safe

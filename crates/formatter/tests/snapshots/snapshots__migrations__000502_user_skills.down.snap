@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 -- Enum additions to resource_type and api_key_scope are intentionally not
@@ -44,5 +45,5 @@ as $$
 $$;
 
 drop trigger if exists trigger_user_skills_per_user_limit on user_skills;
-drop function IF exists enforce_user_skills_per_user_limit ();
+drop function IF exists enforce_user_skills_per_user_limit();
 drop table user_skills;

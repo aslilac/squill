@@ -1,7 +1,8 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 drop trigger if exists trigger_aggregate_usage_event on usage_events;
-drop function IF exists aggregate_usage_event ();
+drop function IF exists aggregate_usage_event();
 drop table if exists usage_events_daily;

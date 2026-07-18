@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 -- Restore the original trigger bodies from 000519.
@@ -71,4 +72,4 @@ drop index if exists idx_chat_messages_search_tsv;
 
 alter table chat_messages drop column if exists search_tsv;
 
-drop function IF exists chat_message_search_text (jsonb);
+drop function IF exists chat_message_search_text(jsonb);

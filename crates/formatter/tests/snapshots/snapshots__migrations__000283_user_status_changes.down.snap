@@ -1,10 +1,11 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 drop trigger if exists user_status_change_trigger on users;
 
-drop function IF exists record_user_status_change ();
+drop function IF exists record_user_status_change();
 
 drop index if exists idx_user_status_changes_changed_at;
 drop index if exists idx_user_deleted_deleted_at;

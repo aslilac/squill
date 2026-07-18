@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 -- Restore prebuilds, previously modified in 000323_workspace_latest_builds_optimization.up.sql.
@@ -66,7 +67,7 @@ from
 
 -- Restore trigger without deleted check.
 drop trigger if exists workspace_agent_name_unique_trigger on workspace_agents;
-drop function IF exists check_workspace_agent_name_unique ();
+drop function IF exists check_workspace_agent_name_unique();
 
 create or replace function check_workspace_agent_name_unique()
 returns trigger
