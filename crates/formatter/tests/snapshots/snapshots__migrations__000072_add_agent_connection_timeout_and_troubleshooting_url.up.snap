@@ -2,10 +2,12 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table workspace_agents add column connection_timeout_seconds integer not null default 0;
+alter table workspace_agents
+	add column connection_timeout_seconds integer not null default 0;
 
 comment on column workspace_agents.connection_timeout_seconds is 'Connection timeout in seconds, 0 means disabled.';
 
-alter table workspace_agents add column troubleshooting_url text not null default '';
+alter table workspace_agents
+	add column troubleshooting_url text not null default '';
 
 comment on column workspace_agents.troubleshooting_url is 'URL for troubleshooting the agent.';

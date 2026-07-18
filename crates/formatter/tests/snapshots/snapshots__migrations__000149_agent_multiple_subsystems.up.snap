@@ -7,13 +7,13 @@ alter type workspace_agent_subsystem add value 'exectrace';
 
 -- Create column subsystems in workspace_agents table, with default value being
 -- an empty array.
-alter table workspace_agents add column subsystems workspace_agent_subsystem [ ] default '{}';
+alter table workspace_agents
+	add column subsystems workspace_agent_subsystem[] default '{}';
 
 -- Add a constraint that the subsystems cannot contain the deprecated value
 -- 'none'.
-alter table workspace_agents add constraint subsystems_not_none check (
-	not ('none' = any(subsystems))
-);
+alter table workspace_agents
+	add constraint subsystems_not_none check (not ('none' = any(subsystems)));
 
 -- Update all existing workspace_agents to have subsystems = [subsystem] unless
 -- the subsystem is 'none'.

@@ -4,9 +4,10 @@ expression: formatted
 ---
 -- A "session" groups related interceptions together. See the COMMENT ON
 -- COLUMN below for the full business-logic description.
-alter table aibridge_interceptions add column session_id text not null generated always as (
-	COALESCE(client_session_id, thread_root_id::text, id::text)
-) stored;
+alter table aibridge_interceptions
+	add column session_id text not null generated always as (
+		COALESCE(client_session_id, thread_root_id::text, id::text)
+	) stored;
 
 -- Searching and grouping on the resolved session ID will be common.
 create index idx_aibridge_interceptions_session_id on aibridge_interceptions (

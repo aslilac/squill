@@ -2,6 +2,7 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table templates add column allow_user_cancel_workspace_jobs boolean not null default true;
+alter table templates
+	add column allow_user_cancel_workspace_jobs boolean not null default true;
 
 comment on column templates.allow_user_cancel_workspace_jobs is 'Allow users to cancel in-progress workspace jobs.';

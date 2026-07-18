@@ -5,7 +5,8 @@ expression: formatted
 delete from custom_roles
 where name = 'organization-service-account' and is_system = true;
 
-alter table organizations add column workspace_sharing_disabled boolean not null default false;
+alter table organizations
+	add column workspace_sharing_disabled boolean not null default false;
 
 -- Migrate back: 'none' -> disabled, everything else -> enabled.
 update organizations

@@ -2,4 +2,5 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table mcp_server_configs add column forward_coder_headers boolean not null default false;
+alter table mcp_server_configs
+	add column forward_coder_headers boolean not null default false;

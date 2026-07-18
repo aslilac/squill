@@ -10,12 +10,14 @@ create table chat_file_links (
 
 create index idx_chat_file_links_chat_id on chat_file_links (chat_id);
 
-alter table chat_file_links add constraint chat_file_links_chat_id_fkey foreign key (
-	chat_id
-) references chats (id) on delete cascade;
+alter table chat_file_links
+	add constraint chat_file_links_chat_id_fkey foreign key (
+		chat_id
+	) references chats (id) on delete cascade;
 
-alter table chat_file_links add constraint chat_file_links_file_id_fkey foreign key (
-	file_id
-) references chat_files (id) on delete cascade;
+alter table chat_file_links
+	add constraint chat_file_links_file_id_fkey foreign key (
+		file_id
+	) references chat_files (id) on delete cascade;
 
 alter table chats drop column if exists file_ids;

@@ -5,7 +5,8 @@ expression: formatted
 comment on column replicas.relay_address is 'URL for DERP relays.';
 alter table replicas add column cluster_host text default ''::text not null;
 comment on column replicas.cluster_host is 'Hostname or IP address the replica is reachable at for clustering purposes.';
-alter table replicas add column nats_port integer default 0 not null constraint nats_port_valid_tcp check (
-	nats_port >= 0 and nats_port <= 65535
-);
+alter table replicas
+	add column nats_port integer default 0 not null constraint nats_port_valid_tcp check (
+		nats_port >= 0 and nats_port <= 65535
+	);
 comment on column replicas.nats_port is 'Port number for NATS clustering. 0 means NATS is disabled.';

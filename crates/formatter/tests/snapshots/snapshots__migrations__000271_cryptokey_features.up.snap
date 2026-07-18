@@ -13,9 +13,10 @@ create type new_crypto_key_feature as enum (
 delete from crypto_keys where feature = 'workspace_apps';
 
 -- Drop the old type and rename the new one
-alter table crypto_keys alter column feature type new_crypto_key_feature using (
-	feature::text::new_crypto_key_feature
-);
+alter table crypto_keys
+	alter column feature type new_crypto_key_feature using (
+		feature::text::new_crypto_key_feature
+	);
 
 drop type crypto_key_feature;
 

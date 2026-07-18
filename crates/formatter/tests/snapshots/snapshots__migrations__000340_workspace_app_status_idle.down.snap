@@ -14,9 +14,10 @@ create type old_workspace_app_status_state as enum (
 update workspace_app_statuses set state = 'complete' where state = 'idle';
 
 -- Swap to the old enum.
-alter table workspace_app_statuses alter column state type old_workspace_app_status_state using (
-	state::text::old_workspace_app_status_state
-);
+alter table workspace_app_statuses
+	alter column state type old_workspace_app_status_state using (
+		state::text::old_workspace_app_status_state
+	);
 
 -- Drop the new enum and rename the old one to the final name.
 drop type workspace_app_status_state;

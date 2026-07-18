@@ -8,10 +8,11 @@ expression: formatted
 -- refresh endpoint. These columns are dark plumbing: they do not feed
 -- prompt building and the per-turn context pull is unchanged. They are
 -- read by drift detection and the refresh endpoint only.
-alter table chats add column context_aggregate_hash bytea,
-add column context_dirty_since timestamptz,
-add column context_dirty_resources jsonb,
-add column context_error text not null default '';
+alter table chats
+	add column context_aggregate_hash bytea,
+	add column context_dirty_since timestamptz,
+	add column context_dirty_resources jsonb,
+	add column context_error text not null default '';
 
 comment on column chats.context_aggregate_hash is 'Aggregate hash of the agent context snapshot this chat is pinned to. NULL until first hydrated; compared against the agent''s latest snapshot hash to detect drift.';
 comment on column chats.context_dirty_since is 'Set when an agent push changes the pinned hash; cleared on refresh. NULL means clean.';

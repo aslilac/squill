@@ -9,8 +9,9 @@ create type old_parameter_scope as enum (
 	'user',
 	'workspace'
 );
-alter table parameter_values alter column scope type old_parameter_scope using (
-	scope::text::old_parameter_scope
-);
+alter table parameter_values
+	alter column scope type old_parameter_scope using (
+		scope::text::old_parameter_scope
+	);
 drop type parameter_scope;
 alter type old_parameter_scope rename to parameter_scope;

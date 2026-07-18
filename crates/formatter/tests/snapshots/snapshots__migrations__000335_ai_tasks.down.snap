@@ -10,7 +10,8 @@ drop index idx_template_versions_has_ai_task;
 
 alter table template_versions drop column has_ai_task;
 
-alter table workspace_builds drop constraint workspace_builds_ai_tasks_sidebar_app_id_fkey;
+alter table workspace_builds
+	drop constraint workspace_builds_ai_tasks_sidebar_app_id_fkey;
 
 alter table workspace_builds drop column ai_tasks_sidebar_app_id;
 

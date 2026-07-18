@@ -3,9 +3,10 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- Step 1: Add nullable column with FK.
-alter table chats add column organization_id uuid references organizations (
-	id
-) on delete cascade;
+alter table chats
+	add column organization_id uuid references organizations (
+		id
+	) on delete cascade;
 
 -- Step 2: Backfill from workspace org (primary path). Fall back to
 -- user's oldest org membership, then default org for rows where

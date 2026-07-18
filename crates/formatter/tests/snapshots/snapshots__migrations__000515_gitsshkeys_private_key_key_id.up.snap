@@ -4,8 +4,9 @@ expression: formatted
 ---
 alter table gitsshkeys add column private_key_key_id text;
 
-alter table only gitsshkeys add constraint gitsshkeys_private_key_key_id_fkey foreign key (
-	private_key_key_id
-) references dbcrypt_keys (active_key_digest);
+alter table only gitsshkeys
+	add constraint gitsshkeys_private_key_key_id_fkey foreign key (
+		private_key_key_id
+	) references dbcrypt_keys (active_key_digest);
 
 comment on column gitsshkeys.private_key_key_id is 'The ID of the key used to encrypt the private key. If this is NULL, the private key is not encrypted.';

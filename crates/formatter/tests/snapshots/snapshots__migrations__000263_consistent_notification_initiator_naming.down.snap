@@ -27,7 +27,7 @@ update notification_templates
 set
 	body_template = E'Hi {{.UserName}},\n\n'
 	|| -- Add a \n
-	 E'User account **{{.Labels.suspended_account_name}}** has been suspended.\n\n'
+	E'User account **{{.Labels.suspended_account_name}}** has been suspended.\n\n'
 	||
 	-- Mention the real name of the user who suspended the account:
 	E'The newly suspended account belongs to **{{.Labels.suspended_account_user_name}}** and was suspended by **{{.Labels.account_suspender_user_name}}**.'
@@ -38,7 +38,7 @@ update notification_templates
 set
 	body_template = E'Hi {{.UserName}},\n\n'
 	|| -- Add a \n
-	 E'Your account **{{.Labels.suspended_account_name}}** has been suspended by **{{.Labels.account_suspender_user_name}}**.'
+	E'Your account **{{.Labels.suspended_account_name}}** has been suspended by **{{.Labels.account_suspender_user_name}}**.'
 where id = '6a2f0609-9b69-4d36-a989-9f5925b6cbff';
 
 -- UserAccountActivated
@@ -46,7 +46,7 @@ update notification_templates
 set
 	body_template = E'Hi {{.UserName}},\n\n'
 	|| -- Add a \n
-	 E'User account **{{.Labels.activated_account_name}}** has been activated.\n\n'
+	E'User account **{{.Labels.activated_account_name}}** has been activated.\n\n'
 	|| E'The newly activated account belongs to **{{.Labels.activated_account_user_name}}** and was activated by **{{.Labels.account_activator_user_name}}**.'
 where id = '9f5af851-8408-4e73-a7a1-c6502ba46689';
 
@@ -55,5 +55,5 @@ update notification_templates
 set
 	body_template = E'Hi {{.UserName}},\n\n'
 	|| -- Add a \n
-	 E'Your account **{{.Labels.activated_account_name}}** has been activated by **{{.Labels.account_activator_user_name}}**.'
+	E'Your account **{{.Labels.activated_account_name}}** has been activated by **{{.Labels.account_activator_user_name}}**.'
 where id = '1a6a6bea-ee0a-43e2-9e7c-eabdb53730e4';

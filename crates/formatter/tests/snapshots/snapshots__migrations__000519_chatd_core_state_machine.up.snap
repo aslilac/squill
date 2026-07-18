@@ -12,14 +12,15 @@ expression: formatted
 alter type chat_status add value if not exists 'interrupting';
 
 -- 2. Add new versioning, ownership, retry, and pending-action fields to chats.
-alter table chats add column snapshot_version bigint not null default 1,
-add column history_version bigint not null default 0,
-add column queue_version bigint not null default 0,
-add column generation_attempt bigint not null default 0,
-add column retry_state jsonb,
-add column retry_state_version bigint not null default 0,
-add column runner_id uuid,
-add column requires_action_deadline_at timestamp with time zone;
+alter table chats
+	add column snapshot_version bigint not null default 1,
+	add column history_version bigint not null default 0,
+	add column queue_version bigint not null default 0,
+	add column generation_attempt bigint not null default 0,
+	add column retry_state jsonb,
+	add column retry_state_version bigint not null default 0,
+	add column runner_id uuid,
+	add column requires_action_deadline_at timestamp with time zone;
 
 comment on column chats.snapshot_version is 'Monotonic version for the full chat snapshot. Starts at 1 so stream loops and workers can use 0 to mean they have not loaded the chat yet.';
 comment on column chats.history_version is 'Snapshot version of the latest durable history change. Starts at 0 until chat_messages triggers set it to the current snapshot_version.';
@@ -44,8 +45,9 @@ where
 	exists (select 1 from chat_messages where chat_messages.chat_id = chats.id);
 
 -- 5. Add `position` and `created_by` to chat_queued_messages.
-alter table chat_queued_messages add column position bigint,
-add column created_by uuid;
+alter table chat_queued_messages
+	add column position bigint,
+	add column created_by uuid;
 
 -- 6. Backfill chat_queued_messages.position per chat using row_number(),
 -- ordering by created_at and breaking ties by id.
@@ -70,8 +72,9 @@ where
 -- 8. Enforce NOT NULL on chat_queued_messages.position and
 -- created_by. Legacy queued-message inserts are updated to populate
 -- created_by from the chat owner when no explicit creator exists.
-alter table chat_queued_messages alter column position set not null,
-alter column created_by set not null;
+alter table chat_queued_messages
+	alter column position set not null,
+	alter column created_by set not null;
 
 -- 9. Default sequence for new queued-message positions.
 -- A global sequence is acceptable because ordering only needs to be
@@ -82,9 +85,10 @@ select
 		'chat_queued_messages_position_seq',
 		GREATEST((select COALESCE(MAX(position), 0) from chat_queued_messages), 1)
 	);
-alter table chat_queued_messages alter column position set default nextval(
-	'chat_queued_messages_position_seq'
-);
+alter table chat_queued_messages
+	alter column position set default nextval(
+		'chat_queued_messages_position_seq'
+	);
 
 -- 10. Backfill chats.queue_version = 1 for chats that already have queued
 -- messages. Same trigger-avoidance reasoning as for history_version.

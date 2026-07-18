@@ -53,7 +53,8 @@ alter type api_key_scope add value if not exists 'notification_message:delete';
 alter type api_key_scope add value if not exists 'notification_message:read';
 alter type api_key_scope add value if not exists 'notification_message:update';
 alter type api_key_scope add value if not exists 'notification_preference:read';
-alter type api_key_scope add value if not exists 'notification_preference:update';
+alter type api_key_scope
+	add value if not exists 'notification_preference:update';
 alter type api_key_scope add value if not exists 'notification_template:read';
 alter type api_key_scope add value if not exists 'notification_template:update';
 alter type api_key_scope add value if not exists 'oauth2_app:create';
@@ -115,7 +116,8 @@ alter type api_key_scope add value if not exists 'user_secret:update';
 alter type api_key_scope add value if not exists 'webpush_subscription:create';
 alter type api_key_scope add value if not exists 'webpush_subscription:delete';
 alter type api_key_scope add value if not exists 'webpush_subscription:read';
-alter type api_key_scope add value if not exists 'workspace:application_connect';
+alter type api_key_scope
+	add value if not exists 'workspace:application_connect';
 alter type api_key_scope add value if not exists 'workspace:create';
 alter type api_key_scope add value if not exists 'workspace:create_agent';
 alter type api_key_scope add value if not exists 'workspace:delete';
@@ -125,15 +127,22 @@ alter type api_key_scope add value if not exists 'workspace:ssh';
 alter type api_key_scope add value if not exists 'workspace:start';
 alter type api_key_scope add value if not exists 'workspace:stop';
 alter type api_key_scope add value if not exists 'workspace:update';
-alter type api_key_scope add value if not exists 'workspace_agent_devcontainers:create';
-alter type api_key_scope add value if not exists 'workspace_agent_resource_monitor:create';
-alter type api_key_scope add value if not exists 'workspace_agent_resource_monitor:read';
-alter type api_key_scope add value if not exists 'workspace_agent_resource_monitor:update';
-alter type api_key_scope add value if not exists 'workspace_dormant:application_connect';
+alter type api_key_scope
+	add value if not exists 'workspace_agent_devcontainers:create';
+alter type api_key_scope
+	add value if not exists 'workspace_agent_resource_monitor:create';
+alter type api_key_scope
+	add value if not exists 'workspace_agent_resource_monitor:read';
+alter type api_key_scope
+	add value if not exists 'workspace_agent_resource_monitor:update';
+alter type api_key_scope
+	add value if not exists 'workspace_dormant:application_connect';
 alter type api_key_scope add value if not exists 'workspace_dormant:create';
-alter type api_key_scope add value if not exists 'workspace_dormant:create_agent';
+alter type api_key_scope
+	add value if not exists 'workspace_dormant:create_agent';
 alter type api_key_scope add value if not exists 'workspace_dormant:delete';
-alter type api_key_scope add value if not exists 'workspace_dormant:delete_agent';
+alter type api_key_scope
+	add value if not exists 'workspace_dormant:delete_agent';
 alter type api_key_scope add value if not exists 'workspace_dormant:read';
 alter type api_key_scope add value if not exists 'workspace_dormant:ssh';
 alter type api_key_scope add value if not exists 'workspace_dormant:start';
@@ -151,8 +160,8 @@ alter type api_key_scope add value if not exists 'workspace_proxy:update';
 delete from api_keys where expires_at < NOW() - interval '7 days';
 
 -- Add new columns without defaults; backfill; then enforce NOT NULL
-alter table api_keys add column scopes api_key_scope [ ];
-alter table api_keys add column allow_list text [ ];
+alter table api_keys add column scopes api_key_scope[];
+alter table api_keys add column allow_list text[];
 
 -- Backfill existing rows for compatibility
 update api_keys

@@ -7,7 +7,8 @@ alter table workspace_agents add column shutdown_script varchar (65534);
 comment on column workspace_agents.shutdown_script is 'Script that is executed before the agent is stopped.';
 
 -- Disable shutdown script timeouts by default.
-alter table workspace_agents add column shutdown_script_timeout_seconds int4 not null default 0;
+alter table workspace_agents
+	add column shutdown_script_timeout_seconds int4 not null default 0;
 
 comment on column workspace_agents.shutdown_script_timeout_seconds is 'The number of seconds to wait for the shutdown script to complete. If the script does not complete within this time, the agent lifecycle will be marked as shutdown_timeout.';
 

@@ -4,4 +4,5 @@ expression: formatted
 ---
 -- making this an enum in case we want to later add other options, like 'if_compatible_vars'
 create type automatic_updates as enum ('always', 'never');
-alter table workspaces add column if not exists automatic_updates automatic_updates not null default 'never'::automatic_updates;
+alter table workspaces
+	add column if not exists automatic_updates automatic_updates not null default 'never'::automatic_updates;

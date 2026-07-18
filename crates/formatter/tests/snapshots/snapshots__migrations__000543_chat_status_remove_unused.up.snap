@@ -39,7 +39,8 @@ create type chat_status as enum (
 	'interrupting'
 );
 alter table chats alter column status drop default;
-alter table chats alter column status type chat_status using status::text::chat_status;
+alter table chats
+	alter column status type chat_status using status::text::chat_status;
 alter table chats alter column status set default 'waiting';
 drop type chat_status_old;
 

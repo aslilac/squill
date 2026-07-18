@@ -3,7 +3,8 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- Bring back the subsystem column.
-alter table workspace_agents add column subsystem workspace_agent_subsystem not null default 'none';
+alter table workspace_agents
+	add column subsystem workspace_agent_subsystem not null default 'none';
 
 -- Update all existing workspace_agents to have subsystem = subsystems[0] unless
 -- subsystems is empty.

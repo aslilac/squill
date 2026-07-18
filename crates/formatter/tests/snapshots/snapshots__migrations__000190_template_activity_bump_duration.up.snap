@@ -2,7 +2,9 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table templates add column activity_bump bigint default '3600000000000'::bigint not null; -- 1 hour
+alter table templates
+	add column activity_bump bigint default '3600000000000'::bigint not null -- 1 hour
+	;
 
 drop view template_with_users;
 

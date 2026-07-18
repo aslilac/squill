@@ -18,7 +18,8 @@ create type chat_reasoning_effort as enum (
 
 alter table chats add column last_reasoning_effort chat_reasoning_effort;
 alter table chat_messages add column reasoning_effort chat_reasoning_effort;
-alter table chat_queued_messages add column reasoning_effort chat_reasoning_effort;
+alter table chat_queued_messages
+	add column reasoning_effort chat_reasoning_effort;
 
 comment on column chats.last_reasoning_effort is 'Stores the most recent message effort once per-turn selection is wired.';
 comment on column chat_messages.reasoning_effort is 'Stores the selected effort for the turn triggered by this message.';

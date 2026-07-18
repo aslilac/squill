@@ -4,5 +4,6 @@ expression: formatted
 ---
 drop index if exists idx_aibridge_interceptions_agent_firewall_session_id;
 
-alter table aibridge_interceptions drop column if exists agent_firewall_sequence_number,
-drop column if exists agent_firewall_session_id;
+alter table aibridge_interceptions
+	drop column if exists agent_firewall_sequence_number,
+	drop column if exists agent_firewall_session_id;

@@ -2,5 +2,9 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table only templates add column if not exists max_ttl bigint not null default 604800000000000; -- 168 hours
-alter table only templates add column if not exists min_autostart_interval bigint not null default 3600000000000; -- 1 hour
+alter table only templates
+	add column if not exists max_ttl bigint not null default 604800000000000 -- 168 hours
+	;
+alter table only templates
+	add column if not exists min_autostart_interval bigint not null default 3600000000000 -- 1 hour
+	;

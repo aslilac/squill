@@ -9,7 +9,8 @@ drop index if exists tasks_organization_id_idx;
 drop index if exists tasks_owner_id_idx;
 drop index if exists tasks_workspace_id_idx;
 
-alter table task_workspace_apps drop constraint if exists task_workspace_apps_pkey;
+alter table task_workspace_apps
+	drop constraint if exists task_workspace_apps_pkey;
 
 -- Add back workspace_build_id column.
 alter table task_workspace_apps add column workspace_build_id uuid;
@@ -30,7 +31,8 @@ where
 delete from task_workspace_apps where workspace_build_id is null;
 
 -- Restore original schema.
-alter table task_workspace_apps drop column workspace_build_number,
-alter column workspace_build_id set not null,
-alter column workspace_agent_id set not null,
-alter column workspace_app_id set not null;
+alter table task_workspace_apps
+	drop column workspace_build_number,
+	alter column workspace_build_id set not null,
+	alter column workspace_agent_id set not null,
+	alter column workspace_app_id set not null;

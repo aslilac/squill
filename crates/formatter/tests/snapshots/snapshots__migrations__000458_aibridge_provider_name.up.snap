@@ -2,7 +2,8 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table aibridge_interceptions add column provider_name text not null default '';
+alter table aibridge_interceptions
+	add column provider_name text not null default '';
 
 comment on column aibridge_interceptions.provider_name is 'The provider instance name which may differ from provider when multiple instances of the same provider type exist.';
 

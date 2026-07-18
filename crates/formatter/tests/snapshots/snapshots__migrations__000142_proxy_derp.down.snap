@@ -7,6 +7,7 @@ delete from replicas where "primary" = false;
 
 alter table replicas drop column "primary";
 
-alter table workspace_proxies drop constraint workspace_proxies_region_id_unique,
-drop column region_id,
-drop column derp_enabled;
+alter table workspace_proxies
+	drop constraint workspace_proxies_region_id_unique,
+	drop column region_id,
+	drop column derp_enabled;

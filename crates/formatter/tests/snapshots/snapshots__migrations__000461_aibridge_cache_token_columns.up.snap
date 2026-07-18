@@ -2,8 +2,9 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table aibridge_token_usages add column cache_read_input_tokens bigint not null default 0,
-add column cache_write_input_tokens bigint not null default 0;
+alter table aibridge_token_usages
+	add column cache_read_input_tokens bigint not null default 0,
+	add column cache_write_input_tokens bigint not null default 0;
 
 -- Backfill from metadata JSONB. Old rows stored cache tokens under
 -- provider-specific keys; new rows use the dedicated columns above.

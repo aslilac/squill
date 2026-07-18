@@ -5,9 +5,12 @@ expression: formatted
 create type new_user_status as enum ('active', 'suspended', 'dormant');
 comment on type new_user_status is 'Defines the users status: active, dormant, or suspended.';
 
-alter table users alter column status drop default,
-alter column status type new_user_status using (status::text::new_user_status),
-alter column status set default 'active'::new_user_status;
+alter table users
+	alter column status drop default,
+	alter column status type new_user_status using (
+		status::text::new_user_status
+	),
+	alter column status set default 'active'::new_user_status;
 
 drop type user_status;
 alter type new_user_status rename to user_status;

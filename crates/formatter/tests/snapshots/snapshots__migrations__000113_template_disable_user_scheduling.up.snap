@@ -2,8 +2,9 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table templates add column allow_user_autostart boolean default true not null,
-add column allow_user_autostop boolean default true not null;
+alter table templates
+	add column allow_user_autostart boolean default true not null,
+	add column allow_user_autostop boolean default true not null;
 
 comment on column templates.allow_user_autostart is 'Allow users to specify an autostart schedule for workspaces (enterprise).';
 

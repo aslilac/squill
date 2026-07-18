@@ -2,8 +2,10 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table workspace_agents rename column login_before_ready to delay_login_until_ready;
-alter table workspace_agents alter column delay_login_until_ready set default false;
+alter table workspace_agents
+	rename column login_before_ready to delay_login_until_ready;
+alter table workspace_agents
+	alter column delay_login_until_ready set default false;
 
 update workspace_agents
 set delay_login_until_ready = not delay_login_until_ready;

@@ -2,6 +2,7 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table only workspaces alter column last_used_at set data type timestamp using last_used_at::timestamptz
-at time zone 'UTC',
-alter column last_used_at set default '0001-01-01 00:00:00'::timestamp;
+alter table only workspaces
+	alter column last_used_at set data type timestamp using last_used_at::timestamptz
+	at time zone 'UTC',
+	alter column last_used_at set default '0001-01-01 00:00:00'::timestamp;

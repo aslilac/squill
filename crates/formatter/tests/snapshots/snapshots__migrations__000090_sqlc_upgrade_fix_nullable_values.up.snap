@@ -10,4 +10,5 @@ alter table parameter_schemas alter column default_source_scheme set not null;
 update parameter_schemas
 set default_destination_scheme = 'none'
 where default_destination_scheme is null;
-alter table parameter_schemas alter column default_destination_scheme set not null;
+alter table parameter_schemas
+	alter column default_destination_scheme set not null;

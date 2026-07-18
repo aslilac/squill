@@ -4,7 +4,8 @@ expression: formatted
 ---
 drop view template_with_users;
 
-alter table templates add column require_active_version boolean not null default 'f';
+alter table templates
+	add column require_active_version boolean not null default 'f';
 
 create view template_with_users as
 select

@@ -4,8 +4,9 @@ expression: formatted
 ---
 drop view workspaces_expanded;
 
-alter table workspaces add column group_acl jsonb not null default '{}'::jsonb,
-add column user_acl jsonb not null default '{}'::jsonb;
+alter table workspaces
+	add column group_acl jsonb not null default '{}'::jsonb,
+	add column user_acl jsonb not null default '{}'::jsonb;
 
 -- Recreate the view, now including the new columns
 create view workspaces_expanded as

@@ -2,5 +2,6 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table only provisioner_daemons alter column api_version set default 'v1.0'::text;
+alter table only provisioner_daemons
+	alter column api_version set default 'v1.0'::text;
 update provisioner_daemons set api_version = 'v1.0' where api_version = '1.0';

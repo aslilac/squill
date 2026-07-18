@@ -6,4 +6,5 @@ alter table provisioner_daemons add column tags jsonb not null default '{}';
 
 -- We must add the organization scope by default, otherwise pending jobs
 -- could be provisioned on new daemons that don't match the tags.
-alter table provisioner_jobs add column tags jsonb not null default '{"scope":"organization"}';
+alter table provisioner_jobs
+	add column tags jsonb not null default '{"scope":"organization"}';

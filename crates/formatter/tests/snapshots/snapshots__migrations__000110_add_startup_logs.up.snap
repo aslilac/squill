@@ -14,10 +14,12 @@ create index workspace_agent_startup_logs_id_agent_id_idx on workspace_agent_sta
 );
 
 -- The maximum length of startup logs is 1MB per workspace agent.
-alter table workspace_agents add column startup_logs_length integer not null default 0 constraint max_startup_logs_length check (
-	startup_logs_length <= 1048576
-);
-alter table workspace_agents add column startup_logs_overflowed boolean not null default false;
+alter table workspace_agents
+	add column startup_logs_length integer not null default 0 constraint max_startup_logs_length check (
+		startup_logs_length <= 1048576
+	);
+alter table workspace_agents
+	add column startup_logs_overflowed boolean not null default false;
 
 comment on column workspace_agents.startup_logs_length is 'Total length of startup logs';
 comment on column workspace_agents.startup_logs_overflowed is 'Whether the startup logs overflowed in length';

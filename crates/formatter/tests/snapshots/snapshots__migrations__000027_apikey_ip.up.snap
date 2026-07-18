@@ -2,4 +2,5 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table only api_keys add column if not exists ip_address inet not null default '0.0.0.0';
+alter table only api_keys
+	add column if not exists ip_address inet not null default '0.0.0.0';

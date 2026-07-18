@@ -2,6 +2,8 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table template_version_parameters add column required boolean not null default true; -- default: true, as so far every parameter should be marked as required
+alter table template_version_parameters
+	add column required boolean not null default true -- default: true, as so far every parameter should be marked as required
+	;
 
 comment on column template_version_parameters.required is 'Is parameter required?';

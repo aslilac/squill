@@ -16,7 +16,8 @@ where
 		'shutdown_error',
 		'off'
 	);
-alter type workspace_agent_lifecycle_state rename to workspace_agent_lifecycle_state_old;
+alter type workspace_agent_lifecycle_state
+	rename to workspace_agent_lifecycle_state_old;
 create type workspace_agent_lifecycle_state as enum (
 	'created',
 	'starting',
@@ -25,6 +26,7 @@ create type workspace_agent_lifecycle_state as enum (
 	'ready'
 );
 alter table workspace_agents alter column lifecycle_state drop default;
-alter table workspace_agents alter column lifecycle_state type workspace_agent_lifecycle_state using lifecycle_state::text::workspace_agent_lifecycle_state;
+alter table workspace_agents
+	alter column lifecycle_state type workspace_agent_lifecycle_state using lifecycle_state::text::workspace_agent_lifecycle_state;
 alter table workspace_agents alter column lifecycle_state set default 'created';
 drop type workspace_agent_lifecycle_state_old;

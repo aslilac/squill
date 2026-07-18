@@ -9,10 +9,11 @@ delete from usage_events where event_type = 'hb_ai_seats_v1';
 delete from usage_events_daily where event_type = 'hb_ai_seats_v1';
 
 -- Restore original constraint.
-alter table usage_events drop constraint usage_event_type_check,
-add constraint usage_event_type_check check (
-	event_type in ('dc_managed_agents_v1')
-);
+alter table usage_events
+	drop constraint usage_event_type_check,
+	add constraint usage_event_type_check check (
+		event_type in ('dc_managed_agents_v1')
+	);
 
 -- Restore the original aggregate function without hb_ai_seats_v1 support.
 create or replace function aggregate_usage_event() returns trigger as $$

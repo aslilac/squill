@@ -9,7 +9,7 @@ update notification_templates
 set
 	body_template = E'Hi {{.UserName}},\n\n'
 	|| -- Add a \n
-	 E'User account **{{.Labels.suspended_account_name}}** has been suspended.\n\n'
+	E'User account **{{.Labels.suspended_account_name}}** has been suspended.\n\n'
 	||
 	-- Use the conventional initiator label:
 	E'The newly suspended account belongs to **{{.Labels.suspended_account_user_name}}** and was suspended by **{{.Labels.initiator}}**.'
@@ -20,7 +20,7 @@ update notification_templates
 set
 	body_template = E'Hi {{.UserName}},\n\n'
 	|| -- Add a \n
-	 E'User account **{{.Labels.activated_account_name}}** has been activated.\n\n'
+	E'User account **{{.Labels.activated_account_name}}** has been activated.\n\n'
 	||
 	-- Use the conventional initiator label:
 	E'The newly activated account belongs to **{{.Labels.activated_account_user_name}}** and was activated by **{{.Labels.initiator}}**.'

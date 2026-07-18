@@ -3,7 +3,8 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- Add scheduling_timezone column to template_version_presets table
-alter table template_version_presets add column scheduling_timezone text default '' not null;
+alter table template_version_presets
+	add column scheduling_timezone text default '' not null;
 
 -- Add table for prebuild schedules
 create table template_version_preset_prebuild_schedules (

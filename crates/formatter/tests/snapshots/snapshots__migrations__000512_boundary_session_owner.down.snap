@@ -2,5 +2,6 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table boundary_sessions drop constraint if exists boundary_sessions_owner_id_fkey;
+alter table boundary_sessions
+	drop constraint if exists boundary_sessions_owner_id_fkey;
 alter table boundary_sessions drop column if exists owner_id;

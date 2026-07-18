@@ -24,9 +24,10 @@ create table template_version_preset_parameters (
 
 alter table workspace_builds add column template_version_preset_id uuid null;
 
-alter table workspace_builds add constraint workspace_builds_template_version_preset_id_fkey foreign key (
-	template_version_preset_id
-) references template_version_presets (id) on delete set null;
+alter table workspace_builds
+	add constraint workspace_builds_template_version_preset_id_fkey foreign key (
+		template_version_preset_id
+	) references template_version_presets (id) on delete set null;
 
 -- Recreate the view to include the new column.
 drop view workspace_build_with_user;

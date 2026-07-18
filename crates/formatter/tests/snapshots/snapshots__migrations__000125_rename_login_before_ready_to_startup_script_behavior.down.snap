@@ -2,7 +2,8 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table workspace_agents add column login_before_ready boolean not null default true;
+alter table workspace_agents
+	add column login_before_ready boolean not null default true;
 
 update workspace_agents
 set

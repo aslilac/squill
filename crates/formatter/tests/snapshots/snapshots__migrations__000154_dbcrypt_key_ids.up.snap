@@ -19,22 +19,24 @@ comment on column dbcrypt_keys.created_at is 'The time at which the key was crea
 comment on column dbcrypt_keys.revoked_at is 'The time at which the key was revoked.';
 comment on column dbcrypt_keys.test is 'A column used to test the encryption.';
 
-alter table git_auth_links add column if not exists oauth_access_token_key_id text references dbcrypt_keys (
-	active_key_digest
-),
-add column if not exists oauth_refresh_token_key_id text references dbcrypt_keys (
-	active_key_digest
-);
+alter table git_auth_links
+	add column if not exists oauth_access_token_key_id text references dbcrypt_keys (
+		active_key_digest
+	),
+	add column if not exists oauth_refresh_token_key_id text references dbcrypt_keys (
+		active_key_digest
+	);
 
 comment on column git_auth_links.oauth_access_token_key_id is 'The ID of the key used to encrypt the OAuth access token. If this is NULL, the access token is not encrypted';
 comment on column git_auth_links.oauth_refresh_token_key_id is 'The ID of the key used to encrypt the OAuth refresh token. If this is NULL, the refresh token is not encrypted';
 
-alter table user_links add column if not exists oauth_access_token_key_id text references dbcrypt_keys (
-	active_key_digest
-),
-add column if not exists oauth_refresh_token_key_id text references dbcrypt_keys (
-	active_key_digest
-);
+alter table user_links
+	add column if not exists oauth_access_token_key_id text references dbcrypt_keys (
+		active_key_digest
+	),
+	add column if not exists oauth_refresh_token_key_id text references dbcrypt_keys (
+		active_key_digest
+	);
 
 comment on column user_links.oauth_access_token_key_id is 'The ID of the key used to encrypt the OAuth access token. If this is NULL, the access token is not encrypted';
 comment on column user_links.oauth_refresh_token_key_id is 'The ID of the key used to encrypt the OAuth refresh token. If this is NULL, the refresh token is not encrypted';

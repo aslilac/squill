@@ -2,9 +2,10 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table aibridge_token_usages drop column effective_group_id,
-drop column input_price_micros,
-drop column output_price_micros,
-drop column cache_read_price_micros,
-drop column cache_write_price_micros,
-drop column cost_micros;
+alter table aibridge_token_usages
+	drop column effective_group_id,
+	drop column input_price_micros,
+	drop column output_price_micros,
+	drop column cache_read_price_micros,
+	drop column cache_write_price_micros,
+	drop column cost_micros;

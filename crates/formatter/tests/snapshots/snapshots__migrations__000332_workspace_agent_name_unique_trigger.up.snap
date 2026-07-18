@@ -40,7 +40,8 @@ create or replace function check_workspace_agent_name_unique() returns trigger a
 		-- If there's already an agent with this name, raise an error
 		if agents_with_name > 0 then
 			raise exception 'workspace agent name "%" already exists in this workspace build',
-			NEW.name using errcode = 'unique_violation';
+			NEW.name
+			using errcode = 'unique_violation';
 		end if;
 		return NEW;
 	end;

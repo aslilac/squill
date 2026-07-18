@@ -11,7 +11,8 @@ create type workspace_agent_lifecycle_state as enum (
 );
 
 -- Set all existing workspace agents to 'ready' so that only newly created agents will be in the 'created' state.
-alter table workspace_agents add column lifecycle_state workspace_agent_lifecycle_state not null default 'ready';
+alter table workspace_agents
+	add column lifecycle_state workspace_agent_lifecycle_state not null default 'ready';
 -- Change the default for newly created agents.
 alter table workspace_agents alter column lifecycle_state set default 'created';
 
@@ -19,11 +20,13 @@ comment on column workspace_agents.lifecycle_state is 'The current lifecycle sta
 
 -- Set default values that conform to current behavior.
 -- Allow logins immediately after agent connect.
-alter table workspace_agents add column delay_login_until_ready boolean not null default false;
+alter table workspace_agents
+	add column delay_login_until_ready boolean not null default false;
 
 comment on column workspace_agents.delay_login_until_ready is 'If true, the agent will delay logins until it is ready (e.g. executing startup script has ended).';
 
 -- Disable startup script timeouts by default.
-alter table workspace_agents add column startup_script_timeout_seconds int4 not null default 0;
+alter table workspace_agents
+	add column startup_script_timeout_seconds int4 not null default 0;
 
 comment on column workspace_agents.startup_script_timeout_seconds is 'The number of seconds to wait for the startup script to complete. If the script does not complete within this time, the agent lifecycle will be marked as start_timeout.';

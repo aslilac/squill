@@ -8,6 +8,7 @@ delete from boundary_logs bl
 where
 	not exists (select 1 from boundary_sessions bs where bs.id = bl.session_id);
 
-alter table boundary_logs add constraint boundary_logs_session_id_fkey foreign key (
-	session_id
-) references boundary_sessions (id) on delete cascade;
+alter table boundary_logs
+	add constraint boundary_logs_session_id_fkey foreign key (
+		session_id
+	) references boundary_sessions (id) on delete cascade;

@@ -2,7 +2,8 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table workspace_agent_scripts add column id uuid unique not null default gen_random_uuid();
+alter table workspace_agent_scripts
+	add column id uuid unique not null default gen_random_uuid();
 
 create type workspace_agent_script_timing_stage as enum (
 	'start',

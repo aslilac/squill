@@ -2,5 +2,7 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table only templates add column if not exists failure_ttl bigint not null default 0;
-alter table only templates add column if not exists inactivity_ttl bigint not null default 0;
+alter table only templates
+	add column if not exists failure_ttl bigint not null default 0;
+alter table only templates
+	add column if not exists inactivity_ttl bigint not null default 0;

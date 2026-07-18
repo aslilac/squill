@@ -2,5 +2,6 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table users alter column avatar_url drop not null,
-alter column avatar_url drop default;
+alter table users
+	alter column avatar_url drop not null,
+	alter column avatar_url drop default;

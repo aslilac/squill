@@ -17,5 +17,6 @@ drop table oauth2_provider_app_codes;
 -- again.  OAuth2 is blocked outside of development mode in previous versions,
 -- so users will not be able to create broken secrets.  This is really just to
 -- make sure tests keep working (say for a bisect).
-alter table only oauth2_provider_app_secrets drop constraint oauth2_provider_app_secrets_secret_prefix_key,
-alter column secret_prefix drop not null;
+alter table only oauth2_provider_app_secrets
+	drop constraint oauth2_provider_app_secrets_secret_prefix_key,
+	alter column secret_prefix drop not null;

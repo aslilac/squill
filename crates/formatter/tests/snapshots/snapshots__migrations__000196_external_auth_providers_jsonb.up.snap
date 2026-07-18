@@ -21,15 +21,17 @@ create or replace function migrate_external_auth_providers_to_jsonb(
 $$;
 
 -- Update the column type and migrate the values
-alter table template_versions alter column external_auth_providers type jsonb using migrate_external_auth_providers_to_jsonb(
-	external_auth_providers
-);
+alter table template_versions
+	alter column external_auth_providers type jsonb using migrate_external_auth_providers_to_jsonb(
+		external_auth_providers
+	);
 
 -- Make the column non-nullable to make the types nicer on the Go side
 update template_versions
 set external_auth_providers = '[]'::jsonb
 where external_auth_providers is null;
-alter table template_versions alter column external_auth_providers set default '[]'::jsonb;
+alter table template_versions
+	alter column external_auth_providers set default '[]'::jsonb;
 alter table template_versions alter column external_auth_providers set not null;
 
 -- Recreate `template_version_with_user` as described in dump.sql

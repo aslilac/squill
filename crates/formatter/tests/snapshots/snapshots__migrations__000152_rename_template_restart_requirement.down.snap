@@ -4,9 +4,11 @@ expression: formatted
 ---
 drop view template_with_users;
 
-alter table templates rename column autostop_requirement_days_of_week to restart_requirement_days_of_week;
+alter table templates
+	rename column autostop_requirement_days_of_week to restart_requirement_days_of_week;
 
-alter table templates rename column autostop_requirement_weeks to restart_requirement_weeks;
+alter table templates
+	rename column autostop_requirement_weeks to restart_requirement_weeks;
 
 create view template_with_users as
 select

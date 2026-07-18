@@ -9,10 +9,12 @@ where pin_order > 0 and parent_chat_id is not null;
 
 update chats set pin_order = 0 where pin_order > 0 and archived = true;
 
-alter table chats add constraint chats_pin_order_parent_check check (
-	pin_order = 0 or parent_chat_id is null
-);
+alter table chats
+	add constraint chats_pin_order_parent_check check (
+		pin_order = 0 or parent_chat_id is null
+	);
 
-alter table chats add constraint chats_pin_order_archived_check check (
-	pin_order = 0 or archived = false
-);
+alter table chats
+	add constraint chats_pin_order_archived_check check (
+		pin_order = 0 or archived = false
+	);

@@ -12,9 +12,10 @@ create type new_resource_type as enum (
 	'api_key'
 );
 
-alter table audit_logs alter column resource_type type new_resource_type using (
-	resource_type::text::new_resource_type
-);
+alter table audit_logs
+	alter column resource_type type new_resource_type using (
+		resource_type::text::new_resource_type
+	);
 
 drop type resource_type;
 alter type new_resource_type rename to resource_type;

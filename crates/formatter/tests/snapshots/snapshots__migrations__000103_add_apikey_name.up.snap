@@ -2,7 +2,8 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table only api_keys add column if not exists token_name text not null default '';
+alter table only api_keys
+	add column if not exists token_name text not null default '';
 
 update api_keys
 set token_name = gen_random_uuid()::text

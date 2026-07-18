@@ -2,7 +2,8 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table workspace_agent_devcontainers add column name text not null default '';
+alter table workspace_agent_devcontainers
+	add column name text not null default '';
 alter table workspace_agent_devcontainers alter column name drop default;
 
 comment on column workspace_agent_devcontainers.name is 'The name of the Dev Container.';

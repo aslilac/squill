@@ -16,8 +16,9 @@ where oauth2_provider_app_tokens.api_key_id = api_keys.id;
 alter table oauth2_provider_app_tokens alter column user_id set not null;
 
 -- Add foreign key constraint to maintain referential integrity
-alter table oauth2_provider_app_tokens add constraint fk_oauth2_provider_app_tokens_user_id foreign key (
-	user_id
-) references users (id) on delete cascade;
+alter table oauth2_provider_app_tokens
+	add constraint fk_oauth2_provider_app_tokens_user_id foreign key (
+		user_id
+	) references users (id) on delete cascade;
 
 comment on column oauth2_provider_app_tokens.user_id is 'Denormalized user ID for performance optimization in authorization checks';

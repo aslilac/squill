@@ -2,6 +2,7 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table template_version_parameters add column display_name text not null default '';
+alter table template_version_parameters
+	add column display_name text not null default '';
 
 comment on column template_version_parameters.display_name is 'Display name of the rich parameter';

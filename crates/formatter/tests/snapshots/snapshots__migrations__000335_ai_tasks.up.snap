@@ -4,17 +4,21 @@ expression: formatted
 ---
 -- Determines if a coder_ai_task resource was included in a
 -- workspace build.
-alter table workspace_builds add column has_ai_task boolean not null default false;
+alter table workspace_builds
+	add column has_ai_task boolean not null default false;
 
 -- The app that is displayed in the ai tasks sidebar.
-alter table workspace_builds add column ai_tasks_sidebar_app_id uuid default null;
+alter table workspace_builds
+	add column ai_tasks_sidebar_app_id uuid default null;
 
-alter table workspace_builds add constraint workspace_builds_ai_tasks_sidebar_app_id_fkey foreign key (
-	ai_tasks_sidebar_app_id
-) references workspace_apps (id);
+alter table workspace_builds
+	add constraint workspace_builds_ai_tasks_sidebar_app_id_fkey foreign key (
+		ai_tasks_sidebar_app_id
+	) references workspace_apps (id);
 
 -- Determines if a coder_ai_task resource is defined in a template version.
-alter table template_versions add column has_ai_task boolean not null default false;
+alter table template_versions
+	add column has_ai_task boolean not null default false;
 
 -- The Tasks tab will be rendered in the UI only if there's at least one template version with has_ai_task set to true.
 -- The query to determine this will be run on every UI render, and this index speeds it up.

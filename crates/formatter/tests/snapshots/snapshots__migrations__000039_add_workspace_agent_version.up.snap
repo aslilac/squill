@@ -2,5 +2,6 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table only workspace_agents add column version text default ''::text not null;
+alter table only workspace_agents
+	add column version text default ''::text not null;
 comment on column workspace_agents.version is 'Version tracks the version of the currently running workspace agent. Workspace agents register their version upon start.';

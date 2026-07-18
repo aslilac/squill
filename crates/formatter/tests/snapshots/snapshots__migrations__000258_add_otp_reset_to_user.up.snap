@@ -5,16 +5,18 @@ expression: formatted
 alter table users add column hashed_one_time_passcode bytea;
 comment on column users.hashed_one_time_passcode is 'A hash of the one-time-passcode given to the user.';
 
-alter table users add column one_time_passcode_expires_at timestamp with time zone;
+alter table users
+	add column one_time_passcode_expires_at timestamp with time zone;
 comment on column users.one_time_passcode_expires_at is 'The time when the one-time-passcode expires.';
 
-alter table users add constraint one_time_passcode_set check (
-	(hashed_one_time_passcode is null and one_time_passcode_expires_at is null)
-	or (
-		hashed_one_time_passcode is not null
-		and one_time_passcode_expires_at is not null
-	)
-);
+alter table users
+	add constraint one_time_passcode_set check (
+		(hashed_one_time_passcode is null and one_time_passcode_expires_at is null)
+		or (
+			hashed_one_time_passcode is not null
+			and one_time_passcode_expires_at is not null
+		)
+	);
 
 alter table users add column must_reset_password bool not null default false;
 comment on column users.must_reset_password is 'Determines if the user should be forced to change their password.';

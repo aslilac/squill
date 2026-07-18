@@ -4,5 +4,6 @@ expression: formatted
 ---
 update users set avatar_url = '' where avatar_url is null;
 
-alter table users alter column avatar_url set not null,
-alter column avatar_url set default '';
+alter table users
+	alter column avatar_url set not null,
+	alter column avatar_url set default '';

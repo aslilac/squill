@@ -3,13 +3,16 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- Rename ai_tasks_sidebar_app_id to ai_task_sidebar_app_id in workspace_builds table
-alter table workspace_builds drop constraint workspace_builds_ai_tasks_sidebar_app_id_fkey;
+alter table workspace_builds
+	drop constraint workspace_builds_ai_tasks_sidebar_app_id_fkey;
 
-alter table workspace_builds rename column ai_tasks_sidebar_app_id to ai_task_sidebar_app_id;
+alter table workspace_builds
+	rename column ai_tasks_sidebar_app_id to ai_task_sidebar_app_id;
 
-alter table workspace_builds add constraint workspace_builds_ai_task_sidebar_app_id_fkey foreign key (
-	ai_task_sidebar_app_id
-) references workspace_apps (id);
+alter table workspace_builds
+	add constraint workspace_builds_ai_task_sidebar_app_id_fkey foreign key (
+		ai_task_sidebar_app_id
+	) references workspace_apps (id);
 
 -- if has_ai_task is true, ai_task_sidebar_app_id MUST be set
 -- ai_task_sidebar_app_id can ONLY be set if has_ai_task is true
@@ -22,13 +25,14 @@ alter table workspace_builds add constraint workspace_builds_ai_task_sidebar_app
 --   FALSE       | NOT NULL               | FALSE (fails)
 --   TRUE        | NULL                   | FALSE (fails)
 --   TRUE        | NOT NULL               | TRUE (passes)
-alter table workspace_builds add constraint workspace_builds_ai_task_sidebar_app_id_required check (
-	(
-		(has_ai_task is null or has_ai_task = false)
-		and ai_task_sidebar_app_id is null
-	)
-	or (has_ai_task = true and ai_task_sidebar_app_id is not null)
-);
+alter table workspace_builds
+	add constraint workspace_builds_ai_task_sidebar_app_id_required check (
+		(
+			(has_ai_task is null or has_ai_task = false)
+			and ai_task_sidebar_app_id is null
+		)
+		or (has_ai_task = true and ai_task_sidebar_app_id is not null)
+	);
 
 -- Update the workspace_build_with_user view to use the new column name
 drop view workspace_build_with_user;

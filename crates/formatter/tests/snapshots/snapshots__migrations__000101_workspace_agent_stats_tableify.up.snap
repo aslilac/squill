@@ -4,11 +4,15 @@ expression: formatted
 ---
 alter table agent_stats rename to workspace_agent_stats;
 
-alter table workspace_agent_stats add column connections_by_proto jsonb not null default '{}'::jsonb;
-alter table workspace_agent_stats add column connection_count bigint default 0 not null;
-alter table workspace_agent_stats add column rx_packets bigint default 0 not null;
+alter table workspace_agent_stats
+	add column connections_by_proto jsonb not null default '{}'::jsonb;
+alter table workspace_agent_stats
+	add column connection_count bigint default 0 not null;
+alter table workspace_agent_stats
+	add column rx_packets bigint default 0 not null;
 alter table workspace_agent_stats add column rx_bytes bigint default 0 not null;
-alter table workspace_agent_stats add column tx_packets bigint default 0 not null;
+alter table workspace_agent_stats
+	add column tx_packets bigint default 0 not null;
 alter table workspace_agent_stats add column tx_bytes bigint default 0 not null;
 
 update workspace_agent_stats

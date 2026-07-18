@@ -2,7 +2,7 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table organizations add column default_org_member_roles text [ ];
+alter table organizations add column default_org_member_roles text[];
 
 update organizations
 set default_org_member_roles = array ['organization-workspace-access']::text[];

@@ -2,5 +2,6 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table templates drop column allow_user_autostart,
-drop column allow_user_autostop;
+alter table templates
+	drop column allow_user_autostart,
+	drop column allow_user_autostop;

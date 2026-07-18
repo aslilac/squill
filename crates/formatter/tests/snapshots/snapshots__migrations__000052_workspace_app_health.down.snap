@@ -2,9 +2,10 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table only workspace_apps drop column if exists healthcheck_url,
-drop column if exists healthcheck_interval,
-drop column if exists healthcheck_threshold,
-drop column if exists health;
+alter table only workspace_apps
+	drop column if exists healthcheck_url,
+	drop column if exists healthcheck_interval,
+	drop column if exists healthcheck_threshold,
+	drop column if exists health;
 
 drop type workspace_app_health;

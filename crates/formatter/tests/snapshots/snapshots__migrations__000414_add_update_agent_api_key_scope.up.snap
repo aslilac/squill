@@ -3,4 +3,5 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 alter type api_key_scope add value if not exists 'workspace:update_agent';
-alter type api_key_scope add value if not exists 'workspace_dormant:update_agent';
+alter type api_key_scope
+	add value if not exists 'workspace_dormant:update_agent';

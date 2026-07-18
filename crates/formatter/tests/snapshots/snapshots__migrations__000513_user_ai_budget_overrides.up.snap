@@ -32,7 +32,8 @@ create function enforce_user_ai_budget_override_membership() returns trigger lan
 		) then
 			raise exception 'user % is not a member of group %',
 			NEW.user_id,
-			NEW.group_id using errcode = 'check_violation',
+			NEW.group_id
+			using errcode = 'check_violation',
 			constraint = 'user_ai_budget_overrides_must_be_group_member';
 		end if;
 		return NEW;

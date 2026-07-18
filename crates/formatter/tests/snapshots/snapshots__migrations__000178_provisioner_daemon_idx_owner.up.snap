@@ -2,7 +2,8 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table only provisioner_daemons drop constraint if exists provisioner_daemons_name_key;
+alter table only provisioner_daemons
+	drop constraint if exists provisioner_daemons_name_key;
 
 create unique index if not exists idx_provisioner_daemons_name_owner_key on provisioner_daemons using btree(
 	name,

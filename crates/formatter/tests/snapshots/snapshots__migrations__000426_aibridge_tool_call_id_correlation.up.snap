@@ -2,14 +2,17 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table aibridge_tool_usages add column provider_tool_call_id text null; -- nullable to allow existing data to be correct
+alter table aibridge_tool_usages
+	add column provider_tool_call_id text null -- nullable to allow existing data to be correct
+	;
 
 create index idx_aibridge_tool_usages_provider_tool_call_id on aibridge_tool_usages (
 	provider_tool_call_id
 );
 
-alter table aibridge_interceptions add column thread_parent_id uuid null,
-add column thread_root_id uuid null;
+alter table aibridge_interceptions
+	add column thread_parent_id uuid null,
+	add column thread_root_id uuid null;
 
 comment on column aibridge_interceptions.thread_parent_id is 'The interception which directly caused this interception to occur, usually through an agentic loop or threaded conversation.';
 comment on column aibridge_interceptions.thread_root_id is 'The root interception of the thread that this interception belongs to.';

@@ -68,9 +68,8 @@ create or replace function delete_deleted_user_resources() returns trigger langu
 	end;
 $$;
 
-alter table chat_model_configs add column ai_provider_id uuid references ai_providers (
-	id
-);
+alter table chat_model_configs
+	add column ai_provider_id uuid references ai_providers (id);
 
 create index idx_chat_model_configs_ai_provider_id on chat_model_configs (
 	ai_provider_id

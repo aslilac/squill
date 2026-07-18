@@ -5,4 +5,5 @@ expression: formatted
 -- Revert canonicalization of special API key scopes
 -- Rename enum values back: 'coder:all' -> 'all', 'coder:application_connect' -> 'application_connect'
 alter type api_key_scope rename value 'coder:all' to 'all';
-alter type api_key_scope rename value 'coder:application_connect' to 'application_connect';
+alter type api_key_scope
+	rename value 'coder:application_connect' to 'application_connect';

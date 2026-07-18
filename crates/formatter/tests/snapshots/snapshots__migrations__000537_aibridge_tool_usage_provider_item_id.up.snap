@@ -2,6 +2,8 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table aibridge_tool_usages add column provider_item_id text null; -- nullable to allow existing data to remain valid
+alter table aibridge_tool_usages
+	add column provider_item_id text null -- nullable to allow existing data to remain valid
+	;
 
 comment on column aibridge_tool_usages.provider_item_id is 'Specific to the OpenAI Responses API: the unique id of the output item that carried the tool call. Distinct from provider_tool_call_id (the call_id correlation key), which is empty for hosted tools. Empty for the chat completions and Anthropic messages APIs, which have no separate item id.';

@@ -3,16 +3,20 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- Drop the check constraint first
-alter table workspace_builds drop constraint workspace_builds_ai_task_sidebar_app_id_required;
+alter table workspace_builds
+	drop constraint workspace_builds_ai_task_sidebar_app_id_required;
 
 -- Revert ai_task_sidebar_app_id back to ai_tasks_sidebar_app_id in workspace_builds table
-alter table workspace_builds drop constraint workspace_builds_ai_task_sidebar_app_id_fkey;
+alter table workspace_builds
+	drop constraint workspace_builds_ai_task_sidebar_app_id_fkey;
 
-alter table workspace_builds rename column ai_task_sidebar_app_id to ai_tasks_sidebar_app_id;
+alter table workspace_builds
+	rename column ai_task_sidebar_app_id to ai_tasks_sidebar_app_id;
 
-alter table workspace_builds add constraint workspace_builds_ai_tasks_sidebar_app_id_fkey foreign key (
-	ai_tasks_sidebar_app_id
-) references workspace_apps (id);
+alter table workspace_builds
+	add constraint workspace_builds_ai_tasks_sidebar_app_id_fkey foreign key (
+		ai_tasks_sidebar_app_id
+	) references workspace_apps (id);
 
 -- Revert the workspace_build_with_user view to use the original column name
 drop view workspace_build_with_user;

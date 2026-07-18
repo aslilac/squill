@@ -2,11 +2,13 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table workspace_resource_metadata drop constraint workspace_resource_metadata_pkey;
+alter table workspace_resource_metadata
+	drop constraint workspace_resource_metadata_pkey;
 
 alter table workspace_resource_metadata add column id bigserial primary key;
 
-alter table workspace_resource_metadata add constraint workspace_resource_metadata_name unique (
-	workspace_resource_id,
-	key
-);
+alter table workspace_resource_metadata
+	add constraint workspace_resource_metadata_name unique (
+		workspace_resource_id,
+		key
+	);

@@ -14,23 +14,26 @@ create type new_app_sharing_level as enum (
 );
 
 -- Update workspace_agent_port_share table to use new enum
-alter table workspace_agent_port_share alter column share_level type new_app_sharing_level using (
-	share_level::text::new_app_sharing_level
-);
+alter table workspace_agent_port_share
+	alter column share_level type new_app_sharing_level using (
+		share_level::text::new_app_sharing_level
+	);
 
 -- Update workspace_apps table to use new enum
-alter table workspace_apps alter column sharing_level drop default,
-alter column sharing_level type new_app_sharing_level using (
-	sharing_level::text::new_app_sharing_level
-),
-alter column sharing_level set default 'owner'::new_app_sharing_level;
+alter table workspace_apps
+	alter column sharing_level drop default,
+	alter column sharing_level type new_app_sharing_level using (
+		sharing_level::text::new_app_sharing_level
+	),
+	alter column sharing_level set default 'owner'::new_app_sharing_level;
 
 -- Update templates table to use new enum
-alter table templates alter column max_port_sharing_level drop default,
-alter column max_port_sharing_level type new_app_sharing_level using (
-	max_port_sharing_level::text::new_app_sharing_level
-),
-alter column max_port_sharing_level set default 'owner'::new_app_sharing_level;
+alter table templates
+	alter column max_port_sharing_level drop default,
+	alter column max_port_sharing_level type new_app_sharing_level using (
+		max_port_sharing_level::text::new_app_sharing_level
+	),
+	alter column max_port_sharing_level set default 'owner'::new_app_sharing_level;
 
 -- Drop old enum and rename new one
 drop type app_sharing_level;

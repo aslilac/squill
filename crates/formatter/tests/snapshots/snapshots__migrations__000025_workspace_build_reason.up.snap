@@ -4,4 +4,5 @@ expression: formatted
 ---
 create type build_reason as enum ('initiator', 'autostart', 'autostop');
 
-alter table only workspace_builds add column if not exists reason build_reason not null default 'initiator';
+alter table only workspace_builds
+	add column if not exists reason build_reason not null default 'initiator';

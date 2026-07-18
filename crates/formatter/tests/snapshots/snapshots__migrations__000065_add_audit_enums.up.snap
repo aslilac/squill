@@ -22,12 +22,13 @@ create type new_resource_type as enum (
 	'workspace_build'
 );
 
-alter table audit_logs alter column action type new_audit_action using (
-	action::text::new_audit_action
-),
-alter column resource_type type new_resource_type using (
-	resource_type::text::new_resource_type
-);
+alter table audit_logs
+	alter column action type new_audit_action using (
+		action::text::new_audit_action
+	),
+	alter column resource_type type new_resource_type using (
+		resource_type::text::new_resource_type
+	);
 
 drop type audit_action;
 alter type new_audit_action rename to audit_action;

@@ -2,7 +2,8 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table only users add column if not exists rbac_roles text [ ] default '{}' not null;
+alter table only users
+	add column if not exists rbac_roles text[] default '{}' not null;
 
 -- All users are site members. So give them the standard role.
 -- Also give them membership to the first org we retrieve. We should only have

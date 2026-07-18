@@ -2,9 +2,8 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table aibridge_interceptions add column client_session_id varchar (
-	256
-) null;
+alter table aibridge_interceptions
+	add column client_session_id varchar (256) null;
 
 comment on column aibridge_interceptions.client_session_id is 'The session ID supplied by the client (optional and not universally supported).';
 

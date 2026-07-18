@@ -3,19 +3,21 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 alter table aibridge_token_usages
--- Effective group this interception's spend is attributed to. NULL if the
--- user has no effective group (no budget configured). Intentionally not a
--- foreign key: this is an immutable historical attribution that must
--- survive group deletion, so the id is retained even after the group is gone.
-add column effective_group_id uuid,
--- Snapshotted prices at interception time, in micro-units per million
--- tokens. NULL if the model is not present in ai_model_prices.
-add column input_price_micros bigint check (input_price_micros >= 0),
-add column output_price_micros bigint check (output_price_micros >= 0),
-add column cache_read_price_micros bigint check (cache_read_price_micros >= 0),
-add column cache_write_price_micros bigint check (
-	cache_write_price_micros >= 0
-),
--- Computed cost in micro-units at interception time. NULL if the model is
--- not present in ai_model_prices.
-add column cost_micros bigint check (cost_micros >= 0);
+	-- Effective group this interception's spend is attributed to. NULL if the
+	-- user has no effective group (no budget configured). Intentionally not a
+	-- foreign key: this is an immutable historical attribution that must
+	-- survive group deletion, so the id is retained even after the group is gone.
+	add column effective_group_id uuid,
+	-- Snapshotted prices at interception time, in micro-units per million
+	-- tokens. NULL if the model is not present in ai_model_prices.
+	add column input_price_micros bigint check (input_price_micros >= 0),
+	add column output_price_micros bigint check (output_price_micros >= 0),
+	add column cache_read_price_micros bigint check (
+		cache_read_price_micros >= 0
+	),
+	add column cache_write_price_micros bigint check (
+		cache_write_price_micros >= 0
+	),
+	-- Computed cost in micro-units at interception time. NULL if the model is
+	-- not present in ai_model_prices.
+	add column cost_micros bigint check (cost_micros >= 0);

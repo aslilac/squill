@@ -3,6 +3,7 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- Remove the denormalized user_id column from oauth2_provider_app_tokens
-alter table oauth2_provider_app_tokens drop constraint if exists fk_oauth2_provider_app_tokens_user_id;
+alter table oauth2_provider_app_tokens
+	drop constraint if exists fk_oauth2_provider_app_tokens_user_id;
 
 alter table oauth2_provider_app_tokens drop column if exists user_id;

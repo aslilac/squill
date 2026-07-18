@@ -6,6 +6,7 @@ expression: formatted
 alter table custom_roles add column is_system boolean not null default false;
 
 -- Add member_permissions column for member-scoped permissions within an organization.
-alter table custom_roles add column member_permissions jsonb not null default '[]'::jsonb;
+alter table custom_roles
+	add column member_permissions jsonb not null default '[]'::jsonb;
 
 comment on column custom_roles.is_system is 'System roles are managed by Coder and cannot be modified or deleted by users.';

@@ -22,10 +22,12 @@ comment on column boundary_usage_stats.window_start is 'Start of the time window
 comment on column boundary_usage_stats.updated_at is 'Timestamp of the last update to this row.';
 
 -- Add boundary_usage_summary to the telemetry_locks event_type constraint.
-alter table telemetry_locks drop constraint telemetry_lock_event_type_constraint;
-alter table telemetry_locks add constraint telemetry_lock_event_type_constraint check (
-	event_type in ('aibridge_interceptions_summary', 'boundary_usage_summary')
-);
+alter table telemetry_locks
+	drop constraint telemetry_lock_event_type_constraint;
+alter table telemetry_locks
+	add constraint telemetry_lock_event_type_constraint check (
+		event_type in ('aibridge_interceptions_summary', 'boundary_usage_summary')
+	);
 
 -- Add boundary_usage scopes for RBAC.
 alter type api_key_scope add value if not exists 'boundary_usage:*';

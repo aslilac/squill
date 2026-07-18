@@ -48,10 +48,11 @@ where x = 1 and keys.login_type != 'password';
 -- Drop columns that have been migrated to user_links.
 -- It appears the 'oauth_id_token' was unused and so it has
 -- been dropped here as well to avoid future confusion.
-alter table api_keys drop column oauth_access_token,
-drop column oauth_refresh_token,
-drop column oauth_id_token,
-drop column oauth_expiry;
+alter table api_keys
+	drop column oauth_access_token,
+	drop column oauth_refresh_token,
+	drop column oauth_id_token,
+	drop column oauth_expiry;
 
 alter table users add column login_type login_type not null default 'password';
 

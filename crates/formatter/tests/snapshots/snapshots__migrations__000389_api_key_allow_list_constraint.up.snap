@@ -9,6 +9,7 @@ set allow_list = array ['*:*']
 where allow_list = array []::text[] or array_length(allow_list, 1) is null;
 
 -- Add CHECK constraint to ensure allow_list array is never empty
-alter table api_keys add constraint api_keys_allow_list_not_empty check (
-	array_length(allow_list, 1) > 0
-);
+alter table api_keys
+	add constraint api_keys_allow_list_not_empty check (
+		array_length(allow_list, 1) > 0
+	);

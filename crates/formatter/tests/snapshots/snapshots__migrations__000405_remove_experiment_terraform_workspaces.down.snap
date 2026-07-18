@@ -3,7 +3,8 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 drop view template_with_names;
-alter table templates add column use_terraform_workspace_cache bool not null default false;
+alter table templates
+	add column use_terraform_workspace_cache bool not null default false;
 
 create view template_with_names as
 select

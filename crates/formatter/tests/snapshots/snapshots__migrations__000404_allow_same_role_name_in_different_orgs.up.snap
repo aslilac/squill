@@ -24,9 +24,10 @@ update custom_roles
 set organization_id = null
 where organization_id = '00000000-0000-0000-0000-000000000000';
 
-alter table custom_roles add constraint organization_id_not_zero check (
-	organization_id <> '00000000-0000-0000-0000-000000000000'::uuid
-);
+alter table custom_roles
+	add constraint organization_id_not_zero check (
+		organization_id <> '00000000-0000-0000-0000-000000000000'::uuid
+	);
 
 create unique index idx_custom_roles_name_lower_organization_id on custom_roles using btree(
 	LOWER(name),

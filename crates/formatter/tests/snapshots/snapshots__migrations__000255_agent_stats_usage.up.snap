@@ -2,4 +2,5 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table workspace_agent_stats add column usage boolean not null default false;
+alter table workspace_agent_stats
+	add column usage boolean not null default false;

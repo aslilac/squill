@@ -2,7 +2,8 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table template_versions rename column external_auth_providers to git_auth_providers;
+alter table template_versions
+	rename column external_auth_providers to git_auth_providers;
 
 alter table external_auth_links rename to git_auth_links;
 

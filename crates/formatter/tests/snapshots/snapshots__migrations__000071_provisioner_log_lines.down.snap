@@ -4,4 +4,5 @@ expression: formatted
 ---
 alter table provisioner_job_logs drop column id;
 
-alter table provisioner_job_logs add column id uuid not null default gen_random_uuid();
+alter table provisioner_job_logs
+	add column id uuid not null default gen_random_uuid();

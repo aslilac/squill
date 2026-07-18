@@ -2,10 +2,9 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table template_version_presets add column if not exists description varchar (
-	128
-) not null default '',
-add column if not exists icon varchar (256) not null default '';
+alter table template_version_presets
+	add column if not exists description varchar (128) not null default '',
+	add column if not exists icon varchar (256) not null default '';
 
 comment on column template_version_presets.description is 'Short text describing the preset (max 128 characters).';
 comment on column template_version_presets.icon is 'URL or path to an icon representing the preset (max 256 characters).';

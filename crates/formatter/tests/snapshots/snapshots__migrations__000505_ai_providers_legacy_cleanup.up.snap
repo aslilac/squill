@@ -120,9 +120,10 @@ set ai_provider_id = cp.id
 from chat_providers cp
 where cmc.provider = cp.provider and cmc.ai_provider_id is null;
 
-alter table chat_model_configs add constraint chat_model_configs_ai_provider_required_when_active check (
-	deleted = true or ai_provider_id is not null
-);
+alter table chat_model_configs
+	add constraint chat_model_configs_ai_provider_required_when_active check (
+		deleted = true or ai_provider_id is not null
+	);
 
 drop table if exists user_chat_provider_keys;
 drop table if exists chat_providers;

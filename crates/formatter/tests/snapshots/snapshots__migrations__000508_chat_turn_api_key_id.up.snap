@@ -5,10 +5,8 @@ expression: formatted
 -- Preserve chat history when API keys are deleted. Pending work whose latest
 -- user turn loses this attribution will fail closed under AI Gateway routing;
 -- operators can retry the turn or temporarily use direct routing.
-alter table chat_messages add column api_key_id text references api_keys (
-	id
-) on delete set null;
+alter table chat_messages
+	add column api_key_id text references api_keys (id) on delete set null;
 
-alter table chat_queued_messages add column api_key_id text references api_keys (
-	id
-) on delete set null;
+alter table chat_queued_messages
+	add column api_key_id text references api_keys (id) on delete set null;

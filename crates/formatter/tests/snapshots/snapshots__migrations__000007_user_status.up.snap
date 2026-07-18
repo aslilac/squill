@@ -4,4 +4,5 @@ expression: formatted
 ---
 create type user_status as enum ('active', 'suspended');
 
-alter table only users add column if not exists status user_status not null default 'active';
+alter table only users
+	add column if not exists status user_status not null default 'active';

@@ -2,5 +2,6 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table chats drop column if exists build_id,
-drop column if exists agent_id;
+alter table chats
+	drop column if exists build_id,
+	drop column if exists agent_id;

@@ -6,8 +6,9 @@ expression: formatted
 -- dependency.
 drop view template_with_users;
 
-alter table templates drop column restart_requirement_days_of_week,
-drop column restart_requirement_weeks;
+alter table templates
+	drop column restart_requirement_days_of_week,
+	drop column restart_requirement_weeks;
 
 alter table users drop column quiet_hours_schedule;
 

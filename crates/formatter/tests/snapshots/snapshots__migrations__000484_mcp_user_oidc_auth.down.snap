@@ -6,8 +6,10 @@ expression: formatted
 -- type because they would otherwise violate the restored CHECK constraint.
 delete from mcp_server_configs where auth_type = 'user_oidc';
 
-alter table mcp_server_configs drop constraint mcp_server_configs_auth_type_check;
+alter table mcp_server_configs
+	drop constraint mcp_server_configs_auth_type_check;
 
-alter table mcp_server_configs add constraint mcp_server_configs_auth_type_check check (
-	auth_type in ('none', 'oauth2', 'api_key', 'custom_headers')
-);
+alter table mcp_server_configs
+	add constraint mcp_server_configs_auth_type_check check (
+		auth_type in ('none', 'oauth2', 'api_key', 'custom_headers')
+	);

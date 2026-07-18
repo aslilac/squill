@@ -40,7 +40,9 @@ alter type api_key_scope add value if not exists 'user:*';
 alter type api_key_scope add value if not exists 'user_secret:*';
 alter type api_key_scope add value if not exists 'webpush_subscription:*';
 alter type api_key_scope add value if not exists 'workspace:*';
-alter type api_key_scope add value if not exists 'workspace_agent_devcontainers:*';
-alter type api_key_scope add value if not exists 'workspace_agent_resource_monitor:*';
+alter type api_key_scope
+	add value if not exists 'workspace_agent_devcontainers:*';
+alter type api_key_scope
+	add value if not exists 'workspace_agent_resource_monitor:*';
 alter type api_key_scope add value if not exists 'workspace_dormant:*';
 alter type api_key_scope add value if not exists 'workspace_proxy:*';

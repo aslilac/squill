@@ -4,12 +4,13 @@ expression: formatted
 ---
 -- WARNING: Restoring this constraint after running a newer version of coderd
 -- and using tasks is bound to break this constraint.
-alter table workspace_builds add constraint workspace_builds_ai_task_sidebar_app_id_required check (
-	(
+alter table workspace_builds
+	add constraint workspace_builds_ai_task_sidebar_app_id_required check (
 		(
-			((has_ai_task is null) or (has_ai_task = false))
-			and (ai_task_sidebar_app_id is null)
+			(
+				((has_ai_task is null) or (has_ai_task = false))
+				and (ai_task_sidebar_app_id is null)
+			)
+			or ((has_ai_task = true) and (ai_task_sidebar_app_id is not null))
 		)
-		or ((has_ai_task = true) and (ai_task_sidebar_app_id is not null))
-	)
-);
+	);

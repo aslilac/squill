@@ -25,14 +25,16 @@ create table chat_usage_limit_config (
 insert into chat_usage_limit_config (singleton) values (true);
 
 -- 2. Per-user overrides (inline on users table).
-alter table users add column chat_spend_limit_micros bigint default null check (
-	chat_spend_limit_micros is null or chat_spend_limit_micros > 0
-);
+alter table users
+	add column chat_spend_limit_micros bigint default null check (
+		chat_spend_limit_micros is null or chat_spend_limit_micros > 0
+	);
 
 -- 3. Per-group overrides (inline on groups table).
-alter table groups add column chat_spend_limit_micros bigint default null check (
-	chat_spend_limit_micros is null or chat_spend_limit_micros > 0
-);
+alter table groups
+	add column chat_spend_limit_micros bigint default null check (
+		chat_spend_limit_micros is null or chat_spend_limit_micros > 0
+	);
 
 -- Speed up per-user spend aggregation in the usage-limit hot path.
 create index idx_chat_messages_owner_spend on chat_messages (

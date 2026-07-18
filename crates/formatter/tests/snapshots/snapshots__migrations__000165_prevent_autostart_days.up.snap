@@ -4,7 +4,8 @@ expression: formatted
 ---
 drop view template_with_users;
 
-alter table templates add column autostart_block_days_of_week smallint not null default 0;
+alter table templates
+	add column autostart_block_days_of_week smallint not null default 0;
 
 comment on column templates.autostart_block_days_of_week is 'A bitmap of days of week that autostart of a workspace is not allowed. Default allows all days. This is intended as a cost savings measure to prevent auto start on weekends (for example).';
 

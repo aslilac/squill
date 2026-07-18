@@ -2,9 +2,10 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table only template_versions add column if not exists created_by uuid references users (
-	id
-) on delete restrict;
+alter table only template_versions
+	add column if not exists created_by uuid references users (
+		id
+	) on delete restrict;
 
 update template_versions
 set

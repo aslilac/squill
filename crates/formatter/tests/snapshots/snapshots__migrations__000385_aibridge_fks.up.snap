@@ -13,24 +13,25 @@ expression: formatted
 -- feature.
 
 -- Step 1: Add FK without validating it
-alter table aibridge_interceptions add constraint aibridge_interceptions_initiator_id_fkey foreign key (
-	initiator_id
-) references users (id)
--- We can't:
--- - Cascade delete because this is an auditing feature, and it also
---   wouldn't delete related aibridge rows since we don't FK them.
--- - Set null because you can't correlate to the original user ID if the
---   user somehow gets deleted.
---
--- So we just use the default and don't do anything. This will result in a
--- deferred constraint violation error when the user is deleted.
---
--- In Coder, we don't delete user rows ever, so this should never happen
--- unless an admin manually deletes a user with SQL.
-on delete no action
--- Delay validation of existing data until after we've dropped rows that
--- violate the FK.
-not valid;
+alter table aibridge_interceptions
+	add constraint aibridge_interceptions_initiator_id_fkey foreign key (
+		initiator_id
+	) references users (id)
+	-- We can't:
+	-- - Cascade delete because this is an auditing feature, and it also
+	--   wouldn't delete related aibridge rows since we don't FK them.
+	-- - Set null because you can't correlate to the original user ID if the
+	--   user somehow gets deleted.
+	--
+	-- So we just use the default and don't do anything. This will result in a
+	-- deferred constraint violation error when the user is deleted.
+	--
+	-- In Coder, we don't delete user rows ever, so this should never happen
+	-- unless an admin manually deletes a user with SQL.
+	on delete no action
+	-- Delay validation of existing data until after we've dropped rows that
+	-- violate the FK.
+	not valid;
 
 -- Step 2: Drop existing interceptions that violate the FK.
 delete from aibridge_interceptions
@@ -48,4 +49,5 @@ delete from aibridge_tool_usages
 where interception_id not in (select id from aibridge_interceptions);
 
 -- Step 4: Validate the FK
-alter table aibridge_interceptions validate constraint aibridge_interceptions_initiator_id_fkey;
+alter table aibridge_interceptions
+	validate constraint aibridge_interceptions_initiator_id_fkey;

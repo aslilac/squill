@@ -226,6 +226,11 @@ impl Printer<'_> {
     // ---- output ----
 
     fn push_text(&mut self, text: &str) {
+        // A lone separator space at the start of a line is always
+        // redundant (the line is already indented): drop it.
+        if text == " " && self.at_line_start {
+            return;
+        }
         self.out.push_str(text);
         self.col += self.width(text);
         if !text.is_empty() {

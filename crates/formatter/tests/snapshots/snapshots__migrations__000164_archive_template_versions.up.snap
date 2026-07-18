@@ -6,7 +6,8 @@ expression: formatted
 drop view template_version_with_user;
 
 -- Archived template versions are not visible or usable by default.
-alter table template_versions add column archived boolean not null default false;
+alter table template_versions
+	add column archived boolean not null default false;
 
 -- Restore the old version of the template_version_with_user view.
 create view template_version_with_user as

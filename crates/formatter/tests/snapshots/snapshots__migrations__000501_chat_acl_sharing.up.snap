@@ -4,19 +4,21 @@ expression: formatted
 ---
 drop view if exists chats_expanded;
 
-alter table chats add column user_acl jsonb not null default '{}'::jsonb,
-add column group_acl jsonb not null default '{}'::jsonb;
+alter table chats
+	add column user_acl jsonb not null default '{}'::jsonb,
+	add column group_acl jsonb not null default '{}'::jsonb;
 
-alter table chats add constraint chat_user_acl_not_null_jsonb check (
-	user_acl is not null and jsonb_typeof(user_acl) = 'object'
-),
-add constraint chat_group_acl_not_null_jsonb check (
-	group_acl is not null and jsonb_typeof(group_acl) = 'object'
-),
-add constraint chat_acl_only_on_root_chats check (
-	(parent_chat_id is null and root_chat_id is null)
-	or (user_acl = '{}'::jsonb and group_acl = '{}'::jsonb)
-);
+alter table chats
+	add constraint chat_user_acl_not_null_jsonb check (
+		user_acl is not null and jsonb_typeof(user_acl) = 'object'
+	),
+	add constraint chat_group_acl_not_null_jsonb check (
+		group_acl is not null and jsonb_typeof(group_acl) = 'object'
+	),
+	add constraint chat_acl_only_on_root_chats check (
+		(parent_chat_id is null and root_chat_id is null)
+		or (user_acl = '{}'::jsonb and group_acl = '{}'::jsonb)
+	);
 
 create view chats_expanded as
 select

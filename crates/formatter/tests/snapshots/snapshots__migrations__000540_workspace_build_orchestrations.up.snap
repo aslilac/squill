@@ -5,15 +5,14 @@ expression: formatted
 -- Postgres requires the referenced column set of a composite foreign
 -- key to have its own unique constraint, even though id is already
 -- unique.
-alter table workspace_builds add constraint workspace_builds_id_workspace_id_key unique (
-	id,
-	workspace_id
-);
+alter table workspace_builds
+	add constraint workspace_builds_id_workspace_id_key unique (id, workspace_id);
 
-alter table template_version_presets add constraint template_version_presets_id_template_version_id_key unique (
-	id,
-	template_version_id
-);
+alter table template_version_presets
+	add constraint template_version_presets_id_template_version_id_key unique (
+		id,
+		template_version_id
+	);
 
 create table workspace_build_orchestrations (
 	id uuid primary key not null,
@@ -100,8 +99,13 @@ comment on column workspace_build_orchestrations.attempt_count is 'Counts retrya
 comment on column workspace_build_orchestrations.next_retry_after is 'When set, the orchestrator skips this pending row until the timestamp has passed.';
 
 -- Add workspace_build_orchestration scopes for RBAC.
-alter type api_key_scope add value if not exists 'workspace_build_orchestration:*';
-alter type api_key_scope add value if not exists 'workspace_build_orchestration:create';
-alter type api_key_scope add value if not exists 'workspace_build_orchestration:delete';
-alter type api_key_scope add value if not exists 'workspace_build_orchestration:read';
-alter type api_key_scope add value if not exists 'workspace_build_orchestration:update';
+alter type api_key_scope
+	add value if not exists 'workspace_build_orchestration:*';
+alter type api_key_scope
+	add value if not exists 'workspace_build_orchestration:create';
+alter type api_key_scope
+	add value if not exists 'workspace_build_orchestration:delete';
+alter type api_key_scope
+	add value if not exists 'workspace_build_orchestration:read';
+alter type api_key_scope
+	add value if not exists 'workspace_build_orchestration:update';

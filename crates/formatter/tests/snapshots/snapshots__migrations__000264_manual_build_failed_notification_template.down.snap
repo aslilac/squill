@@ -16,7 +16,7 @@ update notification_templates
 set
 	body_template = E'Hi {{.UserName}},\n\n'
 	|| -- Add a comma
-	 E'The template **{{.Labels.name}}** was deleted by **{{ .Labels.initiator }}**.\n\n'
+	E'The template **{{.Labels.name}}** was deleted by **{{ .Labels.initiator }}**.\n\n'
 	||
 	-- Mention template display name:
 	E'The template''s display name was **{{.Labels.display_name}}**.'

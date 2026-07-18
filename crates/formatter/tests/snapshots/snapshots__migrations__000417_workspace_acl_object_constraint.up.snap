@@ -7,7 +7,6 @@ expression: formatted
 update workspaces set group_acl = '{}'::jsonb where group_acl = 'null'::jsonb;
 update workspaces set user_acl = '{}'::jsonb where user_acl = 'null'::jsonb;
 
-alter table workspaces add constraint group_acl_is_object check (
-	jsonb_typeof(group_acl) = 'object'
-),
-add constraint user_acl_is_object check (jsonb_typeof(user_acl) = 'object');
+alter table workspaces
+	add constraint group_acl_is_object check (jsonb_typeof(group_acl) = 'object'),
+	add constraint user_acl_is_object check (jsonb_typeof(user_acl) = 'object');

@@ -9,4 +9,5 @@ create type display_app as enum (
 	'ssh_helper',
 	'port_forwarding_helper'
 );
-alter table workspace_agents add column display_apps display_app [ ] default '{vscode, vscode_insiders, web_terminal, ssh_helper, port_forwarding_helper}';
+alter table workspace_agents
+	add column display_apps display_app[] default '{vscode, vscode_insiders, web_terminal, ssh_helper, port_forwarding_helper}';

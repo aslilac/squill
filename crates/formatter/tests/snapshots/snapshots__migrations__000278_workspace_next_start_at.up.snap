@@ -2,7 +2,8 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table only workspaces add column if not exists next_start_at timestamptz default null;
+alter table only workspaces
+	add column if not exists next_start_at timestamptz default null;
 
 create index workspace_next_start_at_idx on workspaces using btree(
 	next_start_at

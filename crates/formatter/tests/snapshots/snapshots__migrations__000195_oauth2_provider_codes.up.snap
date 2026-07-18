@@ -57,22 +57,25 @@ create type new_logintype as enum (
 );
 comment on type new_logintype is 'Specifies the method of authentication. "none" is a special case in which no authentication method is allowed.';
 
-alter table users alter column login_type drop default,
-alter column login_type type new_logintype using (
-	login_type::text::new_logintype
-),
-alter column login_type set default 'password'::new_logintype;
+alter table users
+	alter column login_type drop default,
+	alter column login_type type new_logintype using (
+		login_type::text::new_logintype
+	),
+	alter column login_type set default 'password'::new_logintype;
 
 drop index if exists idx_api_key_name;
-alter table api_keys alter column login_type type new_logintype using (
-	login_type::text::new_logintype
-);
+alter table api_keys
+	alter column login_type type new_logintype using (
+		login_type::text::new_logintype
+	);
 create unique index idx_api_key_name on api_keys (user_id, token_name)
 where (login_type = 'token'::new_logintype);
 
-alter table user_links alter column login_type type new_logintype using (
-	login_type::text::new_logintype
-);
+alter table user_links
+	alter column login_type type new_logintype using (
+		login_type::text::new_logintype
+	);
 
 drop type login_type;
 alter type new_logintype rename to login_type;
@@ -84,14 +87,16 @@ alter type new_logintype rename to login_type;
 -- previously upgraded, in which case they keep their original prefixes and will
 -- be fine.  Add a random ID for the development mode case so the upgrade does
 -- not fail, at least.
-alter table only oauth2_provider_app_secrets add column if not exists secret_prefix bytea null;
+alter table only oauth2_provider_app_secrets
+	add column if not exists secret_prefix bytea null;
 
 update oauth2_provider_app_secrets
 set secret_prefix = substr(md5(random()::text), 0, 10)::bytea
 where secret_prefix is null;
 
-alter table only oauth2_provider_app_secrets alter column secret_prefix set not null,
-add constraint oauth2_provider_app_secrets_secret_prefix_key unique (
-	secret_prefix
-),
-drop constraint if exists oauth2_provider_app_secrets_app_id_hashed_secret_key;
+alter table only oauth2_provider_app_secrets
+	alter column secret_prefix set not null,
+	add constraint oauth2_provider_app_secrets_secret_prefix_key unique (
+		secret_prefix
+	),
+	drop constraint if exists oauth2_provider_app_secrets_app_id_hashed_secret_key;

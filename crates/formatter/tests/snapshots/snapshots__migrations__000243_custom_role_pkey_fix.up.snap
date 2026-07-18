@@ -5,7 +5,5 @@ expression: formatted
 alter table custom_roles drop constraint custom_roles_pkey;
 
 -- Roles are unique to the organization.
-alter table custom_roles add constraint custom_roles_unique_key unique (
-	name,
-	organization_id
-);
+alter table custom_roles
+	add constraint custom_roles_unique_key unique (name, organization_id);

@@ -12,9 +12,10 @@ create type old_crypto_key_feature as enum (
 	'tailnet_resume'
 );
 
-alter table crypto_keys alter column feature type old_crypto_key_feature using (
-	feature::text::old_crypto_key_feature
-);
+alter table crypto_keys
+	alter column feature type old_crypto_key_feature using (
+		feature::text::old_crypto_key_feature
+	);
 
 drop type crypto_key_feature;
 

@@ -2,6 +2,5 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table users add constraint users_username_min_length check (
-	length(username) >= 1
-);
+alter table users
+	add constraint users_username_min_length check (length(username) >= 1);

@@ -17,7 +17,7 @@ update notification_templates
 set
 	body_template = E'Hi {{.UserName}},\n\n'
 	|| -- Add a \n
-	 E'User account **{{.Labels.activated_account_name}}** has been activated.\n\n'
+	E'User account **{{.Labels.activated_account_name}}** has been activated.\n\n'
 	|| E'The account {{if .Labels.activated_account_user_name}}belongs to **{{.Labels.activated_account_user_name}}** and it {{ end }}was activated by **{{.Labels.initiator}}**.'
 where id = '9f5af851-8408-4e73-a7a1-c6502ba46689';
 

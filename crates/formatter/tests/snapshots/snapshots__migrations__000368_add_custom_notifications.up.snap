@@ -6,11 +6,12 @@ expression: formatted
 create type new_notification_template_kind as enum ('system', 'custom');
 
 -- Update the notification_templates table to use new enum
-alter table notification_templates alter column kind drop default,
-alter column kind type new_notification_template_kind using (
-	kind::text::new_notification_template_kind
-),
-alter column kind set default 'system'::new_notification_template_kind;
+alter table notification_templates
+	alter column kind drop default,
+	alter column kind type new_notification_template_kind using (
+		kind::text::new_notification_template_kind
+	),
+	alter column kind set default 'system'::new_notification_template_kind;
 
 -- Drop old enum and rename new one
 drop type notification_template_kind;

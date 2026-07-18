@@ -2,7 +2,8 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table notification_templates add column enabled_by_default boolean default true not null;
+alter table notification_templates
+	add column enabled_by_default boolean default true not null;
 
 create or replace function inhibit_enqueue_if_disabled() returns trigger as $$
 	begin

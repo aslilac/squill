@@ -12,7 +12,8 @@ create unique index idx_templates_name_lower on templates using btree(
 	lower(name)
 );
 
-alter table only templates add constraint templates_organization_id_name_key unique (
-	organization_id,
-	name
-);
+alter table only templates
+	add constraint templates_organization_id_name_key unique (
+		organization_id,
+		name
+	);

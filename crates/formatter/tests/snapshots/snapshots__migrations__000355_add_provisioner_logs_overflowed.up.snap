@@ -3,10 +3,12 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- Add logs length tracking and overflow flag, similar to workspace agents
-alter table provisioner_jobs add column logs_length integer not null default 0 constraint max_provisioner_logs_length check (
-	logs_length <= 1048576
-);
-alter table provisioner_jobs add column logs_overflowed boolean not null default false;
+alter table provisioner_jobs
+	add column logs_length integer not null default 0 constraint max_provisioner_logs_length check (
+		logs_length <= 1048576
+	);
+alter table provisioner_jobs
+	add column logs_overflowed boolean not null default false;
 
 comment on column provisioner_jobs.logs_length is 'Total length of provisioner logs';
 comment on column provisioner_jobs.logs_overflowed is 'Whether the provisioner logs overflowed in length';

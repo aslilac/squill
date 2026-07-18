@@ -40,7 +40,8 @@ create function enforce_user_skills_per_user_limit() returns trigger language pl
 		from user_skills
 		where user_id = NEW.user_id;
 		if skill_count >= skill_limit then
-			raise exception 'user has reached the personal skill limit' using errcode = 'check_violation',
+			raise exception 'user has reached the personal skill limit'
+			using errcode = 'check_violation',
 			constraint = 'user_skills_per_user_limit';
 		end if;
 		return NEW;
@@ -99,7 +100,8 @@ create function insert_user_skill_fail_if_user_deleted() returns trigger languag
 	begin
 		perform 1 from users where id = NEW.user_id and deleted = true limit 1;
 		if FOUND then
-			raise exception 'Cannot create user_skill for deleted user' using errcode = 'check_violation',
+			raise exception 'Cannot create user_skill for deleted user'
+			using errcode = 'check_violation',
 			constraint = 'user_skill_user_deleted';
 		end if;
 		return NEW;

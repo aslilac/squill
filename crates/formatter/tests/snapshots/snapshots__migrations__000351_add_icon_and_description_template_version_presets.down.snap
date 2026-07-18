@@ -2,5 +2,6 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table template_version_presets drop column if exists description,
-drop column if exists icon;
+alter table template_version_presets
+	drop column if exists description,
+	drop column if exists icon;

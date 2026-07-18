@@ -3,5 +3,6 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 drop table workspace_agent_startup_logs;
-alter table only workspace_agents drop column startup_logs_length,
-drop column startup_logs_overflowed;
+alter table only workspace_agents
+	drop column startup_logs_length,
+	drop column startup_logs_overflowed;

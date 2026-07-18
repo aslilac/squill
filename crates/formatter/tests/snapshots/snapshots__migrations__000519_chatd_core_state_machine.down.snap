@@ -43,22 +43,24 @@ drop table if exists chat_heartbeats;
 -- 7. Drop chat_queued_messages.position and its default sequence, plus
 -- created_by.
 alter table chat_queued_messages alter column position drop default;
-alter table chat_queued_messages drop column if exists position,
-drop column if exists created_by;
+alter table chat_queued_messages
+	drop column if exists position,
+	drop column if exists created_by;
 drop sequence if exists chat_queued_messages_position_seq;
 
 -- 8. Drop chat_messages.revision.
 alter table chat_messages drop column if exists revision;
 
 -- 9. Drop the new chats columns.
-alter table chats drop column if exists snapshot_version,
-drop column if exists history_version,
-drop column if exists queue_version,
-drop column if exists generation_attempt,
-drop column if exists retry_state,
-drop column if exists retry_state_version,
-drop column if exists runner_id,
-drop column if exists requires_action_deadline_at;
+alter table chats
+	drop column if exists snapshot_version,
+	drop column if exists history_version,
+	drop column if exists queue_version,
+	drop column if exists generation_attempt,
+	drop column if exists retry_state,
+	drop column if exists retry_state_version,
+	drop column if exists runner_id,
+	drop column if exists requires_action_deadline_at;
 
 -- 10. Recreate chats_expanded with the pre-migration field list.
 create view chats_expanded as

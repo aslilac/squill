@@ -2,8 +2,9 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table only workspace_agents add column if not exists expanded_directory varchar (
-	4096
-) default '' not null;
+alter table only workspace_agents
+	add column if not exists expanded_directory varchar (
+		4096
+	) default '' not null;
 
 comment on column workspace_agents.expanded_directory is 'The resolved path of a user-specified directory. e.g. ~/coder -> /home/coder/coder';

@@ -2,6 +2,5 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table template_version_terraform_values add column cached_module_files uuid references files (
-	id
-);
+alter table template_version_terraform_values
+	add column cached_module_files uuid references files (id);

@@ -3,7 +3,8 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- Recreate single-scope column and collapse arrays
-alter table api_keys add column scope api_key_scope default 'all'::api_key_scope not null;
+alter table api_keys
+	add column scope api_key_scope default 'all'::api_key_scope not null;
 
 -- Collapse logic: prefer 'all', else 'application_connect', else 'all'
 update api_keys

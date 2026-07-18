@@ -2,6 +2,7 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table template_version_parameters add column validation_error text not null default '';
+alter table template_version_parameters
+	add column validation_error text not null default '';
 
 comment on column template_version_parameters.validation_error is 'Validation: error displayed when the regex does not match.';

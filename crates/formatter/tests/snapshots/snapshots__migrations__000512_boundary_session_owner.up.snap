@@ -27,6 +27,7 @@ delete from boundary_sessions where owner_id is null;
 
 -- Add FK constraint. SET NULL preserves audit data when a user is
 -- hard-deleted; the session and its logs survive with a NULL owner.
-alter table boundary_sessions add constraint boundary_sessions_owner_id_fkey foreign key (
-	owner_id
-) references users (id) on delete set null;
+alter table boundary_sessions
+	add constraint boundary_sessions_owner_id_fkey foreign key (
+		owner_id
+	) references users (id) on delete set null;

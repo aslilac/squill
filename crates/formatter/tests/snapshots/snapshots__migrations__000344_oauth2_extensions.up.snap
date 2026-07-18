@@ -10,8 +10,9 @@ alter table oauth2_provider_app_codes add column resource_uri text;
 comment on column oauth2_provider_app_codes.resource_uri is 'RFC 8707 resource parameter for audience restriction';
 
 -- Add PKCE fields to oauth2_provider_app_codes
-alter table oauth2_provider_app_codes add column code_challenge text,
-add column code_challenge_method text;
+alter table oauth2_provider_app_codes
+	add column code_challenge text,
+	add column code_challenge_method text;
 
 comment on column oauth2_provider_app_codes.code_challenge is 'PKCE code challenge for public clients';
 comment on column oauth2_provider_app_codes.code_challenge_method is 'PKCE challenge method (S256)';
@@ -22,9 +23,10 @@ alter table oauth2_provider_app_tokens add column audience text;
 comment on column oauth2_provider_app_tokens.audience is 'Token audience binding from resource parameter';
 
 -- Add fields to oauth2_provider_apps for future dynamic registration and redirect URI management
-alter table oauth2_provider_apps add column redirect_uris text [ ], -- Store multiple URIs for future use
-add column client_type text default 'confidential', -- 'confidential' or 'public'
-add column dynamically_registered boolean default false;
+alter table oauth2_provider_apps
+	add column redirect_uris text[], -- Store multiple URIs for future use
+	add column client_type text default 'confidential', -- 'confidential' or 'public'
+	add column dynamically_registered boolean default false;
 
 -- Backfill existing records with default values
 update oauth2_provider_apps

@@ -6,10 +6,11 @@ expression: formatted
 -- be dropped before the columns it references can be removed.
 drop view if exists chats_expanded;
 
-alter table chats drop column if exists context_aggregate_hash,
-drop column if exists context_dirty_since,
-drop column if exists context_dirty_resources,
-drop column if exists context_error;
+alter table chats
+	drop column if exists context_aggregate_hash,
+	drop column if exists context_dirty_since,
+	drop column if exists context_dirty_resources,
+	drop column if exists context_error;
 
 create view chats_expanded as
 select

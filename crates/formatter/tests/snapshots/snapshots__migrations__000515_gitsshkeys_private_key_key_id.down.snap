@@ -2,5 +2,6 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table gitsshkeys drop constraint gitsshkeys_private_key_key_id_fkey,
-drop column private_key_key_id;
+alter table gitsshkeys
+	drop constraint gitsshkeys_private_key_key_id_fkey,
+	drop column private_key_key_id;

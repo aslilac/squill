@@ -4,4 +4,5 @@ expression: formatted
 ---
 alter table parameter_schemas alter column default_source_scheme drop not null;
 
-alter table parameter_schemas alter column default_destination_scheme drop not null;
+alter table parameter_schemas
+	alter column default_destination_scheme drop not null;

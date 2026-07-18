@@ -32,11 +32,13 @@ do $$
 $$;
 
 -- Drop the columns first.
-alter table git_auth_links drop column if exists oauth_access_token_key_id,
-drop column if exists oauth_refresh_token_key_id;
+alter table git_auth_links
+	drop column if exists oauth_access_token_key_id,
+	drop column if exists oauth_refresh_token_key_id;
 
-alter table user_links drop column if exists oauth_access_token_key_id,
-drop column if exists oauth_refresh_token_key_id;
+alter table user_links
+	drop column if exists oauth_access_token_key_id,
+	drop column if exists oauth_refresh_token_key_id;
 
 -- Finally, drop the table.
 drop table if exists dbcrypt_keys;

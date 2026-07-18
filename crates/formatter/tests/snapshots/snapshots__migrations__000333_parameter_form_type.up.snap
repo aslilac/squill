@@ -19,6 +19,7 @@ comment on type parameter_form_type is 'Enum set should match the terraform prov
 
 -- Intentionally leaving the default blank. The provisioner will not re-run any
 -- imports to backfill these values. Missing values just have to be handled.
-alter table template_version_parameters add column form_type parameter_form_type not null default '';
+alter table template_version_parameters
+	add column form_type parameter_form_type not null default '';
 
 comment on column template_version_parameters.form_type is 'Specify what form_type should be used to render the parameter in the UI. Unsupported values are rejected.';

@@ -5,29 +5,33 @@ expression: formatted
 -- Add RFC 7591 Dynamic Client Registration fields to oauth2_provider_apps
 
 -- RFC 7591 Core Fields
-alter table oauth2_provider_apps add column client_id_issued_at timestamptz default NOW(),
-add column client_secret_expires_at timestamptz,
-add column grant_types text [ ] default '{"authorization_code", "refresh_token"}',
-add column response_types text [ ] default '{"code"}',
-add column token_endpoint_auth_method text default 'client_secret_basic',
-add column scope text default '',
-add column contacts text [ ];
+alter table oauth2_provider_apps
+	add column client_id_issued_at timestamptz default NOW(),
+	add column client_secret_expires_at timestamptz,
+	add column grant_types text[] default '{"authorization_code", "refresh_token"}',
+	add column response_types text[] default '{"code"}',
+	add column token_endpoint_auth_method text default 'client_secret_basic',
+	add column scope text default '',
+	add column contacts text[];
 
 -- RFC 7591 Optional Metadata Fields
-alter table oauth2_provider_apps add column client_uri text,
-add column logo_uri text,
-add column tos_uri text,
-add column policy_uri text;
+alter table oauth2_provider_apps
+	add column client_uri text,
+	add column logo_uri text,
+	add column tos_uri text,
+	add column policy_uri text;
 
 -- RFC 7591 Advanced Fields
-alter table oauth2_provider_apps add column jwks_uri text,
-add column jwks jsonb,
-add column software_id text,
-add column software_version text;
+alter table oauth2_provider_apps
+	add column jwks_uri text,
+	add column jwks jsonb,
+	add column software_id text,
+	add column software_version text;
 
 -- RFC 7592 Management Fields
-alter table oauth2_provider_apps add column registration_access_token text,
-add column registration_client_uri text;
+alter table oauth2_provider_apps
+	add column registration_access_token text,
+	add column registration_client_uri text;
 
 -- Backfill existing records with proper defaults
 update oauth2_provider_apps

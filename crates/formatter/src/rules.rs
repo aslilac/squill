@@ -92,6 +92,7 @@ pub(crate) fn lower_statement(stmt: &SyntaxNode) -> Option<Doc> {
                     let doc = lowerer.node(stmt);
                     docs.push(doc);
                 }
+                SyntaxKind::DdlStmt => lowerer.ddl_statement(&mut docs, stmt),
                 _ => lowerer.dml_flow(&mut docs, stmt),
             }
             lowerer.flush_pending(&mut docs);
@@ -238,12 +239,14 @@ impl Lowerer {
             // Nested error statements pass through verbatim.
             SyntaxKind::ErrorStatement => verbatim(node.to_string().trim().to_string()),
             // DML nested in CTE bodies.
-            SyntaxKind::InsertStmt
-            | SyntaxKind::UpdateStmt
-            | SyntaxKind::DeleteStmt
-            | SyntaxKind::DdlStmt => {
+            SyntaxKind::InsertStmt | SyntaxKind::UpdateStmt | SyntaxKind::DeleteStmt => {
                 let mut docs = Vec::new();
                 self.dml_flow(&mut docs, node);
+                group(concat(docs))
+            }
+            SyntaxKind::DdlStmt => {
+                let mut docs = Vec::new();
+                self.ddl_statement(&mut docs, node);
                 group(concat(docs))
             }
             SyntaxKind::SetClause
@@ -390,6 +393,136 @@ impl Lowerer {
         concat([clause(head, list), concat(tail)])
     }
 
+    /// DDL statement: ALTER statements get their action list indented one
+    /// level, one action per line when broken; everything else uses the
+    /// plain DML flow.
+    fn ddl_statement(&mut self, docs: &mut Vec<Doc>, node: &SyntaxNode) {
+        let is_alter = node
+            .children_with_tokens()
+            .filter_map(|el| el.into_token())
+            .find(|t| !t.kind().is_trivia())
+            .is_some_and(|t| t.text().eq_ignore_ascii_case("alter"));
+        if is_alter {
+            self.alter_flow(docs, node);
+        } else {
+            self.dml_flow(docs, node);
+        }
+    }
+
+    /// `ALTER TABLE name` head, then each action on its own (indented)
+    /// soft line, commas attached to the preceding action.
+    fn alter_flow(&mut self, docs: &mut Vec<Doc>, node: &SyntaxNode) {
+        const ACTION_KWS: &[&str] = &[
+            "add", "drop", "alter", "rename", "validate", "owner", "set", "reset", "enable",
+            "disable", "attach", "detach", "cluster", "replica", "inherit", "force", "no",
+        ];
+        let mut head: Vec<Doc> = Vec::new();
+        let mut segments: Vec<Vec<Doc>> = Vec::new();
+        let mut head_tokens = 0usize;
+        let mut first = true;
+        let mut tight = false;
+        let mut semicolon = false;
+        let mut pending_segment = false;
+        for element in node.children_with_tokens() {
+            // Transitions first, so the borrow below targets the right vec.
+            if let SyntaxElement::Token(token) = element
+                && !token.kind().is_trivia()
+            {
+                if segments.is_empty()
+                    && token.kind() == SyntaxKind::Ident
+                    && head_tokens >= 2
+                    && ACTION_KWS
+                        .iter()
+                        .any(|kw| token.text().eq_ignore_ascii_case(kw))
+                {
+                    segments.push(Vec::new());
+                    first = true;
+                    tight = false;
+                } else if !segments.is_empty() && token.kind() == SyntaxKind::Comma {
+                    let current = segments.last_mut().expect("segment open");
+                    self.push(current, text(","));
+                    // Start the next segment lazily so a trailing comment
+                    // after the comma stays with this action.
+                    pending_segment = true;
+                    continue;
+                } else if pending_segment {
+                    pending_segment = false;
+                    segments.push(Vec::new());
+                    first = true;
+                    tight = false;
+                }
+            }
+            let current = segments.last_mut().unwrap_or(&mut head);
+            match element {
+                SyntaxElement::Token(token) if token.kind().is_trivia() => {
+                    self.trivia(current, token)
+                }
+                SyntaxElement::Token(token) if token.kind() == SyntaxKind::Semicolon => {
+                    semicolon = true;
+                }
+                SyntaxElement::Token(token) => {
+                    let tight_before = tight
+                        || matches!(
+                            token.kind(),
+                            SyntaxKind::RParen
+                                | SyntaxKind::RBracket
+                                | SyntaxKind::LBracket
+                                | SyntaxKind::Dot
+                                | SyntaxKind::ColonColon
+                        );
+                    if !first && !tight_before {
+                        current.push(space());
+                    }
+                    tight = matches!(
+                        token.kind(),
+                        SyntaxKind::LParen
+                            | SyntaxKind::LBracket
+                            | SyntaxKind::Dot
+                            | SyntaxKind::ColonColon
+                    );
+                    let leaf = match token.kind() {
+                        SyntaxKind::QuotedIdent => name_leaf(token, IdentPos::ColumnOrTable),
+                        _ => token_leaf(token),
+                    };
+                    self.push(current, leaf);
+                    if segments.is_empty() {
+                        head_tokens += 1;
+                    }
+                    first = false;
+                }
+                SyntaxElement::Node(child) => {
+                    let clause = is_clause_level(child.kind());
+                    if clause {
+                        if !first {
+                            current.push(soft_line_or_space());
+                        }
+                    } else if !first && !tight {
+                        current.push(space());
+                    }
+                    tight = false;
+                    let doc = self.node(child);
+                    self.push(current, doc);
+                    first = false;
+                }
+            }
+        }
+        docs.extend(head);
+        if !segments.is_empty() {
+            let mut actions = Vec::new();
+            for segment in segments {
+                if segment.is_empty() {
+                    continue;
+                }
+                actions.push(soft_line_or_space());
+                actions.extend(segment);
+            }
+            docs.push(indent(concat(actions)));
+        }
+        if semicolon {
+            self.push(docs, text(";"));
+        }
+    }
+
     /// DML/DDL statement flow: keyword-soup tokens space-joined, clause
     /// children on soft lines, top-level commas (ALTER action lists,
     /// multiple targets) breaking softly, `;` attached tight.
@@ -412,9 +545,18 @@ impl Lowerer {
                     let tight_before = tight
                         || matches!(
                             token.kind(),
-                            SyntaxKind::RParen | SyntaxKind::Dot | SyntaxKind::ColonColon
+                            SyntaxKind::RParen
+                                | SyntaxKind::RBracket
+                                | SyntaxKind::LBracket
+                                | SyntaxKind::Dot
+                                | SyntaxKind::ColonColon
                         );
-                    if pending_sls && !tight_before {
+                    // `RAISE ... USING` / `EXECUTE ... USING` can break
+                    // before the USING keyword.
+                    let soft_break =
+                        matches!(node.kind(), SyntaxKind::PlRaise | SyntaxKind::PlExecute)
+                            && token.text().eq_ignore_ascii_case("using");
+                    if (soft_break && !first) || (pending_sls && !tight_before) {
                         docs.push(soft_line_or_space());
                     } else if !first && !tight_before {
                         docs.push(space());
@@ -422,7 +564,10 @@ impl Lowerer {
                     pending_sls = false;
                     tight = matches!(
                         token.kind(),
-                        SyntaxKind::LParen | SyntaxKind::Dot | SyntaxKind::ColonColon
+                        SyntaxKind::LParen
+                            | SyntaxKind::LBracket
+                            | SyntaxKind::Dot
+                            | SyntaxKind::ColonColon
                     );
                     let leaf = match token.kind() {
                         SyntaxKind::QuotedIdent => name_leaf(token, IdentPos::ColumnOrTable),

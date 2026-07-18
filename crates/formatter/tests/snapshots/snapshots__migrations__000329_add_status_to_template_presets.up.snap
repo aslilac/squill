@@ -8,4 +8,5 @@ create type prebuild_status as enum (
 	'validation_failed' -- Prebuilds failed due to a non-retryable validation error (e.g. template misconfiguration); won't be retried.
 );
 
-alter table template_version_presets add column prebuild_status prebuild_status not null default 'healthy'::prebuild_status;
+alter table template_version_presets
+	add column prebuild_status prebuild_status not null default 'healthy'::prebuild_status;

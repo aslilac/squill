@@ -8,7 +8,8 @@ create type shareable_workspace_owners as enum (
 	'service_accounts'
 );
 
-alter table organizations add column shareable_workspace_owners shareable_workspace_owners not null default 'everyone';
+alter table organizations
+	add column shareable_workspace_owners shareable_workspace_owners not null default 'everyone';
 
 comment on column organizations.shareable_workspace_owners is 'Controls whose workspaces can be shared: none, everyone, or service_accounts.';
 

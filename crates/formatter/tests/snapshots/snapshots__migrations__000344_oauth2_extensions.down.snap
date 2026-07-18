@@ -5,14 +5,16 @@ expression: formatted
 -- Remove OAuth2 extension fields
 
 -- Remove fields from oauth2_provider_apps
-alter table oauth2_provider_apps drop column if exists redirect_uris,
-drop column if exists client_type,
-drop column if exists dynamically_registered;
+alter table oauth2_provider_apps
+	drop column if exists redirect_uris,
+	drop column if exists client_type,
+	drop column if exists dynamically_registered;
 
 -- Remove audience field from oauth2_provider_app_tokens
 alter table oauth2_provider_app_tokens drop column if exists audience;
 
 -- Remove PKCE and resource fields from oauth2_provider_app_codes
-alter table oauth2_provider_app_codes drop column if exists code_challenge_method,
-drop column if exists code_challenge,
-drop column if exists resource_uri;
+alter table oauth2_provider_app_codes
+	drop column if exists code_challenge_method,
+	drop column if exists code_challenge,
+	drop column if exists resource_uri;

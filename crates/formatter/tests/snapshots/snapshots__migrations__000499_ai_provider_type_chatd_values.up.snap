@@ -29,9 +29,10 @@ create type new_ai_provider_type as enum (
 	'vercel'
 );
 
-alter table ai_providers alter column type type new_ai_provider_type using (
-	type::text::new_ai_provider_type
-);
+alter table ai_providers
+	alter column type type new_ai_provider_type using (
+		type::text::new_ai_provider_type
+	);
 
 drop type ai_provider_type;
 

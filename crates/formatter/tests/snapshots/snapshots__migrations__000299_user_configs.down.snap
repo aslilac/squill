@@ -3,7 +3,8 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- Put back "theme_preference" column
-alter table users add column if not exists theme_preference text default ''::text not null;
+alter table users
+	add column if not exists theme_preference text default ''::text not null;
 
 -- Copy "theme_preference" back to "users"
 update users

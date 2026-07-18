@@ -10,37 +10,40 @@ create type new_app_sharing_level as enum ('owner', 'authenticated', 'public');
 
 -- Update workspace_agent_port_share table to use old enum
 -- Convert any 'organization' values to 'authenticated' during downgrade
-alter table workspace_agent_port_share alter column share_level type new_app_sharing_level using (
-	case
-		when share_level = 'organization'
-			then 'authenticated'::new_app_sharing_level
-		else share_level::text::new_app_sharing_level
-	end
-);
+alter table workspace_agent_port_share
+	alter column share_level type new_app_sharing_level using (
+		case
+			when share_level = 'organization'
+				then 'authenticated'::new_app_sharing_level
+			else share_level::text::new_app_sharing_level
+		end
+	);
 
 -- Update workspace_apps table to use old enum
 -- Convert any 'organization' values to 'authenticated' during downgrade
-alter table workspace_apps alter column sharing_level drop default,
-alter column sharing_level type new_app_sharing_level using (
-	case
-		when sharing_level = 'organization'
-			then 'authenticated'::new_app_sharing_level
-		else sharing_level::text::new_app_sharing_level
-	end
-),
-alter column sharing_level set default 'owner'::new_app_sharing_level;
+alter table workspace_apps
+	alter column sharing_level drop default,
+	alter column sharing_level type new_app_sharing_level using (
+		case
+			when sharing_level = 'organization'
+				then 'authenticated'::new_app_sharing_level
+			else sharing_level::text::new_app_sharing_level
+		end
+	),
+	alter column sharing_level set default 'owner'::new_app_sharing_level;
 
 -- Update templates table to use old enum
 -- Convert any 'organization' values to 'authenticated' during downgrade
-alter table templates alter column max_port_sharing_level drop default,
-alter column max_port_sharing_level type new_app_sharing_level using (
-	case
-		when max_port_sharing_level = 'organization'
-			then 'owner'::new_app_sharing_level
-		else max_port_sharing_level::text::new_app_sharing_level
-	end
-),
-alter column max_port_sharing_level set default 'owner'::new_app_sharing_level;
+alter table templates
+	alter column max_port_sharing_level drop default,
+	alter column max_port_sharing_level type new_app_sharing_level using (
+		case
+			when max_port_sharing_level = 'organization'
+				then 'owner'::new_app_sharing_level
+			else max_port_sharing_level::text::new_app_sharing_level
+		end
+	),
+	alter column max_port_sharing_level set default 'owner'::new_app_sharing_level;
 
 -- Drop old enum and rename new one
 drop type app_sharing_level;

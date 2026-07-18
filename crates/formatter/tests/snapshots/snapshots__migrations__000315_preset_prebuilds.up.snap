@@ -2,8 +2,9 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table template_version_presets add column desired_instances int null,
-add column invalidate_after_secs int null default 0;
+alter table template_version_presets
+	add column desired_instances int null,
+	add column invalidate_after_secs int null default 0;
 
 -- Ensure that the idx_unique_preset_name index creation won't fail.
 -- This is necessary because presets were released before the index was introduced,

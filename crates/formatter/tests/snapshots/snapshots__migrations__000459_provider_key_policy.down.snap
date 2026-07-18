@@ -10,8 +10,9 @@ do $$
 			return;
 		end if;
 		alter table chat_providers drop constraint if exists valid_credential_policy;
-		alter table chat_providers drop column if exists central_api_key_enabled,
-		drop column if exists allow_user_api_key,
-		drop column if exists allow_central_api_key_fallback;
+		alter table chat_providers
+			drop column if exists central_api_key_enabled,
+			drop column if exists allow_user_api_key,
+			drop column if exists allow_central_api_key_fallback;
 	end
 $$;

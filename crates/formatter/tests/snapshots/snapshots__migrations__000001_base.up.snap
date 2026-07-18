@@ -59,12 +59,14 @@ create index idx_organization_member_user_id_uuid on organization_members using 
 	user_id
 );
 
-alter table only organization_members add constraint organization_members_organization_id_uuid_fkey foreign key (
-	organization_id
-) references organizations (id) on delete cascade;
-alter table only organization_members add constraint organization_members_user_id_uuid_fkey foreign key (
-	user_id
-) references users (id) on delete cascade;
+alter table only organization_members
+	add constraint organization_members_organization_id_uuid_fkey foreign key (
+		organization_id
+	) references organizations (id) on delete cascade;
+alter table only organization_members
+	add constraint organization_members_user_id_uuid_fkey foreign key (
+		user_id
+	) references users (id) on delete cascade;
 
 create table if not exists api_keys (
 	id text not null,
@@ -84,9 +86,10 @@ create table if not exists api_keys (
 
 create index if not exists idx_api_keys_user on api_keys using btree(user_id);
 
-alter table only api_keys add constraint api_keys_user_id_uuid_fkey foreign key (
-	user_id
-) references users (id) on delete cascade;
+alter table only api_keys
+	add constraint api_keys_user_id_uuid_fkey foreign key (
+		user_id
+	) references users (id) on delete cascade;
 
 create table if not exists licenses (
 	id serial,

@@ -14,12 +14,13 @@ where
 	and max_deadline != '0001-01-01 00:00:00+00'::timestamptz;
 
 -- Add the new constraint.
-alter table workspace_builds add constraint workspace_builds_deadline_below_max_deadline check (
-	-- (deadline is not zero AND deadline <= max_deadline)...
-	(
-		deadline != '0001-01-01 00:00:00+00'::timestamptz
-		and deadline <= max_deadline
-	)
-	-- UNLESS max_deadline is zero.
-	or max_deadline = '0001-01-01 00:00:00+00'::timestamptz
-);
+alter table workspace_builds
+	add constraint workspace_builds_deadline_below_max_deadline check (
+		-- (deadline is not zero AND deadline <= max_deadline)...
+		(
+			deadline != '0001-01-01 00:00:00+00'::timestamptz
+			and deadline <= max_deadline
+		)
+		-- UNLESS max_deadline is zero.
+		or max_deadline = '0001-01-01 00:00:00+00'::timestamptz
+	);
