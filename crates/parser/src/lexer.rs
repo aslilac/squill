@@ -212,7 +212,8 @@ impl Lexer<'_> {
                 }
             }
             _ if self.dialect == Dialect::Postgres && is_pg_op_byte(b) => self.pg_operator(),
-            _ if self.dialect == Dialect::Sqlite && b.is_ascii_punctuation() => {
+            // `_` is ASCII punctuation but starts an identifier.
+            _ if self.dialect == Dialect::Sqlite && b.is_ascii_punctuation() && b != b'_' => {
                 self.sqlite_operator()
             }
             _ if self.is_ident_start_at(0) => {

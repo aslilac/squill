@@ -297,6 +297,12 @@ fn sqlite_no_pg_prefixes_or_custom_operators() {
 }
 
 #[test]
+fn sqlite_underscore_starts_an_identifier() {
+    assert_tokens(Sqlite, "_x", &[(K::Ident, "_x")]);
+    assert_tokens(Sqlite, "_", &[(K::Ident, "_")]);
+}
+
+#[test]
 fn sqlite_block_comments_do_not_nest() {
     assert_tokens(
         Sqlite,
