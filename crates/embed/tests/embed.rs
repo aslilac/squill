@@ -110,11 +110,11 @@ fn multiline_literal_gets_quotes_on_own_lines() {
     let source = "fn main() {\n    let q = sqlx::query!(\n        r#\"SELECT id,name FROM users\n        WHERE org = $1 ORDER BY name\"#\n    );\n}\n";
     let formatted =
         format_embedded(source, Host::Rust, RUST_SQLX_QUERY, &options()).expect("format");
-    // The SQL fits on one line, so it stays one line — but on its own
-    // line between the quotes.
+    // Multi-line literals stay clause-per-line even when the SQL would
+    // fit on one line.
     assert_eq!(
         formatted,
-        "fn main() {\n    let q = sqlx::query!(\n        r#\"\n        select id, name from users where org = $1 order by name\n        \"#\n    );\n}\n"
+        "fn main() {\n    let q = sqlx::query!(\n        r#\"\n        select id, name\n        from users\n        where org = $1\n        order by name\n        \"#\n    );\n}\n"
     );
     assert!(
         !formatted.contains('\t'),
@@ -156,7 +156,8 @@ fn go_smoke_test() {
         .to_string();
     let formatted = format_embedded(&source, Host::Go, GO_DB_QUERY, &options()).expect("format");
     assert!(
-        formatted.contains("`\n\tselect id, name from users where active order by name\n\t`"),
+        formatted
+            .contains("`\n\tselect id, name\n\tfrom users\n\twhere active\n\torder by name\n\t`"),
         "multi-line raw string not formatted: {formatted}"
     );
     // Single-line strings stay byte-identical, even unformatted SQL.

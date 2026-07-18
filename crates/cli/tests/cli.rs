@@ -350,7 +350,7 @@ fn explicit_rust_path_formats_sqlx_macros() {
     let out = std::fs::read_to_string(&file).expect("read");
     assert!(
         out.contains(
-            "r#\"\n        select id, name from users where org = $1 order by name\n        \"#"
+            "r#\"\n        select id, name\n        from users\n        where org = $1\n        order by name\n        \"#"
         ),
         "sqlx macro not formatted: {out}"
     );
@@ -390,7 +390,7 @@ fn directory_recursion_needs_embed_flag() {
     assert!(
         std::fs::read_to_string(dir.join("q.rs"))
             .expect("read")
-            .contains("select id, name from users"),
+            .contains("select id, name\n        from users"),
     );
     let status = squill()
         .args(["fmt", "--embed", "--check"])
@@ -432,7 +432,7 @@ fn go_host_files_format() {
     assert!(
         std::fs::read_to_string(&file)
             .expect("read")
-            .contains("`\n\tselect count(*) from t where a = 1\n\t`"),
+            .contains("`\n\tselect count(*)\n\tfrom t\n\twhere a = 1\n\t`"),
     );
     let _ = std::fs::remove_dir_all(&dir);
 }

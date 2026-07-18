@@ -54,6 +54,11 @@ pub struct Options {
     /// sqlc-style `@name` parameters (see [`LexOptions::at_params`]);
     /// used when re-lexing for the safety check.
     pub at_params: bool,
+    /// Never collapse a statement onto one line (clause-per-line even
+    /// when it would fit). Used by embedding for multi-line string
+    /// literals, where the author already chose a vertical layout. Not
+    /// part of the CLI/config surface.
+    pub always_break_statements: bool,
 }
 
 impl Default for Options {
@@ -65,6 +70,7 @@ impl Default for Options {
             quoting: IdentQuoting::default(),
             dialect: Dialect::default(),
             at_params: false,
+            always_break_statements: false,
         }
     }
 }
@@ -116,7 +122,7 @@ fn format_cst_at(cst: &Cst, options: &Options, depth: u32) -> Formatted {
                 let original = node.to_string();
                 let blank = pending_blank || leading_blank(&original);
                 pending_blank = false;
-                match rules::lower_statement(node) {
+                match rules::lower_statement(node, options.always_break_statements) {
                     Some(doc) => {
                         let rendered = render(&doc, options);
                         let safe = check::tokens_equivalent(
@@ -348,7 +354,7 @@ fn relayout_statement(statement: &str, options: &Options, depth: u32) -> Option<
     if nodes.next().is_some() {
         return None; // expected exactly one statement
     }
-    let doc = rules::lower_statement(node)?;
+    let doc = rules::lower_statement(node, options.always_break_statements)?;
     let rendered = render(&doc, options);
     let piece = rendered.trim_end().to_string();
     if !check::tokens_equivalent(statement, &piece, options.dialect, lex_options)
@@ -373,5 +379,5 @@ fn line_indent(source: &str, offset: usize) -> String {
 /// Dev-tool access to the statement lowering (see examples/).
 #[doc(hidden)]
 pub fn debug_lower(node: &parser::syntax::SyntaxNode) -> Option<Doc> {
-    rules::lower_statement(node)
+    rules::lower_statement(node, false)
 }

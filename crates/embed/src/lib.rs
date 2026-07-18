@@ -227,6 +227,9 @@ fn rewrite_literal(
     let host_indent = line_indent(source, literal_start);
     let mut format_options = *options;
     format_options.dialect = dialect;
+    // The author chose a multi-line literal: keep statements
+    // clause-per-line, never collapsed onto one line.
+    format_options.always_break_statements = true;
     format_options.indent_style = if host_indent.contains(' ') {
         formatter::IndentStyle::Spaces
     } else {
