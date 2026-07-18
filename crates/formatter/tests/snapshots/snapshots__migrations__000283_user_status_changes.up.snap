@@ -39,32 +39,20 @@ from users
 where deleted;
 
 create or replace function record_user_status_change() returns trigger as $$
-BEGIN
-    IF TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM NEW.status THEN
-        INSERT INTO user_status_changes (
-            user_id,
-            new_status,
-            changed_at
-        ) VALUES (
-            NEW.id,
-            NEW.status,
-            NEW.updated_at
-        );
-    END IF;
-
-    IF OLD.deleted = FALSE AND NEW.deleted = TRUE THEN
-        INSERT INTO user_deleted (
-            user_id,
-            deleted_at
-        ) VALUES (
-            NEW.id,
-            NEW.updated_at
-        );
-    END IF;
-
-    RETURN NEW;
-END;
+	begin
+		if TG_OP = 'INSERT' or OLD.status is distinct from NEW.status then
+			insert into user_status_changes (user_id,
+			new_status,
+			changed_at)
+			values (NEW.id, NEW.status, NEW.updated_at);
+		end if;
+		if OLD.deleted = false and NEW.deleted = true then
+			insert into user_deleted (user_id,
+			deleted_at)
+			values (NEW.id, NEW.updated_at);
+		end if;
+		return NEW;
+	end;
 $$ language plpgsql;
 
-create trigger user_status_change_trigger after insert or update on users for each row execute function record_user_status_change(
-);
+create trigger user_status_change_trigger after insert or update on users for each row execute function record_user_status_change();

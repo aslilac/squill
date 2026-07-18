@@ -10,15 +10,14 @@ drop view template_version_with_user;
 create or replace function migrate_external_auth_providers_to_jsonb(
 	text[]
 ) returns jsonb language plpgsql as $$
-DECLARE
-  result jsonb;
-BEGIN
-  SELECT
-    jsonb_agg(jsonb_build_object('id', value::text)) INTO result
-  FROM
-    unnest($1) AS value;
-  RETURN result;
-END;
+	declare
+		result jsonb;
+	begin
+		select jsonb_agg(jsonb_build_object('id', value::text))
+		into result
+		from unnest($1) as value;
+		return result;
+	end;
 $$;
 
 -- Update the column type and migrate the values

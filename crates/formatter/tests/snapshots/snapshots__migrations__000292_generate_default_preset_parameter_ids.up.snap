@@ -2,8 +2,6 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table template_version_presets alter column id set default gen_random_uuid(
-);
+alter table template_version_presets alter column id set default gen_random_uuid();
 
-alter table template_version_preset_parameters alter column id set default gen_random_uuid(
-);
+alter table template_version_preset_parameters alter column id set default gen_random_uuid();

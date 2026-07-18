@@ -9,16 +9,14 @@ drop trigger if exists trigger_upsert_user_links on user_links;
 drop function IF exists insert_user_links_fail_if_user_deleted;
 
 -- Restore the previous trigger
-create function delete_deleted_user_api_keys(
-) returns trigger language plpgsql as $$
-DECLARE
-BEGIN
-	IF (NEW.deleted) THEN
-		DELETE FROM api_keys
-		WHERE user_id = OLD.id;
-	END IF;
-	RETURN NEW;
-END;
+create function delete_deleted_user_api_keys() returns trigger language plpgsql as $$
+	declare
+	begin
+		if (NEW.deleted) then
+			delete from api_keys where user_id = OLD.id;
+		end if;
+		return NEW;
+	end;
 $$;
 
 create trigger trigger_update_users after insert or update on users for each row when (

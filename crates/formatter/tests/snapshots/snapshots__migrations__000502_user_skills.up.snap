@@ -24,33 +24,30 @@ create unique index user_skills_user_id_name_idx on user_skills (user_id, name);
 -- Enforces the per-user personal-skill cap at the schema level so the
 -- invariant survives any future refactor of InsertUserSkill. The cap
 -- value must stay in sync with skills.MaxPersonalSkillsPerUser in Go.
-create function enforce_user_skills_per_user_limit(
-) returns trigger language plpgsql as $$
-DECLARE
-    skill_count int;
-    skill_limit constant int := 100;
-BEGIN
-    -- Serialize skill-cap checks per user so concurrent inserts cannot all
-    -- observe the same pre-insert count and exceed the hard limit.
-    PERFORM 1
-    FROM users
-    WHERE id = NEW.user_id
-    FOR UPDATE;
-
-    SELECT count(*) INTO skill_count
-    FROM user_skills
-    WHERE user_id = NEW.user_id;
-    IF skill_count >= skill_limit THEN
-        RAISE EXCEPTION 'user has reached the personal skill limit'
-            USING ERRCODE = 'check_violation',
-                  CONSTRAINT = 'user_skills_per_user_limit';
-    END IF;
-    RETURN NEW;
-END;
+create function enforce_user_skills_per_user_limit() returns trigger language plpgsql as $$
+	declare
+		skill_count int;
+		skill_limit constant int := 100;
+	begin
+		-- Serialize skill-cap checks per user so concurrent inserts cannot all
+		-- observe the same pre-insert count and exceed the hard limit.
+		perform 1
+		from users
+		where id = NEW.user_id
+		for update;
+		select count(*)
+		into skill_count
+		from user_skills
+		where user_id = NEW.user_id;
+		if skill_count >= skill_limit then
+			raise exception 'user has reached the personal skill limit' using errcode = 'check_violation',
+			constraint = 'user_skills_per_user_limit';
+		end if;
+		return NEW;
+	end;
 $$;
 
-create trigger trigger_user_skills_per_user_limit before insert on user_skills for each row execute procedure enforce_user_skills_per_user_limit(
-);
+create trigger trigger_user_skills_per_user_limit before insert on user_skills for each row execute procedure enforce_user_skills_per_user_limit();
 
 -- Extend the soft-delete cleanup trigger to also wipe user_skills.
 -- user_skills.user_id has ON DELETE CASCADE, but Coder soft-deletes
@@ -58,67 +55,58 @@ create trigger trigger_user_skills_per_user_limit before insert on user_skills f
 -- FK cascade never fires and skills would otherwise survive deletion.
 delete from user_skills where user_id in (select id from users where deleted);
 
-create or replace function delete_deleted_user_resources(
-) returns trigger language plpgsql as $$
-DECLARE
-BEGIN
-    IF (NEW.deleted) THEN
-        -- Remove their api_keys.
-        DELETE FROM api_keys
-        WHERE user_id = OLD.id;
+create or replace function delete_deleted_user_resources() returns trigger language plpgsql as $$
+	declare
+	begin
+		if (NEW.deleted) then
+			-- Remove their api_keys.
+			delete from api_keys
+			where user_id = OLD.id;
 
-        -- Remove their user_links.
-        -- Their login_type is preserved in the users table.
-        -- Matching this user back to the link can still be done by their
-        -- email if the account is undeleted. Although that is not a guarantee.
-        DELETE FROM user_links
-        WHERE user_id = OLD.id;
+			-- Remove their user_links.
+			-- Their login_type is preserved in the users table.
+			-- Matching this user back to the link can still be done by their
+			-- email if the account is undeleted. Although that is not a guarantee.
+			delete from user_links
+			where user_id = OLD.id;
 
-        -- Remove their user_secrets.
-        -- user_secrets.user_id has ON DELETE CASCADE, but soft-delete
-        -- does not remove the users row so the FK cascade never fires.
-        DELETE FROM user_secrets
-        WHERE user_id = OLD.id;
+			-- Remove their user_secrets.
+			-- user_secrets.user_id has ON DELETE CASCADE, but soft-delete
+			-- does not remove the users row so the FK cascade never fires.
+			delete from user_secrets
+			where user_id = OLD.id;
 
-        -- Remove their organization memberships.
-        -- This also triggers group membership cleanup via
-        -- trigger_delete_group_members_on_org_member_delete.
-        DELETE FROM organization_members
-        WHERE user_id = OLD.id;
+			-- Remove their organization memberships.
+			-- This also triggers group membership cleanup via
+			-- trigger_delete_group_members_on_org_member_delete.
+			delete from organization_members
+			where user_id = OLD.id;
 
-        -- Remove their user_skills.
-        -- user_skills.user_id has ON DELETE CASCADE, but soft-delete
-        -- does not remove the users row so the FK cascade never fires.
-        DELETE FROM user_skills
-        WHERE user_id = OLD.id;
-    END IF;
-    RETURN NEW;
-END;
+			-- Remove their user_skills.
+			-- user_skills.user_id has ON DELETE CASCADE, but soft-delete
+			-- does not remove the users row so the FK cascade never fires.
+			delete from user_skills
+			where user_id = OLD.id;
+		end if;
+		return NEW;
+	end;
 $$;
 
 -- Prevent adding new user_skills for soft-deleted users.
 -- Closes the window between an in-flight CreateUserSkill request and
 -- the soft-delete UPDATE committing.
-create function insert_user_skill_fail_if_user_deleted(
-) returns trigger language plpgsql as $$
-
-BEGIN
-    PERFORM 1
-    FROM users
-    WHERE id = NEW.user_id
-      AND deleted = true
-    LIMIT 1;
-    IF FOUND THEN
-        RAISE EXCEPTION 'Cannot create user_skill for deleted user'
-            USING ERRCODE = 'check_violation',
-                  CONSTRAINT = 'user_skill_user_deleted';
-    END IF;
-    RETURN NEW;
-END;
+create function insert_user_skill_fail_if_user_deleted() returns trigger language plpgsql as $$
+	begin
+		perform 1 from users where id = NEW.user_id and deleted = true limit 1;
+		if FOUND then
+			raise exception 'Cannot create user_skill for deleted user' using errcode = 'check_violation',
+			constraint = 'user_skill_user_deleted';
+		end if;
+		return NEW;
+	end;
 $$;
 
-create trigger trigger_upsert_user_skills before insert or update on user_skills for each row execute procedure insert_user_skill_fail_if_user_deleted(
-);
+create trigger trigger_upsert_user_skills before insert or update on user_skills for each row execute procedure insert_user_skill_fail_if_user_deleted();
 
 -- Adds the user skill audit resource type.
 alter type resource_type add value if not exists 'user_skill';

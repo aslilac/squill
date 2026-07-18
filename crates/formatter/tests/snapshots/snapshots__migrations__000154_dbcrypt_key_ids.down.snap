@@ -9,24 +9,26 @@ expression: formatted
 -- git_auth_links.oauth_access_token_key_id
 -- git_auth_links.oauth_refresh_token_key_id
 do $$
-BEGIN
-IF EXISTS (
-	SELECT *
-		FROM user_links
-		WHERE oauth_access_token_key_id IS NOT NULL
-		OR oauth_refresh_token_key_id IS NOT NULL
-	) THEN RAISE EXCEPTION 'Cannot drop dbcrypt_keys table as there are still foreign key references to it from user_links.';
-END IF;
-
-IF EXISTS (
-	SELECT *
-		FROM git_auth_links
-		WHERE oauth_access_token_key_id IS NOT NULL
-		OR oauth_refresh_token_key_id IS NOT NULL
-	) THEN RAISE EXCEPTION 'Cannot drop dbcrypt_keys table as there are still foreign key references to it from git_auth_links.';
-END IF;
-
-END
+	begin
+		if exists (
+			select *
+			from user_links
+			where
+				oauth_access_token_key_id is not null
+				or oauth_refresh_token_key_id is not null
+		) then
+			raise exception 'Cannot drop dbcrypt_keys table as there are still foreign key references to it from user_links.';
+		end if;
+		if exists (
+			select *
+			from git_auth_links
+			where
+				oauth_access_token_key_id is not null
+				or oauth_refresh_token_key_id is not null
+		) then
+			raise exception 'Cannot drop dbcrypt_keys table as there are still foreign key references to it from git_auth_links.';
+		end if;
+	end
 $$;
 
 -- Drop the columns first.

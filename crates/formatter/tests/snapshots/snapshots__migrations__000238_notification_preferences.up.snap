@@ -26,23 +26,24 @@ alter type notification_message_status add value if not exists 'inhibited';
 
 -- Function to prevent enqueuing notifications unnecessarily.
 create or replace function inhibit_enqueue_if_disabled() returns trigger as $$
-BEGIN
-	-- Fail the insertion if the user has disabled this notification.
-	IF EXISTS (SELECT 1
-			   FROM notification_preferences
-			   WHERE disabled = TRUE
-				 AND user_id = NEW.user_id
-				 AND notification_template_id = NEW.notification_template_id) THEN
-		RAISE EXCEPTION 'cannot enqueue message: user has disabled this notification';
-	END IF;
-
-	RETURN NEW;
-END;
+	begin
+		-- Fail the insertion if the user has disabled this notification.
+		if exists (
+			select 1
+			from notification_preferences
+			where
+				disabled = true
+				and user_id = NEW.user_id
+				and notification_template_id = NEW.notification_template_id
+		) then
+			raise exception 'cannot enqueue message: user has disabled this notification';
+		end if;
+		return NEW;
+	end;
 $$ language plpgsql;
 
 -- Trigger to execute above function on insertion.
-create trigger inhibit_enqueue_if_disabled before insert on notification_messages for each row execute function inhibit_enqueue_if_disabled(
-);
+create trigger inhibit_enqueue_if_disabled before insert on notification_messages for each row execute function inhibit_enqueue_if_disabled();
 
 -- Allow modifications to notification templates to be audited.
 alter type resource_type add value if not exists 'notification_template';

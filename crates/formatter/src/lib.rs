@@ -211,13 +211,20 @@ fn trim_verbatim(original: &str) -> String {
     original.trim().to_string()
 }
 
-/// Recursively format `LANGUAGE sql` dollar-quoted bodies inside a
-/// rendered statement, re-anchoring them to the statement's indentation
-/// (TREE-101). `LANGUAGE plpgsql` bodies (and `DO` blocks, which default
-/// to plpgsql) stay byte-identical until the plpgsql formatter lands.
-/// Every splice is individually guarded: a body that fails to parse,
-/// trips the self-check, or would collide with its own tag is left
-/// untouched.
+/// Which body grammar a statement's dollar-quoted string holds.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum BodyLang {
+    Sql,
+    Plpgsql,
+}
+
+/// Recursively format procedural dollar-quoted bodies inside a rendered
+/// statement, re-anchoring them to the statement's indentation.
+/// `LANGUAGE sql` bodies use the SQL grammar (TREE-101); `LANGUAGE
+/// plpgsql` bodies and `DO` blocks (plpgsql by default) use the PL/pgSQL
+/// grammar (TREE-103). Every splice is individually guarded: a body that
+/// fails to parse, trips the self-check, or would collide with its own
+/// tag is left untouched.
 fn splice_sql_bodies(statement: &str, options: &Options, depth: u32) -> String {
     if depth >= MAX_BODY_DEPTH {
         return statement.to_string();
@@ -227,19 +234,37 @@ fn splice_sql_bodies(statement: &str, options: &Options, depth: u32) -> String {
 
     // The statement's language marker: `LANGUAGE sql` / `LANGUAGE
     // plpgsql` (position-independent; LANGUAGE may precede or follow AS).
+    // A `DO` statement without a marker defaults to plpgsql.
     let non_trivia: Vec<_> = tokens.iter().filter(|t| !t.kind.is_trivia()).collect();
-    let is_sql_body = non_trivia
+    let marker = non_trivia
         .iter()
         .zip(non_trivia.iter().skip(1))
-        .any(|(a, b)| {
-            a.kind == SyntaxKind::Ident
+        .find_map(|(a, b)| {
+            if a.kind == SyntaxKind::Ident
                 && a.text.eq_ignore_ascii_case("language")
                 && b.kind == SyntaxKind::Ident
-                && b.text.eq_ignore_ascii_case("sql")
+            {
+                if b.text.eq_ignore_ascii_case("sql") {
+                    Some(BodyLang::Sql)
+                } else if b.text.eq_ignore_ascii_case("plpgsql") {
+                    Some(BodyLang::Plpgsql)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
         });
-    if !is_sql_body {
-        return statement.to_string();
-    }
+    let lang = match marker {
+        Some(lang) => lang,
+        None if non_trivia
+            .first()
+            .is_some_and(|t| t.text.eq_ignore_ascii_case("do")) =>
+        {
+            BodyLang::Plpgsql
+        }
+        None => return statement.to_string(),
+    };
 
     // Collect (offset, token) for dollar-quoted bodies.
     let mut edits: Vec<(std::ops::Range<usize>, String)> = Vec::new();
@@ -257,9 +282,12 @@ fn splice_sql_bodies(statement: &str, options: &Options, depth: u32) -> String {
             continue;
         }
         let body_tokens = parser::lexer::lex_with(content, options.dialect, lex_options);
-        let parse = parser::parser::parse(&body_tokens, options.dialect);
+        let parse = match lang {
+            BodyLang::Sql => parser::parser::parse(&body_tokens, options.dialect),
+            BodyLang::Plpgsql => parser::parser::parse_plpgsql_body(&body_tokens, options.dialect),
+        };
         if !parse.diagnostics.is_empty() {
-            continue; // not (entirely) SQL: leave byte-identical
+            continue; // does not parse cleanly: leave byte-identical
         }
         let formatted = format_cst_at(&parse.cst, options, depth + 1);
         if formatted.fallback_statements > 0 {

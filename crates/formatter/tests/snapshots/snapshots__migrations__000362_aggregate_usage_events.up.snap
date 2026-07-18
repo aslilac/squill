@@ -14,38 +14,40 @@ comment on column usage_events_daily.day is 'The date of the summed usage events
 
 -- Function to handle usage event aggregation
 create or replace function aggregate_usage_event() returns trigger as $$
-BEGIN
-    -- Check for supported event types and throw error for unknown types
-    IF NEW.event_type NOT IN ('dc_managed_agents_v1') THEN
-        RAISE EXCEPTION 'Unhandled usage event type in aggregate_usage_event: %', NEW.event_type;
-    END IF;
-
-    INSERT INTO usage_events_daily (day, event_type, usage_data)
-    VALUES (
-        -- Extract the date from the created_at timestamp, always using UTC for
-        -- consistency
-        date_trunc('day', NEW.created_at AT TIME ZONE 'UTC')::date,
-        NEW.event_type,
-        NEW.event_data
-    )
-    ON CONFLICT (day, event_type) DO UPDATE SET
-        usage_data = CASE
-            -- Handle simple counter events by summing the count
-            WHEN NEW.event_type IN ('dc_managed_agents_v1') THEN
-                jsonb_build_object(
-                    'count',
-                    COALESCE((usage_events_daily.usage_data->>'count')::bigint, 0) +
-                    COALESCE((NEW.event_data->>'count')::bigint, 0)
-                )
-        END;
-
-    RETURN NEW;
-END;
+	begin
+		-- Check for supported event types and throw error for unknown types
+		if NEW.event_type not in ('dc_managed_agents_v1') then
+			raise exception 'Unhandled usage event type in aggregate_usage_event: %',
+			NEW.event_type;
+		end if;
+		insert into usage_events_daily (day,
+		event_type,
+		usage_data)
+		values
+			(
+			-- Extract the date from the created_at timestamp, always using UTC for
+			-- consistency
+			date_trunc('day', NEW.created_at at time zone 'UTC')::date,
+			NEW.event_type,
+			NEW.event_data)
+		on conflict
+			(day,
+			event_type) do update set
+				usage_data = case
+					-- Handle simple counter events by summing the count
+					when NEW.event_type in ('dc_managed_agents_v1')
+						then jsonb_build_object(
+							'count',
+							COALESCE((usage_events_daily.usage_data ->> 'count')::bigint, 0)
+							+ COALESCE((NEW.event_data ->> 'count')::bigint, 0)
+						)
+				end;
+		return NEW;
+	end;
 $$ language plpgsql;
 
 -- Create trigger to automatically aggregate usage events
-create trigger trigger_aggregate_usage_event after insert on usage_events for each row execute function aggregate_usage_event(
-);
+create trigger trigger_aggregate_usage_event after insert on usage_events for each row execute function aggregate_usage_event();
 
 -- Populate usage_events_daily with existing data
 insert into usage_events_daily (day,

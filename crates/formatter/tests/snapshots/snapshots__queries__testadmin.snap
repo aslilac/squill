@@ -7,18 +7,19 @@ expression: formatted
 -- Deprecated: disable foreign keys was created to aid in migrating off
 -- of the test-only in-memory database. Do not use this in new code.
 do $$
-DECLARE
-    table_record record;
-BEGIN
-    FOR table_record IN
-        SELECT table_schema, table_name
-        FROM information_schema.tables
-        WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
-        AND table_type = 'BASE TABLE'
-    LOOP
-        EXECUTE format('ALTER TABLE %I.%I DISABLE TRIGGER ALL',
-                    table_record.table_schema,
-                    table_record.table_name);
-    END LOOP;
-END;
+	declare
+		table_record record;
+	begin
+		for table_record in select table_schema, table_name
+		from information_schema.tables
+		where
+			table_schema not in ('pg_catalog', 'information_schema')
+			and table_type = 'BASE TABLE' loop
+			execute format(
+				'ALTER TABLE %I.%I DISABLE TRIGGER ALL',
+				table_record.table_schema,
+				table_record.table_name
+			);
+		end loop;
+	end;
 $$;

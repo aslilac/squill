@@ -10,14 +10,15 @@ create or replace function provisioner_tagset_contains (
 	provisioner_tags tagset,
 	job_tags tagset
 ) returns boolean as $$
-BEGIN
-	RETURN CASE
-		-- Special case for untagged provisioners, where only an exact match should count
-		WHEN job_tags::jsonb = '{"scope": "organization", "owner": ""}'::jsonb THEN job_tags::jsonb = provisioner_tags::jsonb
-		-- General case
-		ELSE job_tags::jsonb <@ provisioner_tags::jsonb
-	END;
-END;
+	begin
+		return case
+			-- Special case for untagged provisioners, where only an exact match should count
+			when job_tags::jsonb = '{"scope": "organization", "owner": ""}'::jsonb
+				then job_tags::jsonb = provisioner_tags::jsonb
+			-- General case
+			else job_tags::jsonb <@ provisioner_tags::jsonb
+		end;
+	end;
 $$ language plpgsql;
 
 comment on function provisioner_tagset_contains (

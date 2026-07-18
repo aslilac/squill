@@ -33,18 +33,15 @@ create table oauth2_provider_app_tokens (
 comment on column oauth2_provider_app_tokens.refresh_hash is 'Refresh tokens provide a way to refresh an access token (API key). An expired API key can be refreshed if this token is not yet expired, meaning this expiry can outlive an API key.';
 
 -- When we delete a token, delete the API key associated with it.
-create function delete_deleted_oauth2_provider_app_token_api_key(
-) returns trigger language plpgsql as $$
-DECLARE
-BEGIN
-    DELETE FROM api_keys
-    WHERE id = OLD.api_key_id;
-    RETURN OLD;
-END;
+create function delete_deleted_oauth2_provider_app_token_api_key() returns trigger language plpgsql as $$
+	declare
+	begin
+		delete from api_keys where id = OLD.api_key_id;
+		return OLD;
+	end;
 $$;
 
-create trigger trigger_delete_oauth2_provider_app_token after delete on oauth2_provider_app_tokens for each row execute procedure delete_deleted_oauth2_provider_app_token_api_key(
-);
+create trigger trigger_delete_oauth2_provider_app_token after delete on oauth2_provider_app_tokens for each row execute procedure delete_deleted_oauth2_provider_app_token_api_key();
 
 -- This migration has been modified after its initial commit.
 -- The new implementation makes the same changes as the original, but

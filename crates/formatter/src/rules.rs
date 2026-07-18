@@ -24,7 +24,22 @@ pub(crate) fn lower_statement(stmt: &SyntaxNode) -> Option<Doc> {
         | SyntaxKind::InsertStmt
         | SyntaxKind::UpdateStmt
         | SyntaxKind::DeleteStmt
-        | SyntaxKind::DdlStmt => {
+        | SyntaxKind::DdlStmt
+        | SyntaxKind::PlBlock
+        | SyntaxKind::PlIf
+        | SyntaxKind::PlCase
+        | SyntaxKind::PlLoop
+        | SyntaxKind::PlWhile
+        | SyntaxKind::PlFor
+        | SyntaxKind::PlForeach
+        | SyntaxKind::PlExit
+        | SyntaxKind::PlReturn
+        | SyntaxKind::PlRaise
+        | SyntaxKind::PlAssign
+        | SyntaxKind::PlPerform
+        | SyntaxKind::PlExecute
+        | SyntaxKind::PlGetDiag
+        | SyntaxKind::PlNull => {
             // Statement-leading trivia (comments before the first token)
             // attaches at statement level, outside the body group, so a
             // commented short statement still collapses to one line.
@@ -72,6 +87,10 @@ pub(crate) fn lower_statement(stmt: &SyntaxNode) -> Option<Doc> {
             match stmt.kind() {
                 SyntaxKind::SelectStmt | SyntaxKind::EmptyStmt => {
                     lowerer.statement_flow(&mut docs, stmt);
+                }
+                kind if is_pl_container(kind) => {
+                    let doc = lowerer.node(stmt);
+                    docs.push(doc);
                 }
                 _ => lowerer.dml_flow(&mut docs, stmt),
             }
@@ -191,6 +210,33 @@ impl Lowerer {
     fn node(&mut self, node: &SyntaxNode) -> Doc {
         match node.kind() {
             SyntaxKind::SelectCore => self.select_core(node),
+            // PL/pgSQL containers and statements.
+            SyntaxKind::PlBlock => self.pl_block(node),
+            SyntaxKind::PlIf | SyntaxKind::PlElsif => self.pl_container(node, false),
+            SyntaxKind::PlCase => self.pl_container(node, true),
+            SyntaxKind::PlLoop
+            | SyntaxKind::PlWhile
+            | SyntaxKind::PlFor
+            | SyntaxKind::PlForeach
+            | SyntaxKind::PlWhen
+            | SyntaxKind::PlElse => self.pl_container(node, false),
+            SyntaxKind::PlException => self.pl_exception(node),
+            SyntaxKind::PlDeclare => self.space_flow(node, IdentPos::ColumnOrTable),
+            SyntaxKind::PlExit
+            | SyntaxKind::PlReturn
+            | SyntaxKind::PlRaise
+            | SyntaxKind::PlAssign
+            | SyntaxKind::PlPerform
+            | SyntaxKind::PlExecute
+            | SyntaxKind::PlGetDiag
+            | SyntaxKind::PlNull => {
+                let mut docs = Vec::new();
+                self.dml_flow(&mut docs, node);
+                group(concat(docs))
+            }
+            SyntaxKind::PlInto => self.kw_clause(node),
+            // Nested error statements pass through verbatim.
+            SyntaxKind::ErrorStatement => verbatim(node.to_string().trim().to_string()),
             // DML nested in CTE bodies.
             SyntaxKind::InsertStmt
             | SyntaxKind::UpdateStmt
@@ -865,6 +911,10 @@ impl Lowerer {
         } else {
             nil()
         };
+        if inner.is_empty() {
+            // Empty parens never benefit from breaking: `f()`.
+            return group(concat([head_doc, attach, open, close, concat(tail)]));
+        }
         group(concat([
             head_doc,
             attach,
@@ -1211,6 +1261,130 @@ impl Lowerer {
         }
     }
 
+    /// PL/pgSQL block: `[<<label>>] [declare decls] begin stmts
+    /// [exception handlers] end [label];` — section keywords at block
+    /// indent 0, contents indented once.
+    fn pl_block(&mut self, node: &SyntaxNode) -> Doc {
+        let mut docs = Vec::new();
+        let mut first = true;
+        for element in node.children_with_tokens() {
+            match element {
+                SyntaxElement::Token(token) if token.kind().is_trivia() => {
+                    self.trivia(&mut docs, token)
+                }
+                SyntaxElement::Token(token) => {
+                    let lower = token.text().to_ascii_lowercase();
+                    let section = matches!(lower.as_str(), "declare" | "begin" | "end");
+                    if section && !first {
+                        docs.push(hard_line());
+                    } else if !first && token.kind() != SyntaxKind::Semicolon {
+                        docs.push(space());
+                    }
+                    self.push(&mut docs, token_leaf(token));
+                    first = false;
+                }
+                SyntaxElement::Node(child) => {
+                    let doc = self.node(child);
+                    if child.kind() == SyntaxKind::PlException {
+                        docs.push(hard_line());
+                        self.push(&mut docs, doc);
+                    } else {
+                        // Declarations and statements: indented lines.
+                        self.push(&mut docs, indent(concat([hard_line(), doc])));
+                    }
+                    first = false;
+                }
+            }
+        }
+        concat(docs)
+    }
+
+    /// PL/pgSQL control-flow container (`if ... then` / loops / `when ...
+    /// then` arms / `case`): header tokens and expressions inline,
+    /// statements indented one level, arm nodes (`elsif`/`else`/`when`)
+    /// back at the container's indent (or indented, for CASE arms), the
+    /// closing `end ...` on its own line.
+    fn pl_container(&mut self, node: &SyntaxNode, indent_arms: bool) -> Doc {
+        let mut docs = Vec::new();
+        let mut first = true;
+        let mut seen_end = false;
+        let mut tight_dot = false;
+        for element in node.children_with_tokens() {
+            match element {
+                SyntaxElement::Token(token) if token.kind().is_trivia() => {
+                    self.trivia(&mut docs, token)
+                }
+                SyntaxElement::Token(token) => {
+                    let lower = token.text().to_ascii_lowercase();
+                    // `1..3` ranges: dots attach tight (the lexer may
+                    // split them as `1`, `.`, `.3`).
+                    let tight = tight_dot
+                        || token.kind() == SyntaxKind::Dot
+                        || (token.kind() == SyntaxKind::Number && token.text().starts_with('.'));
+                    tight_dot = token.kind() == SyntaxKind::Dot;
+                    if lower == "end" {
+                        seen_end = true;
+                        docs.push(hard_line());
+                    } else if token.kind() != SyntaxKind::Semicolon && !first && !tight {
+                        docs.push(space());
+                    }
+                    self.push(&mut docs, token_leaf(token));
+                    first = false;
+                }
+                SyntaxElement::Node(child) => {
+                    let arm = matches!(
+                        child.kind(),
+                        SyntaxKind::PlElsif
+                            | SyntaxKind::PlElse
+                            | SyntaxKind::PlWhen
+                            | SyntaxKind::PlException
+                    );
+                    let statement = is_pl_statement(child.kind());
+                    let doc = self.node(child);
+                    if arm {
+                        if indent_arms {
+                            self.push(&mut docs, indent(concat([hard_line(), doc])));
+                        } else {
+                            docs.push(hard_line());
+                            self.push(&mut docs, doc);
+                        }
+                    } else if statement && !seen_end {
+                        self.push(&mut docs, indent(concat([hard_line(), doc])));
+                    } else {
+                        // Range bounds after `..` attach tight.
+                        if !first && !tight_dot {
+                            docs.push(space());
+                        }
+                        self.push(&mut docs, doc);
+                    }
+                    tight_dot = false;
+                    first = false;
+                }
+            }
+        }
+        concat(docs)
+    }
+
+    /// `exception` with its `when ... then` handlers on following lines.
+    fn pl_exception(&mut self, node: &SyntaxNode) -> Doc {
+        let mut docs = Vec::new();
+        for element in node.children_with_tokens() {
+            match element {
+                SyntaxElement::Token(token) if token.kind().is_trivia() => {
+                    self.trivia(&mut docs, token)
+                }
+                SyntaxElement::Token(token) => {
+                    self.push(&mut docs, token_leaf(token));
+                }
+                SyntaxElement::Node(child) => {
+                    let doc = self.node(child);
+                    self.push(&mut docs, indent(concat([hard_line(), doc])));
+                }
+            }
+        }
+        concat(docs)
+    }
+
     /// Space-joined flow with tight punctuation; the fallback layout.
     fn space_flow(&mut self, node: &SyntaxNode, pos: IdentPos) -> Doc {
         let mut docs = Vec::new();
@@ -1280,6 +1454,43 @@ impl Lowerer {
         }
         concat(docs)
     }
+}
+
+/// PL/pgSQL container statements (multi-line by construction).
+fn is_pl_container(kind: SyntaxKind) -> bool {
+    matches!(
+        kind,
+        SyntaxKind::PlBlock
+            | SyntaxKind::PlIf
+            | SyntaxKind::PlCase
+            | SyntaxKind::PlLoop
+            | SyntaxKind::PlWhile
+            | SyntaxKind::PlFor
+            | SyntaxKind::PlForeach
+    )
+}
+
+/// Any PL/pgSQL or SQL statement kind (a line of its own inside blocks).
+fn is_pl_statement(kind: SyntaxKind) -> bool {
+    is_pl_container(kind)
+        || matches!(
+            kind,
+            SyntaxKind::PlExit
+                | SyntaxKind::PlReturn
+                | SyntaxKind::PlRaise
+                | SyntaxKind::PlAssign
+                | SyntaxKind::PlPerform
+                | SyntaxKind::PlExecute
+                | SyntaxKind::PlGetDiag
+                | SyntaxKind::PlNull
+                | SyntaxKind::SelectStmt
+                | SyntaxKind::InsertStmt
+                | SyntaxKind::UpdateStmt
+                | SyntaxKind::DeleteStmt
+                | SyntaxKind::DdlStmt
+                | SyntaxKind::ErrorStatement
+                | SyntaxKind::EmptyStmt
+        )
 }
 
 /// Is this node one of the clause-level pieces inside a query body?

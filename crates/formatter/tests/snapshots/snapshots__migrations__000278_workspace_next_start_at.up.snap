@@ -11,26 +11,24 @@ where (deleted = false);
 create index workspace_template_id_idx on workspaces using btree(template_id)
 where (deleted = false);
 
-create function nullify_next_start_at_on_workspace_autostart_modification(
-) returns trigger language plpgsql as $$
-DECLARE
-BEGIN
-	-- A workspace's next_start_at might be invalidated by the following:
-	--   * The autostart schedule has changed independent to next_start_at
-	--   * The workspace has been marked as dormant
-	IF (NEW.autostart_schedule <> OLD.autostart_schedule AND NEW.next_start_at = OLD.next_start_at)
-		OR (NEW.dormant_at IS NOT NULL AND NEW.next_start_at IS NOT NULL)
-	THEN
-		UPDATE workspaces
-		SET next_start_at = NULL
-		WHERE id = NEW.id;
-	END IF;
-	RETURN NEW;
-END;
+create function nullify_next_start_at_on_workspace_autostart_modification() returns trigger language plpgsql as $$
+	declare
+	begin
+		-- A workspace's next_start_at might be invalidated by the following:
+		--   * The autostart schedule has changed independent to next_start_at
+		--   * The workspace has been marked as dormant
+		if (
+			NEW.autostart_schedule <> OLD.autostart_schedule
+			and NEW.next_start_at = OLD.next_start_at
+		)
+		or (NEW.dormant_at is not null and NEW.next_start_at is not null) then
+			update workspaces set next_start_at = null where id = NEW.id;
+		end if;
+		return NEW;
+	end;
 $$;
 
-create trigger trigger_nullify_next_start_at_on_workspace_autostart_modification after update on workspaces for each row execute procedure nullify_next_start_at_on_workspace_autostart_modification(
-);
+create trigger trigger_nullify_next_start_at_on_workspace_autostart_modification after update on workspaces for each row execute procedure nullify_next_start_at_on_workspace_autostart_modification();
 
 -- Recreate view
 drop view workspaces_expanded;

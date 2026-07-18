@@ -6,16 +6,14 @@ expression: formatted
 delete from api_keys where user_id in (select id from users where deleted);
 
 -- When we soft-delete a user, we also want to delete their API key.
-create function delete_deleted_user_api_keys(
-) returns trigger language plpgsql as $$
-DECLARE
-BEGIN
-	IF (NEW.deleted) THEN
-		DELETE FROM api_keys
-		WHERE user_id = OLD.id;
-	END IF;
-	RETURN NEW;
-END;
+create function delete_deleted_user_api_keys() returns trigger language plpgsql as $$
+	declare
+	begin
+		if (NEW.deleted) then
+			delete from api_keys where user_id = OLD.id;
+		end if;
+		return NEW;
+	end;
 $$;
 
 create trigger trigger_update_users after insert or update on users for each row when (
@@ -23,19 +21,16 @@ create trigger trigger_update_users after insert or update on users for each row
 ) execute procedure delete_deleted_user_api_keys();
 
 -- When we insert a new api key, we want to fail if the user is soft-deleted.
-create function insert_apikey_fail_if_user_deleted(
-) returns trigger language plpgsql as $$
-
-DECLARE
-BEGIN
-	IF (NEW.user_id IS NOT NULL) THEN
-		IF (SELECT deleted FROM users WHERE id = NEW.user_id LIMIT 1) THEN
-			RAISE EXCEPTION 'Cannot create API key for deleted user';
-		END IF;
-	END IF;
-	RETURN NEW;
-END;
+create function insert_apikey_fail_if_user_deleted() returns trigger language plpgsql as $$
+	declare
+	begin
+		if (NEW.user_id is not null) then
+			if (select deleted from users where id = NEW.user_id limit 1) then
+				raise exception 'Cannot create API key for deleted user';
+			end if;
+		end if;
+		return NEW;
+	end;
 $$;
 
-create trigger trigger_insert_apikeys before insert on api_keys for each row execute procedure insert_apikey_fail_if_user_deleted(
-);
+create trigger trigger_insert_apikeys before insert on api_keys for each row execute procedure insert_apikey_fail_if_user_deleted();

@@ -5,8 +5,7 @@ expression: formatted
 -- Add RFC 7591 Dynamic Client Registration fields to oauth2_provider_apps
 
 -- RFC 7591 Core Fields
-alter table oauth2_provider_apps add column client_id_issued_at timestamptz default NOW(
-),
+alter table oauth2_provider_apps add column client_id_issued_at timestamptz default NOW(),
 add column client_secret_expires_at timestamptz,
 add column grant_types text [ ] default '{"authorization_code", "refresh_token"}',
 add column response_types text [ ] default '{"code"}',

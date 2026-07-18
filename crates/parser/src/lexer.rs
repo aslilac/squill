@@ -202,6 +202,11 @@ impl Lexer<'_> {
                 self.bump(2);
                 SyntaxKind::ColonColon
             }
+            // PL/pgSQL assignment; Postgres lexes `:=` as one token too.
+            b':' if self.dialect == Dialect::Postgres && self.at(1) == Some(b'=') => {
+                self.bump(2);
+                SyntaxKind::Operator
+            }
             b':' if self.dialect == Dialect::Sqlite && self.is_ident_start_at(1) => {
                 self.bump(1);
                 self.eat_ident();

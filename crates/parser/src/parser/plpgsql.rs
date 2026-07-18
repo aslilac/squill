@@ -451,13 +451,9 @@ fn pl_assign(p: &mut Parser<'_>) -> PResult {
     Ok(())
 }
 
-/// Eat `:=` (Colon + `=`) or plain `=`; false if neither.
+/// Eat `:=` (a single operator token) or plain `=`; false if neither.
 fn assignment_operator(p: &mut Parser<'_>) -> bool {
-    if p.at(SyntaxKind::Colon) && p.nth_at_op(1, "=") {
-        p.bump();
-        p.bump();
-        true
-    } else if p.at_op("=") {
+    if p.at_op(":=") || p.at_op("=") {
         p.bump();
         true
     } else {

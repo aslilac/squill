@@ -42,24 +42,86 @@ fn dollar_tag_is_preserved() {
 }
 
 #[test]
-fn plpgsql_bodies_stay_byte_identical() {
-    let body = "BEGIN\n  RETURN   1;\nEND;";
-    let source = format!("CREATE FUNCTION f() RETURNS int LANGUAGE plpgsql AS $$ {body} $$;");
-    let out = format(&source);
-    assert!(
-        out.contains(&format!("$$ {body} $$")),
-        "plpgsql body was modified: {out}"
+fn plpgsql_bodies_format() {
+    let source =
+        "CREATE FUNCTION f() RETURNS int LANGUAGE plpgsql AS $$ BEGIN\n  RETURN   1;\nEND; $$;";
+    let out = format(source);
+    assert_eq!(
+        out,
+        "create function f() returns int language plpgsql as $$\n\
+         \tbegin\n\
+         \t\treturn 1;\n\
+         \tend;\n\
+         $$;\n"
     );
 }
 
 #[test]
-fn do_blocks_default_to_plpgsql_and_stay_untouched() {
+fn do_blocks_default_to_plpgsql_and_format() {
     let source = "DO $$ BEGIN RAISE NOTICE   'hi'; END $$;";
     let out = format(source);
-    assert!(
-        out.contains("$$ BEGIN RAISE NOTICE   'hi'; END $$"),
-        "DO body was modified: {out}"
+    assert_eq!(out, "do $$\n\tbegin\n\t\traise notice 'hi';\n\tend\n$$;\n");
+}
+
+#[test]
+fn plpgsql_control_flow_layout() {
+    let source = "CREATE FUNCTION guard() RETURNS trigger LANGUAGE plpgsql AS $fn$\n\
+        DECLARE n int := 0;\n\
+        BEGIN\n\
+        SELECT count(*) INTO n FROM t WHERE id = NEW.id;\n\
+        IF n > 10 THEN\n\
+        RAISE EXCEPTION 'too many';\n\
+        ELSIF n > 5 THEN RAISE WARNING 'getting close';\n\
+        ELSE RETURN NEW;\n\
+        END IF;\n\
+        FOR i IN 1..3 LOOP PERFORM audit(i); END LOOP;\n\
+        RETURN NEW;\n\
+        EXCEPTION WHEN OTHERS THEN RETURN NULL;\n\
+        END;\n\
+        $fn$;";
+    let out = format(source);
+    assert_eq!(
+        out,
+        "create function guard() returns trigger language plpgsql as $fn$\n\
+         \tdeclare\n\
+         \t\tn int := 0;\n\
+         \tbegin\n\
+         \t\tselect count(*)\n\
+         \t\tinto n\n\
+         \t\tfrom t\n\
+         \t\twhere id = NEW.id;\n\
+         \t\tif n > 10 then\n\
+         \t\t\traise exception 'too many';\n\
+         \t\telsif n > 5 then\n\
+         \t\t\traise warning 'getting close';\n\
+         \t\telse\n\
+         \t\t\treturn NEW;\n\
+         \t\tend if;\n\
+         \t\tfor i in 1..3 loop\n\
+         \t\t\tperform audit(i);\n\
+         \t\tend loop;\n\
+         \t\treturn NEW;\n\
+         \texception\n\
+         \t\twhen OTHERS then\n\
+         \t\t\treturn null;\n\
+         \tend;\n\
+         $fn$;\n"
     );
+}
+
+#[test]
+fn plpgsql_comments_survive_in_bodies() {
+    let source = "DO $$\n\
+        BEGIN\n\
+        -- leading comment\n\
+        PERFORM 1; -- trailing comment\n\
+        END;\n\
+        $$;";
+    let out = format(source);
+    assert!(out.contains("-- leading comment"), "dropped: {out}");
+    assert!(out.contains("-- trailing comment"), "dropped: {out}");
+    // Idempotent with comments in play.
+    assert_eq!(format(&out), out);
 }
 
 #[test]
