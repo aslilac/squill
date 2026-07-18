@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- We need to assign uuids to any existing licenses that don't have them.
+update licenses set uuid = gen_random_uuid() where uuid is null;
+-- Assert no licenses have null uuids.
+alter table only licenses alter column uuid set not null;

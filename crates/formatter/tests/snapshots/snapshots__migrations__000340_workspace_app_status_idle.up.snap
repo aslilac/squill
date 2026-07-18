@@ -1,0 +1,5 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter type workspace_app_status_state add value if not exists 'idle';

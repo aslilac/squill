@@ -138,19 +138,15 @@ impl Printer<'_> {
             }),
             Doc::SoftLine => {
                 if mode == Mode::Break {
-                    self.newline(indent);
+                    self.soft_newline(indent);
                 }
             }
             Doc::SoftLineOrSpace => match mode {
                 Mode::Flat => self.push_text(" "),
-                Mode::Break => self.newline(indent),
+                Mode::Break => self.soft_newline(indent),
             },
             Doc::HardLine => self.newline(indent),
-            Doc::FreshLine => {
-                if !self.at_line_start {
-                    self.newline(indent);
-                }
-            }
+            Doc::FreshLine => self.reindent_or_newline(indent),
             Doc::BreakParent => {}
             Doc::IfBreak { broken, flat } => {
                 let chosen = match mode {
@@ -248,12 +244,40 @@ impl Printer<'_> {
         }
     }
 
+    /// A soft break: if the current line is still blank (only indentation
+    /// or separator spaces, e.g. after a comment's `fresh_line`),
+    /// re-indent that line to this break's target instead of emitting a
+    /// second newline.
+    fn soft_newline(&mut self, indent: u16) {
+        self.reindent_or_newline(indent);
+    }
+
+    fn reindent_or_newline(&mut self, indent: u16) {
+        if self.line_is_blank() {
+            let start = self.out.rfind('\n').map_or(0, |pos| pos + 1);
+            self.out.truncate(start);
+            self.indent_line(indent);
+        } else {
+            self.newline(indent);
+        }
+    }
+
+    /// Is the current output line whitespace-only so far?
+    fn line_is_blank(&self) -> bool {
+        let start = self.out.rfind('\n').map_or(0, |pos| pos + 1);
+        self.out[start..].chars().all(|c| c == ' ' || c == '\t')
+    }
+
     fn newline(&mut self, indent: u16) {
         // Never leave trailing whitespace on the line being ended.
         while self.out.ends_with(' ') || self.out.ends_with('\t') {
             self.out.pop();
         }
         self.out.push('\n');
+        self.indent_line(indent);
+    }
+
+    fn indent_line(&mut self, indent: u16) {
         let width = usize::from(self.options.indent_width);
         match self.options.indent_style {
             IndentStyle::Tab => {

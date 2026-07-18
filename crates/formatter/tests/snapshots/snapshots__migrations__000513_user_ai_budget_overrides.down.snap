@@ -1,0 +1,11 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop trigger if exists trigger_delete_user_ai_budget_overrides_on_org_member_delete on organization_members;
+drop function IF exists delete_user_ai_budget_overrides_on_org_member_delete;
+drop trigger if exists trigger_delete_user_ai_budget_overrides_on_group_member_delete on group_members;
+drop function IF exists delete_user_ai_budget_overrides_on_group_member_delete;
+drop trigger if exists trigger_enforce_user_ai_budget_override_membership on user_ai_budget_overrides;
+drop function IF exists enforce_user_ai_budget_override_membership;
+drop table if exists user_ai_budget_overrides cascade;

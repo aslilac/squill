@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table if exists workspace_agent_memory_resource_monitors;
+drop table if exists workspace_agent_volume_resource_monitors;

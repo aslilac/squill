@@ -1,0 +1,19 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- temporarily create index column as nullable
+alter table parameter_schemas add column index integer;
+
+-- initialize ordering for existing parameters
+with
+	tmp as (
+		select id, row_number() over (partition by job_id order by name) as index
+		from parameter_schemas
+	) update parameter_schemas
+set index = tmp.index
+from tmp
+where parameter_schemas.id = tmp.id;
+
+-- all rows should now be initialized
+alter table parameter_schemas alter column index set not null;

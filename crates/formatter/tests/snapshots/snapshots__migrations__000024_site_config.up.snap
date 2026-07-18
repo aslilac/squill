@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table if not exists site_configs (
+	key varchar (256) not null unique,
+	value varchar (8192) not null
+);

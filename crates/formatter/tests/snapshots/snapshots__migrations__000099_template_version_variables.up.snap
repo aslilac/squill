@@ -1,0 +1,25 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table if not exists template_version_variables (
+	template_version_id uuid not null references template_versions (
+		id
+	) on delete cascade,
+	name text not null,
+	description text not null,
+	type text not null,
+	value text not null,
+	default_value text not null,
+	required boolean not null,
+	sensitive boolean not null,
+	unique(template_version_id, name)
+);
+
+comment on column template_version_variables.name is 'Variable name';
+comment on column template_version_variables.description is 'Variable description';
+comment on column template_version_variables.type is 'Variable type';
+comment on column template_version_variables.value is 'Variable value';
+comment on column template_version_variables.default_value is 'Variable default value';
+comment on column template_version_variables.required is 'Required variables needs a default value or a value provided by template admin';
+comment on column template_version_variables.sensitive is 'Sensitive variables have their values redacted in logs or site UI';

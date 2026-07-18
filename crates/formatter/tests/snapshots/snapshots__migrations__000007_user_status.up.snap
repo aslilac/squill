@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type user_status as enum ('active', 'suspended');
+
+alter table only users add column if not exists status user_status not null default 'active';

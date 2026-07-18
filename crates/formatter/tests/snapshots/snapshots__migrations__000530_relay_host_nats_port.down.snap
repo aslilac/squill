@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table replicas drop column nats_port;
+alter table replicas drop column cluster_host;

@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop trigger if exists trigger_delete_group_members_on_org_member_delete on organization_members;
+drop function IF exists delete_group_members_on_org_member_delete;

@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table only workspaces add column if not exists autostart_schedule text default null,
+add column if not exists autostop_schedule text default null;

@@ -1,0 +1,36 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- This migration has been modified after its initial commit.
+-- The new implementation makes the same changes as the original, but
+-- takes into account the message in create_migration.sh. This is done
+-- to allow the insertion of a user with the "none" login type in later migrations.
+create type new_logintype as enum (
+	'password',
+	'github',
+	'oidc',
+	'token',
+	'none'
+);
+comment on type new_logintype is 'Specifies the method of authentication. "none" is a special case in which no authentication method is allowed.';
+
+alter table users alter column login_type drop default,
+alter column login_type type new_logintype using (
+	login_type::text::new_logintype
+),
+alter column login_type set default 'password'::new_logintype;
+
+drop index if exists idx_api_key_name;
+alter table api_keys alter column login_type type new_logintype using (
+	login_type::text::new_logintype
+);
+create unique index idx_api_key_name on api_keys (user_id, token_name)
+where (login_type = 'token'::new_logintype);
+
+alter table user_links alter column login_type type new_logintype using (
+	login_type::text::new_logintype
+);
+
+drop type login_type;
+alter type new_logintype rename to login_type;

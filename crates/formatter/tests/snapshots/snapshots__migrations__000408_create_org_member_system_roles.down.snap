@@ -1,0 +1,11 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Drop the trigger and function created by the up migration.
+drop trigger if exists trigger_insert_org_member_system_role on organizations;
+drop function IF exists insert_org_member_system_role;
+
+-- Remove organization-member system roles created by the up migration.
+delete from custom_roles
+where name = 'organization-member' and is_system = true;

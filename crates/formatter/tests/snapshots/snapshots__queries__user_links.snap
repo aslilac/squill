@@ -14,44 +14,38 @@ select * from user_links where user_id = $1 and login_type = $2;
 select * from user_links where user_id = $1;
 
 -- name: InsertUserLink :one
-INSERT INTO
-	user_links (
-		user_id,
-		login_type,
-		linked_id,
-		oauth_access_token,
-		oauth_access_token_key_id,
-		oauth_refresh_token,
-		oauth_refresh_token_key_id,
-		oauth_expiry,
-		claims
-	)
-VALUES
-	( $1, $2, $3, $4, $5, $6, $7, $8, $9 ) RETURNING *;
+insert into user_links (user_id,
+login_type,
+linked_id,
+oauth_access_token,
+oauth_access_token_key_id,
+oauth_refresh_token,
+oauth_refresh_token_key_id,
+oauth_expiry,
+claims)
+values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+returning *;
 
 -- name: UpdateUserLink :one
-UPDATE
-	user_links
-SET
+update user_links
+set
 	oauth_access_token = $1,
 	oauth_access_token_key_id = $2,
 	oauth_refresh_token = $3,
 	oauth_refresh_token_key_id = $4,
 	oauth_expiry = $5,
 	claims = $6
-WHERE
-	user_id = $7 AND login_type = $8 RETURNING *;
+where user_id = $7 and login_type = $8
+returning *;
 
 -- name: UpdateUserLinkedID :one
 -- Backfills linked_id for legacy user_links that were created before
 -- linked_id tracking was added. Only updates when linked_id is empty
 -- to avoid overwriting a valid binding.
-UPDATE
-	user_links
-SET
-	linked_id = @linked_id
-WHERE
-	user_id = @user_id AND login_type = @login_type AND linked_id = '' RETURNING *;
+update user_links
+set linked_id = @linked_id
+where user_id = @user_id and login_type = @login_type and linked_id = ''
+returning *;
 
 -- name: OIDCClaimFields :many
 -- OIDCClaimFields returns a list of distinct keys in the the merged_claims fields.
@@ -150,11 +144,12 @@ group by issuer_prefix;
 -- Resets linked_id to '' for OIDC links where the linked_id is non-empty
 -- and does not begin with the expected issuer prefix. This allows users to
 -- re-authenticate under a new OIDC provider.
-UPDATE user_links
-SET linked_id = ''
-FROM users
-WHERE user_links.user_id = users.id
-	AND user_links.login_type = 'oidc'
-	AND user_links.linked_id != ''
-	AND NOT starts_with(user_links.linked_id, @expected_prefix)
-	AND users.deleted = false;
+update user_links
+set linked_id = ''
+from users
+where
+	user_links.user_id = users.id
+	and user_links.login_type = 'oidc'
+	and user_links.linked_id != ''
+	and not starts_with(user_links.linked_id, @expected_prefix)
+	and users.deleted = false;

@@ -3,37 +3,34 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertWorkspaceBuildOrchestration :one
-INSERT INTO workspace_build_orchestrations (
-    id,
-    created_at,
-    updated_at,
-    parent_build_id,
-    workspace_id,
-    child_transition,
-    child_template_version_id,
-    child_template_version_preset_id,
-    child_rich_parameter_values,
-    child_log_level,
-    child_reason,
-    status,
-    error
-)
-VALUES (
-    @id,
-    @created_at,
-    @updated_at,
-    @parent_build_id,
-    (SELECT workspace_id FROM workspace_builds WHERE id = @parent_build_id),
-    @child_transition,
-    @child_template_version_id,
-    @child_template_version_preset_id,
-    @child_rich_parameter_values,
-    @child_log_level,
-    @child_reason,
-    'pending',
-    NULL
-)
-RETURNING *;
+insert into workspace_build_orchestrations (id,
+created_at,
+updated_at,
+parent_build_id,
+workspace_id,
+child_transition,
+child_template_version_id,
+child_template_version_preset_id,
+child_rich_parameter_values,
+child_log_level,
+child_reason,
+status,
+error)
+values
+	(@id,
+	@created_at,
+	@updated_at,
+	@parent_build_id,
+	(select workspace_id from workspace_builds where id = @parent_build_id),
+	@child_transition,
+	@child_template_version_id,
+	@child_template_version_preset_id,
+	@child_rich_parameter_values,
+	@child_log_level,
+	@child_reason,
+	'pending',
+	null)
+returning *;
 
 -- name: GetNextPendingWorkspaceBuildOrchestrationForUpdate :one
 -- Must be called from within a transaction. The row lock is released
@@ -55,78 +52,63 @@ limit 1
 for update of wbo skip locked;
 
 -- name: UpdateWorkspaceBuildOrchestrationCompletedByID :one
-UPDATE
-    workspace_build_orchestrations
-SET
-    child_build_id = @child_build_id,
-    status = 'completed',
-    next_retry_after = NULL,
-    error = NULL,
-    updated_at = @updated_at
-WHERE
-    id = @id
-    AND status = 'pending'
-RETURNING *;
+update workspace_build_orchestrations
+set
+	child_build_id = @child_build_id,
+	status = 'completed',
+	next_retry_after = null,
+	error = null,
+	updated_at = @updated_at
+where id = @id and status = 'pending'
+returning *;
 
 -- name: UpdateWorkspaceBuildOrchestrationFailedByID :one
-UPDATE
-    workspace_build_orchestrations
-SET
-    status = 'failed',
-    next_retry_after = NULL,
-    error = @error,
-    updated_at = @updated_at
-WHERE
-    id = @id
-    AND status = 'pending'
-RETURNING *;
+update workspace_build_orchestrations
+set
+	status = 'failed',
+	next_retry_after = null,
+	error = @error,
+	updated_at = @updated_at
+where id = @id and status = 'pending'
+returning *;
 
 -- name: UpdateWorkspaceBuildOrchestrationRetryByID :one
-UPDATE
-    workspace_build_orchestrations
-SET
-    attempt_count = attempt_count + 1,
-    next_retry_after = CASE
-        WHEN attempt_count + 1 >= @max_attempt_count::int THEN NULL
-        ELSE @next_retry_after::timestamptz
-    END,
-    status = CASE
-        WHEN attempt_count + 1 >= @max_attempt_count::int THEN 'failed'
-        ELSE status
-    END,
-    error = @error,
-    updated_at = @updated_at
-WHERE
-    id = @id
-    AND status = 'pending'
-RETURNING *;
+update workspace_build_orchestrations
+set
+	attempt_count = attempt_count + 1,
+	next_retry_after = case
+		when attempt_count + 1 >= @max_attempt_count::int then null
+		else @next_retry_after::timestamptz
+	end,
+	status = case
+		when attempt_count + 1 >= @max_attempt_count::int then 'failed'
+		else status
+	end,
+	error = @error,
+	updated_at = @updated_at
+where id = @id and status = 'pending'
+returning *;
 
 -- name: UpdateWorkspaceBuildOrchestrationCanceledByID :one
-UPDATE
-    workspace_build_orchestrations
-SET
-    status = 'canceled',
-    next_retry_after = NULL,
-    error = NULL,
-    updated_at = @updated_at
-WHERE
-    id = @id
-    AND status = 'pending'
-RETURNING *;
+update workspace_build_orchestrations
+set
+	status = 'canceled',
+	next_retry_after = null,
+	error = null,
+	updated_at = @updated_at
+where id = @id and status = 'pending'
+returning *;
 
 -- name: DeleteOldWorkspaceBuildOrchestrations :execrows
-WITH deletable AS (
-    SELECT
-        id
-    FROM
-        workspace_build_orchestrations
-    WHERE
-        status IN ('completed', 'failed', 'canceled')
-        AND updated_at < @before_time::timestamptz
-    ORDER BY
-        updated_at ASC
-    LIMIT @limit_count::int
-)
-DELETE FROM workspace_build_orchestrations
-USING deletable
-WHERE workspace_build_orchestrations.id = deletable.id;
+with
+	deletable as (
+		select id
+		from workspace_build_orchestrations
+		where
+			status in ('completed', 'failed', 'canceled')
+			and updated_at < @before_time::timestamptz
+		order by updated_at asc
+		limit @limit_count::int
+	) delete from workspace_build_orchestrations
+using deletable
+where workspace_build_orchestrations.id = deletable.id;

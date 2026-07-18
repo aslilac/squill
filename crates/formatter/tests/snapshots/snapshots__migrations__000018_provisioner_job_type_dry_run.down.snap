@@ -1,0 +1,10 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- It's not possible to drop enum values from enum types, so the UP has "IF NOT
+-- EXISTS".
+
+-- Delete all audit logs that use the new enum values.
+delete from audit_logs
+where resource_type = 'git_ssh_key' or resource_type = 'api_key';

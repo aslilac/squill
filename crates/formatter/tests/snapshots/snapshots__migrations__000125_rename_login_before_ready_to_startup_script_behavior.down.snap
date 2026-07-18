@@ -1,0 +1,17 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_agents add column login_before_ready boolean not null default true;
+
+update workspace_agents
+set
+	login_before_ready = case
+		when startup_script_behavior = 'non-blocking' then true
+		else false
+	end;
+
+alter table workspace_agents drop column startup_script_behavior;
+drop type startup_script_behavior;
+
+comment on column workspace_agents.login_before_ready is 'If true, the agent will delay logins until it is ready (e.g. executing startup script has ended).';

@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop index if exists idx_chat_messages_owner_spend;
+alter table groups drop column if exists chat_spend_limit_micros;
+alter table users drop column if exists chat_spend_limit_micros;
+drop table if exists chat_usage_limit_config;

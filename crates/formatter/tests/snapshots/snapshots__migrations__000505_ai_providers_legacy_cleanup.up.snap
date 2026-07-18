@@ -1,0 +1,127 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+do $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM chat_providers cp
+        JOIN ai_providers ap ON ap.name = 'agents-' || cp.provider
+        WHERE ap.deleted = FALSE
+            AND ap.id != cp.id
+    ) THEN
+        RAISE EXCEPTION 'cannot finalize chat provider migration because a live agents-* AI provider name already exists';
+    END IF;
+END $$;
+
+insert into ai_providers (id,
+type,
+name,
+display_name,
+enabled,
+base_url,
+created_at,
+updated_at)
+select
+	cp.id,
+	cp.provider::ai_provider_type,
+	'agents-' || cp.provider,
+	NULLIF(cp.display_name, ''),
+	cp.enabled,
+	cp.base_url,
+	cp.created_at,
+	cp.updated_at
+from chat_providers cp
+where not exists (select 1 from ai_providers ap where ap.id = cp.id);
+
+update ai_providers ap
+set
+	type = cp.provider::ai_provider_type,
+	name = 'agents-' || cp.provider,
+	display_name = NULLIF(cp.display_name, ''),
+	enabled = cp.enabled,
+	deleted = false,
+	base_url = cp.base_url,
+	updated_at = GREATEST(cp.updated_at, ap.updated_at)
+from chat_providers cp
+where ap.id = cp.id and (cp.updated_at > ap.updated_at or ap.deleted);
+
+delete from ai_provider_keys apk
+using chat_providers cp
+where
+	cp.id = apk.provider_id
+	and cp.api_key = ''
+	and cp.updated_at > apk.updated_at;
+
+with
+	runtime_provider_keys as (
+		select distinct on (apk.provider_id) apk.id, apk.provider_id
+		from ai_provider_keys apk join chat_providers cp on cp.id = apk.provider_id
+		where cp.api_key != ''
+		order by apk.provider_id asc, apk.created_at asc, apk.id asc
+	) update ai_provider_keys apk
+set
+	api_key = cp.api_key,
+	api_key_key_id = cp.api_key_key_id,
+	updated_at = cp.updated_at
+from runtime_provider_keys rpk join chat_providers cp on cp.id = rpk.provider_id
+where apk.id = rpk.id and cp.updated_at > apk.updated_at;
+
+insert into ai_provider_keys (id,
+provider_id,
+api_key,
+api_key_key_id,
+created_at,
+updated_at)
+select
+	gen_random_uuid(),
+	cp.id,
+	cp.api_key,
+	cp.api_key_key_id,
+	cp.updated_at,
+	cp.updated_at
+from chat_providers cp
+where
+	cp.api_key != ''
+	and not exists (
+		select 1
+		from ai_provider_keys apk
+		where apk.provider_id = cp.id
+	);
+
+insert into user_ai_provider_keys (id,
+user_id,
+ai_provider_id,
+api_key,
+api_key_key_id,
+created_at,
+updated_at)
+select
+	ucpk.id,
+	ucpk.user_id,
+	ucpk.chat_provider_id,
+	ucpk.api_key,
+	ucpk.api_key_key_id,
+	ucpk.created_at,
+	ucpk.updated_at
+from user_chat_provider_keys ucpk
+on conflict
+	(user_id,
+	ai_provider_id) do update set
+		api_key = EXCLUDED.api_key,
+		api_key_key_id = EXCLUDED.api_key_key_id,
+		updated_at = EXCLUDED.updated_at where
+		user_ai_provider_keys.updated_at < EXCLUDED.updated_at;
+
+update chat_model_configs cmc
+set ai_provider_id = cp.id
+from chat_providers cp
+where cmc.provider = cp.provider and cmc.ai_provider_id is null;
+
+alter table chat_model_configs add constraint chat_model_configs_ai_provider_required_when_active check (
+	deleted = true or ai_provider_id is not null
+);
+
+drop table if exists user_chat_provider_keys;
+drop table if exists chat_providers;

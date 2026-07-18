@@ -1,0 +1,83 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table chat_messages add column total_cost_micros bigint;
+
+with
+	message_costs as (
+		select
+			msg.id,
+			ROUND(
+				COALESCE(msg.input_tokens, 0)::numeric
+				* COALESCE(pricing.input_price, 0)
+				+ COALESCE(msg.output_tokens, 0)::numeric
+				* COALESCE(pricing.output_price, 0)
+				+ COALESCE(msg.cache_read_tokens, 0)::numeric
+				* COALESCE(pricing.cache_read_price, 0)
+				+ COALESCE(msg.cache_creation_tokens, 0)::numeric
+				* COALESCE(pricing.cache_write_price, 0)
+			)::bigint as total_cost_micros
+		from
+			chat_messages as msg
+			join chat_model_configs as cfg on cfg.id = msg.model_config_id
+			cross join LATERAL (
+				select
+					COALESCE(
+						(
+							cfg.options -> 'cost' ->> 'input_price_per_million_tokens'
+						)::numeric,
+						(cfg.options ->> 'input_price_per_million_tokens')::numeric
+					) as input_price,
+					COALESCE(
+						(
+							cfg.options -> 'cost' ->> 'output_price_per_million_tokens'
+						)::numeric,
+						(cfg.options ->> 'output_price_per_million_tokens')::numeric
+					) as output_price,
+					COALESCE(
+						(
+							cfg.options -> 'cost' ->> 'cache_read_price_per_million_tokens'
+						)::numeric,
+						(cfg.options ->> 'cache_read_price_per_million_tokens')::numeric
+					) as cache_read_price,
+					COALESCE(
+						(
+							cfg.options -> 'cost' ->> 'cache_write_price_per_million_tokens'
+						)::numeric,
+						(cfg.options ->> 'cache_write_price_per_million_tokens')::numeric
+					) as cache_write_price
+			) as pricing
+		where
+			msg.total_cost_micros is null
+			and (
+				msg.input_tokens is not null
+				or msg.output_tokens is not null
+				or msg.reasoning_tokens is not null
+				or msg.cache_creation_tokens is not null
+				or msg.cache_read_tokens is not null
+			)
+			and (
+				pricing.input_price is not null
+				or pricing.output_price is not null
+				or pricing.cache_read_price is not null
+				or pricing.cache_write_price is not null
+			)
+			and (
+				(msg.input_tokens is not null and pricing.input_price is not null)
+				or (msg.output_tokens is not null and pricing.output_price is not null)
+				or (
+					msg.cache_read_tokens is not null
+					and pricing.cache_read_price is not null
+				)
+				or (
+					msg.cache_creation_tokens is not null
+					and pricing.cache_write_price is not null
+				)
+			)
+	) update chat_messages as msg
+set total_cost_micros = message_costs.total_cost_micros
+from message_costs
+where msg.id = message_costs.id;
+
+create index idx_chat_messages_created_at on chat_messages (created_at);

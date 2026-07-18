@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create unique index if not exists users_email_lower_idx on users using btree(
+	lower(email)
+)
+where (deleted = false);

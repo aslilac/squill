@@ -1,0 +1,39 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type workspace_app_status_state as enum (
+	'working',
+	'complete',
+	'failure'
+);
+
+-- Workspace app statuses allow agents to report statuses per-app in the UI.
+create table workspace_app_statuses (
+	id uuid primary key default gen_random_uuid(),
+	created_at timestamp with time zone not null default CURRENT_TIMESTAMP,
+	-- The agent that the status is for.
+	agent_id uuid not null references workspace_agents (id),
+	-- The slug of the app that the status is for. This will be used
+	-- to reference the app in the UI - with an icon.
+	app_id uuid not null references workspace_apps (id),
+	-- workspace_id is the workspace that the status is for.
+	workspace_id uuid not null references workspaces (id),
+	-- The status determines how the status is displayed in the UI.
+	state workspace_app_status_state not null,
+	-- Whether the status needs user attention.
+	needs_user_attention boolean not null,
+	-- The message is the main text that will be displayed in the UI.
+	message text not null,
+	-- The URI of the resource that the status is for.
+	-- e.g. https://github.com/org/repo/pull/123
+	-- e.g. file:///path/to/file
+	uri text,
+	-- Icon is an external URL to an icon that will be rendered in the UI.
+	icon text
+);
+
+create index idx_workspace_app_statuses_workspace_id_created_at on workspace_app_statuses (
+	workspace_id,
+	created_at desc
+);

@@ -1,0 +1,21 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Remove Custom Notification template
+delete from notification_templates
+where id = '39b1e189-c857-4b0c-877a-511144c18516';
+
+-- Recreate the old enum without 'custom'
+create type old_notification_template_kind as enum ('system');
+
+-- Update notification_templates to use the old enum
+alter table notification_templates alter column kind drop default,
+alter column kind type old_notification_template_kind using (
+	kind::text::old_notification_template_kind
+),
+alter column kind set default 'system'::old_notification_template_kind;
+
+-- Drop the current enum and restore the original name
+drop type notification_template_kind;
+alter type old_notification_template_kind rename to notification_template_kind;

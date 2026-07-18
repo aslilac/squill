@@ -1,0 +1,22 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type aibridge_interception_error_type as enum (
+	'bad_request',
+	'unauthorized',
+	'rate_limited',
+	'overloaded',
+	'server_error',
+	'timeout',
+	'unknown'
+);
+
+-- Records the terminal upstream error observed when an interception failed.
+-- Both columns are NULL for interceptions that completed successfully.
+-- error_message is capped at 1024 characters as a hard schema-level bound.
+alter table aibridge_interceptions add column error_type aibridge_interception_error_type,
+add column error_message varchar (1024);
+
+comment on column aibridge_interceptions.error_type is 'Categorised terminal upstream error for a failed interception; NULL when the interception succeeded.';
+comment on column aibridge_interceptions.error_message is 'Raw terminal upstream error message for a failed interception; NULL when the interception succeeded.';

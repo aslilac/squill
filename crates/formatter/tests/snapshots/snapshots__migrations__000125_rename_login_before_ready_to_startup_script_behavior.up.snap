@@ -1,0 +1,16 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type startup_script_behavior as enum ('blocking', 'non-blocking');
+alter table workspace_agents add column startup_script_behavior startup_script_behavior not null default 'non-blocking';
+
+update workspace_agents
+set
+	startup_script_behavior = (
+		case when login_before_ready then 'non-blocking' else 'blocking' end
+	)::startup_script_behavior;
+
+alter table workspace_agents drop column login_before_ready;
+
+comment on column workspace_agents.startup_script_behavior is 'When startup script behavior is non-blocking, the workspace will be ready and accessible upon agent connection, when it is blocking, workspace will wait for the startup script to complete before becoming ready and accessible.';

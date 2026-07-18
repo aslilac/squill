@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Drop column sharing_level from workspace_apps
+alter table workspace_apps drop column sharing_level;
+
+-- Drop type app_sharing_level
+drop type app_sharing_level;

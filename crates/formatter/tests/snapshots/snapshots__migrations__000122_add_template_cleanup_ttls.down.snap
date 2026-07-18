@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table only templates drop column if exists failure_ttl;
+alter table only templates drop column if exists inactivity_ttl;

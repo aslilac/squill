@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Drop the prebuild schedules table
+drop table template_version_preset_prebuild_schedules;
+
+-- Remove scheduling_timezone column from template_version_presets table
+alter table template_version_presets drop column scheduling_timezone;

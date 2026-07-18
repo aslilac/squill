@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+delete from chat_messages where deleted = true;
+alter table chat_messages drop column deleted;

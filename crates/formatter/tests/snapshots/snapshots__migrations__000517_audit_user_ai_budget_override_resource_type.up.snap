@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Audit log resource type for user AI budget overrides.
+alter type resource_type add value if not exists 'user_ai_budget_override';

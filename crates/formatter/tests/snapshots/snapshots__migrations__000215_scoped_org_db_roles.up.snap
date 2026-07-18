@@ -1,0 +1,11 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- The default was 'organization-member', but we imply that in the
+-- 'GetAuthorizationUserRoles' query.
+alter table only organization_members alter column roles set default '{}';
+
+-- No one should be using organization roles yet. If they are, the names in the
+-- database are now incorrect. Just remove them all.
+update organization_members set roles = '{}';

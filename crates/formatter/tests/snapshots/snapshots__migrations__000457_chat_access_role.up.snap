@@ -1,0 +1,10 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Grant 'agents-access' to every user who has ever created a chat.
+update users
+set rbac_roles = array_append(rbac_roles, 'agents-access')
+where
+	id in (select distinct owner_id from chats)
+	and not ('agents-access' = any(rbac_roles));

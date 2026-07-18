@@ -41,31 +41,27 @@ where
 	end;
 
 -- name: DeleteCustomRole :exec
-DELETE FROM
-	custom_roles
-WHERE
+delete from custom_roles
+where
 	name = lower(@name)
-	AND organization_id = @organization_id
+	and organization_id = @organization_id
 	-- Prevents accidental deletion of system roles even if the API
 	-- layer check is bypassed due to a bug.
-	AND is_system = false
-;
+	and is_system = false;
 
 -- name: InsertCustomRole :one
-INSERT INTO
-	custom_roles (
-	name,
-	display_name,
-	organization_id,
-	site_permissions,
-	org_permissions,
-	user_permissions,
-	member_permissions,
-	is_system,
-	created_at,
-	updated_at
-)
-VALUES (
+insert into custom_roles (name,
+display_name,
+organization_id,
+site_permissions,
+org_permissions,
+user_permissions,
+member_permissions,
+is_system,
+created_at,
+updated_at)
+values
+	(
 	-- Always force lowercase names
 	lower(@name),
 	@display_name,
@@ -76,21 +72,17 @@ VALUES (
 	@member_permissions,
 	@is_system,
 	now(),
-	now()
-)
-RETURNING *;
+	now())
+returning *;
 
 -- name: UpdateCustomRole :one
-UPDATE
-	custom_roles
-SET
+update custom_roles
+set
 	display_name = @display_name,
 	site_permissions = @site_permissions,
 	org_permissions = @org_permissions,
 	user_permissions = @user_permissions,
 	member_permissions = @member_permissions,
 	updated_at = now()
-WHERE
-	name = lower(@name)
-	AND organization_id = @organization_id
-RETURNING *;
+where name = lower(@name) and organization_id = @organization_id
+returning *;

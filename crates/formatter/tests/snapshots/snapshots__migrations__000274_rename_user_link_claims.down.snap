@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table user_links rename column claims to debug_context;
+
+comment on column user_links.debug_context is 'Debug information includes information like id_token and userinfo claims.';

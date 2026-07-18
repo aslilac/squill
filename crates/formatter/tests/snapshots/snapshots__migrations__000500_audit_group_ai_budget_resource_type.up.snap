@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Audit log resource type for group AI budgets.
+alter type resource_type add value if not exists 'group_ai_budget';

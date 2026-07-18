@@ -1,0 +1,32 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table template_version_presets add column desired_instances int null,
+add column invalidate_after_secs int null default 0;
+
+-- Ensure that the idx_unique_preset_name index creation won't fail.
+-- This is necessary because presets were released before the index was introduced,
+-- so existing data might violate the uniqueness constraint.
+with
+	ranked as (
+		select
+			id,
+			name,
+			template_version_id,
+			ROW_NUMBER() over (
+				partition by name,
+				template_version_id
+				order by id
+			) as row_num
+		from template_version_presets
+	) update template_version_presets
+set name = ranked.name || '_auto_' || row_num
+from ranked
+where template_version_presets.id = ranked.id and row_num > 1;
+
+-- We should not be able to have presets with the same name for a particular template version.
+create unique index idx_unique_preset_name on template_version_presets (
+	name,
+	template_version_id
+);

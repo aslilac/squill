@@ -212,27 +212,26 @@ limit sqlc.narg('limit')::int;
 -- and have not connected to coderd since a week.
 -- A provisioner daemon with "zeroed" last_seen_at column indicates possible
 -- connectivity issues (no provisioner daemon activity since registration).
-DELETE FROM provisioner_daemons WHERE (
-	(created_at < (NOW() - INTERVAL '7 days') AND last_seen_at IS NULL) OR
-	(last_seen_at IS NOT NULL AND last_seen_at < (NOW() - INTERVAL '7 days'))
-);
+delete from provisioner_daemons
+where
+	(
+		(created_at < (NOW() - interval '7 days') and last_seen_at is null)
+		or (last_seen_at is not null and last_seen_at < (NOW() - interval '7 days'))
+	);
 
 -- name: UpsertProvisionerDaemon :one
-INSERT INTO
-	provisioner_daemons (
-		id,
-		created_at,
-		"name",
-		provisioners,
-		tags,
-		last_seen_at,
-		"version",
-		organization_id,
-		api_version,
-		key_id
-	)
-VALUES (
-	gen_random_uuid(),
+insert into provisioner_daemons (id,
+created_at,
+name,
+provisioners,
+tags,
+last_seen_at,
+version,
+organization_id,
+api_version,
+key_id)
+values
+	(gen_random_uuid(),
 	@created_at,
 	@name,
 	@provisioners,
@@ -241,22 +240,21 @@ VALUES (
 	@version,
 	@organization_id,
 	@api_version,
-	@key_id
-) ON CONFLICT("organization_id", "name", LOWER(COALESCE(tags ->> 'owner'::text, ''::text))) DO UPDATE SET
-	provisioners = @provisioners,
-	tags = @tags,
-	last_seen_at = @last_seen_at,
-	"version" = @version,
-	api_version = @api_version,
-	organization_id = @organization_id,
-	key_id = @key_id
-RETURNING *;
+	@key_id)
+on conflict
+	(organization_id,
+	name,
+	LOWER(COALESCE(tags ->> 'owner'::text, ''::text))) do update set
+		provisioners = @provisioners,
+		tags = @tags,
+		last_seen_at = @last_seen_at,
+		version = @version,
+		api_version = @api_version,
+		organization_id = @organization_id,
+		key_id = @key_id
+returning *;
 
 -- name: UpdateProvisionerDaemonLastSeenAt :exec
-UPDATE provisioner_daemons
-SET
-	last_seen_at = @last_seen_at
-WHERE
-	id = @id
-AND
-	last_seen_at <= @last_seen_at;
+update provisioner_daemons
+set last_seen_at = @last_seen_at
+where id = @id and last_seen_at <= @last_seen_at;

@@ -1,0 +1,15 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop index if exists idx_connection_logs_workspace_id;
+drop index if exists idx_connection_logs_workspace_owner_id;
+drop index if exists idx_connection_logs_organization_id;
+drop index if exists idx_connection_logs_connect_time_desc;
+drop index if exists idx_connection_logs_connection_id_workspace_id_agent_name;
+
+drop table if exists connection_logs;
+
+drop type if exists connection_type;
+
+drop type if exists connection_status;

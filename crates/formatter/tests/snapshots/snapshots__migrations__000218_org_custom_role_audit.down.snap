@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop index idx_custom_roles_id;
+alter table custom_roles drop column id;

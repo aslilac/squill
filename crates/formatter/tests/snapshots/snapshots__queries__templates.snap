@@ -114,51 +114,35 @@ limit 1;
 select * from template_with_names as templates order by (name, id) asc;
 
 -- name: InsertTemplate :exec
-INSERT INTO
-	templates (
-		id,
-		created_at,
-		updated_at,
-		organization_id,
-		"name",
-		provisioner,
-		active_version_id,
-		description,
-		created_by,
-		icon,
-		user_acl,
-		group_acl,
-		display_name,
-		allow_user_cancel_workspace_jobs,
-		max_port_sharing_level,
-		use_classic_parameter_flow,
-		cors_behavior
-	)
-VALUES
+insert into templates (id,
+created_at,
+updated_at,
+organization_id,
+name,
+provisioner,
+active_version_id,
+description,
+created_by,
+icon,
+user_acl,
+group_acl,
+display_name,
+allow_user_cancel_workspace_jobs,
+max_port_sharing_level,
+use_classic_parameter_flow,
+cors_behavior)
+values
 	($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17);
 
 -- name: UpdateTemplateActiveVersionByID :exec
-UPDATE
-	templates
-SET
-	active_version_id = $2,
-	updated_at = $3
-WHERE
-	id = $1;
+update templates set active_version_id = $2, updated_at = $3 where id = $1;
 
 -- name: UpdateTemplateDeletedByID :exec
-UPDATE
-	templates
-SET
-	deleted = $2,
-	updated_at = $3
-WHERE
-	id = $1;
+update templates set deleted = $2, updated_at = $3 where id = $1;
 
 -- name: UpdateTemplateMetaByID :exec
-UPDATE
-	templates
-SET
+update templates
+set
 	updated_at = $2,
 	description = $3,
 	name = $4,
@@ -170,14 +154,11 @@ SET
 	use_classic_parameter_flow = $10,
 	cors_behavior = $11,
 	disable_module_cache = $12
-WHERE
-	id = $1
-;
+where id = $1;
 
 -- name: UpdateTemplateScheduleByID :exec
-UPDATE
-	templates
-SET
+update templates
+set
 	updated_at = $2,
 	allow_user_autostart = $3,
 	allow_user_autostop = $4,
@@ -190,19 +171,10 @@ SET
 	time_til_dormant = $11,
 	time_til_dormant_autodelete = $12,
 	time_til_autostop_notify = $13
-WHERE
-	id = $1
-;
+where id = $1;
 
 -- name: UpdateTemplateACLByID :exec
-UPDATE
-	templates
-SET
-	group_acl = $1,
-	user_acl = $2
-WHERE
-	id = $3
-;
+update templates set group_acl = $1, user_acl = $2 where id = $3;
 
 -- name: GetTemplateAverageBuildTime :one
 with
@@ -274,11 +246,4 @@ select
 from build_times;
 
 -- name: UpdateTemplateAccessControlByID :exec
-UPDATE
-	templates
-SET
-	require_active_version = $2,
-	deprecated = $3
-WHERE
-	id = $1
-;
+update templates set require_active_version = $2, deprecated = $3 where id = $1;

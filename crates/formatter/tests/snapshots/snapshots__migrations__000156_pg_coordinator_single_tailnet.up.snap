@@ -1,0 +1,83 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table tailnet_client_subscriptions (
+	client_id uuid not null,
+	coordinator_id uuid not null,
+	-- this isn't a foreign key since it's more of a list of agents the client
+	-- *wants* to connect to, and they don't necessarily have to currently
+	-- exist in the db.
+	agent_id uuid not null,
+	updated_at timestamp with time zone not null,
+	primary key (client_id, coordinator_id, agent_id),
+	foreign key (coordinator_id) references tailnet_coordinators (
+		id
+	) on delete cascade
+	-- we don't keep a foreign key to the tailnet_clients table since there's
+	-- not a great way to guarantee that a subscription is always added after
+	-- the client is inserted. clients are only created after the client sends
+	-- its first node update, which can take an undetermined amount of time.
+);
+
+create function tailnet_notify_client_subscription_change(
+) returns trigger language plpgsql as $$
+BEGIN
+	IF (NEW IS NOT NULL) THEN
+		PERFORM pg_notify('tailnet_client_update', NEW.client_id || ',' || NEW.agent_id);
+		RETURN NULL;
+	ELSIF (OLD IS NOT NULL) THEN
+		PERFORM pg_notify('tailnet_client_update', OLD.client_id || ',' || OLD.agent_id);
+		RETURN NULL;
+	END IF;
+END;
+$$;
+
+create trigger tailnet_notify_client_subscription_change after insert or update or delete on tailnet_client_subscriptions for each row execute procedure tailnet_notify_client_subscription_change(
+);
+
+create or replace function tailnet_notify_client_change(
+) returns trigger language plpgsql as $$
+DECLARE
+	var_client_id uuid;
+	var_coordinator_id uuid;
+	var_agent_ids uuid[];
+	var_agent_id uuid;
+BEGIN
+	IF (NEW.id IS NOT NULL) THEN
+		var_client_id = NEW.id;
+		var_coordinator_id = NEW.coordinator_id;
+	ELSIF (OLD.id IS NOT NULL) THEN
+		var_client_id = OLD.id;
+		var_coordinator_id = OLD.coordinator_id;
+	END IF;
+
+	-- Read all agents the client is subscribed to, so we can notify them.
+	SELECT
+		array_agg(agent_id)
+	INTO
+		var_agent_ids
+	FROM
+		tailnet_client_subscriptions subs
+	WHERE
+		subs.client_id = NEW.id AND
+		subs.coordinator_id = NEW.coordinator_id;
+
+	-- No agents to notify
+	if (var_agent_ids IS NULL) THEN
+		return NULL;
+	END IF;
+
+	-- pg_notify is limited to 8k bytes, which is approximately 221 UUIDs.
+	-- Instead of sending all agent ids in a single update, send one for each
+	-- agent id to prevent overflow.
+	FOREACH var_agent_id IN ARRAY var_agent_ids
+	LOOP
+		PERFORM pg_notify('tailnet_client_update', var_client_id || ',' || var_agent_id);
+	END LOOP;
+
+	return NULL;
+END;
+$$;
+
+alter table tailnet_clients drop column agent_id;

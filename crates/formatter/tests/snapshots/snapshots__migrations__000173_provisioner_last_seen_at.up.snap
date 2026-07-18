@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table provisioner_daemons add column last_seen_at timestamp with time zone null,
+add column version text not null default ''::text;

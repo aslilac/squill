@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table template_version_parameters drop column form_type;
+drop type parameter_form_type;

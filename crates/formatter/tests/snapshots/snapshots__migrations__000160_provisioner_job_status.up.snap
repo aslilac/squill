@@ -1,0 +1,46 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type provisioner_job_status as enum (
+	'pending',
+	'running',
+	'succeeded',
+	'canceling',
+	'canceled',
+	'failed',
+	'unknown'
+);
+comment on type provisioner_job_status is 'Computed status of a provisioner job. Jobs could be stuck in a hung state, these states do not guarantee any transition to another state.';
+
+alter table provisioner_jobs add column job_status provisioner_job_status not null generated always as (
+	case
+		-- Completed means it is not in an "-ing" state
+		when completed_at is not null
+			then case
+				-- The order of these checks are important.
+				-- Check the error first, then cancelled, then completed.
+				when error != ''
+					then 'failed'::provisioner_job_status
+				when canceled_at is not null then 'canceled'::provisioner_job_status
+				else 'succeeded'::provisioner_job_status
+			end
+		-- Not completed means it is in some "-ing" state
+		else case
+			-- This should never happen because all errors set
+			-- should also set a completed_at timestamp.
+			-- But if there is an error, we should always return
+			-- a failed state.
+			when error != ''
+				then 'failed'::provisioner_job_status
+			when canceled_at is not null then 'canceling'::provisioner_job_status
+			-- Not done and not started means it is pending
+			when started_at is null
+				then 'pending'::provisioner_job_status
+			else 'running'::provisioner_job_status
+		end
+	end
+	-- Stored so we do not have to recompute it every time.
+) stored;
+
+comment on column provisioner_jobs.job_status is 'Computed column to track the status of the job.';

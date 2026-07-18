@@ -1,0 +1,30 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_agent_logs set logged;
+
+-- Revert the workspace_agents table to its former state
+alter table workspace_agents add column startup_script text;
+alter table workspace_agents add column startup_script_behavior text;
+alter table workspace_agents add column shutdown_script_timeout_seconds integer;
+alter table workspace_agents add column shutdown_script text;
+alter table workspace_agents add column startup_script_timeout_seconds integer;
+
+-- Reinstate the dropped type
+create type workspace_agent_log_source as enum (
+	'startup_script',
+	'shutdown_script',
+	'kubernetes_logs',
+	'envbox',
+	'envbuilder',
+	'external'
+);
+
+-- Add old source column back with enum type and drop log_source_id
+alter table workspace_agent_logs add column source workspace_agent_log_source;
+alter table workspace_agent_logs drop column log_source_id;
+
+-- Drop the newly created tables
+drop table workspace_agent_scripts;
+drop table workspace_agent_log_sources;

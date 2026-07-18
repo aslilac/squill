@@ -1,0 +1,5 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type name_organization_pair as (name text, organization_id uuid);

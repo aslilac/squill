@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspaces drop constraint if exists group_acl_is_object,
+drop constraint if exists user_acl_is_object;

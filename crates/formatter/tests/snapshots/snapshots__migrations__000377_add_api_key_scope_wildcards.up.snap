@@ -1,0 +1,46 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Add wildcard api_key_scope entries so every RBAC resource has a matching resource:* value.
+-- Generated via: CGO_ENABLED=0 go run ./scripts/generate_api_key_scope_enum
+alter type api_key_scope add value if not exists 'aibridge_interception:*';
+alter type api_key_scope add value if not exists 'api_key:*';
+alter type api_key_scope add value if not exists 'assign_org_role:*';
+alter type api_key_scope add value if not exists 'assign_role:*';
+alter type api_key_scope add value if not exists 'audit_log:*';
+alter type api_key_scope add value if not exists 'connection_log:*';
+alter type api_key_scope add value if not exists 'crypto_key:*';
+alter type api_key_scope add value if not exists 'debug_info:*';
+alter type api_key_scope add value if not exists 'deployment_config:*';
+alter type api_key_scope add value if not exists 'deployment_stats:*';
+alter type api_key_scope add value if not exists 'file:*';
+alter type api_key_scope add value if not exists 'group:*';
+alter type api_key_scope add value if not exists 'group_member:*';
+alter type api_key_scope add value if not exists 'idpsync_settings:*';
+alter type api_key_scope add value if not exists 'inbox_notification:*';
+alter type api_key_scope add value if not exists 'license:*';
+alter type api_key_scope add value if not exists 'notification_message:*';
+alter type api_key_scope add value if not exists 'notification_preference:*';
+alter type api_key_scope add value if not exists 'notification_template:*';
+alter type api_key_scope add value if not exists 'oauth2_app:*';
+alter type api_key_scope add value if not exists 'oauth2_app_code_token:*';
+alter type api_key_scope add value if not exists 'oauth2_app_secret:*';
+alter type api_key_scope add value if not exists 'organization:*';
+alter type api_key_scope add value if not exists 'organization_member:*';
+alter type api_key_scope add value if not exists 'prebuilt_workspace:*';
+alter type api_key_scope add value if not exists 'provisioner_daemon:*';
+alter type api_key_scope add value if not exists 'provisioner_jobs:*';
+alter type api_key_scope add value if not exists 'replicas:*';
+alter type api_key_scope add value if not exists 'system:*';
+alter type api_key_scope add value if not exists 'tailnet_coordinator:*';
+alter type api_key_scope add value if not exists 'template:*';
+alter type api_key_scope add value if not exists 'usage_event:*';
+alter type api_key_scope add value if not exists 'user:*';
+alter type api_key_scope add value if not exists 'user_secret:*';
+alter type api_key_scope add value if not exists 'webpush_subscription:*';
+alter type api_key_scope add value if not exists 'workspace:*';
+alter type api_key_scope add value if not exists 'workspace_agent_devcontainers:*';
+alter type api_key_scope add value if not exists 'workspace_agent_resource_monitor:*';
+alter type api_key_scope add value if not exists 'workspace_dormant:*';
+alter type api_key_scope add value if not exists 'workspace_proxy:*';

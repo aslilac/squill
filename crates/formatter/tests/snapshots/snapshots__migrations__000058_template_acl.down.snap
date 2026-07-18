@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table group_members;
+drop table groups;
+alter table templates drop column group_acl;
+alter table templates drop column user_acl;

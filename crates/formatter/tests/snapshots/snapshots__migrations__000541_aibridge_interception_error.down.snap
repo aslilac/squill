@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table aibridge_interceptions drop column error_type,
+drop column error_message;
+
+drop type aibridge_interception_error_type;

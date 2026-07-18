@@ -270,86 +270,101 @@ from
 	) as limited_count;
 
 -- name: DeleteOldConnectionLogs :execrows
-WITH old_logs AS (
-	SELECT id
-	FROM connection_logs
-	WHERE connect_time < @before_time::timestamp with time zone
-	ORDER BY connect_time ASC
-	LIMIT @limit_count
-)
-DELETE FROM connection_logs
-USING old_logs
-WHERE connection_logs.id = old_logs.id;
+with
+	old_logs as (
+		select id
+		from connection_logs
+		where connect_time < @before_time::timestamp with time zone
+		order by connect_time asc
+		limit @limit_count
+	) delete from connection_logs
+using old_logs
+where connection_logs.id = old_logs.id;
 
 -- name: BatchUpsertConnectionLogs :exec
-INSERT INTO connection_logs (
-    id, connect_time, organization_id, workspace_owner_id, workspace_id,
-    workspace_name, agent_name, type, code, ip, user_agent, user_id,
-    slug_or_port, connection_id, disconnect_reason, disconnect_time
-)
-SELECT
-    u.id,
-    u.connect_time,
-    u.organization_id,
-    u.workspace_owner_id,
-    u.workspace_id,
-    u.workspace_name,
-    u.agent_name,
-    u.type,
-    -- Use the validity flag to distinguish "no code" (NULL) from a
-    -- legitimate zero exit code.
-    CASE WHEN u.code_valid THEN u.code ELSE NULL END,
-    u.ip,
-    NULLIF(u.user_agent, ''),
-    NULLIF(u.user_id, '00000000-0000-0000-0000-000000000000'::uuid),
-    NULLIF(u.slug_or_port, ''),
-    NULLIF(u.connection_id, '00000000-0000-0000-0000-000000000000'::uuid),
-    NULLIF(u.disconnect_reason, ''),
-    NULLIF(u.disconnect_time, '0001-01-01 00:00:00Z'::timestamptz)
-FROM (
-    SELECT
-        unnest(sqlc.arg('id')::uuid[]) AS id,
-        unnest(sqlc.arg('connect_time')::timestamptz[]) AS connect_time,
-        unnest(sqlc.arg('organization_id')::uuid[]) AS organization_id,
-        unnest(sqlc.arg('workspace_owner_id')::uuid[]) AS workspace_owner_id,
-        unnest(sqlc.arg('workspace_id')::uuid[]) AS workspace_id,
-        unnest(sqlc.arg('workspace_name')::text[]) AS workspace_name,
-        unnest(sqlc.arg('agent_name')::text[]) AS agent_name,
-        unnest(sqlc.arg('type')::connection_type[]) AS type,
-        unnest(sqlc.arg('code')::int4[]) AS code,
-        unnest(sqlc.arg('code_valid')::bool[]) AS code_valid,
-        unnest(sqlc.arg('ip')::inet[]) AS ip,
-        unnest(sqlc.arg('user_agent')::text[]) AS user_agent,
-        unnest(sqlc.arg('user_id')::uuid[]) AS user_id,
-        unnest(sqlc.arg('slug_or_port')::text[]) AS slug_or_port,
-        unnest(sqlc.arg('connection_id')::uuid[]) AS connection_id,
-        unnest(sqlc.arg('disconnect_reason')::text[]) AS disconnect_reason,
-        unnest(sqlc.arg('disconnect_time')::timestamptz[]) AS disconnect_time
-) AS u
-ON CONFLICT (connection_id, workspace_id, agent_name)
-DO UPDATE SET
-    -- Pick the earliest real connect_time. The zero sentinel
-    -- ('0001-01-01') means the batch didn't know the connect_time
-    -- (e.g. a pure disconnect event), so we keep the existing value.
-    connect_time = CASE
-        WHEN EXCLUDED.connect_time = '0001-01-01 00:00:00Z'::timestamptz
-        THEN connection_logs.connect_time
-        WHEN connection_logs.connect_time = '0001-01-01 00:00:00Z'::timestamptz
-        THEN EXCLUDED.connect_time
-        ELSE LEAST(connection_logs.connect_time, EXCLUDED.connect_time)
-    END,
-    disconnect_time = CASE
-        WHEN connection_logs.disconnect_time IS NULL
-        THEN EXCLUDED.disconnect_time
-        ELSE connection_logs.disconnect_time
-    END,
-    disconnect_reason = CASE
-        WHEN connection_logs.disconnect_reason IS NULL
-        THEN EXCLUDED.disconnect_reason
-        ELSE connection_logs.disconnect_reason
-    END,
-    code = CASE
-        WHEN connection_logs.code IS NULL
-        THEN EXCLUDED.code
-        ELSE connection_logs.code
-    END;
+insert into connection_logs (id,
+connect_time,
+organization_id,
+workspace_owner_id,
+workspace_id,
+workspace_name,
+agent_name,
+type,
+code,
+ip,
+user_agent,
+user_id,
+slug_or_port,
+connection_id,
+disconnect_reason,
+disconnect_time)
+select
+	u.id,
+	u.connect_time,
+	u.organization_id,
+	u.workspace_owner_id,
+	u.workspace_id,
+	u.workspace_name,
+	u.agent_name,
+	u.type,
+	-- Use the validity flag to distinguish "no code" (NULL) from a
+	-- legitimate zero exit code.
+	case
+		when u.code_valid then u.code
+		else null
+	end,
+	u.ip,
+	NULLIF(u.user_agent, ''),
+	NULLIF(u.user_id, '00000000-0000-0000-0000-000000000000'::uuid),
+	NULLIF(u.slug_or_port, ''),
+	NULLIF(u.connection_id, '00000000-0000-0000-0000-000000000000'::uuid),
+	NULLIF(u.disconnect_reason, ''),
+	NULLIF(u.disconnect_time, '0001-01-01 00:00:00Z'::timestamptz)
+from
+	(
+		select
+			unnest(sqlc.arg('id')::uuid[]) as id,
+			unnest(sqlc.arg('connect_time')::timestamptz[]) as connect_time,
+			unnest(sqlc.arg('organization_id')::uuid[]) as organization_id,
+			unnest(sqlc.arg('workspace_owner_id')::uuid[]) as workspace_owner_id,
+			unnest(sqlc.arg('workspace_id')::uuid[]) as workspace_id,
+			unnest(sqlc.arg('workspace_name')::text[]) as workspace_name,
+			unnest(sqlc.arg('agent_name')::text[]) as agent_name,
+			unnest(sqlc.arg('type')::connection_type[]) as type,
+			unnest(sqlc.arg('code')::int4[]) as code,
+			unnest(sqlc.arg('code_valid')::bool[]) as code_valid,
+			unnest(sqlc.arg('ip')::inet[]) as ip,
+			unnest(sqlc.arg('user_agent')::text[]) as user_agent,
+			unnest(sqlc.arg('user_id')::uuid[]) as user_id,
+			unnest(sqlc.arg('slug_or_port')::text[]) as slug_or_port,
+			unnest(sqlc.arg('connection_id')::uuid[]) as connection_id,
+			unnest(sqlc.arg('disconnect_reason')::text[]) as disconnect_reason,
+			unnest(sqlc.arg('disconnect_time')::timestamptz[]) as disconnect_time
+	) as u
+on conflict
+	(connection_id,
+	workspace_id,
+	agent_name) do update set
+		-- Pick the earliest real connect_time. The zero sentinel
+		-- ('0001-01-01') means the batch didn't know the connect_time
+		-- (e.g. a pure disconnect event), so we keep the existing value.
+		connect_time = case
+			when EXCLUDED.connect_time = '0001-01-01 00:00:00Z'::timestamptz
+				then connection_logs.connect_time
+			when connection_logs.connect_time = '0001-01-01 00:00:00Z'::timestamptz
+				then EXCLUDED.connect_time
+			else LEAST(connection_logs.connect_time, EXCLUDED.connect_time)
+		end,
+		disconnect_time = case
+			when connection_logs.disconnect_time is null then EXCLUDED.disconnect_time
+			else connection_logs.disconnect_time
+		end,
+		disconnect_reason = case
+			when connection_logs.disconnect_reason is null
+				then EXCLUDED.disconnect_reason
+			else connection_logs.disconnect_reason
+		end,
+		code = case
+			when connection_logs.code is null then EXCLUDED.code
+			else connection_logs.code
+		end;

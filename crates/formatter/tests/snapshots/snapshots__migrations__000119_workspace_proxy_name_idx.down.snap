@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop index if exists workspace_proxies_lower_name_idx;
+
+-- Enforces no active proxies have the same name.
+create unique index on workspace_proxies (name) where deleted = false;

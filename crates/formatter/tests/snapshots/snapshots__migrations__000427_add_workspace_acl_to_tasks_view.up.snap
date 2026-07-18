@@ -1,0 +1,156 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Fix task status logic: pending provisioner job should give pending task status, not initializing.
+-- A task is pending when the provisioner hasn't picked up the job yet.
+-- A task is initializing when the provisioner is actively running the job.
+drop view if exists tasks_with_status;
+
+create view tasks_with_status as
+select
+	tasks.*,
+	coalesce(workspaces.group_acl, '{}'::jsonb) as workspace_group_acl,
+	coalesce(workspaces.user_acl, '{}'::jsonb) as workspace_user_acl,
+	-- Combine component statuses with precedence: build -> agent -> app.
+	case
+		when tasks.workspace_id is null then 'pending'::task_status
+		when build_status.status != 'active' then build_status.status::task_status
+		when agent_status.status != 'active' then agent_status.status::task_status
+		else app_status.status::task_status
+	end as status,
+	-- Attach debug information for troubleshooting status.
+	jsonb_build_object(
+		'build',
+		jsonb_build_object(
+			'transition',
+			latest_build_raw.transition,
+			'job_status',
+			latest_build_raw.job_status,
+			'computed',
+			build_status.status
+		),
+		'agent',
+		jsonb_build_object(
+			'lifecycle_state',
+			agent_raw.lifecycle_state,
+			'computed',
+			agent_status.status
+		),
+		'app',
+		jsonb_build_object('health', app_raw.health, 'computed', app_status.status)
+	) as status_debug,
+	task_app.*,
+	agent_raw.lifecycle_state as workspace_agent_lifecycle_state,
+	app_raw.health as workspace_app_health,
+	task_owner.*
+from
+	tasks
+	left join workspaces on workspaces.id = tasks.workspace_id
+	cross join LATERAL (
+		select
+			vu.username as owner_username,
+			vu.name as owner_name,
+			vu.avatar_url as owner_avatar_url
+		from visible_users vu
+		where vu.id = tasks.owner_id
+	) task_owner
+	left join LATERAL (
+		select
+			task_app.workspace_build_number,
+			task_app.workspace_agent_id,
+			task_app.workspace_app_id
+		from task_workspace_apps task_app
+		where task_id = tasks.id
+		order by task_app.workspace_build_number desc
+		limit 1
+	) task_app on true
+
+	-- Join the raw data for computing task status.
+	left join LATERAL (
+		select
+			workspace_build.transition,
+			provisioner_job.job_status,
+			workspace_build.job_id
+		from
+			workspace_builds workspace_build
+			join provisioner_jobs provisioner_job on provisioner_job.id
+			= workspace_build.job_id
+		where
+			workspace_build.workspace_id = tasks.workspace_id
+			and workspace_build.build_number = task_app.workspace_build_number
+	) latest_build_raw on true
+	left join LATERAL (
+		select workspace_agent.lifecycle_state
+		from workspace_agents workspace_agent
+		where workspace_agent.id = task_app.workspace_agent_id
+	) agent_raw on true
+	left join LATERAL (
+		select workspace_app.health
+		from workspace_apps workspace_app
+		where workspace_app.id = task_app.workspace_app_id
+	) app_raw on true
+
+	-- Compute the status for each component.
+	cross join LATERAL (
+		select
+			case
+				when latest_build_raw.job_status is null then 'pending'::task_status
+				when latest_build_raw.job_status in ('failed', 'canceling', 'canceled')
+					then 'error'::task_status
+				when latest_build_raw.transition in ('stop', 'delete')
+				and latest_build_raw.job_status = 'succeeded'
+					then 'paused'::task_status
+				-- Job is pending (not picked up by provisioner yet).
+				when latest_build_raw.transition = 'start'
+				and latest_build_raw.job_status = 'pending'
+					then 'pending'::task_status
+				-- Job is running or done, defer to agent/app status.
+				when latest_build_raw.transition = 'start'
+				and latest_build_raw.job_status in ('running', 'succeeded')
+					then 'active'::task_status
+				else 'unknown'::task_status
+			end as status
+	) build_status
+	cross join LATERAL (
+		select
+			case
+				-- No agent or connecting.
+				when agent_raw.lifecycle_state is null
+				or agent_raw.lifecycle_state in ('created', 'starting')
+					then 'initializing'::task_status
+				-- Agent is running, defer to app status.
+				-- NOTE(mafredri): The start_error/start_timeout states means connected, but some startup script failed.
+				-- This may or may not affect the task status but this has to be caught by app health check.
+				when agent_raw.lifecycle_state in (
+					'ready',
+					'start_timeout',
+					'start_error'
+				)
+					then 'active'::task_status
+				-- If the agent is shutting down or turned off, this is an unknown state because we would expect a stop
+				-- build to be running.
+				-- This is essentially equal to: `IN ('shutting_down', 'shutdown_timeout', 'shutdown_error', 'off')`,
+				-- but we cannot use them because the values were added in a migration.
+				when agent_raw.lifecycle_state not in (
+					'created',
+					'starting',
+					'ready',
+					'start_timeout',
+					'start_error'
+				)
+					then 'unknown'::task_status
+				else 'unknown'::task_status
+			end as status
+	) agent_status
+	cross join LATERAL (
+		select
+			case
+				when app_raw.health = 'initializing' then 'initializing'::task_status
+				when app_raw.health = 'unhealthy' then 'error'::task_status
+				when app_raw.health in ('healthy', 'disabled')
+					then 'active'::task_status
+				else 'unknown'::task_status
+			end as status
+	) app_status
+where tasks.deleted_at is null;

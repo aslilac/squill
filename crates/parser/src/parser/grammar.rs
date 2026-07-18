@@ -23,6 +23,9 @@ const SELECT_ITEM_STOP: &[&str] = &[
     "except",
     "into",
     "returning",
+    // INSERT ... SELECT tails.
+    "on",
+    "do",
 ];
 
 /// Keywords that stop a bare table alias in FROM position.
@@ -70,12 +73,17 @@ pub(crate) fn query_body(p: &mut Parser<'_>) -> PResult {
     if p.at_kw("with") {
         with_clause(p)?;
     }
+    query_tail(p)
+}
+
+/// A query body after any WITH clause has been consumed.
+pub(crate) fn query_tail(p: &mut Parser<'_>) -> PResult {
     query_expr(p, 0)?;
     trailing_clauses(p)?;
     Ok(())
 }
 
-fn with_clause(p: &mut Parser<'_>) -> PResult {
+pub(crate) fn with_clause(p: &mut Parser<'_>) -> PResult {
     p.start(SyntaxKind::WithClause);
     p.expect_kw("with")?;
     p.eat_kw("recursive");
@@ -103,7 +111,12 @@ fn cte(p: &mut Parser<'_>) -> PResult {
         p.eat_kw("materialized");
     }
     p.expect(SyntaxKind::LParen, "`(`")?;
-    query_body(p)?;
+    if p.at_any_kw(&["insert", "update", "delete"]) {
+        // Data-modifying CTE body.
+        super::dml::dml_in_parens(p)?;
+    } else {
+        query_body(p)?;
+    }
     p.expect(SyntaxKind::RParen, "`)`")?;
     if p.at_kw("search") {
         search_clause(p)?;
@@ -220,10 +233,7 @@ fn select_core(p: &mut Parser<'_>) -> PResult {
         from_clause(p)?;
     }
     if p.at_kw("where") {
-        p.start(SyntaxKind::WhereClause);
-        p.bump();
-        expr(p, 0)?;
-        p.finish();
+        where_clause(p)?;
     }
     if p.at_kw("group") {
         group_by_clause(p)?;
@@ -241,7 +251,7 @@ fn select_core(p: &mut Parser<'_>) -> PResult {
     Ok(())
 }
 
-fn select_list(p: &mut Parser<'_>) -> PResult {
+pub(crate) fn select_list(p: &mut Parser<'_>) -> PResult {
     p.start(SyntaxKind::SelectList);
     loop {
         select_item(p)?;
@@ -267,12 +277,20 @@ fn select_item(p: &mut Parser<'_>) -> PResult {
     Ok(())
 }
 
+pub(crate) fn where_clause(p: &mut Parser<'_>) -> PResult {
+    p.start(SyntaxKind::WhereClause);
+    p.expect_kw("where")?;
+    expr(p, 0)?;
+    p.finish();
+    Ok(())
+}
+
 /// A bare (no `AS`) alias: an identifier that is not a clause keyword.
-fn at_bare_alias(p: &Parser<'_>, stop: &[&str]) -> bool {
+pub(crate) fn at_bare_alias(p: &Parser<'_>, stop: &[&str]) -> bool {
     (p.at(SyntaxKind::Ident) || p.at(SyntaxKind::QuotedIdent)) && !p.at_any_kw(stop)
 }
 
-fn alias_name(p: &mut Parser<'_>) -> PResult {
+pub(crate) fn alias_name(p: &mut Parser<'_>) -> PResult {
     if p.at(SyntaxKind::Ident) || p.at(SyntaxKind::QuotedIdent) {
         p.bump();
         Ok(())
@@ -281,7 +299,7 @@ fn alias_name(p: &mut Parser<'_>) -> PResult {
     }
 }
 
-fn from_clause(p: &mut Parser<'_>) -> PResult {
+pub(crate) fn from_clause(p: &mut Parser<'_>) -> PResult {
     p.start(SyntaxKind::FromClause);
     p.expect_kw("from")?;
     loop {
@@ -296,7 +314,7 @@ fn from_clause(p: &mut Parser<'_>) -> PResult {
 
 /// One FROM element: a primary table reference plus any number of joins,
 /// built left-associatively as nested `JoinExpr` nodes.
-fn from_item(p: &mut Parser<'_>) -> PResult {
+pub(crate) fn from_item(p: &mut Parser<'_>) -> PResult {
     let checkpoint = p.checkpoint();
     table_primary(p)?;
     while at_join_start(p) {

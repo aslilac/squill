@@ -1,0 +1,83 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table templates add column time_til_autostop_notify bigint default 0 not null;
+
+comment on column templates.time_til_autostop_notify is 'How long before the workspace autostop deadline to send a reminder notification, in nanoseconds. 0 disables the notification.';
+
+drop view template_with_names;
+
+create view template_with_names as
+select
+	templates.*,
+	COALESCE(visible_users.avatar_url, ''::text) as created_by_avatar_url,
+	COALESCE(visible_users.username, ''::text) as created_by_username,
+	COALESCE(visible_users.name, ''::text) as created_by_name,
+	COALESCE(organizations.name, ''::text) as organization_name,
+	COALESCE(organizations.display_name, ''::text) as organization_display_name,
+	COALESCE(organizations.icon, ''::text) as organization_icon
+from
+	(
+		(
+			templates
+			left join visible_users on ((templates.created_by = visible_users.id))
+		)
+		left join organizations on ((templates.organization_id = organizations.id))
+	);
+
+comment on view template_with_names is 'Joins in the display name information such as username, avatar, and organization name.';
+
+alter table workspace_builds add column notified_autostop_deadline timestamptz default '0001-01-01 00:00:00+00' not null;
+
+comment on column workspace_builds.notified_autostop_deadline is 'The autostop deadline value that an autostop reminder notification was last sent for. Used for idempotence: when it equals the build deadline the reminder has already been sent, and it re-arms automatically when the deadline changes.';
+
+drop view workspace_build_with_user;
+
+create view workspace_build_with_user as
+select
+	workspace_builds.id,
+	workspace_builds.created_at,
+	workspace_builds.updated_at,
+	workspace_builds.workspace_id,
+	workspace_builds.template_version_id,
+	workspace_builds.build_number,
+	workspace_builds.transition,
+	workspace_builds.initiator_id,
+	workspace_builds.job_id,
+	workspace_builds.deadline,
+	workspace_builds.reason,
+	workspace_builds.daily_cost,
+	workspace_builds.max_deadline,
+	workspace_builds.template_version_preset_id,
+	workspace_builds.has_ai_task,
+	workspace_builds.has_external_agent,
+	workspace_builds.notified_autostop_deadline,
+	COALESCE(visible_users.avatar_url, ''::text) as initiator_by_avatar_url,
+	COALESCE(visible_users.username, ''::text) as initiator_by_username,
+	COALESCE(visible_users.name, ''::text) as initiator_by_name
+from
+	workspace_builds
+	left join visible_users on workspace_builds.initiator_id = visible_users.id;
+
+comment on view workspace_build_with_user is 'Joins in the username + avatar url of the initiated by user.';
+
+insert into notification_templates (id,
+name,
+title_template,
+body_template,
+actions,
+"group",
+method,
+kind,
+enabled_by_default)
+values
+	('6f6cb984-c167-4fa5-bb87-1058dd642779',
+	'Workspace Autostop Reminder',
+	E'Your workspace "{{.Labels.workspace}}" will stop soon',
+	E'Your workspace **{{.Labels.workspace}}** is scheduled to automatically stop at {{.Labels.deadline}}.\n\nConnect to it or extend the deadline to keep it running.',
+	'[{"label": "View workspace", "url": "{{base_url}}/@{{.UserUsername}}/{{.Labels.workspace}}"}]'::jsonb,
+	'Workspace Events',
+	null,
+	'system'::notification_template_kind,
+	true);

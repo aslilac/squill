@@ -1,0 +1,20 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- The view will be rebuilt with the new column
+drop view template_version_with_user;
+
+alter table template_versions drop column archived;
+
+-- Restore the old version of the template_version_with_user view.
+create view template_version_with_user as
+select
+	template_versions.*,
+	coalesce(visible_users.avatar_url, '') as created_by_avatar_url,
+	coalesce(visible_users.username, '') as created_by_username
+from
+	template_versions
+	left join visible_users on template_versions.created_by = visible_users.id;
+
+comment on view template_version_with_user is 'Joins in the username + avatar url of the created by user.';

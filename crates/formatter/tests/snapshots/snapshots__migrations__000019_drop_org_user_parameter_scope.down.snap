@@ -1,0 +1,16 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type old_parameter_scope as enum (
+	'organization',
+	'template',
+	'import_job',
+	'user',
+	'workspace'
+);
+alter table parameter_values alter column scope type old_parameter_scope using (
+	scope::text::old_parameter_scope
+);
+drop type parameter_scope;
+alter type old_parameter_scope rename to parameter_scope;

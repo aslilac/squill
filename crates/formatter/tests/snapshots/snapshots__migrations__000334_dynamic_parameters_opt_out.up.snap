@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- All templates should opt out of dynamic parameters by default.
+alter table templates alter column use_classic_parameter_flow set default true;
+
+update templates set use_classic_parameter_flow = true

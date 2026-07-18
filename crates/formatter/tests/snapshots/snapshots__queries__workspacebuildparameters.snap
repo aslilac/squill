@@ -3,13 +3,14 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertWorkspaceBuildParameters :exec
-INSERT INTO
-    workspace_build_parameters (workspace_build_id, name, value)
-SELECT
-    @workspace_build_id :: uuid AS workspace_build_id,
-    unnest(@name :: text[]) AS name,
-    unnest(@value :: text[]) AS value
-RETURNING *;
+insert into workspace_build_parameters (workspace_build_id,
+name,
+value)
+select
+	@workspace_build_id::uuid as workspace_build_id,
+	unnest(@name::text[]) as name,
+	unnest(@value::text[]) as value
+returning *;
 
 -- name: GetWorkspaceBuildParameters :many
 select * from workspace_build_parameters where workspace_build_id = $1;

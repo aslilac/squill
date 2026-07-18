@@ -47,25 +47,17 @@ where
 	end;
 
 -- name: InsertOrganizationMember :one
-INSERT INTO
-	organization_members (
-		organization_id,
-		user_id,
-		created_at,
-		updated_at,
-		roles
-	)
-VALUES
-	($1, $2, $3, $4, $5) RETURNING *;
+insert into organization_members (organization_id,
+user_id,
+created_at,
+updated_at,
+roles)
+values ($1, $2, $3, $4, $5)
+returning *;
 
 -- name: DeleteOrganizationMember :exec
-DELETE
-	FROM
-		organization_members
-	WHERE
-		organization_id = @organization_id AND
-		user_id = @user_id
-;
+delete from organization_members
+where organization_id = @organization_id and user_id = @user_id;
 
 -- name: GetOrganizationIDsByMemberIDs :many
 select user_id, array_agg(organization_id)::uuid[] as "organization_IDs"
@@ -74,15 +66,12 @@ where user_id = any(@ids::uuid[])
 group by user_id;
 
 -- name: UpdateMemberRoles :one
-UPDATE
-	organization_members
-SET
+update organization_members
+set
 	-- Remove all duplicates from the roles.
-	roles = ARRAY(SELECT DISTINCT UNNEST(@granted_roles :: text[]))
-WHERE
-	user_id = @user_id
-	AND organization_id = @org_id
-RETURNING *;
+	roles = array (select distinct UNNEST(@granted_roles::text[]))
+where user_id = @user_id and organization_id = @org_id
+returning *;
 
 -- name: PaginatedOrganizationMembers :many
 select

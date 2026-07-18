@@ -1,0 +1,63 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table if not exists user_configs (
+	user_id uuid not null,
+	key varchar (256) not null,
+	value text not null,
+	primary key (user_id, key),
+	foreign key (user_id) references users (id) on delete cascade
+);
+
+-- Copy "theme_preference" from "users" table
+insert into user_configs (user_id,
+key,
+value)
+select id, 'theme_preference', theme_preference
+from users
+where users.theme_preference is not null;
+
+-- Replace "group_members_expanded" without "theme_preference"
+drop view group_members_expanded;
+-- Taken from 000242_group_members_view.up.sql
+create view group_members_expanded as
+-- If the group is a user made group, then we need to check the group_members table.
+-- If it is the "Everyone" group, then we need to check the organization_members table.
+with
+	all_members as (
+		select user_id, group_id
+		from group_members
+		union
+		select user_id, organization_id as group_id
+		from organization_members
+	)
+select
+	users.id as user_id,
+	users.email as user_email,
+	users.username as user_username,
+	users.hashed_password as user_hashed_password,
+	users.created_at as user_created_at,
+	users.updated_at as user_updated_at,
+	users.status as user_status,
+	users.rbac_roles as user_rbac_roles,
+	users.login_type as user_login_type,
+	users.avatar_url as user_avatar_url,
+	users.deleted as user_deleted,
+	users.last_seen_at as user_last_seen_at,
+	users.quiet_hours_schedule as user_quiet_hours_schedule,
+	users.name as user_name,
+	users.github_com_user_id as user_github_com_user_id,
+	groups.organization_id as organization_id,
+	groups.name as group_name,
+	all_members.group_id as group_id
+from
+	all_members
+	join users on users.id = all_members.user_id
+	join groups on groups.id = all_members.group_id
+where users.deleted = 'false';
+
+comment on view group_members_expanded is 'Joins group members with user information, organization ID, group name. Includes both regular group members and organization members (as part of the "Everyone" group).';
+
+-- Drop the "theme_preference" column now that the view no longer depends on it.
+alter table users drop column theme_preference;

@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop index idx_tailnet_tunnels_src_id;
+drop index idx_tailnet_tunnels_dst_id;

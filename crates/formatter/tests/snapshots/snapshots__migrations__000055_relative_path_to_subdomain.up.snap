@@ -1,0 +1,12 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Add column subdomain of type bool to workspace_apps
+alter table workspace_apps add column subdomain bool not null default false;
+
+-- Set column subdomain to the opposite of relative_path
+update workspace_apps set subdomain = not relative_path;
+
+-- Drop column relative_path
+alter table workspace_apps drop column relative_path;

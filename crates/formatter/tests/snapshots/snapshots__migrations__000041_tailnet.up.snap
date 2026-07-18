@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_agents drop column wireguard_node_ipv6;
+alter table workspace_agents drop column wireguard_node_public_key;
+alter table workspace_agents drop column wireguard_disco_public_key;

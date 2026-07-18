@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table template_version_terraform_values add column if not exists provisionerd_version text not null default '';
+
+comment on column template_version_terraform_values.provisionerd_version is 'What version of the provisioning engine was used to generate the cached plan and module files.';

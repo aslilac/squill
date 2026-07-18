@@ -1,0 +1,13 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop trigger if exists user_status_change_trigger on users;
+
+drop function IF exists record_user_status_change ();
+
+drop index if exists idx_user_status_changes_changed_at;
+drop index if exists idx_user_deleted_deleted_at;
+
+drop table if exists user_status_changes;
+drop table if exists user_deleted;

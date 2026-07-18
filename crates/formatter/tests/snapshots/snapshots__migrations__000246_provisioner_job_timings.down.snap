@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop view if exists provisioner_job_stats;
+
+drop type if exists provisioner_job_timing_stage cascade;
+
+drop table if exists provisioner_job_timings;

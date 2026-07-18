@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter type build_reason add value if not exists 'dashboard';
+alter type build_reason add value if not exists 'cli';
+alter type build_reason add value if not exists 'ssh_connection';
+alter type build_reason add value if not exists 'vscode_connection';
+alter type build_reason add value if not exists 'jetbrains_connection';

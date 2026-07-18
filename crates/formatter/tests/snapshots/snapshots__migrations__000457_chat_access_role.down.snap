@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Remove 'agents-access' from all users who have it.
+update users
+set rbac_roles = array_remove(rbac_roles, 'agents-access')
+where 'agents-access' = any(rbac_roles);

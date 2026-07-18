@@ -58,54 +58,63 @@ where
 	and deleted = false;
 
 -- name: InsertWorkspaceAgent :one
-INSERT INTO
-	workspace_agents (
-		id,
-		parent_id,
-		created_at,
-		updated_at,
-		name,
-		resource_id,
-		auth_token,
-		auth_instance_id,
-		architecture,
-		environment_variables,
-		operating_system,
-		directory,
-		instance_metadata,
-		resource_metadata,
-		connection_timeout_seconds,
-		troubleshooting_url,
-		motd_file,
-		display_apps,
-		display_order,
-		api_key_scope
-	)
-VALUES
-	($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING *;
+insert into workspace_agents (id,
+parent_id,
+created_at,
+updated_at,
+name,
+resource_id,
+auth_token,
+auth_instance_id,
+architecture,
+environment_variables,
+operating_system,
+directory,
+instance_metadata,
+resource_metadata,
+connection_timeout_seconds,
+troubleshooting_url,
+motd_file,
+display_apps,
+display_order,
+api_key_scope)
+values
+	($1,
+	$2,
+	$3,
+	$4,
+	$5,
+	$6,
+	$7,
+	$8,
+	$9,
+	$10,
+	$11,
+	$12,
+	$13,
+	$14,
+	$15,
+	$16,
+	$17,
+	$18,
+	$19,
+	$20)
+returning *;
 
 -- name: UpdateWorkspaceAgentConnectionByID :exec
-UPDATE
-	workspace_agents
-SET
+update workspace_agents
+set
 	first_connected_at = $2,
 	last_connected_at = $3,
 	last_connected_replica_id = $4,
 	disconnected_at = $5,
 	updated_at = $6
-WHERE
-	id = $1;
+where id = $1;
 
 -- name: UpdateWorkspaceAgentStartupByID :exec
-UPDATE
-	workspace_agents
-SET
-	version = $2,
-	expanded_directory = $3,
-	subsystems = $4,
-	api_version = $5
-WHERE
-	id = $1;
+update workspace_agents
+set version = $2, expanded_directory = $3, subsystems = $4, api_version = $5
+where id = $1;
 
 -- name: GetWorkspaceAgentLifecycleStateByID :one
 select lifecycle_state, started_at, ready_at
@@ -113,69 +122,46 @@ from workspace_agents
 where id = $1;
 
 -- name: UpdateWorkspaceAgentLifecycleStateByID :exec
-UPDATE
-	workspace_agents
-SET
-	lifecycle_state = $2,
-	started_at = $3,
-	ready_at = $4
-WHERE
-	id = $1;
+update workspace_agents
+set lifecycle_state = $2, started_at = $3, ready_at = $4
+where id = $1;
 
 -- name: InsertWorkspaceAgentMetadata :exec
-INSERT INTO
-	workspace_agent_metadata (
-		workspace_agent_id,
-		display_name,
-		key,
-		script,
-		timeout,
-		interval,
-		display_order
-	)
-VALUES
-	($1, $2, $3, $4, $5, $6, $7);
+insert into workspace_agent_metadata (workspace_agent_id,
+display_name,
+key,
+script,
+timeout,
+interval,
+display_order)
+values ($1, $2, $3, $4, $5, $6, $7);
 
 -- name: UpdateWorkspaceAgentMetadata :exec
-WITH metadata AS (
-	SELECT
-		unnest(sqlc.arg('key')::text[]) AS key,
-		unnest(sqlc.arg('value')::text[]) AS value,
-		unnest(sqlc.arg('error')::text[]) AS error,
-		unnest(sqlc.arg('collected_at')::timestamptz[]) AS collected_at
-)
-UPDATE
-	workspace_agent_metadata wam
-SET
-	value = m.value,
-	error = m.error,
-	collected_at = m.collected_at
-FROM
-	metadata m
-WHERE
-	wam.workspace_agent_id = $1
-	AND wam.key = m.key;
+with
+	metadata as (
+		select
+			unnest(sqlc.arg('key')::text[]) as key,
+			unnest(sqlc.arg('value')::text[]) as value,
+			unnest(sqlc.arg('error')::text[]) as error,
+			unnest(sqlc.arg('collected_at')::timestamptz[]) as collected_at
+	) update workspace_agent_metadata wam
+set value = m.value, error = m.error, collected_at = m.collected_at
+from metadata m
+where wam.workspace_agent_id = $1 and wam.key = m.key;
 
 -- name: BatchUpdateWorkspaceAgentMetadata :exec
-WITH metadata AS (
-	SELECT
-		unnest(sqlc.arg('workspace_agent_id')::uuid[]) AS workspace_agent_id,
-		unnest(sqlc.arg('key')::text[]) AS key,
-		unnest(sqlc.arg('value')::text[]) AS value,
-		unnest(sqlc.arg('error')::text[]) AS error,
-		unnest(sqlc.arg('collected_at')::timestamptz[]) AS collected_at
-)
-UPDATE
-	workspace_agent_metadata wam
-SET
-	value = m.value,
-	error = m.error,
-	collected_at = m.collected_at
-FROM
-	metadata m
-WHERE
-	wam.workspace_agent_id = m.workspace_agent_id
-	AND wam.key = m.key;
+with
+	metadata as (
+		select
+			unnest(sqlc.arg('workspace_agent_id')::uuid[]) as workspace_agent_id,
+			unnest(sqlc.arg('key')::text[]) as key,
+			unnest(sqlc.arg('value')::text[]) as value,
+			unnest(sqlc.arg('error')::text[]) as error,
+			unnest(sqlc.arg('collected_at')::timestamptz[]) as collected_at
+	) update workspace_agent_metadata wam
+set value = m.value, error = m.error, collected_at = m.collected_at
+from metadata m
+where wam.workspace_agent_id = m.workspace_agent_id and wam.key = m.key;
 
 -- name: GetWorkspaceAgentMetadata :many
 select *
@@ -189,28 +175,13 @@ where
 	end;
 
 -- name: UpdateWorkspaceAgentLogOverflowByID :exec
-UPDATE
-	workspace_agents
-SET
-	logs_overflowed = $2
-WHERE
-	id = $1;
+update workspace_agents set logs_overflowed = $2 where id = $1;
 
 -- name: UpdateWorkspaceAgentDisplayAppsByID :exec
-UPDATE
-	workspace_agents
-SET
-	display_apps = $2, updated_at = $3
-WHERE
-	id = $1;
+update workspace_agents set display_apps = $2, updated_at = $3 where id = $1;
 
 -- name: UpdateWorkspaceAgentDirectoryByID :exec
-UPDATE
-	workspace_agents
-SET
-	directory = $2, updated_at = $3
-WHERE
-	id = $1;
+update workspace_agents set directory = $2, updated_at = $3 where id = $1;
 
 -- name: GetWorkspaceAgentLogsAfter :many
 select *
@@ -219,30 +190,37 @@ where agent_id = $1 and (id > @created_after)
 order by id asc;
 
 -- name: InsertWorkspaceAgentLogs :many
-WITH new_length AS (
-	UPDATE workspace_agents SET
-	logs_length = logs_length + @output_length WHERE workspace_agents.id = @agent_id
-)
-INSERT INTO
-		workspace_agent_logs (agent_id, created_at, output, level, log_source_id)
-	SELECT
-		@agent_id :: uuid AS agent_id,
-		@created_at :: timestamptz AS created_at,
-		unnest(@output :: VARCHAR(1024) [ ]) AS output,
-		unnest(@level :: log_level [ ]) AS level,
-		@log_source_id :: uuid AS log_source_id
-	RETURNING workspace_agent_logs.*;
+with
+	new_length as (
+		update workspace_agents
+		set logs_length = logs_length + @output_length
+		where workspace_agents.id = @agent_id
+	) insert into workspace_agent_logs (agent_id,
+created_at,
+output,
+level,
+log_source_id)
+select
+	@agent_id::uuid as agent_id,
+	@created_at::timestamptz as created_at,
+	unnest(@output::varchar(1024)[]) as output,
+	unnest(@level::log_level[]) as level,
+	@log_source_id::uuid as log_source_id
+returning workspace_agent_logs.*;
 
 -- name: InsertWorkspaceAgentLogSources :many
-INSERT INTO
-		workspace_agent_log_sources (workspace_agent_id, created_at, id, display_name, icon)
-	SELECT
-		@workspace_agent_id :: uuid AS workspace_agent_id,
-		@created_at :: timestamptz AS created_at,
-		unnest(@id :: uuid [ ]) AS id,
-		unnest(@display_name :: VARCHAR(127) [ ]) AS display_name,
-		unnest(@icon :: text [ ]) AS icon
-	RETURNING workspace_agent_log_sources.*;
+insert into workspace_agent_log_sources (workspace_agent_id,
+created_at,
+id,
+display_name,
+icon)
+select
+	@workspace_agent_id::uuid as workspace_agent_id,
+	@created_at::timestamptz as created_at,
+	unnest(@id::uuid[]) as id,
+	unnest(@display_name::varchar(127)[]) as display_name,
+	unnest(@icon::text[]) as icon
+returning workspace_agent_log_sources.*;
 
 -- name: GetWorkspaceAgentLogSourcesByAgentIDs :many
 select *
@@ -253,46 +231,33 @@ where workspace_agent_id = any(@ids::uuid[]);
 -- Exception: if the logs are related to the latest build, we keep those around.
 -- Logs can take up a lot of space, so it's important we clean up frequently.
 -- name: DeleteOldWorkspaceAgentLogs :execrows
-WITH
-	latest_builds AS (
-		SELECT
-			workspace_id, max(build_number) AS max_build_number
-		FROM
-			workspace_builds
-		GROUP BY
-			workspace_id
+with
+	latest_builds as (
+		select workspace_id, max(build_number) as max_build_number
+		from workspace_builds
+		group by workspace_id
 	),
-	old_agents AS (
-		SELECT
-			wa.id
-		FROM
-			workspace_agents AS wa
-		JOIN
-			workspace_resources AS wr
-		ON
-			wa.resource_id = wr.id
-		JOIN
-			workspace_builds AS wb
-		ON
-			wb.job_id = wr.job_id
-		LEFT JOIN
-			latest_builds
-		ON
-			latest_builds.workspace_id = wb.workspace_id
-		AND
-			latest_builds.max_build_number = wb.build_number
-		WHERE
+	old_agents as (
+		select wa.id
+		from
+			workspace_agents as wa
+			join workspace_resources as wr on wa.resource_id = wr.id
+			join workspace_builds as wb on wb.job_id = wr.job_id
+			left join latest_builds on latest_builds.workspace_id = wb.workspace_id
+			and latest_builds.max_build_number = wb.build_number
+		where
 			-- Filter out the latest builds for each workspace.
-			latest_builds.workspace_id IS NULL
-		AND CASE
-			-- If the last time the agent connected was before @threshold
-			WHEN wa.last_connected_at IS NOT NULL THEN
-				 wa.last_connected_at < @threshold :: timestamptz
-			-- The agent never connected, and was created before @threshold
-			ELSE wa.created_at < @threshold :: timestamptz
-		END
-	)
-DELETE FROM workspace_agent_logs WHERE agent_id IN (SELECT id FROM old_agents);
+			latest_builds.workspace_id
+			is null
+			and case
+				-- If the last time the agent connected was before @threshold
+				when wa.last_connected_at is not null
+					then wa.last_connected_at < @threshold::timestamptz
+				-- The agent never connected, and was created before @threshold
+				else wa.created_at < @threshold::timestamptz
+			end
+	) delete from workspace_agent_logs
+where agent_id in (select id from old_agents);
 
 -- name: GetWorkspaceAgentsInLatestBuildByWorkspaceID :many
 select workspace_agents.*
@@ -452,18 +417,14 @@ where
 	end;
 
 -- name: InsertWorkspaceAgentScriptTimings :one
-INSERT INTO
-    workspace_agent_script_timings (
-        script_id,
-        started_at,
-        ended_at,
-        exit_code,
-        stage,
-        status
-    )
-VALUES
-    ($1, $2, $3, $4, $5, $6)
-RETURNING workspace_agent_script_timings.*;
+insert into workspace_agent_script_timings (script_id,
+started_at,
+ended_at,
+exit_code,
+stage,
+status)
+values ($1, $2, $3, $4, $5, $6)
+returning workspace_agent_script_timings.*;
 
 -- name: GetWorkspaceAgentScriptTimingsByBuildID :many
 select distinct on (workspace_agent_script_timings.script_id)
@@ -501,19 +462,18 @@ where parent_id = @parent_id::uuid and deleted = false;
 -- rebuild-time soft-delete queries skip already-deleted agents, and
 -- agents are never hard-deleted, so the rows would otherwise orphan
 -- forever.
-WITH soft_deleted_agents AS (
-    UPDATE workspace_agents
-    SET deleted = TRUE
-    WHERE id = @id
-        AND parent_id IS NOT NULL
-        AND deleted = FALSE
-    RETURNING id
-), purged_context_resources AS (
-    DELETE FROM workspace_agent_context_resources
-    WHERE workspace_agent_id IN (SELECT id FROM soft_deleted_agents)
-)
-DELETE FROM workspace_agent_context_snapshots
-WHERE workspace_agent_id IN (SELECT id FROM soft_deleted_agents);
+with
+	soft_deleted_agents as (
+		update workspace_agents
+		set deleted = true
+		where id = @id and parent_id is not null and deleted = false
+		returning id
+	),
+	purged_context_resources as (
+		delete from workspace_agent_context_resources
+		where workspace_agent_id in (select id from soft_deleted_agents)
+	) delete from workspace_agent_context_snapshots
+where workspace_agent_id in (select id from soft_deleted_agents);
 
 -- name: GetWorkspaceAgentsForMetrics :many
 select
@@ -573,25 +533,29 @@ limit 1;
 -- workspace_agent_context_resources) only describe live agents, and
 -- agents are never un-deleted, so they are hard-deleted here instead
 -- of accumulating alongside the soft-deleted agent rows.
-WITH soft_deleted_agents AS (
-    UPDATE workspace_agents
-    SET deleted = TRUE
-    WHERE id IN (
-        SELECT wa.id
-        FROM workspace_agents wa
-        JOIN workspace_resources wr ON wr.id = wa.resource_id
-        JOIN workspace_builds wb ON wb.job_id = wr.job_id
-        WHERE wb.workspace_id = @workspace_id
-          AND wb.id <> @current_build_id
-          AND wa.deleted = FALSE
-    )
-    RETURNING id
-), purged_context_resources AS (
-    DELETE FROM workspace_agent_context_resources
-    WHERE workspace_agent_id IN (SELECT id FROM soft_deleted_agents)
-)
-DELETE FROM workspace_agent_context_snapshots
-WHERE workspace_agent_id IN (SELECT id FROM soft_deleted_agents);
+with
+	soft_deleted_agents as (
+		update workspace_agents
+		set deleted = true
+		where
+			id in (
+				select wa.id
+				from
+					workspace_agents wa
+					join workspace_resources wr on wr.id = wa.resource_id
+					join workspace_builds wb on wb.job_id = wr.job_id
+				where
+					wb.workspace_id = @workspace_id
+					and wb.id <> @current_build_id
+					and wa.deleted = false
+			)
+		returning id
+	),
+	purged_context_resources as (
+		delete from workspace_agent_context_resources
+		where workspace_agent_id in (select id from soft_deleted_agents)
+	) delete from workspace_agent_context_snapshots
+where workspace_agent_id in (select id from soft_deleted_agents);
 
 -- name: SoftDeleteWorkspaceAgentsByWorkspaceID :exec
 -- Marks every non-deleted agent belonging to the given workspace as
@@ -602,21 +566,23 @@ WHERE workspace_agent_id IN (SELECT id FROM soft_deleted_agents);
 --
 -- Agent context rows are hard-deleted for the same reason as in
 -- SoftDeletePriorWorkspaceAgents.
-WITH soft_deleted_agents AS (
-    UPDATE workspace_agents
-    SET deleted = TRUE
-    WHERE id IN (
-        SELECT wa.id
-        FROM workspace_agents wa
-        JOIN workspace_resources wr ON wr.id = wa.resource_id
-        JOIN workspace_builds wb ON wb.job_id = wr.job_id
-        WHERE wb.workspace_id = @workspace_id
-          AND wa.deleted = FALSE
-    )
-    RETURNING id
-), purged_context_resources AS (
-    DELETE FROM workspace_agent_context_resources
-    WHERE workspace_agent_id IN (SELECT id FROM soft_deleted_agents)
-)
-DELETE FROM workspace_agent_context_snapshots
-WHERE workspace_agent_id IN (SELECT id FROM soft_deleted_agents);
+with
+	soft_deleted_agents as (
+		update workspace_agents
+		set deleted = true
+		where
+			id in (
+				select wa.id
+				from
+					workspace_agents wa
+					join workspace_resources wr on wr.id = wa.resource_id
+					join workspace_builds wb on wb.job_id = wr.job_id
+				where wb.workspace_id = @workspace_id and wa.deleted = false
+			)
+		returning id
+	),
+	purged_context_resources as (
+		delete from workspace_agent_context_resources
+		where workspace_agent_id in (select id from soft_deleted_agents)
+	) delete from workspace_agent_context_snapshots
+where workspace_agent_id in (select id from soft_deleted_agents);

@@ -3,9 +3,10 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: ClaimPrebuiltWorkspace :one
-UPDATE workspaces w
-SET owner_id   = @new_user_id::uuid,
-	name       = @new_name::text,
+update workspaces w
+set
+	owner_id = @new_user_id::uuid,
+	name = @new_name::text,
 	updated_at = @now::timestamptz,
 	-- Update autostart_schedule, next_start_at and ttl according to template and workspace-level
 	-- configurations, allowing the workspace to be managed by the lifecycle executor as expected.
@@ -18,24 +19,30 @@ SET owner_id   = @new_user_id::uuid,
 	-- Clear dormant and deletion timestamps as a safeguard to ensure a clean lifecycle state after claim.
 	-- These fields should not be set on prebuilds, but we defensively reset them here to prevent
 	-- accidental dormancy or deletion by the lifecycle executor.
-	dormant_at = NULL,
-	deleting_at = NULL
-WHERE w.id IN (
-	SELECT p.id
-	FROM workspace_prebuilds p
-		INNER JOIN workspace_latest_builds b ON b.workspace_id = p.id
-		INNER JOIN templates t ON p.template_id = t.id
-	WHERE (b.transition = 'start'::workspace_transition
-		AND b.job_status IN ('succeeded'::provisioner_job_status))
-		-- The prebuilds system should never try to claim a prebuild for an inactive template version.
-		-- Nevertheless, this filter is here as a defensive measure:
-		AND b.template_version_id = t.active_version_id
-		AND p.current_preset_id = @preset_id::uuid
-		AND p.ready
-		AND NOT t.deleted
-	LIMIT 1 FOR UPDATE OF p SKIP LOCKED -- Ensure that a concurrent request will not select the same prebuild.
-)
-RETURNING w.id, w.name;
+	dormant_at = null,
+	deleting_at = null
+where
+	w.id in (
+		select p.id
+		from
+			workspace_prebuilds p
+			inner join workspace_latest_builds b on b.workspace_id = p.id
+			inner join templates t on p.template_id = t.id
+		where
+			(
+				b.transition = 'start'::workspace_transition
+				and b.job_status in ('succeeded'::provisioner_job_status)
+			)
+			-- The prebuilds system should never try to claim a prebuild for an inactive template version.
+			-- Nevertheless, this filter is here as a defensive measure:
+			and b.template_version_id = t.active_version_id
+			and p.current_preset_id = @preset_id::uuid
+			and p.ready
+			and not t.deleted
+		limit 1
+		for update of p skip locked -- Ensure that a concurrent request will not select the same prebuild.
+	)
+returning w.id, w.name;
 
 -- name: GetTemplatePresetsWithPrebuilds :many
 -- GetTemplatePresetsWithPrebuilds retrieves template versions with configured presets and prebuilds.
@@ -305,24 +312,27 @@ group by tsb.template_version_id, tsb.preset_id
 having COUNT(*) = @hard_limit::bigint;
 
 -- name: GetPrebuildMetrics :many
-SELECT
+select
 	t.name as template_name,
 	tvp.name as preset_name,
 	o.name as organization_name,
 	COUNT(*) as created_count,
-	COUNT(*) FILTER (WHERE pj.job_status = 'failed'::provisioner_job_status) as failed_count,
-	COUNT(*) FILTER (
-			WHERE w.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid -- The system user responsible for prebuilds.
-		) as claimed_count
-FROM workspaces w
-INNER JOIN workspace_prebuild_builds wpb ON wpb.workspace_id = w.id
-INNER JOIN templates t ON t.id = w.template_id
-INNER JOIN template_version_presets tvp ON tvp.id = wpb.template_version_preset_id
-INNER JOIN provisioner_jobs pj ON pj.id = wpb.job_id
-INNER JOIN organizations o ON o.id = w.organization_id
-WHERE NOT t.deleted AND wpb.build_number = 1
-GROUP BY t.name, tvp.name, o.name
-ORDER BY t.name, tvp.name, o.name;
+	COUNT(*) filter (where pj.job_status
+	= 'failed'::provisioner_job_status) as failed_count,
+	COUNT(*) filter (where w.owner_id
+	!= 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid -- The system user responsible for prebuilds.
+	) as claimed_count
+from
+	workspaces w
+	inner join workspace_prebuild_builds wpb on wpb.workspace_id = w.id
+	inner join templates t on t.id = w.template_id
+	inner join template_version_presets tvp on tvp.id
+	= wpb.template_version_preset_id
+	inner join provisioner_jobs pj on pj.id = wpb.job_id
+	inner join organizations o on o.id = w.organization_id
+where not t.deleted and wpb.build_number = 1
+group by t.name, tvp.name, o.name
+order by t.name, tvp.name, o.name;
 
 -- name: FindMatchingPresetID :one
 -- FindMatchingPresetID finds a preset ID that is the largest exact subset of the provided parameters.
@@ -384,33 +394,37 @@ group by wpb.template_version_preset_id;
 -- Cancels all pending provisioner jobs for prebuilt workspaces on a specific preset from an
 -- inactive template version.
 -- This is an optimization to clean up stale pending jobs.
-WITH jobs_to_cancel AS (
-	SELECT pj.id, w.id AS workspace_id, w.template_id, wpb.template_version_preset_id
-	FROM provisioner_jobs pj
-	INNER JOIN workspace_prebuild_builds wpb ON wpb.job_id = pj.id
-	INNER JOIN workspaces w ON w.id = wpb.workspace_id
-	INNER JOIN templates t ON t.id = w.template_id
-	WHERE
-		wpb.template_version_id != t.active_version_id
-		AND wpb.template_version_preset_id = @preset_id
-		-- Only considers initial builds, i.e. created by the reconciliation loop
-		AND wpb.build_number = 1
-		-- Only consider 'start' transitions (provisioning), not 'stop'/'delete' (deprovisioning)
-		-- Deprovisioning jobs should complete naturally as they're already cleaning up resources
-		AND wpb.transition = 'start'::workspace_transition
-		-- Pending jobs that have not yet been picked up by a provisioner
-		AND pj.job_status = 'pending'::provisioner_job_status
-		AND pj.worker_id IS NULL
-		AND pj.canceled_at IS NULL
-		AND pj.completed_at IS NULL
-)
-UPDATE provisioner_jobs
-SET
-	canceled_at = @now::timestamptz,
-	completed_at = @now::timestamptz
-FROM jobs_to_cancel
-WHERE provisioner_jobs.id = jobs_to_cancel.id
-RETURNING jobs_to_cancel.id, jobs_to_cancel.workspace_id, jobs_to_cancel.template_id, jobs_to_cancel.template_version_preset_id;
+with
+	jobs_to_cancel as (
+		select
+			pj.id, w.id as workspace_id, w.template_id, wpb.template_version_preset_id
+		from
+			provisioner_jobs pj
+			inner join workspace_prebuild_builds wpb on wpb.job_id = pj.id
+			inner join workspaces w on w.id = wpb.workspace_id
+			inner join templates t on t.id = w.template_id
+		where
+			wpb.template_version_id != t.active_version_id
+			and wpb.template_version_preset_id = @preset_id
+			-- Only considers initial builds, i.e. created by the reconciliation loop
+			and wpb.build_number = 1
+			-- Only consider 'start' transitions (provisioning), not 'stop'/'delete' (deprovisioning)
+			-- Deprovisioning jobs should complete naturally as they're already cleaning up resources
+			and wpb.transition = 'start'::workspace_transition
+			-- Pending jobs that have not yet been picked up by a provisioner
+			and pj.job_status = 'pending'::provisioner_job_status
+			and pj.worker_id is null
+			and pj.canceled_at is null
+			and pj.completed_at is null
+	) update provisioner_jobs
+set canceled_at = @now::timestamptz, completed_at = @now::timestamptz
+from jobs_to_cancel
+where provisioner_jobs.id = jobs_to_cancel.id
+returning
+	jobs_to_cancel.id,
+	jobs_to_cancel.workspace_id,
+	jobs_to_cancel.template_id,
+	jobs_to_cancel.template_version_preset_id;
 
 -- name: GetOrganizationsWithPrebuildStatus :many
 -- GetOrganizationsWithPrebuildStatus returns organizations with prebuilds configured and their

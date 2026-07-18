@@ -1,0 +1,32 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Add back the storage_source column. This must be nullable temporarily.
+alter table provisioner_jobs add column storage_source text;
+
+-- Set the storage_source to the hash of the files.id reference.
+update provisioner_jobs
+set storage_source = files.hash
+from files
+where provisioner_jobs.file_id = files.id;
+
+-- Now that we've populated storage_source drop the file_id column.
+alter table provisioner_jobs drop column file_id;
+-- We can set the storage_source column as NOT NULL now.
+alter table provisioner_jobs alter column storage_source set not null;
+
+-- Delete all the duplicate rows where hashes collide.
+-- We filter on 'id' to ensure only 1 unique row.
+delete from files a
+using files b
+where a.created_by < b.created_by and a.hash = b.hash;
+
+-- Drop the primary key on files.id.
+alter table files drop constraint files_pkey;
+-- Drop the id column.
+alter table files drop column id;
+-- Drop the unique constraint on hash + owner.
+alter table files drop constraint files_hash_created_by_key;
+-- Set the primary key back to hash.
+alter table files add primary key (hash);

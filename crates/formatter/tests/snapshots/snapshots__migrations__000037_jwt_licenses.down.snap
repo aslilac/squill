@@ -1,0 +1,10 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Valid licenses don't fit into old format, so delete all data
+delete from licenses;
+alter table licenses drop column jwt;
+alter table licenses rename column uploaded_at to created_at;
+alter table licenses add column license jsonb not null;
+alter table licenses drop column exp;

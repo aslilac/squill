@@ -3,9 +3,14 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertUserSkill :one
-INSERT INTO user_skills (id, user_id, name, description, content)
-VALUES (@id::uuid, @user_id::uuid, @name::text, @description::text, @content::text)
-RETURNING *;
+insert into user_skills (id,
+user_id,
+name,
+description,
+content)
+values
+	(@id::uuid, @user_id::uuid, @name::text, @description::text, @content::text)
+returning *;
 
 -- name: GetUserSkillByUserIDAndName :one
 select * from user_skills where user_id = @user_id and name = @name;
@@ -17,15 +22,10 @@ where user_id = @user_id
 order by name asc;
 
 -- name: UpdateUserSkillByUserIDAndName :one
-UPDATE user_skills
-SET
-    description = @description,
-    content     = @content,
-    updated_at  = now()
-WHERE user_id = @user_id AND name = @name
-RETURNING *;
+update user_skills
+set description = @description, content = @content, updated_at = now()
+where user_id = @user_id and name = @name
+returning *;
 
 -- name: DeleteUserSkillByUserIDAndName :one
-DELETE FROM user_skills
-WHERE user_id = @user_id AND name = @name
-RETURNING *;
+delete from user_skills where user_id = @user_id and name = @name returning *;

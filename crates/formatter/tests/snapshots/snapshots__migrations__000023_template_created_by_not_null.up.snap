@@ -1,0 +1,16 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+update templates
+set
+	created_by = (
+		select user_id
+		from organization_members
+		where organization_members.organization_id = templates.organization_id
+		order by created_at
+		limit 1
+	)
+where created_by is null;
+
+alter table only templates alter column created_by set not null;

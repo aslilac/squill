@@ -1,0 +1,11 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type chat_client_type as enum ('ui', 'api');
+
+alter table chats add column client_type chat_client_type not null default 'api'::chat_client_type;
+
+-- Backfill all existing rows to 'ui' since they were created
+-- from the web interface before this column existed.
+update chats set client_type = 'ui';

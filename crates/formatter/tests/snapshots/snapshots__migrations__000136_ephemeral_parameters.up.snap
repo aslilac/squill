@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table template_version_parameters add column ephemeral boolean not null default false;
+
+comment on column template_version_parameters.ephemeral is 'The value of an ephemeral parameter will not be preserved between consecutive workspace builds.';

@@ -1,0 +1,68 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table if not exists user_links (
+	user_id uuid not null,
+	login_type login_type not null,
+	linked_id text default ''::text not null,
+	oauth_access_token text default ''::text not null,
+	oauth_refresh_token text default ''::text not null,
+	oauth_expiry timestamp with time zone default '0001-01-01 00:00:00+00'::timestamp with time zone not null,
+	primary key (user_id, login_type),
+	foreign key (user_id) references users (id) on delete cascade
+);
+
+-- This migrates columns on api_keys to the new user_links table.
+-- It does this by finding all the API keys for each user, choosing
+-- the most recently updated for each one and then assigning its relevant
+-- values to the user_links table.
+-- A user should at most have a row for an OIDC account and a Github account.
+-- 'password' login types are ignored.
+insert into user_links (user_id,
+login_type,
+linked_id,
+oauth_access_token,
+oauth_refresh_token,
+oauth_expiry)
+select
+	keys.user_id,
+	keys.login_type,
+	'',
+	keys.oauth_access_token,
+	keys.oauth_refresh_token,
+	keys.oauth_expiry
+from
+	(
+		select
+			row_number() over (
+				partition by user_id,
+				login_type
+				order by last_used desc
+			) as x,
+			api_keys.*
+		from api_keys
+	) as keys
+where x = 1 and keys.login_type != 'password';
+
+-- Drop columns that have been migrated to user_links.
+-- It appears the 'oauth_id_token' was unused and so it has
+-- been dropped here as well to avoid future confusion.
+alter table api_keys drop column oauth_access_token,
+drop column oauth_refresh_token,
+drop column oauth_id_token,
+drop column oauth_expiry;
+
+alter table users add column login_type login_type not null default 'password';
+
+update users
+set
+	login_type = (
+		select login_type
+		from user_links
+		where user_links.user_id = users.id
+		order by oauth_expiry desc
+		limit 1
+	)
+from user_links
+where user_links.user_id = users.id;

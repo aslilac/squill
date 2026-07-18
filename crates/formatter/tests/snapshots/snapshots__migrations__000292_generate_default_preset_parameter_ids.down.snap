@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table template_version_presets alter column id drop default;
+
+alter table template_version_preset_parameters alter column id drop default;

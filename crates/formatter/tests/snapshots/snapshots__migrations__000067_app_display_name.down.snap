@@ -1,0 +1,36 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Select all apps with an extra "row_number" column that determines the "rank"
+-- of the display name against other display names in the same agent.
+with
+	row_numbers as (
+		select
+			*,
+			row_number() over (
+				partition by agent_id,
+				display_name
+				order by display_name asc
+			) as row_number
+		from workspace_apps
+	)
+
+-- Update any app with a "row_number" greater than 1 to have the row number
+-- appended to the display name. This effectively means that all lowercase
+-- display names remain untouched, while non-unique mixed case usernames are
+-- appended with a unique number. If you had three apps called all called asdf,
+-- they would then be renamed to e.g. asdf, asdf1234, and asdf5678.
+update workspace_apps
+set display_name = workspace_apps.display_name || floor(random() * 10000)::text
+from row_numbers
+where workspace_apps.id = row_numbers.id and row_numbers.row_number > 1;
+
+-- rename column "display_name" to "name" on "workspace_apps"
+alter table workspace_apps rename column display_name to name;
+
+-- restore unique index on "workspace_apps" table
+alter table workspace_apps add constraint workspace_apps_agent_id_name_key unique (
+	agent_id,
+	name
+);

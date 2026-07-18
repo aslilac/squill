@@ -1,0 +1,17 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- webpush_subscriptions is a table that stores push notification
+-- subscriptions for users. These are acquired via the Push API in the browser.
+create table if not exists webpush_subscriptions (
+	id uuid primary key default gen_random_uuid(),
+	user_id uuid not null references users on delete cascade,
+	created_at timestamp with time zone not null default CURRENT_TIMESTAMP,
+	-- endpoint is called by coderd to send a push notification to the user.
+	endpoint text not null,
+	-- endpoint_p256dh_key is the public key for the endpoint.
+	endpoint_p256dh_key text not null,
+	-- endpoint_auth_key is the authentication key for the endpoint.
+	endpoint_auth_key text not null
+);

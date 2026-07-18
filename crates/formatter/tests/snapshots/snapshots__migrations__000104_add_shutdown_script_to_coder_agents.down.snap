@@ -1,0 +1,30 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_agents drop column shutdown_script;
+
+alter table workspace_agents drop column shutdown_script_timeout_seconds;
+
+-- We can't drop values from enums, so we have to create a new one and convert the data.
+update workspace_agents
+set lifecycle_state = 'ready'
+where
+	lifecycle_state in (
+		'shutting_down',
+		'shutdown_timeout',
+		'shutdown_error',
+		'off'
+	);
+alter type workspace_agent_lifecycle_state rename to workspace_agent_lifecycle_state_old;
+create type workspace_agent_lifecycle_state as enum (
+	'created',
+	'starting',
+	'start_timeout',
+	'start_error',
+	'ready'
+);
+alter table workspace_agents alter column lifecycle_state drop default;
+alter table workspace_agents alter column lifecycle_state type workspace_agent_lifecycle_state using lifecycle_state::text::workspace_agent_lifecycle_state;
+alter table workspace_agents alter column lifecycle_state set default 'created';
+drop type workspace_agent_lifecycle_state_old;

@@ -1,0 +1,14 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table if not exists git_auth_links (
+	provider_id text not null,
+	user_id uuid not null,
+	created_at timestamptz not null,
+	updated_at timestamptz not null,
+	oauth_access_token text not null,
+	oauth_refresh_token text not null,
+	oauth_expiry timestamptz not null,
+	UNIQUE(provider_id, user_id)
+);

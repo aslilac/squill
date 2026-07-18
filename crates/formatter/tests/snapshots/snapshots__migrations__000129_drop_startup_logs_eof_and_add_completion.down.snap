@@ -1,0 +1,11 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_agents drop column started_at, drop column ready_at;
+
+-- We won't bring back log entries where eof = TRUE, but this doesn't matter
+-- as the implementation doesn't require it and hasn't been part of a release.
+alter table workspace_agent_startup_logs add column eof boolean not null default false;
+
+comment on column workspace_agent_startup_logs.eof is 'End of file reached';

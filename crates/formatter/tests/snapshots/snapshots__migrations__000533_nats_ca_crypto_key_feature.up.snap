@@ -1,0 +1,5 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter type crypto_key_feature add value if not exists 'nats_ca';

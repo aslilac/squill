@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table provisioner_jobs drop column job_status;
+drop type provisioner_job_status;

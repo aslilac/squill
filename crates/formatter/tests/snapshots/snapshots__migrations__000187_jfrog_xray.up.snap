@@ -1,0 +1,13 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table jfrog_xray_scans (
+	agent_id uuid not null references workspace_agents (id) on delete cascade,
+	workspace_id uuid not null references workspaces (id) on delete cascade,
+	critical integer not null default 0,
+	high integer not null default 0,
+	medium integer not null default 0,
+	results_url text not null default '',
+	primary key (agent_id, workspace_id)
+);

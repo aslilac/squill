@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table aibridge_token_usages drop column cache_read_input_tokens,
+drop column cache_write_input_tokens;

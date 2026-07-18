@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table provisioner_keys add column tags jsonb default '{}'::jsonb not null;
+alter table provisioner_keys alter column tags drop default;

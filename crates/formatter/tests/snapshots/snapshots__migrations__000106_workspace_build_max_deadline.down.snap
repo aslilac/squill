@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_builds drop column max_deadline;
+
+alter table templates drop column max_ttl;

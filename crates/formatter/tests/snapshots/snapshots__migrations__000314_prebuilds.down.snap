@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Revert prebuild views
+drop view if exists workspace_prebuild_builds;
+drop view if exists workspace_prebuilds;
+drop view if exists workspace_latest_builds;

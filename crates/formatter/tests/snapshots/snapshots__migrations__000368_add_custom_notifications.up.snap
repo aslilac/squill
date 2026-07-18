@@ -1,0 +1,38 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Create new enum with 'custom' value
+create type new_notification_template_kind as enum ('system', 'custom');
+
+-- Update the notification_templates table to use new enum
+alter table notification_templates alter column kind drop default,
+alter column kind type new_notification_template_kind using (
+	kind::text::new_notification_template_kind
+),
+alter column kind set default 'system'::new_notification_template_kind;
+
+-- Drop old enum and rename new one
+drop type notification_template_kind;
+alter type new_notification_template_kind rename to notification_template_kind;
+
+-- Insert new Custom Notification template with 'custom' kind
+insert into notification_templates (id,
+name,
+title_template,
+body_template,
+actions,
+"group",
+method,
+kind,
+enabled_by_default)
+values
+	('39b1e189-c857-4b0c-877a-511144c18516',
+	'Custom Notification',
+	'{{.Labels.custom_title}}',
+	'{{.Labels.custom_message}}',
+	'[]',
+	'Custom Events',
+	null,
+	'custom'::notification_template_kind,
+	true);

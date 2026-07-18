@@ -1,0 +1,96 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Drop the view that depends on the templates table
+drop view template_with_names;
+
+-- Remove 'organization' from the app_sharing_level enum
+create type new_app_sharing_level as enum ('owner', 'authenticated', 'public');
+
+-- Update workspace_agent_port_share table to use old enum
+-- Convert any 'organization' values to 'authenticated' during downgrade
+alter table workspace_agent_port_share alter column share_level type new_app_sharing_level using (
+	case
+		when share_level = 'organization'
+			then 'authenticated'::new_app_sharing_level
+		else share_level::text::new_app_sharing_level
+	end
+);
+
+-- Update workspace_apps table to use old enum
+-- Convert any 'organization' values to 'authenticated' during downgrade
+alter table workspace_apps alter column sharing_level drop default,
+alter column sharing_level type new_app_sharing_level using (
+	case
+		when sharing_level = 'organization'
+			then 'authenticated'::new_app_sharing_level
+		else sharing_level::text::new_app_sharing_level
+	end
+),
+alter column sharing_level set default 'owner'::new_app_sharing_level;
+
+-- Update templates table to use old enum
+-- Convert any 'organization' values to 'authenticated' during downgrade
+alter table templates alter column max_port_sharing_level drop default,
+alter column max_port_sharing_level type new_app_sharing_level using (
+	case
+		when max_port_sharing_level = 'organization'
+			then 'owner'::new_app_sharing_level
+		else max_port_sharing_level::text::new_app_sharing_level
+	end
+),
+alter column max_port_sharing_level set default 'owner'::new_app_sharing_level;
+
+-- Drop old enum and rename new one
+drop type app_sharing_level;
+alter type new_app_sharing_level rename to app_sharing_level;
+
+-- Recreate the template_with_names view
+create view template_with_names as
+select
+	templates.id,
+	templates.created_at,
+	templates.updated_at,
+	templates.organization_id,
+	templates.deleted,
+	templates.name,
+	templates.provisioner,
+	templates.active_version_id,
+	templates.description,
+	templates.default_ttl,
+	templates.created_by,
+	templates.icon,
+	templates.user_acl,
+	templates.group_acl,
+	templates.display_name,
+	templates.allow_user_cancel_workspace_jobs,
+	templates.allow_user_autostart,
+	templates.allow_user_autostop,
+	templates.failure_ttl,
+	templates.time_til_dormant,
+	templates.time_til_dormant_autodelete,
+	templates.autostop_requirement_days_of_week,
+	templates.autostop_requirement_weeks,
+	templates.autostart_block_days_of_week,
+	templates.require_active_version,
+	templates.deprecated,
+	templates.activity_bump,
+	templates.max_port_sharing_level,
+	templates.use_classic_parameter_flow,
+	COALESCE(visible_users.avatar_url, ''::text) as created_by_avatar_url,
+	COALESCE(visible_users.username, ''::text) as created_by_username,
+	COALESCE(visible_users.name, ''::text) as created_by_name,
+	COALESCE(organizations.name, ''::text) as organization_name,
+	COALESCE(organizations.display_name, ''::text) as organization_display_name,
+	COALESCE(organizations.icon, ''::text) as organization_icon
+from
+	(
+		(
+			templates
+			left join visible_users on ((templates.created_by = visible_users.id))
+		)
+		left join organizations on ((templates.organization_id = organizations.id))
+	);
+
+comment on view template_with_names is 'Joins in the display name information such as username, avatar, and organization name.';

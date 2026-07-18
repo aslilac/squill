@@ -1,0 +1,10 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Avoid "upgrading" devurl keys to fully fledged API keys.
+delete from api_keys where scope != 'all';
+
+alter table api_keys drop column scope;
+
+drop type api_key_scope;

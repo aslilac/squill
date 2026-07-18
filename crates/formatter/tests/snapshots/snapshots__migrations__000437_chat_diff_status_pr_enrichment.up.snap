@@ -1,0 +1,11 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table chat_diff_statuses add column author_login text;
+alter table chat_diff_statuses add column author_avatar_url text;
+alter table chat_diff_statuses add column base_branch text;
+alter table chat_diff_statuses add column pr_number integer;
+alter table chat_diff_statuses add column commits integer;
+alter table chat_diff_statuses add column approved boolean;
+alter table chat_diff_statuses add column reviewer_count integer;

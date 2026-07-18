@@ -76,386 +76,390 @@ where
 	);
 
 -- name: GetWorkspaces :many
-WITH
--- build_params is used to filter by build parameters if present.
--- It has to be a CTE because the set returning function 'unnest' cannot
--- be used in a WHERE clause.
-build_params AS (
-SELECT
-	LOWER(unnest(@param_names :: text[])) AS name,
-	LOWER(unnest(@param_values :: text[])) AS value
-),
-filtered_workspaces AS (
-SELECT
-	workspaces.*,
-	latest_build.template_version_id,
-	latest_build.template_version_name,
-	latest_build.completed_at as latest_build_completed_at,
-	latest_build.canceled_at as latest_build_canceled_at,
-	latest_build.error as latest_build_error,
-	latest_build.transition as latest_build_transition,
-	latest_build.job_status as latest_build_status,
-	latest_build.has_external_agent as latest_build_has_external_agent
-FROM
-	workspaces_expanded as workspaces
-JOIN
-    users
-ON
-    workspaces.owner_id = users.id
-LEFT JOIN LATERAL (
-	SELECT
-		workspace_builds.id,
-		workspace_builds.transition,
-		workspace_builds.template_version_id,
-		workspace_builds.has_ai_task,
-		workspace_builds.has_external_agent,
-		template_versions.name AS template_version_name,
-		provisioner_jobs.id AS provisioner_job_id,
-		provisioner_jobs.started_at,
-		provisioner_jobs.updated_at,
-		provisioner_jobs.canceled_at,
-		provisioner_jobs.completed_at,
-		provisioner_jobs.error,
-		provisioner_jobs.job_status
-	FROM
-		workspace_builds
-	JOIN
-		provisioner_jobs
-	ON
-		provisioner_jobs.id = workspace_builds.job_id
-	LEFT JOIN
-		template_versions
-	ON
-		template_versions.id = workspace_builds.template_version_id
-	WHERE
-		workspace_builds.workspace_id = workspaces.id
-	ORDER BY
-		build_number DESC
-	LIMIT
-		1
-) latest_build ON TRUE
-LEFT JOIN LATERAL (
-	SELECT
-		*
-	FROM
-		templates
-	WHERE
-		templates.id = workspaces.template_id
-) template ON true
-WHERE
-	-- Optionally include deleted workspaces
-	workspaces.deleted = @deleted
-	AND CASE
-		WHEN @status :: text != '' THEN
-			CASE
-			    -- Some workspace specific status refer to the transition
-			    -- type. By default, the standard provisioner job status
-			    -- search strings are supported.
-			    -- 'running' states
-				WHEN @status = 'starting' THEN
-				    latest_build.job_status = 'running'::provisioner_job_status AND
-					latest_build.transition = 'start'::workspace_transition
-				WHEN @status = 'stopping' THEN
-					latest_build.job_status = 'running'::provisioner_job_status AND
-					latest_build.transition = 'stop'::workspace_transition
-				WHEN @status = 'deleting' THEN
-					latest_build.job_status = 'running' AND
-					latest_build.transition = 'delete'::workspace_transition
+with
+	-- build_params is used to filter by build parameters if present.
+	-- It has to be a CTE because the set returning function 'unnest' cannot
+	-- be used in a WHERE clause.
+	build_params as (
+		select
+			LOWER(unnest(@param_names::text[])) as name,
+			LOWER(unnest(@param_values::text[])) as value
+	),
+	filtered_workspaces as (
+		select
+			workspaces.*,
+			latest_build.template_version_id,
+			latest_build.template_version_name,
+			latest_build.completed_at as latest_build_completed_at,
+			latest_build.canceled_at as latest_build_canceled_at,
+			latest_build.error as latest_build_error,
+			latest_build.transition as latest_build_transition,
+			latest_build.job_status as latest_build_status,
+			latest_build.has_external_agent as latest_build_has_external_agent
+		from
+			workspaces_expanded as workspaces
+			join users on workspaces.owner_id = users.id
+			left join LATERAL (
+				select
+					workspace_builds.id,
+					workspace_builds.transition,
+					workspace_builds.template_version_id,
+					workspace_builds.has_ai_task,
+					workspace_builds.has_external_agent,
+					template_versions.name as template_version_name,
+					provisioner_jobs.id as provisioner_job_id,
+					provisioner_jobs.started_at,
+					provisioner_jobs.updated_at,
+					provisioner_jobs.canceled_at,
+					provisioner_jobs.completed_at,
+					provisioner_jobs.error,
+					provisioner_jobs.job_status
+				from
+					workspace_builds
+					join provisioner_jobs on provisioner_jobs.id = workspace_builds.job_id
+					left join template_versions on template_versions.id
+					= workspace_builds.template_version_id
+				where workspace_builds.workspace_id = workspaces.id
+				order by build_number desc
+				limit 1
+			) latest_build on true
+			left join LATERAL (
+				select *
+				from templates
+				where templates.id = workspaces.template_id
+			) template on true
+		where
+			-- Optionally include deleted workspaces
+			workspaces.deleted
+			= @deleted
+			and case
+				when @status::text != ''
+					then case
+						-- Some workspace specific status refer to the transition
+						-- type. By default, the standard provisioner job status
+						-- search strings are supported.
+						-- 'running' states
+						when @status = 'starting'
+							then latest_build.job_status = 'running'::provisioner_job_status
+							and latest_build.transition = 'start'::workspace_transition
+						when @status = 'stopping'
+							then latest_build.job_status = 'running'::provisioner_job_status
+							and latest_build.transition = 'stop'::workspace_transition
+						when @status = 'deleting'
+							then latest_build.job_status = 'running'
+							and latest_build.transition = 'delete'::workspace_transition
 
-			    -- 'succeeded' states
-			    WHEN @status = 'deleted' THEN
-			    	latest_build.job_status = 'succeeded'::provisioner_job_status AND
-			    	latest_build.transition = 'delete'::workspace_transition
-				WHEN @status = 'stopped' THEN
-					latest_build.job_status = 'succeeded'::provisioner_job_status AND
-					latest_build.transition = 'stop'::workspace_transition
-				WHEN @status = 'started' THEN
-					latest_build.job_status = 'succeeded'::provisioner_job_status AND
-					latest_build.transition = 'start'::workspace_transition
+						-- 'succeeded' states
+						when @status = 'deleted'
+							then latest_build.job_status = 'succeeded'::provisioner_job_status
+							and latest_build.transition = 'delete'::workspace_transition
+						when @status = 'stopped'
+							then latest_build.job_status = 'succeeded'::provisioner_job_status
+							and latest_build.transition = 'stop'::workspace_transition
+						when @status = 'started'
+							then latest_build.job_status = 'succeeded'::provisioner_job_status
+							and latest_build.transition = 'start'::workspace_transition
 
-			    -- Special case where the provisioner status and workspace status
-			    -- differ. A workspace is "running" if the job is "succeeded" and
-			    -- the transition is "start". This is because a workspace starts
-			    -- running when a job is complete.
-			    WHEN @status = 'running' THEN
-					latest_build.job_status = 'succeeded'::provisioner_job_status AND
-					latest_build.transition = 'start'::workspace_transition
+						-- Special case where the provisioner status and workspace status
+						-- differ. A workspace is "running" if the job is "succeeded" and
+						-- the transition is "start". This is because a workspace starts
+						-- running when a job is complete.
+						when @status = 'running'
+							then latest_build.job_status = 'succeeded'::provisioner_job_status
+							and latest_build.transition = 'start'::workspace_transition
+						when @status != ''
+							then
+							-- By default just match the job status exactly
+							latest_build.job_status
+							= @status::provisioner_job_status
+						else true
+					end
+				else true
+			end
+			-- Filter by owner_id
+			and case
+				when @owner_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
+					then workspaces.owner_id = @owner_id
+				else true
+			end
+			-- Filter by organization_id
+			and case
+				when @organization_id::uuid
+				!= '00000000-0000-0000-0000-000000000000'::uuid
+					then workspaces.organization_id = @organization_id
+				else true
+			end
+			-- Filter by build parameter
+			-- @has_param will match any build that includes the parameter.
+			and case
+				when array_length(@has_param::text[], 1) > 0
+					then exists (
+						select 1
+						from workspace_build_parameters
+						where
+							workspace_build_parameters.workspace_build_id = latest_build.id
+							and
+							-- ILIKE is case insensitive
+							workspace_build_parameters.name
+							ilike any(@has_param)
+					)
+				else true
+			end
+			-- @param_value will match param name an value.
+			-- requires 2 arrays, @param_names and @param_values to be passed in.
+			-- Array index must match between the 2 arrays for name=value
+			and case
+				when array_length(@param_names::text[], 1) > 0
+					then exists (
+						select 1
+						from
+							workspace_build_parameters
+							inner join build_params on LOWER(workspace_build_parameters.name)
+							= build_params.name
+							and LOWER(workspace_build_parameters.value) = build_params.value
+							and workspace_build_parameters.workspace_build_id
+							= latest_build.id
+					)
+				else true
+			end
 
-				WHEN @status != '' THEN
-				    -- By default just match the job status exactly
-			    	latest_build.job_status = @status::provisioner_job_status
-				ELSE
-					true
-			END
-		ELSE true
-	END
-	-- Filter by owner_id
-	AND CASE
-		WHEN @owner_id :: uuid != '00000000-0000-0000-0000-000000000000'::uuid THEN
-			workspaces.owner_id = @owner_id
-		ELSE true
-	END
-  	-- Filter by organization_id
-  	AND CASE
-		  WHEN @organization_id :: uuid != '00000000-0000-0000-0000-000000000000'::uuid THEN
-			  workspaces.organization_id = @organization_id
-		  ELSE true
-	END
-	-- Filter by build parameter
-   	-- @has_param will match any build that includes the parameter.
-	AND CASE WHEN array_length(@has_param :: text[], 1) > 0  THEN
-		EXISTS (
-			SELECT
-				1
-			FROM
-				workspace_build_parameters
-			WHERE
-				workspace_build_parameters.workspace_build_id = latest_build.id AND
-				-- ILIKE is case insensitive
-				workspace_build_parameters.name ILIKE ANY(@has_param)
-		)
-		ELSE true
-	END
-	-- @param_value will match param name an value.
-  	-- requires 2 arrays, @param_names and @param_values to be passed in.
-  	-- Array index must match between the 2 arrays for name=value
-  	AND CASE WHEN array_length(@param_names :: text[], 1) > 0  THEN
-		EXISTS (
-			SELECT
-				1
-			FROM
-				workspace_build_parameters
-			INNER JOIN
-				build_params
-			ON
-				LOWER(workspace_build_parameters.name) = build_params.name AND
-				LOWER(workspace_build_parameters.value) = build_params.value AND
-				workspace_build_parameters.workspace_build_id = latest_build.id
-		)
-		ELSE true
-	END
+			-- Filter by owner_name
+			and case
+				when @owner_username::text != ''
+					then workspaces.owner_id
+					= (
+						select id
+						from users
+						where
+							lower(users.username) = lower(@owner_username) and deleted = false
+					)
+				else true
+			end
+			-- Filter by template_name
+			-- There can be more than 1 template with the same name across organizations.
+			-- Use the organization filter to restrict to 1 org if needed.
+			and case
+				when @template_name::text != ''
+					then workspaces.template_id
+					= any (
+						select id
+						from templates
+						where lower(name) = lower(@template_name) and deleted = false
+					)
+				else true
+			end
+			-- Filter by template_ids
+			and case
+				when array_length(@template_ids::uuid[], 1) > 0
+					then workspaces.template_id = any(@template_ids)
+				else true
+			end
+			-- Filter by workspace_ids
+			and case
+				when array_length(@workspace_ids::uuid[], 1) > 0
+					then workspaces.id = any(@workspace_ids)
+				else true
+			end
+			-- Filter by name, matching on substring
+			and case
+				when @name::text != '' then workspaces.name ilike '%' || @name || '%'
+				else true
+			end
+			-- Filter by agent status
+			-- has-agent: is only applicable for workspaces in "start" transition. Stopped and deleted workspaces don't have agents.
+			and case
+				when array_length(@has_agent_statuses::text[], 1) > 0
+					then (
+						select COUNT(*)
+						from
+							workspace_resources
+							join workspace_agents on workspace_agents.resource_id
+							= workspace_resources.id
+						where
+							workspace_resources.job_id = latest_build.provisioner_job_id
+							and latest_build.transition = 'start'::workspace_transition
+							and
+							-- Filter out deleted sub agents.
+							workspace_agents.deleted
+							= false
+							and (
+								case
+									when workspace_agents.first_connected_at is null
+										then case
+											when workspace_agents.connection_timeout_seconds > 0
+											and NOW() - workspace_agents.created_at
+											> workspace_agents.connection_timeout_seconds
+											* interval '1 second'
+												then 'timeout'
+											else 'connecting'
+										end
+									when workspace_agents.disconnected_at
+									> workspace_agents.last_connected_at
+										then 'disconnected'
+									when NOW() - workspace_agents.last_connected_at
+									> interval '1 second'
+									* @agent_inactive_disconnect_timeout_seconds::bigint
+										then 'disconnected'
+									when workspace_agents.last_connected_at is not null
+										then 'connected'
+									else null
+								end
+							)
+							= any(@has_agent_statuses::text[])
+					)
+					> 0
+				else true
+			end
+			-- Filter by dormant workspaces.
+			and case
+				when @dormant::boolean != 'false' then dormant_at is not null
+				else true
+			end
+			-- Filter by last_used
+			and case
+				when @last_used_before::timestamp with time zone
+				> '0001-01-01 00:00:00Z'
+					then workspaces.last_used_at <= @last_used_before
+				else true
+			end
+			and case
+				when @last_used_after::timestamp with time zone > '0001-01-01 00:00:00Z'
+					then workspaces.last_used_at >= @last_used_after
+				else true
+			end
+			and case
+				when sqlc.narg('using_active')::boolean is not null
+					then (latest_build.template_version_id = template.active_version_id)
+					= sqlc.narg('using_active')::boolean
+				else true
+			end
+			-- Filter by has_ai_task, checks if this is a task workspace.
+			and case
+				when sqlc.narg('has_ai_task')::boolean is not null
+					then sqlc.narg('has_ai_task')::boolean
+					= exists (
+						select 1
+						from tasks
+						where
+							-- Consider all tasks, deleting a task does not turn the
+							-- workspace into a non-task workspace.
+							tasks.workspace_id
+							= workspaces.id
+					)
+				else true
+			end
+			-- Filter by has_external_agent in latest build
+			and case
+				when sqlc.narg('has_external_agent')::boolean is not null
+					then latest_build.has_external_agent
+					= sqlc.narg('has_external_agent')::boolean
+				else true
+			end
+			-- Filter by shared status
+			and case
+				when sqlc.narg('shared')::boolean is not null
+					then (
+						workspaces.user_acl != '{}'::jsonb
+						or workspaces.group_acl != '{}'::jsonb
+					)
+					= sqlc.narg('shared')::boolean
+				else true
+			end
+			-- Filter by shared_with_user_id
+			and case
+				when @shared_with_user_id::uuid
+				!= '00000000-0000-0000-0000-000000000000'::uuid
+					then workspaces.user_acl ? (@shared_with_user_id::uuid)::text
+				else true
+			end
+			-- Filter by shared_with_group_id
+			and case
+				when @shared_with_group_id::uuid
+				!= '00000000-0000-0000-0000-000000000000'::uuid
+					then workspaces.group_acl ? (@shared_with_group_id::uuid)::text
+				else true
+			end
 
-	-- Filter by owner_name
-	AND CASE
-		WHEN @owner_username :: text != '' THEN
-			workspaces.owner_id = (SELECT id FROM users WHERE lower(users.username) = lower(@owner_username) AND deleted = false)
-		ELSE true
-	END
-	-- Filter by template_name
-	-- There can be more than 1 template with the same name across organizations.
-	-- Use the organization filter to restrict to 1 org if needed.
-	AND CASE
-		WHEN @template_name :: text != '' THEN
-			workspaces.template_id = ANY(SELECT id FROM templates WHERE lower(name) = lower(@template_name) AND deleted = false)
-		ELSE true
-	END
-	-- Filter by template_ids
-	AND CASE
-		WHEN array_length(@template_ids :: uuid[], 1) > 0 THEN
-			workspaces.template_id = ANY(@template_ids)
-		ELSE true
-	END
-  	-- Filter by workspace_ids
-  	AND CASE
-		  WHEN array_length(@workspace_ids :: uuid[], 1) > 0 THEN
-			  workspaces.id = ANY(@workspace_ids)
-		  ELSE true
-	END
-	-- Filter by name, matching on substring
-	AND CASE
-		WHEN @name :: text != '' THEN
-			workspaces.name ILIKE '%' || @name || '%'
-		ELSE true
-	END
-	-- Filter by agent status
-	-- has-agent: is only applicable for workspaces in "start" transition. Stopped and deleted workspaces don't have agents.
-	AND CASE
-		WHEN array_length(@has_agent_statuses :: text[], 1) > 0 THEN
+		-- Authorize Filter clause will be injected below in GetAuthorizedWorkspaces
+		-- @authorize_filter
+	),
+	filtered_workspaces_order as (
+		select fw.*
+		from filtered_workspaces fw
+		order by
+			-- To ensure that 'favorite' workspaces show up first in the list only for their owner.
+			case
+				when favorite
+				and owner_username
+				= (select users.username from users where users.id = @requester_id)
+					then 0
+				else 1
+			end asc,
 			(
-				SELECT COUNT(*)
-				FROM
-					workspace_resources
-				JOIN
-					workspace_agents
-				ON
-					workspace_agents.resource_id = workspace_resources.id
-				WHERE
-					workspace_resources.job_id = latest_build.provisioner_job_id AND
-					latest_build.transition = 'start'::workspace_transition AND
-					-- Filter out deleted sub agents.
-					workspace_agents.deleted = FALSE AND
-					(
-						CASE
-							WHEN workspace_agents.first_connected_at IS NULL THEN
-								CASE
-									WHEN workspace_agents.connection_timeout_seconds > 0 AND NOW() - workspace_agents.created_at > workspace_agents.connection_timeout_seconds * INTERVAL '1 second' THEN
-										'timeout'
-									ELSE
-										'connecting'
-								END
-							WHEN workspace_agents.disconnected_at > workspace_agents.last_connected_at THEN
-								'disconnected'
-							WHEN NOW() - workspace_agents.last_connected_at > INTERVAL '1 second' * @agent_inactive_disconnect_timeout_seconds :: bigint THEN
-								'disconnected'
-							WHEN workspace_agents.last_connected_at IS NOT NULL THEN
-								'connected'
-							ELSE
-								NULL
-						END
-					) = ANY(@has_agent_statuses :: text[])
-			) > 0
-		ELSE true
-	END
-	-- Filter by dormant workspaces.
-	AND CASE
-		WHEN @dormant :: boolean != 'false' THEN
-			dormant_at IS NOT NULL
-		ELSE true
-	END
-	-- Filter by last_used
-	AND CASE
-		  WHEN @last_used_before :: timestamp with time zone > '0001-01-01 00:00:00Z' THEN
-				  workspaces.last_used_at <= @last_used_before
-		  ELSE true
-	END
-	AND CASE
-		  WHEN @last_used_after :: timestamp with time zone > '0001-01-01 00:00:00Z' THEN
-				  workspaces.last_used_at >= @last_used_after
-		  ELSE true
-	END
-  	AND CASE
-		  WHEN sqlc.narg('using_active') :: boolean IS NOT NULL THEN
-			  (latest_build.template_version_id = template.active_version_id) = sqlc.narg('using_active') :: boolean
-		  ELSE true
-	END
-	-- Filter by has_ai_task, checks if this is a task workspace.
-	AND CASE
-		WHEN sqlc.narg('has_ai_task')::boolean IS NOT NULL
-		THEN sqlc.narg('has_ai_task')::boolean = EXISTS (
-			SELECT
-				1
-			FROM
-				tasks
-			WHERE
-				-- Consider all tasks, deleting a task does not turn the
-				-- workspace into a non-task workspace.
-				tasks.workspace_id = workspaces.id
-		)
-		ELSE true
-	END
-	-- Filter by has_external_agent in latest build
-	AND CASE
-		WHEN sqlc.narg('has_external_agent') :: boolean IS NOT NULL THEN
-			latest_build.has_external_agent = sqlc.narg('has_external_agent') :: boolean
-		ELSE true
-	END
-	-- Filter by shared status
-	AND CASE
-		WHEN sqlc.narg('shared') :: boolean IS NOT NULL THEN
-			(workspaces.user_acl != '{}'::jsonb OR workspaces.group_acl != '{}'::jsonb) = sqlc.narg('shared') :: boolean
-		ELSE true
-	END
-	-- Filter by shared_with_user_id
-	AND CASE
-		WHEN @shared_with_user_id :: uuid != '00000000-0000-0000-0000-000000000000'::uuid THEN
-			workspaces.user_acl ? (@shared_with_user_id :: uuid) :: text
-		ELSE true
-	END
-	-- Filter by shared_with_group_id
-	AND CASE
-		WHEN @shared_with_group_id :: uuid != '00000000-0000-0000-0000-000000000000'::uuid THEN
-			workspaces.group_acl ? (@shared_with_group_id :: uuid) :: text
-		ELSE true
-	END
-
-	-- Authorize Filter clause will be injected below in GetAuthorizedWorkspaces
-	-- @authorize_filter
-), filtered_workspaces_order AS (
-	SELECT
-		fw.*
-	FROM
-		filtered_workspaces fw
-	ORDER BY
-		-- To ensure that 'favorite' workspaces show up first in the list only for their owner.
-		CASE WHEN favorite AND owner_username = (SELECT users.username FROM users WHERE users.id = @requester_id) THEN 0 ELSE 1 END ASC,
-		(latest_build_completed_at IS NOT NULL AND
-			latest_build_canceled_at IS NULL AND
-			latest_build_error IS NULL AND
-			latest_build_transition = 'start'::workspace_transition) DESC,
-		LOWER(owner_username) ASC,
-		LOWER(name) ASC
-	LIMIT
-		CASE
-			WHEN @limit_ :: integer > 0 THEN
-				@limit_
-		END
-	OFFSET
-		@offset_
-), filtered_workspaces_order_with_summary AS (
-	SELECT
-		fwo.*
-	FROM
-		filtered_workspaces_order fwo
-	-- Return a technical summary row with total count of workspaces.
-	-- It is used to present the correct count if pagination goes beyond the offset.
-	UNION ALL
-	SELECT
-		'00000000-0000-0000-0000-000000000000'::uuid, -- id
-		'0001-01-01 00:00:00+00'::timestamptz, -- created_at
-		'0001-01-01 00:00:00+00'::timestamptz, -- updated_at
-		'00000000-0000-0000-0000-000000000000'::uuid, -- owner_id
-		'00000000-0000-0000-0000-000000000000'::uuid, -- organization_id
-		'00000000-0000-0000-0000-000000000000'::uuid, -- template_id
-		false, -- deleted
-		'**TECHNICAL_ROW**', -- name
-		'', -- autostart_schedule
-		0, -- ttl
-		'0001-01-01 00:00:00+00'::timestamptz, -- last_used_at
-		'0001-01-01 00:00:00+00'::timestamptz, -- dormant_at
-		'0001-01-01 00:00:00+00'::timestamptz, -- deleting_at
-		'never'::automatic_updates, -- automatic_updates
-		false, -- favorite
-		'0001-01-01 00:00:00+00'::timestamptz, -- next_start_at
-		'{}'::jsonb, -- group_acl
-		'{}'::jsonb, -- user_acl
-		'', -- owner_avatar_url
-		'', -- owner_username
-		'', -- owner_name
-		'', -- organization_name
-		'', -- organization_display_name
-		'', -- organization_icon
-		'', -- organization_description
-		'', -- template_name
-		'', -- template_display_name
-		'', -- template_icon
-		'', -- template_description
-		'00000000-0000-0000-0000-000000000000'::uuid, -- task_id
-		'{}'::jsonb, -- group_acl_display_info
-		'{}'::jsonb, -- user_acl_display_info
-		-- Extra columns added to `filtered_workspaces`
-		'00000000-0000-0000-0000-000000000000'::uuid, -- template_version_id
-		'', -- template_version_name
-		'0001-01-01 00:00:00+00'::timestamptz, -- latest_build_completed_at,
-		'0001-01-01 00:00:00+00'::timestamptz, -- latest_build_canceled_at,
-		'', -- latest_build_error
-		'start'::workspace_transition, -- latest_build_transition
-		'unknown'::provisioner_job_status, -- latest_build_status
-		false -- latest_build_has_external_agent
-	WHERE
-		@with_summary :: boolean = true
-), total_count AS (
-	SELECT
-		count(*) AS count
-    FROM
-		filtered_workspaces
-)
-SELECT
-	fwos.*,
-	tc.count
-FROM
-	filtered_workspaces_order_with_summary fwos
-CROSS JOIN
-	total_count tc;
+				latest_build_completed_at is not null
+				and latest_build_canceled_at is null
+				and latest_build_error is null
+				and latest_build_transition = 'start'::workspace_transition
+			) desc,
+			LOWER(owner_username) asc,
+			LOWER(name) asc
+		limit case when @limit_::integer > 0 then @limit_ end
+		offset @offset_
+	),
+	filtered_workspaces_order_with_summary as (
+		select fwo.*
+		from filtered_workspaces_order fwo
+		-- Return a technical summary row with total count of workspaces.
+		-- It is used to present the correct count if pagination goes beyond the offset.
+		union
+		all
+		select
+			'00000000-0000-0000-0000-000000000000'::uuid, -- id
+			'0001-01-01 00:00:00+00'::timestamptz, -- created_at
+			'0001-01-01 00:00:00+00'::timestamptz, -- updated_at
+			'00000000-0000-0000-0000-000000000000'::uuid, -- owner_id
+			'00000000-0000-0000-0000-000000000000'::uuid, -- organization_id
+			'00000000-0000-0000-0000-000000000000'::uuid, -- template_id
+			false, -- deleted
+			'**TECHNICAL_ROW**', -- name
+			'', -- autostart_schedule
+			0, -- ttl
+			'0001-01-01 00:00:00+00'::timestamptz, -- last_used_at
+			'0001-01-01 00:00:00+00'::timestamptz, -- dormant_at
+			'0001-01-01 00:00:00+00'::timestamptz, -- deleting_at
+			'never'::automatic_updates, -- automatic_updates
+			false, -- favorite
+			'0001-01-01 00:00:00+00'::timestamptz, -- next_start_at
+			'{}'::jsonb, -- group_acl
+			'{}'::jsonb, -- user_acl
+			'', -- owner_avatar_url
+			'', -- owner_username
+			'', -- owner_name
+			'', -- organization_name
+			'', -- organization_display_name
+			'', -- organization_icon
+			'', -- organization_description
+			'', -- template_name
+			'', -- template_display_name
+			'', -- template_icon
+			'', -- template_description
+			'00000000-0000-0000-0000-000000000000'::uuid, -- task_id
+			'{}'::jsonb, -- group_acl_display_info
+			'{}'::jsonb, -- user_acl_display_info
+			-- Extra columns added to `filtered_workspaces`
+			'00000000-0000-0000-0000-000000000000'::uuid, -- template_version_id
+			'', -- template_version_name
+			'0001-01-01 00:00:00+00'::timestamptz, -- latest_build_completed_at,
+			'0001-01-01 00:00:00+00'::timestamptz, -- latest_build_canceled_at,
+			'', -- latest_build_error
+			'start'::workspace_transition, -- latest_build_transition
+			'unknown'::provisioner_job_status, -- latest_build_status
+			false -- latest_build_has_external_agent
+		where @with_summary::boolean = true
+	),
+	total_count as (select count(*) as count from filtered_workspaces)
+select fwos.*, tc.count
+from filtered_workspaces_order_with_summary fwos cross join total_count tc;
 
 -- name: GetWorkspaceByOwnerIDAndName :one
 select *
@@ -532,125 +536,94 @@ from
 	left join org_usage o on o.template_id = t.template_id;
 
 -- name: InsertWorkspace :one
-INSERT INTO
-	workspaces (
-		id,
-		created_at,
-		updated_at,
-		owner_id,
-		organization_id,
-		template_id,
-		name,
-		autostart_schedule,
-		ttl,
-		last_used_at,
-		automatic_updates,
-		next_start_at
-	)
-VALUES
-	($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *;
+insert into workspaces (id,
+created_at,
+updated_at,
+owner_id,
+organization_id,
+template_id,
+name,
+autostart_schedule,
+ttl,
+last_used_at,
+automatic_updates,
+next_start_at)
+values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+returning *;
 
 -- name: UpdateWorkspaceDeletedByID :exec
-UPDATE
-	workspaces
-SET
-	deleted = $2
-WHERE
-	id = $1;
+update workspaces set deleted = $2 where id = $1;
 
 -- name: UpdateWorkspace :one
-UPDATE
-	workspaces
-SET
-	name = $2
-WHERE
-	id = $1
-	AND deleted = false
-RETURNING *;
+update workspaces set name = $2 where id = $1 and deleted = false returning *;
 
 -- name: UpdateWorkspaceAutostart :exec
-UPDATE
-	workspaces
-SET
-	autostart_schedule = $2,
-	next_start_at = $3
-WHERE
+update workspaces
+set autostart_schedule = $2, next_start_at = $3
+where
 	id = $1
 	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
-  	-- are managed by the reconciliation loop, not the lifecycle executor which handles
-  	-- autostart_schedule and next_start_at
-  	AND owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID;
+	-- are managed by the reconciliation loop, not the lifecycle executor which handles
+	-- autostart_schedule and next_start_at
+	and owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid;
 
 -- name: UpdateWorkspaceNextStartAt :exec
-UPDATE
-	workspaces
-SET
-	next_start_at = $2
-WHERE
+update workspaces
+set next_start_at = $2
+where
 	id = $1
 	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
 	-- are managed by the reconciliation loop, not the lifecycle executor which handles
 	-- next_start_at
-	AND owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID;
+	and owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid;
 
 -- name: BatchUpdateWorkspaceNextStartAt :exec
-UPDATE
-	workspaces
-SET
-	next_start_at = CASE
-		WHEN batch.next_start_at = '0001-01-01 00:00:00+00'::timestamptz THEN NULL
-		ELSE batch.next_start_at
-	END
-FROM (
-	SELECT
-		unnest(sqlc.arg(ids)::uuid[]) AS id,
-		unnest(sqlc.arg(next_start_ats)::timestamptz[]) AS next_start_at
-) AS batch
-WHERE
-	workspaces.id = batch.id;
+update workspaces
+set
+	next_start_at = case
+		when batch.next_start_at = '0001-01-01 00:00:00+00'::timestamptz then null
+		else batch.next_start_at
+	end
+from
+	(
+		select
+			unnest(sqlc.arg(ids)::uuid[]) as id,
+			unnest(sqlc.arg(next_start_ats)::timestamptz[]) as next_start_at
+	) as batch
+where workspaces.id = batch.id;
 
 -- name: UpdateWorkspaceTTL :exec
-UPDATE
-	workspaces
-SET
-	ttl = $2
-WHERE
+update workspaces
+set ttl = $2
+where
 	id = $1
 	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
 	-- are managed by the reconciliation loop, not the lifecycle executor which handles
 	-- ttl
-	AND owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID;
+	and owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid;
 
 -- name: UpdateWorkspacesTTLByTemplateID :exec
-UPDATE
-	workspaces
-SET
-	ttl = $2
-WHERE
+update workspaces
+set ttl = $2
+where
 	template_id = $1
 	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
 	-- should not have their TTL updated, as they are handled by the prebuilds
 	-- reconciliation loop.
-	AND workspaces.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID;
+	and workspaces.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid;
 
 -- name: UpdateWorkspaceLastUsedAt :exec
-UPDATE
-	workspaces
-SET
-	last_used_at = $2
-WHERE
-	id = $1;
+update workspaces set last_used_at = $2 where id = $1;
 
 -- name: BatchUpdateWorkspaceLastUsedAt :exec
-UPDATE
-	workspaces
-SET
-	last_used_at = @last_used_at
-WHERE
-	id = ANY(@ids :: uuid[])
-AND
-  -- Do not overwrite with older data
-  last_used_at < @last_used_at;
+update workspaces
+set last_used_at = @last_used_at
+where
+	id = any(@ids::uuid[])
+	and
+	-- Do not overwrite with older data
+	last_used_at
+	< @last_used_at;
 
 -- name: GetDeploymentWorkspaceStats :one
 with
@@ -943,75 +916,75 @@ where
 	and workspaces.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid;
 
 -- name: UpdateWorkspaceDormantDeletingAt :one
-UPDATE
-    workspaces
-SET
-    dormant_at = $2,
-    -- When a workspace is active we want to update the last_used_at to avoid the workspace going
-    -- immediately dormant. If we're transition the workspace to dormant then we leave it alone.
-    last_used_at = CASE WHEN $2::timestamptz IS NULL THEN
-        now() at time zone 'utc'
-    ELSE
-        last_used_at
-    END,
-    -- If dormant_at is null (meaning active) or the template-defined time_til_dormant_autodelete is 0 we should set
-    -- deleting_at to NULL else set it to the dormant_at + time_til_dormant_autodelete duration.
-    deleting_at = CASE WHEN $2::timestamptz IS NULL OR templates.time_til_dormant_autodelete = 0 THEN
-        NULL
-    ELSE
-        $2::timestamptz + (INTERVAL '1 millisecond' * (templates.time_til_dormant_autodelete / 1000000))
-    END
-FROM
-    templates
-WHERE
-    workspaces.id = $1
-    AND templates.id = workspaces.template_id
+update workspaces
+set
+	dormant_at = $2,
+	-- When a workspace is active we want to update the last_used_at to avoid the workspace going
+	-- immediately dormant. If we're transition the workspace to dormant then we leave it alone.
+	last_used_at = case
+		when $2::timestamptz is null then now() at time zone 'utc'
+		else last_used_at
+	end,
+	-- If dormant_at is null (meaning active) or the template-defined time_til_dormant_autodelete is 0 we should set
+	-- deleting_at to NULL else set it to the dormant_at + time_til_dormant_autodelete duration.
+	deleting_at = case
+		when $2::timestamptz is null or templates.time_til_dormant_autodelete = 0
+			then null
+		else $2::timestamptz
+		+ (
+			interval '1 millisecond'
+			* (templates.time_til_dormant_autodelete / 1000000)
+		)
+	end
+from templates
+where
+	workspaces.id = $1
+	and templates.id = workspaces.template_id
 	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
 	-- are managed by the reconciliation loop, not the lifecycle executor which handles
 	-- dormant_at and deleting_at
-	AND owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID
-RETURNING
-    workspaces.*;
+	and owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid
+returning workspaces.*;
 
 -- name: UpdateWorkspacesDormantDeletingAtByTemplateID :many
-UPDATE workspaces
-SET
-    deleting_at = CASE
-        WHEN @time_til_dormant_autodelete_ms::bigint = 0 THEN NULL
-        WHEN @dormant_at::timestamptz > '0001-01-01 00:00:00+00'::timestamptz THEN (@dormant_at::timestamptz) + interval '1 milliseconds' * @time_til_dormant_autodelete_ms::bigint
-        ELSE dormant_at + interval '1 milliseconds' * @time_til_dormant_autodelete_ms::bigint
-    END,
-    dormant_at = CASE WHEN @dormant_at::timestamptz > '0001-01-01 00:00:00+00'::timestamptz THEN @dormant_at::timestamptz ELSE dormant_at END
-WHERE
-    template_id = @template_id
-	AND dormant_at IS NOT NULL
-	AND deleted = false
+update workspaces
+set
+	deleting_at = case
+		when @time_til_dormant_autodelete_ms::bigint = 0 then null
+		when @dormant_at::timestamptz > '0001-01-01 00:00:00+00'::timestamptz
+			then (@dormant_at::timestamptz)
+			+ interval '1 milliseconds' * @time_til_dormant_autodelete_ms::bigint
+		else dormant_at
+		+ interval '1 milliseconds' * @time_til_dormant_autodelete_ms::bigint
+	end,
+	dormant_at = case
+		when @dormant_at::timestamptz > '0001-01-01 00:00:00+00'::timestamptz
+			then @dormant_at::timestamptz
+		else dormant_at
+	end
+where
+	template_id = @template_id
+	and dormant_at is not null
+	and deleted = false
 	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
 	-- should not have their dormant or deleting at set, as these are handled by the
-    -- prebuilds reconciliation loop.
-	AND workspaces.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID
-RETURNING *;
+	-- prebuilds reconciliation loop.
+	and workspaces.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid
+returning *;
 
 -- name: UpdateTemplateWorkspacesLastUsedAt :exec
-UPDATE workspaces
-SET
-	last_used_at = @last_used_at::timestamptz
-WHERE
-	template_id = @template_id;
+update workspaces
+set last_used_at = @last_used_at::timestamptz
+where template_id = @template_id;
 
 -- name: UpdateWorkspaceAutomaticUpdates :exec
-UPDATE
-	workspaces
-SET
-	automatic_updates = $2
-WHERE
-		id = $1;
+update workspaces set automatic_updates = $2 where id = $1;
 
 -- name: FavoriteWorkspace :exec
-UPDATE workspaces SET favorite = true WHERE id = @id;
+update workspaces set favorite = true where id = @id;
 
 -- name: UnfavoriteWorkspace :exec
-UPDATE workspaces SET favorite = false WHERE id = @id;
+update workspaces set favorite = false where id = @id;
 
 -- name: GetWorkspacesAndAgentsByOwnerID :many
 select
@@ -1070,36 +1043,23 @@ select * from workspaces where template_id = $1 and deleted = false;
 select group_acl as groups, user_acl as users from workspaces where id = @id;
 
 -- name: UpdateWorkspaceACLByID :exec
-UPDATE
-	workspaces
-SET
-	group_acl = @group_acl,
-	user_acl = @user_acl
-WHERE
-	id = @id;
+update workspaces
+set group_acl = @group_acl, user_acl = @user_acl
+where id = @id;
 
 -- name: DeleteWorkspaceACLByID :exec
-UPDATE
-	workspaces
-SET
-	group_acl = '{}'::json,
-	user_acl = '{}'::json
-WHERE
-	id = @id;
+update workspaces
+set group_acl = '{}'::json, user_acl = '{}'::json
+where id = @id;
 
 -- name: DeleteWorkspaceACLsByOrganization :exec
-UPDATE
-	workspaces
-SET
-	group_acl = '{}'::jsonb,
-	user_acl = '{}'::jsonb
-WHERE
+update workspaces
+set group_acl = '{}'::jsonb, user_acl = '{}'::jsonb
+where
 	organization_id = @organization_id
-	AND (
-		NOT @exclude_service_accounts::boolean
-		OR owner_id NOT IN (
-			SELECT id FROM users WHERE is_service_account = true
-		)
+	and (
+		not @exclude_service_accounts::boolean
+		or owner_id not in (select id from users where is_service_account = true)
 	);
 
 -- name: GetRegularWorkspaceCreateMetrics :many

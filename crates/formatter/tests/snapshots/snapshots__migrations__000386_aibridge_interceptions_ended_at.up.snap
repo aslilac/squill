@@ -1,0 +1,5 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table aibridge_interceptions add column ended_at timestamp with time zone default null;

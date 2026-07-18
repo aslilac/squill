@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table only workspaces drop column autostop_schedule;
+alter table only workspaces add column ttl bigint default null;

@@ -1,0 +1,10 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table chats drop column if exists mcp_server_ids;
+drop index if exists idx_mcp_server_configs_enabled;
+drop index if exists idx_mcp_server_configs_forced;
+drop index if exists idx_mcp_server_user_tokens_user_id;
+drop table if exists mcp_server_user_tokens;
+drop table if exists mcp_server_configs;

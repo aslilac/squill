@@ -1,0 +1,17 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type workspace_agent_log_source as enum (
+	'startup_script',
+	'shutdown_script',
+	'kubernetes_logs',
+	'envbox',
+	'envbuilder',
+	'external'
+);
+alter table workspace_agent_startup_logs rename to workspace_agent_logs;
+alter table workspace_agent_logs add column source workspace_agent_log_source not null default 'startup_script';
+alter table workspace_agents rename column startup_logs_overflowed to logs_overflowed;
+alter table workspace_agents rename column startup_logs_length to logs_length;
+alter table workspace_agents rename constraint max_startup_logs_length to max_logs_length;

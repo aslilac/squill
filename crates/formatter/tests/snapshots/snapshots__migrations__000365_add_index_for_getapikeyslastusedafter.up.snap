@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create index api_keys_last_used_idx on api_keys (last_used desc);
+comment on index api_keys_last_used_idx is 'Index for optimizing api_keys queries filtering by last_used';

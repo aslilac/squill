@@ -1,0 +1,31 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Step 1: Add nullable column with FK.
+alter table chats add column organization_id uuid references organizations (
+	id
+) on delete cascade;
+
+-- Step 2: Backfill from workspace org (primary path). Fall back to
+-- user's oldest org membership, then default org for rows where
+-- workspace_id was NULLed out by ON DELETE SET NULL or never set.
+update chats c
+set
+	organization_id = COALESCE(
+		(select w.organization_id from workspaces w where w.id = c.workspace_id),
+		(
+			select om.organization_id
+			from organization_members om
+			where om.user_id = c.owner_id
+			order by om.created_at asc
+			limit 1
+		),
+		(select id from organizations where is_default = true limit 1)
+	);
+
+-- Step 3: Enforce NOT NULL going forward.
+alter table chats alter column organization_id set not null;
+
+-- Step 4: Index for efficient lookups by organization.
+create index idx_chats_organization_id on chats (organization_id);

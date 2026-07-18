@@ -1,0 +1,22 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table chat_model_configs add column provider text;
+
+update chat_model_configs cmc
+set provider = ap.type::text
+from ai_providers ap
+where ap.id = cmc.ai_provider_id;
+
+update chat_model_configs set provider = '' where provider is null;
+
+alter table chat_model_configs alter column provider set not null;
+
+create index idx_chat_model_configs_provider on chat_model_configs using btree(
+	provider
+);
+create index idx_chat_model_configs_provider_model on chat_model_configs using btree(
+	provider,
+	model
+);

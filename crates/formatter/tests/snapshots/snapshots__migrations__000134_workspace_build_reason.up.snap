@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter type build_reason add value if not exists 'autolock';
+alter type build_reason add value if not exists 'failedstop';
+alter type build_reason add value if not exists 'autodelete';

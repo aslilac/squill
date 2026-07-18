@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table chats drop column if exists client_type;
+
+drop type if exists chat_client_type;

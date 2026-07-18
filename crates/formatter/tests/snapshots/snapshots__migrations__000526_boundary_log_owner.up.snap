@@ -1,0 +1,17 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table boundary_logs add column owner_id uuid;
+
+comment on column boundary_logs.owner_id is 'The ID of the user who owns the workspace. NULL for logs inserted before this column existed or if the user was deleted.';
+
+-- Backfill from sessions where possible.
+update boundary_logs bl
+set owner_id = bs.owner_id
+from boundary_sessions bs
+where bl.session_id = bs.id and bs.owner_id is not null;
+
+alter table boundary_logs add constraint boundary_logs_owner_id_fkey foreign key (
+	owner_id
+) references users (id) on delete set null;

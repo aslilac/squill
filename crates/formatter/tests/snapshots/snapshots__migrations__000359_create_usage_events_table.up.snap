@@ -1,0 +1,34 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table usage_events (
+	id text primary key,
+	-- We use a TEXT column with a CHECK constraint rather than an enum because of
+	-- the limitations with adding new values to an enum and using them in the
+	-- same transaction.
+	event_type text not null constraint usage_event_type_check check (
+		event_type in ('dc_managed_agents_v1')
+	),
+	event_data jsonb not null,
+	created_at timestamp with time zone not null,
+	publish_started_at timestamp with time zone default null,
+	published_at timestamp with time zone default null,
+	failure_message text default null
+);
+
+comment on table usage_events is 'usage_events contains usage data that is collected from the product and potentially shipped to the usage collector service.';
+comment on column usage_events.id is 'For "discrete" event types, this is a random UUID. For "heartbeat" event types, this is a combination of the event type and a truncated timestamp.';
+comment on column usage_events.event_type is 'The usage event type with version. "dc" means "discrete" (e.g. a single event, for counters), "hb" means "heartbeat" (e.g. a recurring event that contains a total count of usage generated from the database, for gauges).';
+comment on column usage_events.event_data is 'Event payload. Determined by the matching usage struct for this event type.';
+comment on column usage_events.publish_started_at is 'Set to a timestamp while the event is being published by a Coder replica to the usage collector service. Used to avoid duplicate publishes by multiple replicas. Timestamps older than 1 hour are considered expired.';
+comment on column usage_events.published_at is 'Set to a timestamp when the event is successfully (or permanently unsuccessfully) published to the usage collector service. If set, the event should never be attempted to be published again.';
+comment on column usage_events.failure_message is 'Set to an error message when the event is temporarily or permanently unsuccessfully published to the usage collector service.';
+
+-- Create an index with all three fields used by the
+-- SelectUsageEventsForPublishing query.
+create index idx_usage_events_select_for_publishing on usage_events (
+	published_at,
+	publish_started_at,
+	created_at
+);

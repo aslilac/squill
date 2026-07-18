@@ -1,0 +1,5 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create index idx_chats_agent_id on chats (agent_id) where agent_id is not null;

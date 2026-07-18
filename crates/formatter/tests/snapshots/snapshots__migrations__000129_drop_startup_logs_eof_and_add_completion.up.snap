@@ -1,0 +1,13 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+delete from workspace_agent_startup_logs where eof is true;
+
+alter table workspace_agent_startup_logs drop column eof;
+
+alter table workspace_agents add column started_at timestamp with time zone default null,
+add column ready_at timestamp with time zone default null;
+
+comment on column workspace_agents.started_at is 'The time the agent entered the starting lifecycle state';
+comment on column workspace_agents.ready_at is 'The time the agent entered the ready or start_error lifecycle state';

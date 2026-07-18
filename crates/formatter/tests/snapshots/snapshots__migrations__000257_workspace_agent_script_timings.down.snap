@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop type if exists workspace_agent_script_timing_status cascade;
+drop type if exists workspace_agent_script_timing_stage cascade;
+drop table if exists workspace_agent_script_timings;
+
+alter table workspace_agent_scripts drop column id;

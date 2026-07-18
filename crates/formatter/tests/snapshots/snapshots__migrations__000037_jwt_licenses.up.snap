@@ -1,0 +1,13 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- No valid licenses should exist, but to be sure, drop all rows
+delete from licenses;
+alter table licenses drop column license;
+alter table licenses rename column created_at to uploaded_at;
+alter table licenses add column jwt text not null;
+-- prevent adding the same license more than once
+alter table licenses add constraint licenses_jwt_key unique (jwt);
+alter table licenses add column exp timestamp with time zone not null;
+comment on column licenses.exp is 'exp tracks the claim of the same name in the JWT, and we include it here so that we can easily query for licenses that have not yet expired.';

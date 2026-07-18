@@ -9,36 +9,34 @@ expression: formatted
 -- multiple provisioners from acquiring the same jobs. See:
 -- https://www.postgresql.org/docs/9.5/sql-select.html#SQL-FOR-UPDATE-SHARE
 -- name: AcquireProvisionerJob :one
-UPDATE
-	provisioner_jobs
-SET
-	started_at = @started_at,
-	updated_at = @started_at,
-	worker_id = @worker_id
-WHERE
-	id = (
-		SELECT
-			id
-		FROM
-			provisioner_jobs AS potential_job
-		WHERE
-			potential_job.started_at IS NULL
-			AND potential_job.completed_at IS NULL
-			AND potential_job.organization_id = @organization_id
+update provisioner_jobs
+set started_at = @started_at, updated_at = @started_at, worker_id = @worker_id
+where
+	id
+	= (
+		select id
+		from provisioner_jobs as potential_job
+		where
+			potential_job.started_at is null
+			and potential_job.completed_at is null
+			and potential_job.organization_id = @organization_id
 			-- Ensure the caller has the correct provisioner.
-			AND potential_job.provisioner = ANY(@types :: provisioner_type [ ])
+			and potential_job.provisioner = any(@types::provisioner_type[])
 			-- elsewhere, we use the tagset type, but here we use jsonb for backward compatibility
 			-- they are aliases and the code that calls this query already relies on a different type
-			AND provisioner_tagset_contains(@provisioner_tags :: jsonb, potential_job.tags :: jsonb)
-		ORDER BY
+			and provisioner_tagset_contains(
+				@provisioner_tags::jsonb,
+				potential_job.tags::jsonb
+			)
+		order by
 			-- Ensure that human-initiated jobs are prioritized over prebuilds.
-			potential_job.initiator_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid ASC,
-			potential_job.created_at ASC
-		FOR UPDATE
-		SKIP LOCKED
-		LIMIT
-			1
-	) RETURNING *;
+			potential_job.initiator_id
+			= 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid asc,
+			potential_job.created_at asc
+		for update skip locked
+		limit 1
+	)
+returning *;
 
 -- name: GetProvisionerJobByID :one
 select * from provisioner_jobs where id = $1;
@@ -54,78 +52,94 @@ select * from provisioner_jobs where id = $1 for update skip locked;
 select * from provisioner_jobs where id = $1 for update;
 
 -- name: GetProvisionerJobsByIDsWithQueuePosition :many
-WITH filtered_provisioner_jobs AS (
-	-- Step 1: Filter provisioner_jobs
-	SELECT
-		id, created_at, tags
-	FROM
-		provisioner_jobs
-	WHERE
-		id = ANY(@ids :: uuid [ ]) -- Apply filter early to reduce dataset size before expensive JOIN
-),
-pending_jobs AS (
-	-- Step 2: Extract only pending jobs
-	SELECT
-		id, initiator_id, created_at, tags
-	FROM
-		provisioner_jobs
-	WHERE
-		job_status = 'pending'
-),
-unique_daemon_tags AS (
-	SELECT DISTINCT tags FROM provisioner_daemons pd
-	WHERE pd.last_seen_at IS NOT NULL
-	  AND pd.last_seen_at >= (NOW() - (@stale_interval_ms::bigint || ' ms')::interval)
-),
-relevant_daemon_tags AS (
-	SELECT udt.tags
-	FROM unique_daemon_tags udt
-	WHERE EXISTS (
-		SELECT 1 FROM filtered_provisioner_jobs fpj
-		WHERE provisioner_tagset_contains(udt.tags, fpj.tags)
+with
+	filtered_provisioner_jobs as (
+		-- Step 1: Filter provisioner_jobs
+		select
+			id, created_at, tags
+		from provisioner_jobs
+		where
+			id
+			= any(
+				@ids::uuid[]
+			) -- Apply filter early to reduce dataset size before expensive JOIN
+	),
+	pending_jobs as (
+		-- Step 2: Extract only pending jobs
+		select
+			id, initiator_id, created_at, tags
+		from provisioner_jobs
+		where job_status = 'pending'
+	),
+	unique_daemon_tags as (
+		select distinct tags
+		from provisioner_daemons pd
+		where
+			pd.last_seen_at is not null
+			and pd.last_seen_at
+			>= (NOW() - (@stale_interval_ms::bigint || ' ms')::interval)
+	),
+	relevant_daemon_tags as (
+		select udt.tags
+		from unique_daemon_tags udt
+		where
+			exists (
+				select 1
+				from filtered_provisioner_jobs fpj
+				where provisioner_tagset_contains(udt.tags, fpj.tags)
+			)
+	),
+	ranked_jobs as (
+		-- Step 3: Rank only pending jobs based on provisioner availability
+		select
+			pj.id,
+			pj.created_at,
+			ROW_NUMBER() over (
+				partition by rdt.tags
+				order by
+					pj.initiator_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid asc,
+					pj.created_at asc
+			) as queue_position,
+			COUNT(*) over (partition by rdt.tags) as queue_size
+		from
+			pending_jobs pj
+			inner join relevant_daemon_tags rdt on provisioner_tagset_contains(
+				rdt.tags,
+				pj.tags
+			)
+	),
+	final_jobs as (
+		-- Step 4: Compute best queue position and max queue size per job
+		select
+			fpj.id,
+			fpj.created_at,
+			COALESCE(
+				MIN(rj.queue_position),
+				0
+			)::bigint as queue_position, -- Best queue position across provisioners
+			COALESCE(
+				MAX(rj.queue_size),
+				0
+			)::bigint as queue_size -- Max queue size across provisioners
+		from
+			filtered_provisioner_jobs fpj -- Use the pre-filtered dataset instead of full provisioner_jobs
+			left join ranked_jobs rj on fpj.id
+			= rj.id -- Join with the ranking jobs CTE to assign a rank to each specified provisioner job.
+		group by fpj.id, fpj.created_at
 	)
-),
-ranked_jobs AS (
-	-- Step 3: Rank only pending jobs based on provisioner availability
-	SELECT
-		pj.id,
-		pj.created_at,
-		ROW_NUMBER() OVER (PARTITION BY rdt.tags ORDER BY pj.initiator_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid ASC, pj.created_at ASC) AS queue_position,
-		COUNT(*) OVER (PARTITION BY rdt.tags) AS queue_size
-	FROM
-		pending_jobs pj
-	INNER JOIN
-		relevant_daemon_tags rdt
-	ON
-		provisioner_tagset_contains(rdt.tags, pj.tags)
-),
-final_jobs AS (
-	-- Step 4: Compute best queue position and max queue size per job
-	SELECT
-		fpj.id,
-		fpj.created_at,
-		COALESCE(MIN(rj.queue_position), 0) :: BIGINT AS queue_position, -- Best queue position across provisioners
-		COALESCE(MAX(rj.queue_size), 0) :: BIGINT AS queue_size -- Max queue size across provisioners
-	FROM
-		filtered_provisioner_jobs fpj -- Use the pre-filtered dataset instead of full provisioner_jobs
-			LEFT JOIN ranked_jobs rj
-					ON fpj.id = rj.id -- Join with the ranking jobs CTE to assign a rank to each specified provisioner job.
-	GROUP BY
-		fpj.id, fpj.created_at
-)
-SELECT
+select
 	-- Step 5: Final SELECT with INNER JOIN provisioner_jobs
 	fj.id,
 	fj.created_at,
 	sqlc.embed(pj),
 	fj.queue_position,
 	fj.queue_size
-FROM
+from
 	final_jobs fj
-		INNER JOIN provisioner_jobs pj
-				ON fj.id = pj.id -- Ensure we retrieve full details from `provisioner_jobs`.
-                                 -- JOIN with pj is required for sqlc.embed(pj) to compile successfully.
-ORDER BY
+	inner join provisioner_jobs pj on fj.id
+	= pj.id -- Ensure we retrieve full details from `provisioner_jobs`.
+-- JOIN with pj is required for sqlc.embed(pj) to compile successfully.
+order by
 	fj.created_at;
 
 -- name: GetProvisionerJobsByOrganizationAndStatusWithQueuePositionAndProvisioner :many
@@ -246,64 +260,42 @@ limit sqlc.narg('limit')::int;
 select * from provisioner_jobs where created_at > $1;
 
 -- name: InsertProvisionerJob :one
-INSERT INTO
-	provisioner_jobs (
-		id,
-		created_at,
-		updated_at,
-		organization_id,
-		initiator_id,
-		provisioner,
-		storage_method,
-		file_id,
-		"type",
-		"input",
-		tags,
-		trace_metadata,
-		logs_overflowed
-	)
-VALUES
-	($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *;
+insert into provisioner_jobs (id,
+created_at,
+updated_at,
+organization_id,
+initiator_id,
+provisioner,
+storage_method,
+file_id,
+type,
+input,
+tags,
+trace_metadata,
+logs_overflowed)
+values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+returning *;
 
 -- name: UpdateProvisionerJobByID :exec
-UPDATE
-	provisioner_jobs
-SET
-	updated_at = $2
-WHERE
-	id = $1;
+update provisioner_jobs set updated_at = $2 where id = $1;
 
 -- name: UpdateProvisionerJobWithCancelByID :exec
-UPDATE
-	provisioner_jobs
-SET
-	canceled_at = $2,
-	completed_at = $3
-WHERE
-	id = $1;
+update provisioner_jobs set canceled_at = $2, completed_at = $3 where id = $1;
 
 -- name: UpdateProvisionerJobWithCompleteByID :exec
-UPDATE
-	provisioner_jobs
-SET
-	updated_at = $2,
-	completed_at = $3,
-	error = $4,
-	error_code = $5
-WHERE
-	id = $1;
+update provisioner_jobs
+set updated_at = $2, completed_at = $3, error = $4, error_code = $5
+where id = $1;
 
 -- name: UpdateProvisionerJobWithCompleteWithStartedAtByID :exec
-UPDATE
-	provisioner_jobs
-SET
+update provisioner_jobs
+set
 	updated_at = $2,
 	completed_at = $3,
 	error = $4,
 	error_code = $5,
 	started_at = $6
-WHERE
-	id = $1;
+where id = $1;
 
 -- name: GetProvisionerJobsToBeReaped :many
 select *
@@ -329,16 +321,22 @@ order by
 limit @max_jobs;
 
 -- name: InsertProvisionerJobTimings :many
-INSERT INTO provisioner_job_timings (job_id, started_at, ended_at, stage, source, action, resource)
-SELECT
-    @job_id::uuid AS provisioner_job_id,
-    unnest(@started_at::timestamptz[]),
-    unnest(@ended_at::timestamptz[]),
-    unnest(@stage::provisioner_job_timing_stage[]),
-    unnest(@source::text[]),
-    unnest(@action::text[]),
-    unnest(@resource::text[])
-RETURNING *;
+insert into provisioner_job_timings (job_id,
+started_at,
+ended_at,
+stage,
+source,
+action,
+resource)
+select
+	@job_id::uuid as provisioner_job_id,
+	unnest(@started_at::timestamptz[]),
+	unnest(@ended_at::timestamptz[]),
+	unnest(@stage::provisioner_job_timing_stage[]),
+	unnest(@source::text[]),
+	unnest(@action::text[]),
+	unnest(@resource::text[])
+returning *;
 
 -- name: GetProvisionerJobTimingsByJobID :many
 select * from provisioner_job_timings where job_id = $1 order by started_at asc;

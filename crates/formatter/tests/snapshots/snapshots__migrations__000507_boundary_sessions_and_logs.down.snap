@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop index if exists idx_boundary_logs_captured_at;
+drop index if exists idx_boundary_logs_session_seq;
+drop table if exists boundary_logs;
+drop table if exists boundary_sessions;

@@ -1,0 +1,71 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Override any pre-existing live AI providers whose names collide with the
+-- backfill below. No other process should write to ai_providers before this
+-- migration, so any conflicting live row is treated as stale and soft-deleted
+-- to free the name for the chat_providers row inserted below, which becomes
+-- authoritative.
+update ai_providers
+set deleted = true, enabled = false, updated_at = NOW()
+where
+	deleted = false
+	and name in (select 'agents-' || cp.provider from chat_providers cp);
+
+insert into ai_providers (id,
+type,
+name,
+display_name,
+enabled,
+base_url,
+created_at,
+updated_at)
+select
+	cp.id,
+	cp.provider::ai_provider_type,
+	'agents-' || cp.provider,
+	NULLIF(cp.display_name, ''),
+	cp.enabled,
+	cp.base_url,
+	cp.created_at,
+	cp.updated_at
+from chat_providers cp;
+
+insert into ai_provider_keys (id,
+provider_id,
+api_key,
+api_key_key_id,
+created_at,
+updated_at)
+select
+	gen_random_uuid(),
+	cp.id,
+	cp.api_key,
+	cp.api_key_key_id,
+	cp.created_at,
+	cp.updated_at
+from chat_providers cp
+where cp.api_key != '';
+
+insert into user_ai_provider_keys (id,
+user_id,
+ai_provider_id,
+api_key,
+api_key_key_id,
+created_at,
+updated_at)
+select
+	ucpk.id,
+	ucpk.user_id,
+	ucpk.chat_provider_id,
+	ucpk.api_key,
+	ucpk.api_key_key_id,
+	ucpk.created_at,
+	ucpk.updated_at
+from user_chat_provider_keys ucpk;
+
+update chat_model_configs cmc
+set ai_provider_id = cp.id
+from chat_providers cp
+where cmc.provider = cp.provider and cmc.ai_provider_id is null;

@@ -1,0 +1,19 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- add "slug" column to "workspace_apps" table
+alter table workspace_apps add column slug text default '';
+
+-- copy the "name" column for each workspace app to the "slug" column
+update workspace_apps set slug = name;
+
+-- make "slug" column not nullable and remove default
+alter table workspace_apps alter column slug set not null;
+alter table workspace_apps alter column slug drop default;
+
+-- add unique index on "slug" column
+alter table workspace_apps add constraint workspace_apps_agent_id_slug_idx unique (
+	agent_id,
+	slug
+);

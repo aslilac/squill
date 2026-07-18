@@ -1,0 +1,21 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Step 1: Remove the new entries from crypto_keys table
+delete from crypto_keys
+where feature in ('workspace_apps_token', 'workspace_apps_api_key');
+
+create type old_crypto_key_feature as enum (
+	'workspace_apps',
+	'oidc_convert',
+	'tailnet_resume'
+);
+
+alter table crypto_keys alter column feature type old_crypto_key_feature using (
+	feature::text::old_crypto_key_feature
+);
+
+drop type crypto_key_feature;
+
+alter type old_crypto_key_feature rename to crypto_key_feature;

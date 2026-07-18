@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table replicas;
+alter table provisioner_daemons drop column replica_id;

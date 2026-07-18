@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table provisioner_daemons drop column key_id;
+
+delete from provisioner_keys where name = 'built-in';
+delete from provisioner_keys where name = 'psk';
+delete from provisioner_keys where name = 'user-auth';

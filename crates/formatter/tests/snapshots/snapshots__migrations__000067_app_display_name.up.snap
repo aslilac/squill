@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- rename column "name" to "display_name" on "workspace_apps"
+alter table workspace_apps rename column name to display_name;
+
+-- drop constraint "workspace_apps_agent_id_name_key" on "workspace_apps".
+alter table only workspace_apps drop constraint if exists workspace_apps_agent_id_name_key;

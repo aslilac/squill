@@ -1,0 +1,19 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Bring back the subsystem column.
+alter table workspace_agents add column subsystem workspace_agent_subsystem not null default 'none';
+
+-- Update all existing workspace_agents to have subsystem = subsystems[0] unless
+-- subsystems is empty.
+update workspace_agents
+set subsystem = subsystems[1]
+where cardinality(subsystems) > 0;
+
+-- Drop the subsystems column from workspace_agents.
+alter table workspace_agents drop column subsystems;
+
+-- We cannot drop the "exectrace" value from the workspace_agent_subsystem type
+-- because you cannot drop values from an enum type.
+update workspace_agents set subsystem = 'none' where subsystem = 'exectrace';

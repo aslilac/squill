@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop function IF exists provisioner_tagset_contains (tagset, tagset);
+
+drop domain if exists tagset;

@@ -1,0 +1,42 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Add OAuth2 extension fields for RFC 8707 resource indicators, PKCE, and dynamic client registration
+
+-- Add resource_uri field to oauth2_provider_app_codes for RFC 8707 resource parameter
+alter table oauth2_provider_app_codes add column resource_uri text;
+
+comment on column oauth2_provider_app_codes.resource_uri is 'RFC 8707 resource parameter for audience restriction';
+
+-- Add PKCE fields to oauth2_provider_app_codes
+alter table oauth2_provider_app_codes add column code_challenge text,
+add column code_challenge_method text;
+
+comment on column oauth2_provider_app_codes.code_challenge is 'PKCE code challenge for public clients';
+comment on column oauth2_provider_app_codes.code_challenge_method is 'PKCE challenge method (S256)';
+
+-- Add audience field to oauth2_provider_app_tokens for token binding
+alter table oauth2_provider_app_tokens add column audience text;
+
+comment on column oauth2_provider_app_tokens.audience is 'Token audience binding from resource parameter';
+
+-- Add fields to oauth2_provider_apps for future dynamic registration and redirect URI management
+alter table oauth2_provider_apps add column redirect_uris text [ ], -- Store multiple URIs for future use
+add column client_type text default 'confidential', -- 'confidential' or 'public'
+add column dynamically_registered boolean default false;
+
+-- Backfill existing records with default values
+update oauth2_provider_apps
+set
+	redirect_uris = COALESCE(redirect_uris, '{}'),
+	client_type = COALESCE(client_type, 'confidential'),
+	dynamically_registered = COALESCE(dynamically_registered, false)
+where
+	redirect_uris is null
+	or client_type is null
+	or dynamically_registered is null;
+
+comment on column oauth2_provider_apps.redirect_uris is 'List of valid redirect URIs for the application';
+comment on column oauth2_provider_apps.client_type is 'OAuth2 client type: confidential or public';
+comment on column oauth2_provider_apps.dynamically_registered is 'Whether this app was created via dynamic client registration';

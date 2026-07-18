@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_agent_stats add column connection_median_latency_ms bigint default -1 not null;
+alter table workspace_agent_stats add column session_count_vscode bigint default 0 not null;
+alter table workspace_agent_stats add column session_count_jetbrains bigint default 0 not null;
+alter table workspace_agent_stats add column session_count_reconnecting_pty bigint default 0 not null;
+alter table workspace_agent_stats add column session_count_ssh bigint default 0 not null;

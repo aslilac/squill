@@ -1,0 +1,23 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- This ensures a default organization always exists.
+insert into organizations (id,
+name,
+description,
+created_at,
+updated_at,
+is_default)
+select
+	-- Avoid calling it "default" as we are reserving that word as a keyword to fetch
+	-- the default org regardless of the name.
+	gen_random_uuid(),
+	'first-organization',
+	'Builtin default organization.',
+	now(),
+	now(),
+	true
+where
+	-- Only insert if no organizations exist.
+	not exists (select * from organizations);

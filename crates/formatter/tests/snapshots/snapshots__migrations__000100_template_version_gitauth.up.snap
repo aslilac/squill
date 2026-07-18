@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table template_versions add column git_auth_providers text [ ];
+
+comment on column template_versions.git_auth_providers is 'IDs of Git auth providers for a specific template version';

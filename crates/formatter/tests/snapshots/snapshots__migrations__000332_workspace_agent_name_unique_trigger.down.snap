@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop trigger if exists workspace_agent_name_unique_trigger on workspace_agents;
+drop function IF exists check_workspace_agent_name_unique ();

@@ -1,0 +1,10 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_agent_logs rename to workspace_agent_startup_logs;
+alter table workspace_agent_startup_logs drop column source;
+drop type workspace_agent_log_source;
+alter table workspace_agents rename column logs_overflowed to startup_logs_overflowed;
+alter table workspace_agents rename column logs_length to startup_logs_length;
+alter table workspace_agents rename constraint max_logs_length to max_startup_logs_length;

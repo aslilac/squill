@@ -1,0 +1,43 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table if not exists template_version_parameters (
+	template_version_id uuid not null references template_versions (
+		id
+	) on delete cascade,
+	name text not null,
+	description text not null,
+	type text not null,
+	mutable boolean not null,
+	default_value text not null,
+	icon text not null,
+	options jsonb not null default '[]'::jsonb,
+	validation_regex text not null,
+	validation_min integer not null,
+	validation_max integer not null,
+	unique(template_version_id, name)
+);
+
+comment on column template_version_parameters.name is 'Parameter name';
+comment on column template_version_parameters.description is 'Parameter description';
+comment on column template_version_parameters.type is 'Parameter type';
+comment on column template_version_parameters.mutable is 'Is parameter mutable?';
+comment on column template_version_parameters.default_value is 'Default value';
+comment on column template_version_parameters.icon is 'Icon';
+comment on column template_version_parameters.options is 'Additional options';
+comment on column template_version_parameters.validation_regex is 'Validation: regex pattern';
+comment on column template_version_parameters.validation_min is 'Validation: minimum length of value';
+comment on column template_version_parameters.validation_max is 'Validation: maximum length of value';
+
+create table if not exists workspace_build_parameters (
+	workspace_build_id uuid not null references workspace_builds (
+		id
+	) on delete cascade,
+	name text not null,
+	value text not null,
+	unique(workspace_build_id, name)
+);
+
+comment on column workspace_build_parameters.name is 'Parameter name';
+comment on column workspace_build_parameters.value is 'Parameter value';

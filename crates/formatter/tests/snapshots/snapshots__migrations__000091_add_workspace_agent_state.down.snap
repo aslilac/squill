@@ -1,0 +1,10 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_agents drop column startup_script_timeout_seconds;
+alter table workspace_agents drop column delay_login_until_ready;
+
+alter table workspace_agents drop column lifecycle_state;
+
+drop type workspace_agent_lifecycle_state;

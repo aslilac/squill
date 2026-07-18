@@ -1,0 +1,32 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table if not exists replicas (
+	-- A unique identifier for the replica that is stored on disk.
+	-- For persistent replicas, this will be reused.
+	-- For ephemeral replicas, this will be a new UUID for each one.
+	id uuid not null,
+	created_at timestamp with time zone not null,
+	-- The time the replica was created.
+	started_at timestamp with time zone not null,
+	-- The time the replica was last seen.
+	stopped_at timestamp with time zone,
+	-- Updated periodically to ensure the replica is still alive.
+	updated_at timestamp with time zone not null,
+	-- Hostname is the hostname of the replica.
+	hostname text not null,
+	-- Region is the region the replica is in.
+	-- We only DERP mesh to the same region ID of a running replica.
+	region_id integer not null,
+	-- An address that should be accessible to other replicas.
+	relay_address text not null,
+	-- The latency of the replica to the database in microseconds.
+	database_latency int not null,
+	-- Version is the Coder version of the replica.
+	version text not null,
+	error text not null default ''
+);
+
+-- Associates a provisioner daemon with a replica.
+alter table provisioner_daemons add column replica_id uuid;

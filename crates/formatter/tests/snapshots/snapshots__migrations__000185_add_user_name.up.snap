@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table users add column name text not null default '';
+
+comment on column users.name is 'Name of the Coder user';

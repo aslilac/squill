@@ -75,41 +75,49 @@ select
 	) as provisioner_key_count;
 
 -- name: InsertOrganization :one
-INSERT INTO
-    organizations (id, "name", display_name, description, icon, created_at, updated_at, is_default, default_org_member_roles)
-VALUES
-    -- If no organizations exist, and this is the first, make it the default.
-    (@id, @name, @display_name, @description, @icon, @created_at, @updated_at, (SELECT TRUE FROM organizations LIMIT 1) IS NULL, @default_org_member_roles) RETURNING *;
+insert into organizations (id,
+name,
+display_name,
+description,
+icon,
+created_at,
+updated_at,
+is_default,
+default_org_member_roles)
+values
+	-- If no organizations exist, and this is the first, make it the default.
+	(@id,
+	@name,
+	@display_name,
+	@description,
+	@icon,
+	@created_at,
+	@updated_at,
+	(select true from organizations limit 1) is null,
+	@default_org_member_roles)
+returning *;
 
 -- name: UpdateOrganization :one
-UPDATE
-    organizations
-SET
-    updated_at = @updated_at,
-    name = @name,
-    display_name = @display_name,
-    description = @description,
-    icon = @icon,
-    default_org_member_roles = @default_org_member_roles
-WHERE
-    id = @id
-RETURNING *;
+update organizations
+set
+	updated_at = @updated_at,
+	name = @name,
+	display_name = @display_name,
+	description = @description,
+	icon = @icon,
+	default_org_member_roles = @default_org_member_roles
+where id = @id
+returning *;
 
 -- name: UpdateOrganizationDeletedByID :exec
-UPDATE organizations
-SET
-    deleted = true,
-    updated_at = @updated_at
-WHERE
-    id = @id AND
-    is_default = false;
+update organizations
+set deleted = true, updated_at = @updated_at
+where id = @id and is_default = false;
 
 -- name: UpdateOrganizationWorkspaceSharingSettings :one
-UPDATE
-    organizations
-SET
-    shareable_workspace_owners = @shareable_workspace_owners,
-    updated_at = @updated_at
-WHERE
-    id = @id
-RETURNING *;
+update organizations
+set
+	shareable_workspace_owners = @shareable_workspace_owners,
+	updated_at = @updated_at
+where id = @id
+returning *;

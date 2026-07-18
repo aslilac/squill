@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table if exists chat_debug_steps;
+drop table if exists chat_debug_runs;

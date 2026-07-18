@@ -1,0 +1,75 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Discriminator for the body JSON shape stored with each context
+-- resource. Matches the proto oneof variant names. plugin, hook,
+-- subagent, and command are reserved for the Claude Code plugin RFC.
+create type workspace_agent_context_body_kind as enum (
+	'instruction_file',
+	'skill',
+	'mcp_config',
+	'mcp_server',
+	'plugin',
+	'hook',
+	'subagent',
+	'command'
+);
+
+-- Per-resource resolution status reported by the agent.
+create type workspace_agent_context_resource_status as enum (
+	'ok',
+	'oversize',
+	'unreadable',
+	'invalid',
+	'excluded'
+);
+
+-- Latest workspace agent context snapshot, one row per agent.
+-- Overwritten on each PushContextState; no history.
+create table workspace_agent_context_snapshots (
+	workspace_agent_id uuid primary key references workspace_agents (
+		id
+	) on delete cascade,
+	version bigint not null,
+	aggregate_hash bytea not null,
+	snapshot_error text not null default '',
+	received_at timestamptz not null default now()
+);
+
+comment on table workspace_agent_context_snapshots is 'Latest workspace agent context snapshot received via PushContextState. One row per workspace agent, overwritten in place.';
+comment on column workspace_agent_context_snapshots.version is 'Monotonic per-agent-process push counter. Resets to one when the agent process restarts; combined with the initial flag on the wire to detect agent reboots.';
+comment on column workspace_agent_context_snapshots.aggregate_hash is 'sha256 over a canonical encoding of every resource in the snapshot. Identical inputs always produce identical hashes; chat hydration uses this to detect drift.';
+comment on column workspace_agent_context_snapshots.snapshot_error is 'Singular snapshot-level error string (count cap exceeded, watcher degraded, etc.). Empty when healthy.';
+comment on column workspace_agent_context_snapshots.received_at is 'Time at which coderd received the push.';
+
+-- Resolved resources within a snapshot. Keyed by (agent, source); a
+-- subsequent push upserts known sources and the agentapi handler
+-- deletes any sources absent from the latest push in the same
+-- transaction.
+create table workspace_agent_context_resources (
+	workspace_agent_id uuid not null references workspace_agents (
+		id
+	) on delete cascade,
+	source text not null,
+	body_kind workspace_agent_context_body_kind not null,
+	body jsonb not null,
+	content_hash bytea not null,
+	size_bytes bigint not null,
+	status workspace_agent_context_resource_status not null,
+	error text not null default '',
+	source_path text not null default '',
+	created_at timestamptz not null default now(),
+	updated_at timestamptz not null default now(),
+	primary key (workspace_agent_id, source)
+);
+
+comment on table workspace_agent_context_resources is 'Per-resource state for the latest pushed workspace agent context snapshot.';
+comment on column workspace_agent_context_resources.source is 'Resource locator: canonical file path for file-backed kinds, or the MCP server name for mcp_server resources.';
+comment on column workspace_agent_context_resources.body_kind is 'Discriminator for the body JSON shape. Matches the proto oneof variant: instruction_file, skill, mcp_config, mcp_server. PLUGIN/HOOK/SUBAGENT/COMMAND are reserved for the Claude Code plugin RFC.';
+comment on column workspace_agent_context_resources.body is 'protojson-encoded variant body matching body_kind. Always populated; non-OK statuses use the variant zero value so the wire kind is still attributable.';
+comment on column workspace_agent_context_resources.content_hash is 'sha256 over the resource''s original bytes (or transport-encoded server tool list).';
+comment on column workspace_agent_context_resources.size_bytes is 'Original payload size in bytes; populated regardless of status.';
+comment on column workspace_agent_context_resources.status is 'Per-resource status. ok carries a populated body; oversize, unreadable, invalid, and excluded carry an empty body plus an error string.';
+comment on column workspace_agent_context_resources.error is 'Per-resource error or warning string. Populated whenever status is non-ok; may also carry a non-fatal warning when status is ok.';
+comment on column workspace_agent_context_resources.source_path is 'User-declared scan root that produced this resource. Empty for built-in scan roots.';

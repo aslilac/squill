@@ -1,0 +1,12 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table aibridge_interceptions add column provider_name text not null default '';
+
+comment on column aibridge_interceptions.provider_name is 'The provider instance name which may differ from provider when multiple instances of the same provider type exist.';
+
+-- Backfill existing records with the provider type as the provider name.
+update aibridge_interceptions
+set provider_name = provider
+where provider_name = '';

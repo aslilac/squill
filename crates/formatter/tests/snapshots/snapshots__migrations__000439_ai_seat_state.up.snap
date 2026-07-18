@@ -1,0 +1,14 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type ai_seat_usage_reason as enum ('aibridge', 'task');
+
+create table ai_seat_state (
+	user_id uuid not null primary key references users (id) on delete cascade,
+	first_used_at timestamptz not null,
+	last_used_at timestamptz not null,
+	last_event_type ai_seat_usage_reason not null,
+	last_event_description text not null,
+	updated_at timestamptz not null
+);

@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- This has to be outside a transaction
+alter type resource_type add value if not exists 'convert_login';

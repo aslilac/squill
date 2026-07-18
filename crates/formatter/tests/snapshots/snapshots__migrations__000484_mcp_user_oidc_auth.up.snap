@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table mcp_server_configs drop constraint mcp_server_configs_auth_type_check;
+
+alter table mcp_server_configs add constraint mcp_server_configs_auth_type_check check (
+	auth_type in ('none', 'oauth2', 'api_key', 'custom_headers', 'user_oidc')
+);

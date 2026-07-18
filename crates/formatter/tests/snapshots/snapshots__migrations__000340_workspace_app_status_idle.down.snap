@@ -1,0 +1,23 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- It is not possible to delete a value from an enum, so we have to recreate it.
+create type old_workspace_app_status_state as enum (
+	'working',
+	'complete',
+	'failure'
+);
+
+-- Convert the new "idle" state into "complete".  This means we lose some
+-- information when downgrading, but this is necessary to swap to the old enum.
+update workspace_app_statuses set state = 'complete' where state = 'idle';
+
+-- Swap to the old enum.
+alter table workspace_app_statuses alter column state type old_workspace_app_status_state using (
+	state::text::old_workspace_app_status_state
+);
+
+-- Drop the new enum and rename the old one to the final name.
+drop type workspace_app_status_state;
+alter type old_workspace_app_status_state rename to workspace_app_status_state;

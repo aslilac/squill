@@ -1,0 +1,26 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table agent_stats rename to workspace_agent_stats;
+
+alter table workspace_agent_stats add column connections_by_proto jsonb not null default '{}'::jsonb;
+alter table workspace_agent_stats add column connection_count bigint default 0 not null;
+alter table workspace_agent_stats add column rx_packets bigint default 0 not null;
+alter table workspace_agent_stats add column rx_bytes bigint default 0 not null;
+alter table workspace_agent_stats add column tx_packets bigint default 0 not null;
+alter table workspace_agent_stats add column tx_bytes bigint default 0 not null;
+
+update workspace_agent_stats
+set
+	connections_by_proto = coalesce(
+		(payload ->> 'conns_by_proto')::jsonb,
+		'{}'::jsonb
+	),
+	connection_count = coalesce((payload ->> 'num_conns')::bigint, 0),
+	rx_packets = coalesce((payload ->> 'rx_packets')::bigint, 0),
+	rx_bytes = coalesce((payload ->> 'rx_bytes')::bigint, 0),
+	tx_packets = coalesce((payload ->> 'tx_packets')::bigint, 0),
+	tx_bytes = coalesce((payload ->> 'tx_bytes')::bigint, 0);
+
+alter table workspace_agent_stats drop column payload;

@@ -1,0 +1,12 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table organizations add column default_org_member_roles text [ ];
+
+update organizations
+set default_org_member_roles = array ['organization-workspace-access']::text[];
+
+alter table organizations alter column default_org_member_roles set not null;
+
+comment on column organizations.default_org_member_roles is 'Roles granted to every member of this organization at request time. ' 'The set is unioned into each member''s effective roles when ' 'GetAuthorizationUserRoles runs, so changes propagate to all members ' 'on the next request. Deployments can use this column to revoke ' 'capabilities that would otherwise be considered normal organization ' 'member permissions.';

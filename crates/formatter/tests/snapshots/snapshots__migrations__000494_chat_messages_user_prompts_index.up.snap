@@ -1,0 +1,19 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create index idx_chat_messages_user_prompts on chat_messages using btree (
+	chat_id,
+	id desc
+)
+where
+	(
+		(deleted = false)
+		and (role = 'user'::chat_message_role)
+		and (
+			visibility
+			= any(
+				array ['user'::chat_message_visibility, 'both'::chat_message_visibility]
+			)
+		)
+	);

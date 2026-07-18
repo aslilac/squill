@@ -1,0 +1,37 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_agent_scripts add column id uuid unique not null default gen_random_uuid(
+);
+
+create type workspace_agent_script_timing_stage as enum (
+	'start',
+	'stop',
+	'cron'
+);
+
+comment on type workspace_agent_script_timing_stage is 'What stage the script was ran in.';
+
+create type workspace_agent_script_timing_status as enum (
+	'ok',
+	'exit_failure',
+	'timed_out',
+	'pipes_left_open'
+);
+
+comment on type workspace_agent_script_timing_status is 'What the exit status of the script is.';
+
+create table workspace_agent_script_timings (
+	script_id uuid not null references workspace_agent_scripts (
+		id
+	) on delete cascade,
+	started_at timestamp with time zone not null,
+	ended_at timestamp with time zone not null,
+	exit_code int not null,
+	stage workspace_agent_script_timing_stage not null,
+	status workspace_agent_script_timing_status not null,
+	UNIQUE(script_id, started_at)
+);
+
+comment on type workspace_agent_script_timings is 'Timing and execution information about a script run.';

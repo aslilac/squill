@@ -1,0 +1,20 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table notification_templates drop column enabled_by_default;
+
+create or replace function inhibit_enqueue_if_disabled() returns trigger as $$
+BEGIN
+	-- Fail the insertion if the user has disabled this notification.
+	IF EXISTS (SELECT 1
+			   FROM notification_preferences
+			   WHERE disabled = TRUE
+				 AND user_id = NEW.user_id
+				 AND notification_template_id = NEW.notification_template_id) THEN
+		RAISE EXCEPTION 'cannot enqueue message: user has disabled this notification';
+	END IF;
+
+	RETURN NEW;
+END;
+$$ language plpgsql;

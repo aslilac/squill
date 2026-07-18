@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table only provisioner_daemons add column api_version text not null default '1.0';
+comment on column provisioner_daemons.api_version is 'The API version of the provisioner daemon';

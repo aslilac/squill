@@ -1,0 +1,12 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table if exists chat_queued_messages;
+drop table if exists chat_diff_statuses;
+drop table if exists chat_messages;
+drop table if exists chats;
+drop table if exists chat_model_configs;
+drop table if exists chat_providers;
+drop type if exists chat_message_visibility;
+drop type if exists chat_status;

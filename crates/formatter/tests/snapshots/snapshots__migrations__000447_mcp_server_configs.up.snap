@@ -1,0 +1,88 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table mcp_server_configs (
+	id uuid primary key default gen_random_uuid(),
+
+	-- Display
+	display_name text not null,
+	slug text not null unique,
+	description text not null default '',
+	icon_url text not null default '',
+
+	-- Connection
+	transport text not null default 'streamable_http' check (
+		transport in ('streamable_http', 'sse')
+	),
+	url text not null,
+
+	-- Authentication
+	auth_type text not null default 'none' check (
+		auth_type in ('none', 'oauth2', 'api_key', 'custom_headers')
+	),
+
+	-- OAuth2 config (when auth_type = 'oauth2')
+	oauth2_client_id text not null default '',
+	oauth2_client_secret text not null default '',
+	oauth2_client_secret_key_id text references dbcrypt_keys (active_key_digest),
+	oauth2_auth_url text not null default '',
+	oauth2_token_url text not null default '',
+	oauth2_scopes text not null default '',
+
+	-- API key config (when auth_type = 'api_key')
+	api_key_header text not null default 'Authorization',
+	api_key_value text not null default '',
+	api_key_value_key_id text references dbcrypt_keys (active_key_digest),
+
+	-- Custom headers (when auth_type = 'custom_headers')
+	custom_headers text not null default '{}',
+	custom_headers_key_id text references dbcrypt_keys (active_key_digest),
+
+	-- Tool governance
+	tool_allow_list text [] not null default '{}',
+	tool_deny_list text [] not null default '{}',
+
+	-- Availability policy
+	availability text not null default 'default_off' check (
+		availability in ('force_on', 'default_on', 'default_off')
+	),
+
+	-- Lifecycle
+	enabled boolean not null default false,
+	created_by uuid references users (id) on delete set null,
+	updated_by uuid references users (id) on delete set null,
+	created_at timestamptz not null default now(),
+	updated_at timestamptz not null default now()
+);
+
+create table mcp_server_user_tokens (
+	id uuid primary key default gen_random_uuid(),
+	mcp_server_config_id uuid not null references mcp_server_configs (
+		id
+	) on delete cascade,
+	user_id uuid not null references users (id) on delete cascade,
+	access_token text not null,
+	access_token_key_id text references dbcrypt_keys (active_key_digest),
+	refresh_token text not null default '',
+	refresh_token_key_id text references dbcrypt_keys (active_key_digest),
+	token_type text not null default 'Bearer',
+	expiry timestamptz,
+	created_at timestamptz not null default now(),
+	updated_at timestamptz not null default now(),
+	UNIQUE(mcp_server_config_id, user_id)
+);
+
+-- Add MCP server selection to chats (per-chat, like model_config_id)
+alter table chats add column mcp_server_ids uuid [ ] not null default '{}';
+
+create index idx_mcp_server_configs_enabled on mcp_server_configs (enabled)
+where enabled = true;
+create index idx_mcp_server_configs_forced on mcp_server_configs (
+	enabled,
+	availability
+)
+where enabled = true and availability = 'force_on';
+create index idx_mcp_server_user_tokens_user_id on mcp_server_user_tokens (
+	user_id
+);

@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Drop all CHECK constraints added in the up migration
+alter table api_keys drop constraint api_keys_allow_list_not_empty;

@@ -1,0 +1,26 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop trigger if exists trigger_update_users on users;
+drop function IF exists delete_deleted_user_resources;
+
+drop trigger if exists trigger_upsert_user_links on user_links;
+drop function IF exists insert_user_links_fail_if_user_deleted;
+
+-- Restore the previous trigger
+create function delete_deleted_user_api_keys(
+) returns trigger language plpgsql as $$
+DECLARE
+BEGIN
+	IF (NEW.deleted) THEN
+		DELETE FROM api_keys
+		WHERE user_id = OLD.id;
+	END IF;
+	RETURN NEW;
+END;
+$$;
+
+create trigger trigger_update_users after insert or update on users for each row when (
+	NEW.deleted = true
+) execute procedure delete_deleted_user_api_keys();

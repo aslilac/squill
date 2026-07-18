@@ -1,0 +1,23 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table ai_model_prices (
+	provider text not null,
+	model text not null,
+	-- Prices per million tokens, in micro-units (1 unit = 1,000,000).
+	-- A NULL column means the price is unknown for this dimension; an explicit zero means "free".
+	input_price bigint check (input_price >= 0),
+	output_price bigint check (output_price >= 0),
+	cache_read_price bigint check (cache_read_price >= 0),
+	cache_write_price bigint check (cache_write_price >= 0),
+	created_at timestamptz not null default NOW(),
+	updated_at timestamptz not null default NOW(),
+	primary key (provider, model)
+);
+
+comment on table ai_model_prices is 'Per-model token prices used by AI Bridge to compute interception cost.';
+
+alter type api_key_scope add value if not exists 'ai_model_price:*';
+alter type api_key_scope add value if not exists 'ai_model_price:read';
+alter type api_key_scope add value if not exists 'ai_model_price:update';

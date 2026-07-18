@@ -1,0 +1,73 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Add RFC 7591 Dynamic Client Registration fields to oauth2_provider_apps
+
+-- RFC 7591 Core Fields
+alter table oauth2_provider_apps add column client_id_issued_at timestamptz default NOW(
+),
+add column client_secret_expires_at timestamptz,
+add column grant_types text [ ] default '{"authorization_code", "refresh_token"}',
+add column response_types text [ ] default '{"code"}',
+add column token_endpoint_auth_method text default 'client_secret_basic',
+add column scope text default '',
+add column contacts text [ ];
+
+-- RFC 7591 Optional Metadata Fields
+alter table oauth2_provider_apps add column client_uri text,
+add column logo_uri text,
+add column tos_uri text,
+add column policy_uri text;
+
+-- RFC 7591 Advanced Fields
+alter table oauth2_provider_apps add column jwks_uri text,
+add column jwks jsonb,
+add column software_id text,
+add column software_version text;
+
+-- RFC 7592 Management Fields
+alter table oauth2_provider_apps add column registration_access_token text,
+add column registration_client_uri text;
+
+-- Backfill existing records with proper defaults
+update oauth2_provider_apps
+set
+	client_id_issued_at = COALESCE(client_id_issued_at, created_at),
+	grant_types = COALESCE(
+		grant_types,
+		'{"authorization_code", "refresh_token"}'
+	),
+	response_types = COALESCE(response_types, '{"code"}'),
+	token_endpoint_auth_method = COALESCE(
+		token_endpoint_auth_method,
+		'client_secret_basic'
+	),
+	scope = COALESCE(scope, ''),
+	contacts = COALESCE(contacts, '{}')
+where
+	client_id_issued_at is null
+	or grant_types is null
+	or response_types is null
+	or token_endpoint_auth_method is null
+	or scope is null
+	or contacts is null;
+
+-- Add comments for documentation
+comment on column oauth2_provider_apps.client_id_issued_at is 'RFC 7591: Timestamp when client_id was issued';
+comment on column oauth2_provider_apps.client_secret_expires_at is 'RFC 7591: Timestamp when client_secret expires (null for non-expiring)';
+comment on column oauth2_provider_apps.grant_types is 'RFC 7591: Array of grant types the client is allowed to use';
+comment on column oauth2_provider_apps.response_types is 'RFC 7591: Array of response types the client supports';
+comment on column oauth2_provider_apps.token_endpoint_auth_method is 'RFC 7591: Authentication method for token endpoint';
+comment on column oauth2_provider_apps.scope is 'RFC 7591: Space-delimited scope values the client can request';
+comment on column oauth2_provider_apps.contacts is 'RFC 7591: Array of email addresses for responsible parties';
+comment on column oauth2_provider_apps.client_uri is 'RFC 7591: URL of the client home page';
+comment on column oauth2_provider_apps.logo_uri is 'RFC 7591: URL of the client logo image';
+comment on column oauth2_provider_apps.tos_uri is 'RFC 7591: URL of the client terms of service';
+comment on column oauth2_provider_apps.policy_uri is 'RFC 7591: URL of the client privacy policy';
+comment on column oauth2_provider_apps.jwks_uri is 'RFC 7591: URL of the client JSON Web Key Set';
+comment on column oauth2_provider_apps.jwks is 'RFC 7591: JSON Web Key Set document value';
+comment on column oauth2_provider_apps.software_id is 'RFC 7591: Identifier for the client software';
+comment on column oauth2_provider_apps.software_version is 'RFC 7591: Version of the client software';
+comment on column oauth2_provider_apps.registration_access_token is 'RFC 7592: Hashed registration access token for client management';
+comment on column oauth2_provider_apps.registration_client_uri is 'RFC 7592: URI for client configuration endpoint';

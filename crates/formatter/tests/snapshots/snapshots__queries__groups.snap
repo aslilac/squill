@@ -74,64 +74,48 @@ limit
 	NULLIF(@limit_opt::int, 0);
 
 -- name: InsertGroup :one
-INSERT INTO groups (
-	id,
-	name,
-	display_name,
-	organization_id,
-	avatar_url,
-	quota_allowance
-)
-VALUES
-	($1, $2, $3, $4, $5, $6) RETURNING *;
+insert into groups (id,
+name,
+display_name,
+organization_id,
+avatar_url,
+quota_allowance)
+values ($1, $2, $3, $4, $5, $6)
+returning *;
 
 -- name: InsertMissingGroups :many
 -- Inserts any group by name that does not exist. All new groups are given
 -- a random uuid, are inserted into the same organization. They have the default
 -- values for avatar, display name, and quota allowance (all zero values).
-INSERT INTO groups (
-	id,
-	name,
-	organization_id,
-						source
-)
-SELECT
-						gen_random_uuid(),
-						group_name,
-						@organization_id,
-						@source
-FROM
-						UNNEST(@group_names :: text[]) AS group_name
+insert into groups (id,
+name,
+organization_id,
+source)
+select gen_random_uuid(), group_name, @organization_id, @source
+from UNNEST(@group_names::text[]) as group_name
 -- If the name conflicts, do nothing.
-ON CONFLICT DO NOTHING
-RETURNING *;
+on conflict do nothing
+returning *;
 
 -- We use the organization_id as the id
 -- for simplicity since all users is
 -- every member of the org.
 -- name: InsertAllUsersGroup :one
-INSERT INTO groups (
-	id,
-	name,
-	organization_id
-)
-VALUES
-	(sqlc.arg(organization_id), 'Everyone', sqlc.arg(organization_id)) RETURNING *;
+insert into groups (id,
+name,
+organization_id)
+values (sqlc.arg(organization_id), 'Everyone', sqlc.arg(organization_id))
+returning *;
 
 -- name: UpdateGroupByID :one
-UPDATE
-	groups
-SET
+update groups
+set
 	name = @name,
 	display_name = @display_name,
 	avatar_url = @avatar_url,
 	quota_allowance = @quota_allowance
-WHERE
-	id = @id
-RETURNING *;
+where id = @id
+returning *;
 
 -- name: DeleteGroupByID :exec
-DELETE FROM
-	groups
-WHERE
-	id = $1;
+delete from groups where id = $1;

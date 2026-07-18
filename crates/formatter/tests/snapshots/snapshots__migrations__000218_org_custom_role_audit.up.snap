@@ -1,0 +1,12 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- (name) is the primary key, this column is almost exclusively for auditing.
+-- Audit logs require a uuid as the unique identifier for a resource.
+alter table custom_roles add column id uuid default gen_random_uuid() not null;
+comment on column custom_roles.id is 'Custom roles ID is used purely for auditing purposes. Name is a better unique identifier.';
+
+-- Ensure unique uuids.
+create index idx_custom_roles_id on custom_roles (id);
+alter type resource_type add value if not exists 'custom_role';

@@ -1,0 +1,13 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Create the enum type for API key scope
+create type agent_key_scope_enum as enum ('all', 'no_user_data');
+
+-- Add the api_key_scope column to the workspace_agents table
+-- It defaults to 'all' to maintain existing behavior for current agents.
+alter table workspace_agents add column api_key_scope agent_key_scope_enum not null default 'all';
+
+-- Add a comment explaining the purpose of the column
+comment on column workspace_agents.api_key_scope is 'Defines the scope of the API key associated with the agent. ''all'' allows access to everything, ''no_user_data'' restricts it to exclude user data.';

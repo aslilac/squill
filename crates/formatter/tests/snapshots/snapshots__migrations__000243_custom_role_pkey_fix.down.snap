@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table custom_roles drop constraint custom_roles_unique_key;
+
+alter table custom_roles add constraint custom_roles_pkey primary key (name);

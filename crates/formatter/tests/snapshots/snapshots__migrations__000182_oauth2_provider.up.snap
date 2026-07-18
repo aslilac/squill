@@ -1,0 +1,29 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table oauth2_provider_apps (
+	id uuid not null,
+	created_at timestamp with time zone not null,
+	updated_at timestamp with time zone not null,
+	name varchar (64) not null,
+	icon varchar (256) not null,
+	callback_url text not null,
+	primary key (id),
+	UNIQUE(name)
+);
+
+comment on table oauth2_provider_apps is 'A table used to configure apps that can use Coder as an OAuth2 provider, the reverse of what we are calling external authentication.';
+
+create table oauth2_provider_app_secrets (
+	id uuid not null,
+	created_at timestamp with time zone not null,
+	last_used_at timestamp with time zone null,
+	hashed_secret bytea not null,
+	display_secret text not null,
+	app_id uuid not null references oauth2_provider_apps (id) on delete cascade,
+	primary key (id),
+	UNIQUE(app_id, hashed_secret)
+);
+
+comment on column oauth2_provider_app_secrets.display_secret is 'The tail end of the original secret so secrets can be differentiated.';

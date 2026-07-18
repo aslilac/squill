@@ -3,15 +3,12 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertLicense :one
-INSERT INTO
-	licenses (
-	uploaded_at,
-	jwt,
-	exp,
-	uuid
-)
-VALUES
-	($1, $2, $3, $4) RETURNING *;
+insert into licenses (uploaded_at,
+jwt,
+exp,
+uuid)
+values ($1, $2, $3, $4)
+returning *;
 
 -- name: GetLicenses :many
 select * from licenses order by (id);
@@ -23,7 +20,4 @@ select * from licenses where id = $1 limit 1;
 select * from licenses where exp > NOW() order by (id);
 
 -- name: DeleteLicense :one
-DELETE
-FROM licenses
-WHERE id = $1
-RETURNING id;
+delete from licenses where id = $1 returning id;

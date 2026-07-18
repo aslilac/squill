@@ -1,0 +1,11 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Add new audit types for connect and open actions.
+alter type audit_action add value if not exists 'connect';
+alter type audit_action add value if not exists 'disconnect';
+alter type resource_type add value if not exists 'workspace_agent';
+alter type audit_action add value if not exists 'open';
+alter type audit_action add value if not exists 'close';
+alter type resource_type add value if not exists 'workspace_app';

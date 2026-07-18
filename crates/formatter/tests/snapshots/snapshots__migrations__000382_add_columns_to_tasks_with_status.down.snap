@@ -1,0 +1,79 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop view if exists tasks_with_status;
+
+-- Restore from 00037_add_columns_to_tasks_with_status.up.sql.
+create view tasks_with_status as
+select
+	tasks.*,
+	case
+		when tasks.workspace_id is null or latest_build.job_status is null
+			then 'pending'::task_status
+		when latest_build.job_status = 'failed' then 'error'::task_status
+		when latest_build.transition in ('stop', 'delete')
+		and latest_build.job_status = 'succeeded'
+			then 'paused'::task_status
+		when latest_build.transition = 'start'
+		and latest_build.job_status = 'pending'
+			then 'initializing'::task_status
+		when latest_build.transition = 'start'
+		and latest_build.job_status in ('running', 'succeeded')
+			then case
+				when agent_status.none then 'initializing'::task_status
+				when agent_status.connecting then 'initializing'::task_status
+				when agent_status.connected
+					then case
+						when app_status.any_unhealthy then 'error'::task_status
+						when app_status.any_initializing then 'initializing'::task_status
+						when app_status.all_healthy_or_disabled then 'active'::task_status
+						else 'unknown'::task_status
+					end
+				else 'unknown'::task_status
+			end
+		else 'unknown'::task_status
+	end as status
+from
+	tasks
+	left join LATERAL (
+		select workspace_build_number, workspace_agent_id, workspace_app_id
+		from task_workspace_apps task_app
+		where task_id = tasks.id
+		order by workspace_build_number desc
+		limit 1
+	) task_app on true
+	left join LATERAL (
+		select
+			workspace_build.transition,
+			provisioner_job.job_status,
+			workspace_build.job_id
+		from
+			workspace_builds workspace_build
+			join provisioner_jobs provisioner_job on provisioner_job.id
+			= workspace_build.job_id
+		where
+			workspace_build.workspace_id = tasks.workspace_id
+			and workspace_build.build_number = task_app.workspace_build_number
+	) latest_build on true
+	cross join LATERAL (
+		select
+			COUNT(*) = 0 as none,
+			bool_or(
+				workspace_agent.lifecycle_state in ('created', 'starting')
+			) as connecting,
+			bool_and(workspace_agent.lifecycle_state = 'ready') as connected
+		from workspace_agents workspace_agent
+		where workspace_agent.id = task_app.workspace_agent_id
+	) agent_status
+	cross join LATERAL (
+		select
+			bool_or(workspace_app.health = 'unhealthy') as any_unhealthy,
+			bool_or(workspace_app.health = 'initializing') as any_initializing,
+			bool_and(
+				workspace_app.health in ('healthy', 'disabled')
+			) as all_healthy_or_disabled
+		from workspace_apps workspace_app
+		where workspace_app.id = task_app.workspace_app_id
+	) app_status
+where tasks.deleted_at is null;

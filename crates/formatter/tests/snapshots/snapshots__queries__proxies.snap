@@ -3,68 +3,57 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertWorkspaceProxy :one
-INSERT INTO
-	workspace_proxies (
-		id,
-		url,
-		wildcard_hostname,
-		name,
-		display_name,
-		icon,
-		derp_enabled,
-		derp_only,
-		token_hashed_secret,
-		created_at,
-		updated_at,
-		deleted
-	)
-VALUES
-	($1, '', '', $2, $3, $4, $5, $6, $7, $8, $9, false) RETURNING *;
+insert into workspace_proxies (id,
+url,
+wildcard_hostname,
+name,
+display_name,
+icon,
+derp_enabled,
+derp_only,
+token_hashed_secret,
+created_at,
+updated_at,
+deleted)
+values ($1, '', '', $2, $3, $4, $5, $6, $7, $8, $9, false)
+returning *;
 
 -- name: RegisterWorkspaceProxy :one
-UPDATE
-	workspace_proxies
-SET
-	url = @url :: text,
-	wildcard_hostname = @wildcard_hostname :: text,
-	derp_enabled = @derp_enabled :: boolean,
-	derp_only = @derp_only :: boolean,
-	version = @version :: text,
+update workspace_proxies
+set
+	url = @url::text,
+	wildcard_hostname = @wildcard_hostname::text,
+	derp_enabled = @derp_enabled::boolean,
+	derp_only = @derp_only::boolean,
+	version = @version::text,
 	updated_at = Now()
-WHERE
-	id = @id
-RETURNING *;
+where id = @id
+returning *;
 
 -- name: UpdateWorkspaceProxyDeleted :exec
-UPDATE
-	workspace_proxies
-SET
-	updated_at = Now(),
-	deleted = @deleted
-WHERE
-	id = @id;
+update workspace_proxies
+set updated_at = Now(), deleted = @deleted
+where id = @id;
 
 -- name: UpdateWorkspaceProxy :one
 -- This allows editing the properties of a workspace proxy.
-UPDATE
-	workspace_proxies
-SET
+update workspace_proxies
+set
 	-- These values should always be provided.
 	name = @name,
 	display_name = @display_name,
 	icon = @icon,
 	-- Only update the token if a new one is provided.
 	-- So this is an optional field.
-	token_hashed_secret = CASE
-		WHEN length(@token_hashed_secret :: bytea) > 0  THEN @token_hashed_secret :: bytea
-		ELSE  workspace_proxies.token_hashed_secret
-	END,
+	token_hashed_secret = case
+		when length(@token_hashed_secret::bytea) > 0
+			then @token_hashed_secret::bytea
+		else workspace_proxies.token_hashed_secret
+	end,
 	-- Always update this timestamp.
 	updated_at = Now()
-WHERE
-	id = @id
-RETURNING *
-;
+where id = @id
+returning *;
 
 -- name: GetWorkspaceProxyByID :one
 select * from workspace_proxies where id = $1 limit 1;

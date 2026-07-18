@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table only workspace_builds drop column if exists reason;
+
+drop type build_reason;

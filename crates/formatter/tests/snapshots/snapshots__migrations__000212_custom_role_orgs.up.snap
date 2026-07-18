@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table custom_roles
+-- This column is nullable, meaning no organization scope
+add column organization_id uuid;
+
+comment on column custom_roles.organization_id is 'Roles can optionally be scoped to an organization'

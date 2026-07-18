@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table template_version_presets drop column desired_instances,
+drop column invalidate_after_secs;
+
+drop index if exists idx_unique_preset_name;

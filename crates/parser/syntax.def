@@ -58,6 +58,27 @@ node ErrorStatement
 # A bare `;` with nothing before it.
 node EmptyStmt
 
+# ---- DML statements ----
+
+node InsertStmt
+node UpdateStmt
+node DeleteStmt
+node SetClause
+node SetItem
+node OnConflictClause
+node ReturningClause
+node UsingClause
+
+# ---- DDL and utility statements ----
+
+# Structured-but-tolerant DDL: leading keywords, top-level commas split
+# action lists, parenthesized element lists become ElementList/ColumnDef,
+# and expression positions (DEFAULT, CHECK, index expressions, AS query)
+# hold real expression/query nodes.
+node DdlStmt
+node ElementList
+node ColumnDef
+
 # ---- SELECT statements ----
 
 node SelectStmt

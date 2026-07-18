@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop trigger if exists remove_chat_mcp_server_config_id on mcp_server_configs;
+drop function IF exists remove_mcp_server_config_id_from_chats;

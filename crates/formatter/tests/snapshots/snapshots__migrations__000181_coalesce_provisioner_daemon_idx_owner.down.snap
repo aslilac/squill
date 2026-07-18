@@ -1,0 +1,12 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop index if exists idx_provisioner_daemons_name_owner_key;
+
+create unique index if not exists idx_provisioner_daemons_name_owner_key on provisioner_daemons using btree(
+	name,
+	lower((tags ->> 'owner')::text)
+);
+
+comment on index idx_provisioner_daemons_name_owner_key is 'Relax uniqueness constraint for provisioner daemon names';

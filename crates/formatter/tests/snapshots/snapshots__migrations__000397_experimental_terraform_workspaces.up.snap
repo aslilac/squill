@@ -1,0 +1,27 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Default to `false`. Users will have to manually opt into the terraform workspace cache feature.
+alter table templates add column use_terraform_workspace_cache bool not null default false;
+
+comment on column templates.use_terraform_workspace_cache is 'Determines whether to keep terraform directories cached between runs for workspaces created from this template. ' 'When enabled, this can significantly speed up the `terraform init` step at the cost of increased disk usage. ' 'This is an opt-in experience, as it prevents modules from being updated, and therefore is a behavioral difference ' 'from the default.';
+;
+
+-- Update the template_with_names view by recreating it.
+drop view template_with_names;
+create view template_with_names as
+select
+	templates.*,
+	COALESCE(visible_users.avatar_url, ''::text) as created_by_avatar_url,
+	COALESCE(visible_users.username, ''::text) as created_by_username,
+	COALESCE(visible_users.name, ''::text) as created_by_name,
+	COALESCE(organizations.name, ''::text) as organization_name,
+	COALESCE(organizations.display_name, ''::text) as organization_display_name,
+	COALESCE(organizations.icon, ''::text) as organization_icon
+from
+	templates
+	left join visible_users on templates.created_by = visible_users.id
+	left join organizations on templates.organization_id = organizations.id;
+
+comment on view template_with_names is 'Joins in the display name information such as username, avatar, and organization name.';

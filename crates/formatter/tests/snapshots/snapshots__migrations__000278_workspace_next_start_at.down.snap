@@ -1,0 +1,40 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop view workspaces_expanded;
+
+drop trigger if exists trigger_nullify_next_start_at_on_template_autostart_modification on templates;
+drop function IF exists nullify_next_start_at_on_template_autostart_modification;
+
+drop trigger if exists trigger_nullify_next_start_at_on_workspace_autostart_modification on workspaces;
+drop function IF exists nullify_next_start_at_on_workspace_autostart_modification;
+
+drop index workspace_template_id_idx;
+drop index workspace_next_start_at_idx;
+
+alter table only workspaces drop column if exists next_start_at;
+
+create view workspaces_expanded as
+select
+	workspaces.*,
+	-- Owner
+	visible_users.avatar_url as owner_avatar_url,
+	visible_users.username as owner_username,
+	-- Organization
+	organizations.name as organization_name,
+	organizations.display_name as organization_display_name,
+	organizations.icon as organization_icon,
+	organizations.description as organization_description,
+	-- Template
+	templates.name as template_name,
+	templates.display_name as template_display_name,
+	templates.icon as template_icon,
+	templates.description as template_description
+from
+	workspaces
+	inner join visible_users on workspaces.owner_id = visible_users.id
+	inner join organizations on workspaces.organization_id = organizations.id
+	inner join templates on workspaces.template_id = templates.id;
+
+comment on view workspaces_expanded is 'Joins in the display name information such as username, avatar, and organization name.';

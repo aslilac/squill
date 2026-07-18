@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table chats add column labels jsonb not null default '{}';
+
+create index idx_chats_labels on chats using GIN(labels);

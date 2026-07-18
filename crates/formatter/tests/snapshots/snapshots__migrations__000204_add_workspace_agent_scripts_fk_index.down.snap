@@ -1,0 +1,5 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop index workspace_agent_scripts_workspace_agent_id_idx;

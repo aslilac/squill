@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table oauth2_provider_apps alter column registration_access_token set data type bytea using decode(
+	registration_access_token,
+	'escape'
+);

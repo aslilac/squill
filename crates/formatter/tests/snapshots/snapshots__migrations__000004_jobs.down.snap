@@ -1,0 +1,25 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table workspace_builds;
+
+drop table parameter_values;
+drop table parameter_schemas;
+drop type parameter_destination_scheme;
+drop type parameter_source_scheme;
+drop type parameter_type_system;
+drop type parameter_scope;
+
+drop table workspace_agents;
+drop table workspace_resources;
+
+drop table provisioner_job_logs;
+drop type log_source;
+drop type log_level;
+
+drop table provisioner_jobs;
+drop type provisioner_storage_method;
+drop type provisioner_job_type;
+
+drop table provisioner_daemons;

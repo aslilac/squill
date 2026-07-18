@@ -1,0 +1,14 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table aibridge_interceptions add column client_session_id varchar (
+	256
+) null;
+
+comment on column aibridge_interceptions.client_session_id is 'The session ID supplied by the client (optional and not universally supported).';
+
+create index idx_aibridge_interceptions_client_session_id on aibridge_interceptions (
+	client_session_id
+)
+where client_session_id is not null;

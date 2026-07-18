@@ -1,0 +1,10 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table template_versions;
+
+drop table templates;
+drop type provisioner_type;
+
+drop table files;

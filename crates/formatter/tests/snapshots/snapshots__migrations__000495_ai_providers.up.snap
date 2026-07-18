@@ -1,0 +1,68 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type ai_provider_type as enum ('openai', 'anthropic');
+
+create table ai_providers (
+	id uuid primary key default gen_random_uuid(),
+	type ai_provider_type not null,
+	name text not null constraint ai_providers_name_check check (
+		name ~ '^[a-z0-9]+(-[a-z0-9]+)*$'
+	),
+	display_name text,
+	enabled boolean not null default true,
+	deleted boolean not null default false,
+	base_url text not null,
+	settings text,
+	settings_key_id text references dbcrypt_keys (active_key_digest),
+	created_at timestamp with time zone not null default NOW(),
+	updated_at timestamp with time zone not null default NOW()
+);
+
+-- Provider names are unique among live rows only. Soft-deleted rows
+-- are retained for audit and FK history but do not reserve names.
+create unique index ai_providers_name_unique on ai_providers (name)
+where deleted = false;
+
+comment on table ai_providers is 'Runtime configuration for AI providers. Authoritative source for the provider set served by aibridged. Replaces deployment-time CODER_AIBRIDGE_* environment variables.';
+
+comment on column ai_providers.settings is 'Encrypted JSON blob holding type-specific configuration (e.g. AWS Bedrock region, model, access key secret). Plaintext is a JSON object. NULL when no type-specific settings are required.';
+
+comment on column ai_providers.settings_key_id is 'The ID of the key used to encrypt settings. If this is NULL, settings is not encrypted.';
+
+comment on column ai_providers.deleted is 'Soft delete flag. Soft-deleted rows are preserved for audit and FK history but do not block name reuse by future live rows.';
+
+comment on column ai_providers.display_name is 'Optional human-readable label. When NULL, callers should fall back to name.';
+
+create index idx_ai_providers_enabled on ai_providers (enabled)
+where deleted = false;
+
+create table ai_provider_keys (
+	id uuid primary key default gen_random_uuid(),
+	provider_id uuid not null references ai_providers (id) on delete cascade,
+	api_key text not null,
+	api_key_key_id text references dbcrypt_keys (active_key_digest),
+	created_at timestamp with time zone not null default NOW(),
+	updated_at timestamp with time zone not null default NOW()
+);
+
+comment on table ai_provider_keys is 'API keys associated with AI providers. Bedrock providers have zero keys (they authenticate via settings). OpenAI and Anthropic providers have one or more keys for failover.';
+
+comment on column ai_provider_keys.api_key is 'API key used to authenticate with the upstream AI provider. Encrypted at rest via dbcrypt when api_key_key_id is set.';
+
+comment on column ai_provider_keys.api_key_key_id is 'The ID of the key used to encrypt the provider API key. If this is NULL, the API key is not encrypted.';
+
+create index idx_ai_provider_keys_provider_id on ai_provider_keys (provider_id);
+
+-- Audit support: allow ai_providers and ai_provider_keys to appear in
+-- audit_log.resource_type.
+alter type resource_type add value if not exists 'ai_provider';
+alter type resource_type add value if not exists 'ai_provider_key';
+
+-- API key scopes for ai_provider resources.
+alter type api_key_scope add value if not exists 'ai_provider:*';
+alter type api_key_scope add value if not exists 'ai_provider:create';
+alter type api_key_scope add value if not exists 'ai_provider:delete';
+alter type api_key_scope add value if not exists 'ai_provider:read';
+alter type api_key_scope add value if not exists 'ai_provider:update';

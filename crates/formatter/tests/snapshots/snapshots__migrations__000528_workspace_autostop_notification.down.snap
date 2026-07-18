@@ -1,0 +1,61 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+delete from notification_templates
+where id = '6f6cb984-c167-4fa5-bb87-1058dd642779';
+
+drop view workspace_build_with_user;
+
+alter table workspace_builds drop column notified_autostop_deadline;
+
+create view workspace_build_with_user as
+select
+	workspace_builds.id,
+	workspace_builds.created_at,
+	workspace_builds.updated_at,
+	workspace_builds.workspace_id,
+	workspace_builds.template_version_id,
+	workspace_builds.build_number,
+	workspace_builds.transition,
+	workspace_builds.initiator_id,
+	workspace_builds.job_id,
+	workspace_builds.deadline,
+	workspace_builds.reason,
+	workspace_builds.daily_cost,
+	workspace_builds.max_deadline,
+	workspace_builds.template_version_preset_id,
+	workspace_builds.has_ai_task,
+	workspace_builds.has_external_agent,
+	COALESCE(visible_users.avatar_url, ''::text) as initiator_by_avatar_url,
+	COALESCE(visible_users.username, ''::text) as initiator_by_username,
+	COALESCE(visible_users.name, ''::text) as initiator_by_name
+from
+	workspace_builds
+	left join visible_users on workspace_builds.initiator_id = visible_users.id;
+
+comment on view workspace_build_with_user is 'Joins in the username + avatar url of the initiated by user.';
+
+drop view template_with_names;
+
+alter table templates drop column time_til_autostop_notify;
+
+create view template_with_names as
+select
+	templates.*,
+	COALESCE(visible_users.avatar_url, ''::text) as created_by_avatar_url,
+	COALESCE(visible_users.username, ''::text) as created_by_username,
+	COALESCE(visible_users.name, ''::text) as created_by_name,
+	COALESCE(organizations.name, ''::text) as organization_name,
+	COALESCE(organizations.display_name, ''::text) as organization_display_name,
+	COALESCE(organizations.icon, ''::text) as organization_icon
+from
+	(
+		(
+			templates
+			left join visible_users on ((templates.created_by = visible_users.id))
+		)
+		left join organizations on ((templates.organization_id = organizations.id))
+	);
+
+comment on view template_with_names is 'Joins in the display name information such as username, avatar, and organization name.';

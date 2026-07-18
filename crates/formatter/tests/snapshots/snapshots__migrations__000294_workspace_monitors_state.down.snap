@@ -1,0 +1,13 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_agent_volume_resource_monitors drop column updated_at,
+drop column state,
+drop column debounced_until;
+
+alter table workspace_agent_memory_resource_monitors drop column updated_at,
+drop column state,
+drop column debounced_until;
+
+drop type workspace_agent_monitor_state;

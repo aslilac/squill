@@ -1,0 +1,89 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table users add column is_system bool default false not null;
+
+comment on column users.is_system is 'Determines if a user is a system user, and therefore cannot login or perform normal actions';
+
+insert into users (id,
+email,
+username,
+name,
+created_at,
+updated_at,
+status,
+rbac_roles,
+hashed_password,
+is_system,
+login_type)
+values
+	('c42fdf75-3097-471c-8c33-fb52454d81c0',
+	'prebuilds@system',
+	'prebuilds',
+	'Prebuilds Owner',
+	now(),
+	now(),
+	'active',
+	'{}',
+	'none',
+	true,
+	'none'::login_type);
+
+drop view if exists group_members_expanded;
+create view group_members_expanded as
+with
+	all_members as (
+		select group_members.user_id, group_members.group_id
+		from group_members
+		union
+		select
+			organization_members.user_id,
+			organization_members.organization_id as group_id
+		from organization_members
+	)
+select
+	users.id as user_id,
+	users.email as user_email,
+	users.username as user_username,
+	users.hashed_password as user_hashed_password,
+	users.created_at as user_created_at,
+	users.updated_at as user_updated_at,
+	users.status as user_status,
+	users.rbac_roles as user_rbac_roles,
+	users.login_type as user_login_type,
+	users.avatar_url as user_avatar_url,
+	users.deleted as user_deleted,
+	users.last_seen_at as user_last_seen_at,
+	users.quiet_hours_schedule as user_quiet_hours_schedule,
+	users.name as user_name,
+	users.github_com_user_id as user_github_com_user_id,
+	users.is_system as user_is_system,
+	groups.organization_id,
+	groups.name as group_name,
+	all_members.group_id
+from
+	(
+		(all_members join users on ((users.id = all_members.user_id)))
+		join groups on ((groups.id = all_members.group_id))
+	)
+where (users.deleted = false);
+
+comment on view group_members_expanded is 'Joins group members with user information, organization ID, group name. Includes both regular group members and organization members (as part of the "Everyone" group).';
+-- TODO: do we *want* to use the default org here? how do we handle multi-org?
+with
+	default_org as (
+		select id
+		from organizations
+		where is_default = true
+		limit 1
+	) insert into organization_members (organization_id,
+user_id,
+created_at,
+updated_at)
+select
+	default_org.id,
+	'c42fdf75-3097-471c-8c33-fb52454d81c0', -- The system user responsible for prebuilds.
+	NOW(),
+	NOW()
+from default_org;

@@ -1,0 +1,16 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table chats add column last_read_message_id bigint;
+
+-- Backfill existing chats so they don't appear unread after deploy.
+-- The has_unread query uses COALESCE(last_read_message_id, 0), so
+-- leaving this NULL would mark every existing chat as unread.
+update chats
+set
+	last_read_message_id = (
+		select MAX(cm.id)
+		from chat_messages cm
+		where cm.chat_id = chats.id and cm.role = 'assistant' and cm.deleted = false
+	);

@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table users drop constraint one_time_passcode_set;
+
+alter table users drop column hashed_one_time_passcode;
+alter table users drop column one_time_passcode_expires_at;
+alter table users drop column must_reset_password;

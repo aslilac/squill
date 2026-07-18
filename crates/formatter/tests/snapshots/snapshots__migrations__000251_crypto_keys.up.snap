@@ -1,0 +1,19 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type crypto_key_feature as enum (
+	'workspace_apps',
+	'oidc_convert',
+	'tailnet_resume'
+);
+
+create table crypto_keys (
+	feature crypto_key_feature not null,
+	sequence integer not null,
+	secret text null,
+	secret_key_id text null references dbcrypt_keys (active_key_digest),
+	starts_at timestamptz not null,
+	deletes_at timestamptz null,
+	primary key (feature, sequence)
+);

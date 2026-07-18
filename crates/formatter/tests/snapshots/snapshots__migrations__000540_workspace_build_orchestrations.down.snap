@@ -1,0 +1,11 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Enum additions to api_key_scope are intentionally not reversed
+-- because Postgres cannot drop enum values safely.
+drop table if exists workspace_build_orchestrations;
+
+alter table template_version_presets drop constraint if exists template_version_presets_id_template_version_id_key;
+
+alter table workspace_builds drop constraint if exists workspace_builds_id_workspace_id_key;

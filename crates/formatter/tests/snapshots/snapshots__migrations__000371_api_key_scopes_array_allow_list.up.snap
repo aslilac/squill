@@ -1,0 +1,166 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Extend api_key_scope enum with low-level <resource>:<action> values derived from RBACPermissions
+-- Generated via: go run ./scripts/generate_api_key_scope_enum
+-- Begin enum extensions
+alter type api_key_scope add value if not exists 'aibridge_interception:create';
+alter type api_key_scope add value if not exists 'aibridge_interception:read';
+alter type api_key_scope add value if not exists 'aibridge_interception:update';
+alter type api_key_scope add value if not exists 'api_key:create';
+alter type api_key_scope add value if not exists 'api_key:delete';
+alter type api_key_scope add value if not exists 'api_key:read';
+alter type api_key_scope add value if not exists 'api_key:update';
+alter type api_key_scope add value if not exists 'assign_org_role:assign';
+alter type api_key_scope add value if not exists 'assign_org_role:create';
+alter type api_key_scope add value if not exists 'assign_org_role:delete';
+alter type api_key_scope add value if not exists 'assign_org_role:read';
+alter type api_key_scope add value if not exists 'assign_org_role:unassign';
+alter type api_key_scope add value if not exists 'assign_org_role:update';
+alter type api_key_scope add value if not exists 'assign_role:assign';
+alter type api_key_scope add value if not exists 'assign_role:read';
+alter type api_key_scope add value if not exists 'assign_role:unassign';
+alter type api_key_scope add value if not exists 'audit_log:create';
+alter type api_key_scope add value if not exists 'audit_log:read';
+alter type api_key_scope add value if not exists 'connection_log:read';
+alter type api_key_scope add value if not exists 'connection_log:update';
+alter type api_key_scope add value if not exists 'crypto_key:create';
+alter type api_key_scope add value if not exists 'crypto_key:delete';
+alter type api_key_scope add value if not exists 'crypto_key:read';
+alter type api_key_scope add value if not exists 'crypto_key:update';
+alter type api_key_scope add value if not exists 'debug_info:read';
+alter type api_key_scope add value if not exists 'deployment_config:read';
+alter type api_key_scope add value if not exists 'deployment_config:update';
+alter type api_key_scope add value if not exists 'deployment_stats:read';
+alter type api_key_scope add value if not exists 'file:create';
+alter type api_key_scope add value if not exists 'file:read';
+alter type api_key_scope add value if not exists 'group:create';
+alter type api_key_scope add value if not exists 'group:delete';
+alter type api_key_scope add value if not exists 'group:read';
+alter type api_key_scope add value if not exists 'group:update';
+alter type api_key_scope add value if not exists 'group_member:read';
+alter type api_key_scope add value if not exists 'idpsync_settings:read';
+alter type api_key_scope add value if not exists 'idpsync_settings:update';
+alter type api_key_scope add value if not exists 'inbox_notification:create';
+alter type api_key_scope add value if not exists 'inbox_notification:read';
+alter type api_key_scope add value if not exists 'inbox_notification:update';
+alter type api_key_scope add value if not exists 'license:create';
+alter type api_key_scope add value if not exists 'license:delete';
+alter type api_key_scope add value if not exists 'license:read';
+alter type api_key_scope add value if not exists 'notification_message:create';
+alter type api_key_scope add value if not exists 'notification_message:delete';
+alter type api_key_scope add value if not exists 'notification_message:read';
+alter type api_key_scope add value if not exists 'notification_message:update';
+alter type api_key_scope add value if not exists 'notification_preference:read';
+alter type api_key_scope add value if not exists 'notification_preference:update';
+alter type api_key_scope add value if not exists 'notification_template:read';
+alter type api_key_scope add value if not exists 'notification_template:update';
+alter type api_key_scope add value if not exists 'oauth2_app:create';
+alter type api_key_scope add value if not exists 'oauth2_app:delete';
+alter type api_key_scope add value if not exists 'oauth2_app:read';
+alter type api_key_scope add value if not exists 'oauth2_app:update';
+alter type api_key_scope add value if not exists 'oauth2_app_code_token:create';
+alter type api_key_scope add value if not exists 'oauth2_app_code_token:delete';
+alter type api_key_scope add value if not exists 'oauth2_app_code_token:read';
+alter type api_key_scope add value if not exists 'oauth2_app_secret:create';
+alter type api_key_scope add value if not exists 'oauth2_app_secret:delete';
+alter type api_key_scope add value if not exists 'oauth2_app_secret:read';
+alter type api_key_scope add value if not exists 'oauth2_app_secret:update';
+alter type api_key_scope add value if not exists 'organization:create';
+alter type api_key_scope add value if not exists 'organization:delete';
+alter type api_key_scope add value if not exists 'organization:read';
+alter type api_key_scope add value if not exists 'organization:update';
+alter type api_key_scope add value if not exists 'organization_member:create';
+alter type api_key_scope add value if not exists 'organization_member:delete';
+alter type api_key_scope add value if not exists 'organization_member:read';
+alter type api_key_scope add value if not exists 'organization_member:update';
+alter type api_key_scope add value if not exists 'prebuilt_workspace:delete';
+alter type api_key_scope add value if not exists 'prebuilt_workspace:update';
+alter type api_key_scope add value if not exists 'provisioner_daemon:create';
+alter type api_key_scope add value if not exists 'provisioner_daemon:delete';
+alter type api_key_scope add value if not exists 'provisioner_daemon:read';
+alter type api_key_scope add value if not exists 'provisioner_daemon:update';
+alter type api_key_scope add value if not exists 'provisioner_jobs:create';
+alter type api_key_scope add value if not exists 'provisioner_jobs:read';
+alter type api_key_scope add value if not exists 'provisioner_jobs:update';
+alter type api_key_scope add value if not exists 'replicas:read';
+alter type api_key_scope add value if not exists 'system:create';
+alter type api_key_scope add value if not exists 'system:delete';
+alter type api_key_scope add value if not exists 'system:read';
+alter type api_key_scope add value if not exists 'system:update';
+alter type api_key_scope add value if not exists 'tailnet_coordinator:create';
+alter type api_key_scope add value if not exists 'tailnet_coordinator:delete';
+alter type api_key_scope add value if not exists 'tailnet_coordinator:read';
+alter type api_key_scope add value if not exists 'tailnet_coordinator:update';
+alter type api_key_scope add value if not exists 'template:create';
+alter type api_key_scope add value if not exists 'template:delete';
+alter type api_key_scope add value if not exists 'template:read';
+alter type api_key_scope add value if not exists 'template:update';
+alter type api_key_scope add value if not exists 'template:use';
+alter type api_key_scope add value if not exists 'template:view_insights';
+alter type api_key_scope add value if not exists 'usage_event:create';
+alter type api_key_scope add value if not exists 'usage_event:read';
+alter type api_key_scope add value if not exists 'usage_event:update';
+alter type api_key_scope add value if not exists 'user:create';
+alter type api_key_scope add value if not exists 'user:delete';
+alter type api_key_scope add value if not exists 'user:read';
+alter type api_key_scope add value if not exists 'user:read_personal';
+alter type api_key_scope add value if not exists 'user:update';
+alter type api_key_scope add value if not exists 'user:update_personal';
+alter type api_key_scope add value if not exists 'user_secret:create';
+alter type api_key_scope add value if not exists 'user_secret:delete';
+alter type api_key_scope add value if not exists 'user_secret:read';
+alter type api_key_scope add value if not exists 'user_secret:update';
+alter type api_key_scope add value if not exists 'webpush_subscription:create';
+alter type api_key_scope add value if not exists 'webpush_subscription:delete';
+alter type api_key_scope add value if not exists 'webpush_subscription:read';
+alter type api_key_scope add value if not exists 'workspace:application_connect';
+alter type api_key_scope add value if not exists 'workspace:create';
+alter type api_key_scope add value if not exists 'workspace:create_agent';
+alter type api_key_scope add value if not exists 'workspace:delete';
+alter type api_key_scope add value if not exists 'workspace:delete_agent';
+alter type api_key_scope add value if not exists 'workspace:read';
+alter type api_key_scope add value if not exists 'workspace:ssh';
+alter type api_key_scope add value if not exists 'workspace:start';
+alter type api_key_scope add value if not exists 'workspace:stop';
+alter type api_key_scope add value if not exists 'workspace:update';
+alter type api_key_scope add value if not exists 'workspace_agent_devcontainers:create';
+alter type api_key_scope add value if not exists 'workspace_agent_resource_monitor:create';
+alter type api_key_scope add value if not exists 'workspace_agent_resource_monitor:read';
+alter type api_key_scope add value if not exists 'workspace_agent_resource_monitor:update';
+alter type api_key_scope add value if not exists 'workspace_dormant:application_connect';
+alter type api_key_scope add value if not exists 'workspace_dormant:create';
+alter type api_key_scope add value if not exists 'workspace_dormant:create_agent';
+alter type api_key_scope add value if not exists 'workspace_dormant:delete';
+alter type api_key_scope add value if not exists 'workspace_dormant:delete_agent';
+alter type api_key_scope add value if not exists 'workspace_dormant:read';
+alter type api_key_scope add value if not exists 'workspace_dormant:ssh';
+alter type api_key_scope add value if not exists 'workspace_dormant:start';
+alter type api_key_scope add value if not exists 'workspace_dormant:stop';
+alter type api_key_scope add value if not exists 'workspace_dormant:update';
+alter type api_key_scope add value if not exists 'workspace_proxy:create';
+alter type api_key_scope add value if not exists 'workspace_proxy:delete';
+alter type api_key_scope add value if not exists 'workspace_proxy:read';
+alter type api_key_scope add value if not exists 'workspace_proxy:update';
+-- End enum extensions
+
+-- Purge old API keys to speed up the migration for large deployments.
+-- Note: that problem should be solved in coderd once PR 20863 is released:
+-- https://github.com/coder/coder/blob/main/coderd/database/dbpurge/dbpurge.go#L85
+delete from api_keys where expires_at < NOW() - interval '7 days';
+
+-- Add new columns without defaults; backfill; then enforce NOT NULL
+alter table api_keys add column scopes api_key_scope [ ];
+alter table api_keys add column allow_list text [ ];
+
+-- Backfill existing rows for compatibility
+update api_keys
+set scopes = array [scope::api_key_scope], allow_list = array ['*:*'];
+
+-- Enforce NOT NULL
+alter table api_keys alter column scopes set not null;
+alter table api_keys alter column allow_list set not null;
+
+-- Drop legacy single-scope column
+alter table api_keys drop column scope;

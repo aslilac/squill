@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter type api_key_scope add value if not exists 'ai_seat:*';
+alter type api_key_scope add value if not exists 'ai_seat:create';
+alter type api_key_scope add value if not exists 'ai_seat:read';

@@ -1,0 +1,92 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table tailnet_coordinators (
+	id uuid not null primary key,
+	heartbeat_at timestamp with time zone not null
+);
+
+comment on table tailnet_coordinators is 'We keep this separate from replicas in case we need to break the coordinator out into its own service';
+
+create table tailnet_clients (
+	id uuid not null,
+	coordinator_id uuid not null,
+	agent_id uuid not null,
+	updated_at timestamp with time zone not null,
+	node jsonb not null,
+	primary key (id, coordinator_id),
+	foreign key (coordinator_id) references tailnet_coordinators (
+		id
+	) on delete cascade
+);
+
+-- For querying/deleting mappings
+create index idx_tailnet_clients_agent on tailnet_clients (agent_id);
+
+-- For shutting down / GC a coordinator
+create index idx_tailnet_clients_coordinator on tailnet_clients (
+	coordinator_id
+);
+
+create table tailnet_agents (
+	id uuid not null,
+	coordinator_id uuid not null,
+	updated_at timestamp with time zone not null,
+	node jsonb not null,
+	primary key (id, coordinator_id),
+	foreign key (coordinator_id) references tailnet_coordinators (
+		id
+	) on delete cascade
+);
+
+-- For shutting down / GC a coordinator
+create index idx_tailnet_agents_coordinator on tailnet_agents (coordinator_id);
+
+-- Any time the tailnet_clients table changes, send an update with the affected client and agent IDs
+create function tailnet_notify_client_change(
+) returns trigger language plpgsql as $$
+BEGIN
+	IF (OLD IS NOT NULL) THEN
+		PERFORM pg_notify('tailnet_client_update', OLD.id || ',' || OLD.agent_id);
+		RETURN NULL;
+	END IF;
+	IF (NEW IS NOT NULL) THEN
+		PERFORM pg_notify('tailnet_client_update', NEW.id || ',' || NEW.agent_id);
+		RETURN NULL;
+	END IF;
+END;
+$$;
+
+create trigger tailnet_notify_client_change after insert or update or delete on tailnet_clients for each row execute procedure tailnet_notify_client_change(
+);
+
+-- Any time tailnet_agents table changes, send an update with the affected agent ID.
+create function tailnet_notify_agent_change(
+) returns trigger language plpgsql as $$
+BEGIN
+	IF (OLD IS NOT NULL) THEN
+		PERFORM pg_notify('tailnet_agent_update', OLD.id::text);
+		RETURN NULL;
+	END IF;
+	IF (NEW IS NOT NULL) THEN
+		PERFORM pg_notify('tailnet_agent_update', NEW.id::text);
+		RETURN NULL;
+	END IF;
+END;
+$$;
+
+create trigger tailnet_notify_agent_change after insert or update or delete on tailnet_agents for each row execute procedure tailnet_notify_agent_change(
+);
+
+-- Send coordinator heartbeats
+create function tailnet_notify_coordinator_heartbeat(
+) returns trigger language plpgsql as $$
+BEGIN
+	PERFORM pg_notify('tailnet_coordinator_heartbeat', NEW.id::text);
+	RETURN NULL;
+END;
+$$;
+
+create trigger tailnet_notify_coordinator_heartbeat after insert or update on tailnet_coordinators for each row execute procedure tailnet_notify_coordinator_heartbeat(
+);

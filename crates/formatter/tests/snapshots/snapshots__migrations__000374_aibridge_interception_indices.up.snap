@@ -1,0 +1,17 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- This is used for consistent cursor pagination.
+create index if not exists idx_aibridge_interceptions_started_id_desc on aibridge_interceptions (
+	started_at desc,
+	id desc
+);
+
+create index if not exists idx_aibridge_interceptions_provider on aibridge_interceptions (
+	provider
+);
+
+create index if not exists idx_aibridge_interceptions_model on aibridge_interceptions (
+	model
+);

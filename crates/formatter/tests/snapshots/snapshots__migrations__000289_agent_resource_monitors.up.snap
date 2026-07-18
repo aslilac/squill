@@ -1,0 +1,20 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table workspace_agent_memory_resource_monitors (
+	agent_id uuid not null references workspace_agents (id) on delete cascade,
+	enabled boolean not null,
+	threshold integer not null,
+	created_at timestamp with time zone not null,
+	primary key (agent_id)
+);
+
+create table workspace_agent_volume_resource_monitors (
+	agent_id uuid not null references workspace_agents (id) on delete cascade,
+	enabled boolean not null,
+	threshold integer not null,
+	path text not null,
+	created_at timestamp with time zone not null,
+	primary key (agent_id, path)
+);

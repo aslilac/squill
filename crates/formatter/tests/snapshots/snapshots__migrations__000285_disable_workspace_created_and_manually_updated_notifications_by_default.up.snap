@@ -1,0 +1,13 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Disable 'workspace created' notification by default
+update notification_templates
+set enabled_by_default = false
+where id = '281fdf73-c6d6-4cbb-8ff5-888baf8a2fff';
+
+-- Disable 'workspace manually updated' notification by default
+update notification_templates
+set enabled_by_default = false
+where id = 'd089fe7b-d5c5-4c0c-aaf5-689859f7d392';

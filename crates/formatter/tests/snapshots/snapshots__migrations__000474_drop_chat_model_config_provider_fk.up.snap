@@ -1,0 +1,5 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table chat_model_configs drop constraint chat_model_configs_provider_fkey;

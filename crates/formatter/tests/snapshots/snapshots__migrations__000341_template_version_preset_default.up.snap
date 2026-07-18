@@ -1,0 +1,11 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table template_version_presets add column is_default boolean not null default false;
+
+-- Add a unique constraint to ensure only one default preset per template version
+create unique index idx_template_version_presets_default on template_version_presets (
+	template_version_id
+)
+where is_default = true;

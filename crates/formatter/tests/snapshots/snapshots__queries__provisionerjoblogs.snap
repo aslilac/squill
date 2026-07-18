@@ -9,28 +9,18 @@ where job_id = @job_id and (id > @created_after)
 order by id asc;
 
 -- name: InsertProvisionerJobLogs :many
-INSERT INTO
-	provisioner_job_logs
-SELECT
-	@job_id :: uuid AS job_id,
-	unnest(@created_at :: timestamptz [ ]) AS created_at,
-	unnest(@source :: log_source [ ]) AS source,
-	unnest(@level :: log_level [ ]) AS LEVEL,
-	unnest(@stage :: VARCHAR(128) [ ]) AS stage,
-	unnest(@output :: VARCHAR(1024) [ ]) AS output RETURNING *;
+insert into provisioner_job_logs
+select
+	@job_id::uuid as job_id,
+	unnest(@created_at::timestamptz[]) as created_at,
+	unnest(@source::log_source[]) as source,
+	unnest(@level::log_level[]) as LEVEL,
+	unnest(@stage::varchar(128)[]) as stage,
+	unnest(@output::varchar(1024)[]) as output
+returning *;
 
 -- name: UpdateProvisionerJobLogsOverflowed :exec
-UPDATE
-	provisioner_jobs
-SET
-	logs_overflowed = $2
-WHERE
-	id = $1;
+update provisioner_jobs set logs_overflowed = $2 where id = $1;
 
 -- name: UpdateProvisionerJobLogsLength :exec
-UPDATE
-	provisioner_jobs
-SET
-	logs_length = logs_length + $2
-WHERE
-	id = $1;
+update provisioner_jobs set logs_length = logs_length + $2 where id = $1;

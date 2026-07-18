@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Remove index on workspace_builds.initiator_id
+drop index if exists idx_workspace_builds_initiator_id;

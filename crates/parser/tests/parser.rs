@@ -222,9 +222,10 @@ fn sqlite_trigger_body_is_one_statement() {
     assert_eq!(parse.cst.text(), sql);
     assert_eq!(
         top_level_kinds(&parse.cst),
-        [SyntaxKind::ErrorStatement, SyntaxKind::SelectStmt],
+        [SyntaxKind::DdlStmt, SyntaxKind::SelectStmt],
         "trigger body semicolons must not split the statement"
     );
+    assert!(parse.diagnostics.is_empty());
 }
 
 #[test]
@@ -235,9 +236,10 @@ fn sqlite_begin_transaction_is_not_a_block() {
     assert_eq!(parse.cst.text(), sql);
     assert_eq!(
         top_level_kinds(&parse.cst),
-        [SyntaxKind::ErrorStatement, SyntaxKind::SelectStmt],
+        [SyntaxKind::DdlStmt, SyntaxKind::SelectStmt],
         "BEGIN TRANSACTION must end at its own semicolon"
     );
+    assert!(parse.diagnostics.is_empty());
 }
 
 #[test]

@@ -1,0 +1,14 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Revert tailnet tables to LOGGED (standard WAL-enabled tables).
+-- WARNING: This requires a full table rewrite with WAL generation,
+-- which can be slow for large tables.
+
+-- Convert parent table first (before children, reverse of up migration).
+alter table tailnet_coordinators set logged;
+
+-- Convert child tables after parent.
+alter table tailnet_peers set logged;
+alter table tailnet_tunnels set logged;

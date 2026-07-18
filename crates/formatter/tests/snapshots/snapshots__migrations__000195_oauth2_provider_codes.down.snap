@@ -1,0 +1,21 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop trigger if exists trigger_delete_oauth2_provider_app_token on oauth2_provider_app_tokens;
+drop function IF exists delete_deleted_oauth2_provider_app_token_api_key;
+
+drop table oauth2_provider_app_tokens;
+drop table oauth2_provider_app_codes;
+
+-- It is not possible to drop enum values from enum types, so the UP on
+-- login_type has "IF NOT EXISTS".
+
+-- The constraints on the secret prefix (which is used as an id embedded in the
+-- secret) are dropped, but avoid completely reverting back to the previous
+-- behavior since that will render existing secrets unusable once upgraded
+-- again.  OAuth2 is blocked outside of development mode in previous versions,
+-- so users will not be able to create broken secrets.  This is really just to
+-- make sure tests keep working (say for a bisect).
+alter table only oauth2_provider_app_secrets drop constraint oauth2_provider_app_secrets_secret_prefix_key,
+alter column secret_prefix drop not null;

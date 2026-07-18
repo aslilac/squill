@@ -1,0 +1,32 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+update users
+set
+	-- Replace the role 'admin' with the role 'owner'
+	rbac_roles = array_replace(rbac_roles, 'admin', 'owner')
+where
+	-- Update the first user with the role 'admin'. This should be the first
+	-- user ever, but if that user was demoted from an admin, then choose
+	-- the next best user.
+	id
+	= (
+		select id
+		from users
+		where 'admin' = any(rbac_roles)
+		order by created_at asc
+		limit 1
+	);
+
+update users
+set
+	-- Replace 'admin' role with 'template-admin' and 'user-admin'
+	rbac_roles = array_cat(
+		array_remove(rbac_roles, 'admin'),
+		array ['template-admin', 'user-admin']
+	)
+where
+	-- Only on existing admins
+	'admin'
+	= any(rbac_roles);

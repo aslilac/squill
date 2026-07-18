@@ -1,0 +1,31 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Remove the linked_id if two user_links share the same value.
+-- This will affect the user if they attempt to change their settings on
+-- the oauth/oidc provider. However, if two users exist with the same
+-- linked_value, there is no way to determine correctly which user should
+-- be updated. Since the linked_id is empty, this value will be linked
+-- by email.
+update only user_links as out
+set
+	linked_id = case
+		when (
+			-- When the count of linked_id is greater than 1, set the linked_id to empty
+			select
+				COUNT(*)
+			from user_links inn
+			where out.linked_id = inn.linked_id and out.login_type = inn.login_type
+		)
+		> 1
+			then ''
+		else out.linked_id
+	end;
+
+-- Enforce unique linked_id constraint on non-empty linked_id
+create unique index user_links_linked_id_login_type_idx on user_links using btree(
+	linked_id,
+	login_type
+)
+where (linked_id != '');

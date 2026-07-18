@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create index idx_chats_owner_updated_id on chats (
+	owner_id,
+	updated_at desc,
+	id desc
+);

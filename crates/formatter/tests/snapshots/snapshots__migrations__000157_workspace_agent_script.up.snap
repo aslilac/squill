@@ -1,0 +1,42 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table workspace_agent_log_sources (
+	workspace_agent_id uuid not null references workspace_agents (
+		id
+	) on delete cascade,
+	id uuid not null,
+	created_at timestamptz not null,
+	display_name varchar (127) not null,
+	icon text not null,
+	primary key (workspace_agent_id, id)
+);
+
+create table workspace_agent_scripts (
+	workspace_agent_id uuid not null references workspace_agents (
+		id
+	) on delete cascade,
+	log_source_id uuid not null,
+	log_path text not null,
+	created_at timestamptz not null,
+	script text not null,
+	cron text not null,
+	start_blocks_login boolean not null,
+	run_on_start boolean not null,
+	run_on_stop boolean not null,
+	timeout_seconds integer not null
+);
+
+alter table workspace_agent_logs add column log_source_id uuid not null default '00000000-0000-0000-0000-000000000000'::uuid;
+alter table workspace_agent_logs drop column source;
+drop type workspace_agent_log_source;
+
+alter table workspace_agents drop column startup_script_timeout_seconds;
+alter table workspace_agents drop column shutdown_script;
+alter table workspace_agents drop column shutdown_script_timeout_seconds;
+alter table workspace_agents drop column startup_script_behavior;
+alter table workspace_agents drop column startup_script;
+
+-- Set the table to unlogged to speed up the inserts
+alter table workspace_agent_logs set unlogged;

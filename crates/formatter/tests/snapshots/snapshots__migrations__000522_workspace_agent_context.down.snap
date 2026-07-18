@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table if exists workspace_agent_context_resources;
+drop table if exists workspace_agent_context_snapshots;
+drop type if exists workspace_agent_context_resource_status;
+drop type if exists workspace_agent_context_body_kind;

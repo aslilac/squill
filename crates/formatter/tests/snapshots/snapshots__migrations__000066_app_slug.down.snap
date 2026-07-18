@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- drop unique index on "slug" column
+alter table workspace_apps drop constraint if exists workspace_apps_agent_id_slug_idx;
+
+-- drop "slug" column from "workspace_apps" table
+alter table workspace_apps drop column slug;

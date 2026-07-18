@@ -1,0 +1,19 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop index if exists idx_organization_name_lower;
+
+create unique index if not exists idx_organization_name on organizations using btree(
+	name
+);
+create unique index if not exists idx_organization_name_lower on organizations using btree(
+	lower(name)
+);
+
+alter table only organizations add constraint organizations_name unique (name);
+
+drop trigger if exists protect_deleting_organizations on organizations;
+drop function IF exists protect_deleting_organizations;
+
+alter table organizations drop column deleted;

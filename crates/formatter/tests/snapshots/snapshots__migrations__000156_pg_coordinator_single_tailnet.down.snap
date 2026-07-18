@@ -1,0 +1,31 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table tailnet_clients add column agent_id uuid;
+
+update tailnet_clients
+set
+	-- there's no reason for us to try and preserve data since coordinators will
+	-- have to restart anyways, which will create all of the client mappings.
+	agent_id = '00000000-0000-0000-0000-000000000000'::uuid;
+
+alter table tailnet_clients alter column agent_id set not null;
+
+drop table tailnet_client_subscriptions;
+drop function tailnet_notify_client_subscription_change;
+
+-- update the tailnet_clients trigger to the old version.
+create or replace function tailnet_notify_client_change(
+) returns trigger language plpgsql as $$
+BEGIN
+	IF (OLD IS NOT NULL) THEN
+		PERFORM pg_notify('tailnet_client_update', OLD.id || ',' || OLD.agent_id);
+		RETURN NULL;
+	END IF;
+	IF (NEW IS NOT NULL) THEN
+		PERFORM pg_notify('tailnet_client_update', NEW.id || ',' || NEW.agent_id);
+		RETURN NULL;
+	END IF;
+END;
+$$;

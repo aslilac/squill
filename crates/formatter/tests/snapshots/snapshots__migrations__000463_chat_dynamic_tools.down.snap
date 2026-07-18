@@ -1,0 +1,36 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- First update any rows using the value we're about to remove.
+-- The column type is still the original chat_status at this point.
+update chats set status = 'error' where status = 'requires_action';
+
+-- Drop the column (this is independent of the enum).
+alter table chats drop column if exists dynamic_tools;
+
+-- Drop the partial index that references the chat_status enum type.
+-- It must be removed before the rename-create-cast-drop cycle
+-- because the index's WHERE clause (status = 'pending'::chat_status)
+-- would otherwise cause a cross-type comparison failure.
+drop index if exists idx_chats_pending;
+
+-- Now recreate the enum without requires_action.
+-- We must use the rename-create-cast-drop pattern.
+alter type chat_status rename to chat_status_old;
+create type chat_status as enum (
+	'waiting',
+	'pending',
+	'running',
+	'paused',
+	'completed',
+	'error'
+);
+alter table chats alter column status drop default;
+alter table chats alter column status type chat_status using status::text::chat_status;
+alter table chats alter column status set default 'waiting';
+drop type chat_status_old;
+
+-- Recreate the partial index.
+create index idx_chats_pending on chats using btree(status)
+where (status = 'pending'::chat_status);

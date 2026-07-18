@@ -1,0 +1,28 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Add column with default true, so existing templates will function as usual
+alter table templates add column use_max_ttl boolean not null default true;
+
+-- Find any templates with autostop_requirement_days_of_week set and set them to
+-- use_max_ttl = false
+update templates
+set use_max_ttl = false
+where autostop_requirement_days_of_week != 0;
+
+-- Alter column to default false, because we want autostop_requirement to be the
+-- default from now on
+alter table templates alter column use_max_ttl set default false;
+
+drop view template_with_users;
+
+create view template_with_users as
+select
+	templates.*,
+	coalesce(visible_users.avatar_url, '') as created_by_avatar_url,
+	coalesce(visible_users.username, '') as created_by_username
+from
+	templates left join visible_users on templates.created_by = visible_users.id;
+
+comment on view template_with_users is 'Joins in the username + avatar url of the created by user.';

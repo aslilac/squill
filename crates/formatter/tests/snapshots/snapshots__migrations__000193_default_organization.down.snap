@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop index organizations_single_default_org;
+alter table organizations drop column is_default;

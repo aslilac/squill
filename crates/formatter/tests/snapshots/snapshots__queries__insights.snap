@@ -521,236 +521,257 @@ where
 -- into a single table for efficient storage and querying. Half-hour buckets are
 -- used to store the data, and the minutes are summed for each user and template
 -- combination. The result is stored in the template_usage_stats table.
-WITH
-	latest_start AS (
-		SELECT
+with
+	latest_start as (
+		select
 			-- Truncate to hour so that we always look at even ranges of data.
-			date_trunc('hour', COALESCE(
-				MAX(start_time) - '1 hour'::interval,
-				-- Fallback when there are no template usage stats yet.
-				-- App stats can exist before this, but not agent stats,
-				-- limit the lookback to avoid inconsistency.
-				(SELECT MIN(created_at) FROM workspace_agent_stats)
-			)) AS t
-		FROM
-			template_usage_stats
+			date_trunc(
+				'hour',
+				COALESCE(
+					MAX(start_time) - '1 hour'::interval,
+					-- Fallback when there are no template usage stats yet.
+					-- App stats can exist before this, but not agent stats,
+					-- limit the lookback to avoid inconsistency.
+					(
+						select MIN(created_at)
+						from workspace_agent_stats
+					)
+				)
+			) as t
+		from template_usage_stats
 	),
-	filtered_app_stats AS (
-        SELECT
-            was.workspace_id,
-            was.user_id,
-            was.agent_id,
-            was.access_method,
-            was.slug_or_port,
-            was.session_started_at,
-            was.session_ended_at
-        FROM
-            workspace_app_stats AS was
-        WHERE
-            was.session_ended_at >= (SELECT t FROM latest_start)
-            AND was.session_started_at < NOW()
-    ),
-	workspace_app_stat_buckets AS (
-		SELECT
+	filtered_app_stats as (
+		select
+			was.workspace_id,
+			was.user_id,
+			was.agent_id,
+			was.access_method,
+			was.slug_or_port,
+			was.session_started_at,
+			was.session_ended_at
+		from workspace_app_stats as was
+		where
+			was.session_ended_at >= (select t from latest_start)
+			and was.session_started_at < NOW()
+	),
+	workspace_app_stat_buckets as (
+		select
 			-- Truncate the minute to the nearest half hour, this is the bucket size
 			-- for the data.
-			date_trunc('hour', s.minute_bucket) + trunc(date_part('minute', s.minute_bucket) / 30) * 30 * '1 minute'::interval AS time_bucket,
+			date_trunc('hour', s.minute_bucket)
+			+ trunc(date_part('minute', s.minute_bucket) / 30) * 30
+			* '1 minute'::interval as time_bucket,
 			w.template_id,
 			fas.user_id,
 			-- Both app stats and agent stats track web terminal usage, but
 			-- by different means. The app stats value should be more
 			-- accurate so we don't want to discard it just yet.
-			CASE
-				WHEN fas.access_method = 'terminal'
-				THEN '[terminal]' -- Unique name, app names can't contain brackets.
-				ELSE fas.slug_or_port
-			END AS app_name,
-			COUNT(DISTINCT s.minute_bucket) AS app_minutes,
+			case
+				when fas.access_method = 'terminal'
+					then '[terminal]' -- Unique name, app names can't contain brackets.
+				else fas.slug_or_port
+			end as app_name,
+			COUNT(distinct s.minute_bucket) as app_minutes,
 			-- Store each unique minute bucket for later merge between datasets.
-			array_agg(DISTINCT s.minute_bucket) AS minute_buckets
-		FROM
-			filtered_app_stats AS fas
-		JOIN
-			workspaces AS w
-		ON
-			w.id = fas.workspace_id
-		-- Generate a series of minute buckets for each session for computing the
-		-- mintes/bucket.
-		CROSS JOIN
-			generate_series(
+			array_agg(distinct s.minute_bucket) as minute_buckets
+		from
+			filtered_app_stats as fas
+			join workspaces as w on w.id = fas.workspace_id
+			-- Generate a series of minute buckets for each session for computing the
+			-- mintes/bucket.
+			cross join generate_series(
 				date_trunc('minute', fas.session_started_at),
 				-- Subtract 1 μs to avoid creating an extra series.
 				date_trunc('minute', fas.session_ended_at - '1 microsecond'::interval),
 				'1 minute'::interval
-			) AS s(minute_bucket)
-		WHERE
+			) as s(minute_bucket)
+		where
 			-- s.minute_bucket >= @start_time::timestamptz
 			-- AND s.minute_bucket < @end_time::timestamptz
-			s.minute_bucket >= (SELECT t FROM latest_start)
-			AND s.minute_bucket < NOW()
-		GROUP BY
-			time_bucket, w.template_id, fas.user_id, fas.access_method, fas.slug_or_port
+			s.minute_bucket
+			>= (select t from latest_start)
+			and s.minute_bucket < NOW()
+		group by
+			time_bucket,
+			w.template_id,
+			fas.user_id,
+			fas.access_method,
+			fas.slug_or_port
 	),
-	agent_stats_buckets AS (
-		SELECT
+	agent_stats_buckets as (
+		select
 			-- Truncate the minute to the nearest half hour, this is the bucket size
 			-- for the data.
-			date_trunc('hour', created_at) + trunc(date_part('minute', created_at) / 30) * 30 * '1 minute'::interval AS time_bucket,
+			date_trunc('hour', created_at)
+			+ trunc(date_part('minute', created_at) / 30) * 30
+			* '1 minute'::interval as time_bucket,
 			template_id,
 			user_id,
 			-- Store each unique minute bucket for later merge between datasets.
 			array_agg(
-				DISTINCT CASE
-				WHEN
-					session_count_ssh > 0
+				distinct case
+					when session_count_ssh > 0
 					-- TODO(mafredri): Enable when we have the column.
 					-- OR session_count_sftp > 0
-					OR session_count_reconnecting_pty > 0
-					OR session_count_vscode > 0
-					OR session_count_jetbrains > 0
-				THEN
-					date_trunc('minute', created_at)
-				ELSE
-					NULL
-				END
-			) AS minute_buckets,
-			COUNT(DISTINCT CASE WHEN session_count_ssh > 0 THEN date_trunc('minute', created_at) ELSE NULL END) AS ssh_mins,
+					or session_count_reconnecting_pty > 0
+					or session_count_vscode > 0
+					or session_count_jetbrains > 0
+						then date_trunc('minute', created_at)
+					else null
+				end
+			) as minute_buckets,
+			COUNT(
+				distinct case
+					when session_count_ssh > 0 then date_trunc('minute', created_at)
+					else null
+				end
+			) as ssh_mins,
 			-- TODO(mafredri): Enable when we have the column.
 			-- COUNT(DISTINCT CASE WHEN session_count_sftp > 0 THEN date_trunc('minute', created_at) ELSE NULL END) AS sftp_mins,
-			COUNT(DISTINCT CASE WHEN session_count_reconnecting_pty > 0 THEN date_trunc('minute', created_at) ELSE NULL END) AS reconnecting_pty_mins,
-			COUNT(DISTINCT CASE WHEN session_count_vscode > 0 THEN date_trunc('minute', created_at) ELSE NULL END) AS vscode_mins,
-			COUNT(DISTINCT CASE WHEN session_count_jetbrains > 0 THEN date_trunc('minute', created_at) ELSE NULL END) AS jetbrains_mins,
+			COUNT(
+				distinct case
+					when session_count_reconnecting_pty > 0
+						then date_trunc('minute', created_at)
+					else null
+				end
+			) as reconnecting_pty_mins,
+			COUNT(
+				distinct case
+					when session_count_vscode > 0 then date_trunc('minute', created_at)
+					else null
+				end
+			) as vscode_mins,
+			COUNT(
+				distinct case
+					when session_count_jetbrains > 0 then date_trunc('minute', created_at)
+					else null
+				end
+			) as jetbrains_mins,
 			-- NOTE(mafredri): The agent stats are currently very unreliable, and
 			-- sometimes the connections are missing, even during active sessions.
 			-- Since we can't fully rely on this, we check for "any connection
 			-- during this half-hour". A better solution here would be preferable.
-			MAX(connection_count) > 0 AS has_connection
-		FROM
-			workspace_agent_stats
-		WHERE
+			MAX(connection_count)
+			> 0 as has_connection
+		from workspace_agent_stats
+		where
 			-- created_at >= @start_time::timestamptz
 			-- AND created_at < @end_time::timestamptz
-			created_at >= (SELECT t FROM latest_start)
-			AND created_at < NOW()
+			created_at
+			>= (select t from latest_start)
+			and created_at < NOW()
 			-- Inclusion criteria to filter out empty results.
-			AND (
+			and (
 				session_count_ssh > 0
 				-- TODO(mafredri): Enable when we have the column.
 				-- OR session_count_sftp > 0
-				OR session_count_reconnecting_pty > 0
-				OR session_count_vscode > 0
-				OR session_count_jetbrains > 0
+				or session_count_reconnecting_pty > 0
+				or session_count_vscode > 0
+				or session_count_jetbrains > 0
 			)
-		GROUP BY
-			time_bucket, template_id, user_id
+		group by time_bucket, template_id, user_id
 	),
-	stats AS (
-		SELECT
-			stats.time_bucket AS start_time,
-			stats.time_bucket + '30 minutes'::interval AS end_time,
+	stats as (
+		select
+			stats.time_bucket as start_time,
+			stats.time_bucket + '30 minutes'::interval as end_time,
 			stats.template_id,
 			stats.user_id,
 			-- Sum/distinct to handle zero/duplicate values due union and to unnest.
-			COUNT(DISTINCT minute_bucket) AS usage_mins,
-			array_agg(DISTINCT minute_bucket) AS minute_buckets,
-			SUM(DISTINCT stats.ssh_mins) AS ssh_mins,
-			SUM(DISTINCT stats.sftp_mins) AS sftp_mins,
-			SUM(DISTINCT stats.reconnecting_pty_mins) AS reconnecting_pty_mins,
-			SUM(DISTINCT stats.vscode_mins) AS vscode_mins,
-			SUM(DISTINCT stats.jetbrains_mins) AS jetbrains_mins,
+			COUNT(distinct minute_bucket) as usage_mins,
+			array_agg(distinct minute_bucket) as minute_buckets,
+			SUM(distinct stats.ssh_mins) as ssh_mins,
+			SUM(distinct stats.sftp_mins) as sftp_mins,
+			SUM(distinct stats.reconnecting_pty_mins) as reconnecting_pty_mins,
+			SUM(distinct stats.vscode_mins) as vscode_mins,
+			SUM(distinct stats.jetbrains_mins) as jetbrains_mins,
 			-- This is what we unnested, re-nest as json.
-			jsonb_object_agg(stats.app_name, stats.app_minutes) FILTER (WHERE stats.app_name IS NOT NULL) AS app_usage_mins
-		FROM (
-			SELECT
-				time_bucket,
-				template_id,
-				user_id,
-				0 AS ssh_mins,
-				0 AS sftp_mins,
-				0 AS reconnecting_pty_mins,
-				0 AS vscode_mins,
-				0 AS jetbrains_mins,
-				app_name,
-				app_minutes,
-				minute_buckets
-			FROM
-				workspace_app_stat_buckets
-
-			UNION ALL
-
-			SELECT
-				time_bucket,
-				template_id,
-				user_id,
-				ssh_mins,
-				-- TODO(mafredri): Enable when we have the column.
-				0 AS sftp_mins,
-				reconnecting_pty_mins,
-				vscode_mins,
-				jetbrains_mins,
-				NULL AS app_name,
-				NULL AS app_minutes,
-				minute_buckets
-			FROM
-				agent_stats_buckets
-			WHERE
-				-- See note in the agent_stats_buckets CTE.
-				has_connection
-		) AS stats, unnest(minute_buckets) AS minute_bucket
-		GROUP BY
-			stats.time_bucket, stats.template_id, stats.user_id
+			jsonb_object_agg(
+				stats.app_name,
+				stats.app_minutes
+			) filter (where stats.app_name is not null) as app_usage_mins
+		from
+			(
+				select
+					time_bucket,
+					template_id,
+					user_id,
+					0 as ssh_mins,
+					0 as sftp_mins,
+					0 as reconnecting_pty_mins,
+					0 as vscode_mins,
+					0 as jetbrains_mins,
+					app_name,
+					app_minutes,
+					minute_buckets
+				from workspace_app_stat_buckets
+				union
+				all
+				select
+					time_bucket,
+					template_id,
+					user_id,
+					ssh_mins,
+					-- TODO(mafredri): Enable when we have the column.
+					0 as sftp_mins,
+					reconnecting_pty_mins,
+					vscode_mins,
+					jetbrains_mins,
+					null as app_name,
+					null as app_minutes,
+					minute_buckets
+				from agent_stats_buckets
+				where
+					-- See note in the agent_stats_buckets CTE.
+					has_connection
+			) as stats,
+			unnest(minute_buckets) as minute_bucket
+		group by stats.time_bucket, stats.template_id, stats.user_id
 	),
-	minute_buckets AS (
+	minute_buckets as (
 		-- Create distinct minute buckets for user-activity, so we can filter out
 		-- irrelevant latencies.
-		SELECT DISTINCT ON (stats.start_time, stats.template_id, stats.user_id, minute_bucket)
-			stats.start_time,
-			stats.template_id,
-			stats.user_id,
-			minute_bucket
-		FROM
-			stats, unnest(minute_buckets) AS minute_bucket
+		select distinct on (stats.start_time,
+		stats.template_id,
+		stats.user_id,
+		minute_bucket)
+			stats.start_time, stats.template_id, stats.user_id, minute_bucket
+		from stats, unnest(minute_buckets) as minute_bucket
 	),
-	latencies AS (
+	latencies as (
 		-- Select all non-zero latencies for all the minutes that a user used the
 		-- workspace in some way.
-		SELECT
+		select
 			mb.start_time,
 			mb.template_id,
 			mb.user_id,
 			-- TODO(mafredri): We're doing medians on medians here, we may want to
 			-- improve upon this at some point.
-			PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY was.connection_median_latency_ms)::real AS median_latency_ms
-		FROM
-			minute_buckets AS mb
-		JOIN
-			workspace_agent_stats AS was
-		ON
-			was.created_at >= (SELECT t FROM latest_start)
-			AND was.created_at < NOW()
-			AND date_trunc('minute', was.created_at) = mb.minute_bucket
-			AND was.template_id = mb.template_id
-			AND was.user_id = mb.user_id
-			AND was.connection_median_latency_ms > 0
-		GROUP BY
-			mb.start_time, mb.template_id, mb.user_id
-	)
-
-INSERT INTO template_usage_stats AS tus (
-	start_time,
-	end_time,
-	template_id,
-	user_id,
-	usage_mins,
-	median_latency_ms,
-	ssh_mins,
-	sftp_mins,
-	reconnecting_pty_mins,
-	vscode_mins,
-	jetbrains_mins,
-	app_usage_mins
-) (
-	SELECT
+			PERCENTILE_CONT(0.5) within group (order by
+				was.connection_median_latency_ms)::real as median_latency_ms
+		from
+			minute_buckets as mb
+			join workspace_agent_stats as was on was.created_at
+			>= (select t from latest_start)
+			and was.created_at < NOW()
+			and date_trunc('minute', was.created_at) = mb.minute_bucket
+			and was.template_id = mb.template_id
+			and was.user_id = mb.user_id
+			and was.connection_median_latency_ms > 0
+		group by mb.start_time, mb.template_id, mb.user_id
+	) insert into template_usage_stats as tus (start_time,
+end_time,
+template_id,
+user_id,
+usage_mins,
+median_latency_ms,
+ssh_mins,
+sftp_mins,
+reconnecting_pty_mins,
+vscode_mins,
+jetbrains_mins,
+app_usage_mins) (
+	select
 		stats.start_time,
 		stats.end_time,
 		stats.template_id,
@@ -763,30 +784,28 @@ INSERT INTO template_usage_stats AS tus (
 		stats.vscode_mins,
 		stats.jetbrains_mins,
 		stats.app_usage_mins
-	FROM
+	from
 		stats
-	LEFT JOIN
-		latencies
-	ON
+		left join latencies on
 		-- The latencies group-by ensures there at most one row.
-		latencies.start_time = stats.start_time
-		AND latencies.template_id = stats.template_id
-		AND latencies.user_id = stats.user_id
+		latencies.start_time
+		= stats.start_time
+		and latencies.template_id = stats.template_id
+		and latencies.user_id = stats.user_id
 )
-ON CONFLICT
-	(start_time, template_id, user_id)
-DO UPDATE
-SET
-	usage_mins = EXCLUDED.usage_mins,
-	median_latency_ms = EXCLUDED.median_latency_ms,
-	ssh_mins = EXCLUDED.ssh_mins,
-	sftp_mins = EXCLUDED.sftp_mins,
-	reconnecting_pty_mins = EXCLUDED.reconnecting_pty_mins,
-	vscode_mins = EXCLUDED.vscode_mins,
-	jetbrains_mins = EXCLUDED.jetbrains_mins,
-	app_usage_mins = EXCLUDED.app_usage_mins
-WHERE
-	(tus.*) IS DISTINCT FROM (EXCLUDED.*);
+on conflict
+	(start_time,
+	template_id,
+	user_id) do update set
+		usage_mins = EXCLUDED.usage_mins,
+		median_latency_ms = EXCLUDED.median_latency_ms,
+		ssh_mins = EXCLUDED.ssh_mins,
+		sftp_mins = EXCLUDED.sftp_mins,
+		reconnecting_pty_mins = EXCLUDED.reconnecting_pty_mins,
+		vscode_mins = EXCLUDED.vscode_mins,
+		jetbrains_mins = EXCLUDED.jetbrains_mins,
+		app_usage_mins = EXCLUDED.app_usage_mins where
+		(tus.*) is distinct from (EXCLUDED.*);
 
 -- name: GetTemplateParameterInsights :many
 -- GetTemplateParameterInsights does for each template in a given timeframe,

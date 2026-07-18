@@ -1,0 +1,48 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Remove already-stale MCP server references before future deletes are
+-- handled by the trigger below.
+update chats
+set
+	mcp_server_ids = (
+		select
+			COALESCE(array_agg(ids.mcp_server_id order by ids.position), '{}'::uuid[])
+		from
+			unnest(
+				chats.mcp_server_ids
+			) with ordinality as ids(mcp_server_id, position)
+		where
+			exists (
+				select 1
+				from mcp_server_configs
+				where mcp_server_configs.id = ids.mcp_server_id
+			)
+	)
+where
+	exists (
+		select 1
+		from unnest(chats.mcp_server_ids) as ids(mcp_server_id)
+		where
+			not exists (
+				select 1
+				from mcp_server_configs
+				where mcp_server_configs.id = ids.mcp_server_id
+			)
+	);
+
+create or replace function remove_mcp_server_config_id_from_chats(
+) returns trigger as $$
+BEGIN
+	UPDATE chats
+	SET mcp_server_ids = array_remove(mcp_server_ids, OLD.id)
+	WHERE OLD.id = ANY(mcp_server_ids);
+	RETURN OLD;
+END;
+$$ language plpgsql;
+
+create trigger remove_chat_mcp_server_config_id before delete on mcp_server_configs for each row execute procedure remove_mcp_server_config_id_from_chats(
+);
+
+comment on trigger remove_chat_mcp_server_config_id on mcp_server_configs is 'When an MCP server config is deleted, this trigger removes its ID from all chats.';

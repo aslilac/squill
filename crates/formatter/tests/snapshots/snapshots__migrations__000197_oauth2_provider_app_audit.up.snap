@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter type resource_type add value if not exists 'oauth2_provider_app';
+alter type resource_type add value if not exists 'oauth2_provider_app_secret';

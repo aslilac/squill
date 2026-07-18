@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table oauth2_provider_app_secrets;
+drop table oauth2_provider_apps;

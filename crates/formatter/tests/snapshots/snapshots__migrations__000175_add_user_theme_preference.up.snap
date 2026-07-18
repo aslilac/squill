@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table users add column theme_preference text not null default '';
+
+comment on column users.theme_preference is '"" can be interpreted as "the user does not care", falling back to the default theme';

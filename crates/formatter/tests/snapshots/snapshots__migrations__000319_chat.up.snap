@@ -1,0 +1,21 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table if not exists chats (
+	id uuid primary key default gen_random_uuid(),
+	owner_id uuid not null references users (id) on delete cascade,
+	created_at timestamptz not null default NOW(),
+	updated_at timestamptz not null default NOW(),
+	title text not null
+);
+
+create table if not exists chat_messages (
+	-- BIGSERIAL is auto-incrementing so we know the exact order of messages.
+	id bigserial primary key,
+	chat_id uuid not null references chats (id) on delete cascade,
+	created_at timestamptz not null default NOW(),
+	model text not null,
+	provider text not null,
+	content jsonb not null
+);

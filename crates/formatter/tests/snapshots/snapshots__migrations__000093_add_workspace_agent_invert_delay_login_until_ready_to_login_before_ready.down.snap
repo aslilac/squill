@@ -1,0 +1,11 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_agents rename column login_before_ready to delay_login_until_ready;
+alter table workspace_agents alter column delay_login_until_ready set default false;
+
+update workspace_agents
+set delay_login_until_ready = not delay_login_until_ready;
+
+comment on column workspace_agents.delay_login_until_ready is 'If true, the agent will delay logins until it is ready (e.g. executing startup script has ended).';

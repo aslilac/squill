@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Default lifetime is 24hours.
+alter table api_keys add column lifetime_seconds bigint default 86400 not null;

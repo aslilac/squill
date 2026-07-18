@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+delete from notification_templates
+where id = 'f40fae84-55a2-42cd-99fa-b41c1ca64894';

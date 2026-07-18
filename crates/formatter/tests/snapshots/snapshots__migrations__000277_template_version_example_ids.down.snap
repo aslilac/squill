@@ -1,0 +1,33 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- We cannot alter the column type while a view depends on it, so we drop it and recreate it.
+drop view template_version_with_user;
+
+alter table template_versions drop column source_example_id;
+
+-- Recreate `template_version_with_user` as described in dump.sql
+create view template_version_with_user as
+select
+	template_versions.id,
+	template_versions.template_id,
+	template_versions.organization_id,
+	template_versions.created_at,
+	template_versions.updated_at,
+	template_versions.name,
+	template_versions.readme,
+	template_versions.job_id,
+	template_versions.created_by,
+	template_versions.external_auth_providers,
+	template_versions.message,
+	template_versions.archived,
+	COALESCE(visible_users.avatar_url, ''::text) as created_by_avatar_url,
+	COALESCE(visible_users.username, ''::text) as created_by_username
+from
+	(
+		template_versions
+		left join visible_users on (template_versions.created_by = visible_users.id)
+	);
+
+comment on view template_version_with_user is 'Joins in the username + avatar url of the created by user.';

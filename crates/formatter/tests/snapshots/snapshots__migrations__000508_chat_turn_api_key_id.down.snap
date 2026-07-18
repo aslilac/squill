@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table chat_queued_messages drop column api_key_id;
+
+alter table chat_messages drop column api_key_id;

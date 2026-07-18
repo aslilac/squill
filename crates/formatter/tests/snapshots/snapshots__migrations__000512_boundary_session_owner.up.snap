@@ -1,0 +1,32 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Add owner_id to boundary_sessions to avoid expensive JOINs when
+-- deriving the workspace owner for RBAC checks during log insertion.
+alter table boundary_sessions add column owner_id uuid;
+
+comment on column boundary_sessions.owner_id is 'The ID of the user who owns the workspace. NULL if the user has been deleted.';
+
+-- Backfill owner_id from the workspace agent -> workspace -> owner chain.
+-- Soft-deleted agents and workspaces are included so that their audit
+-- data is preserved.
+update boundary_sessions bs
+set owner_id = w.owner_id
+from
+	workspace_agents wa
+	join workspace_resources wr on wa.resource_id = wr.id
+	join provisioner_jobs pj on wr.job_id = pj.id
+	join workspace_builds wb on pj.id = wb.job_id
+	join workspaces w on wb.workspace_id = w.id
+where wa.id = bs.workspace_agent_id and pj.type = 'workspace_build';
+
+-- Delete any sessions that could not be backfilled (orphaned data
+-- with no resolvable workspace agent or workspace build chain).
+delete from boundary_sessions where owner_id is null;
+
+-- Add FK constraint. SET NULL preserves audit data when a user is
+-- hard-deleted; the session and its logs survive with a NULL owner.
+alter table boundary_sessions add constraint boundary_sessions_owner_id_fkey foreign key (
+	owner_id
+) references users (id) on delete set null;

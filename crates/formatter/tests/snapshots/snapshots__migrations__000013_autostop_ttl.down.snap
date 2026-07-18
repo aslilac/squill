@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table only workspaces drop column ttl;
+alter table only workspaces add column autostop_schedule text default null;

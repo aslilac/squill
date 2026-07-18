@@ -6,17 +6,17 @@ expression: formatted
 select * from dbcrypt_keys order by number asc;
 
 -- name: RevokeDBCryptKey :exec
-UPDATE dbcrypt_keys
-SET
+update dbcrypt_keys
+set
 	revoked_key_digest = active_key_digest,
 	active_key_digest = revoked_key_digest,
 	revoked_at = CURRENT_TIMESTAMP
-WHERE
-	active_key_digest = @active_key_digest::text
-AND
-	revoked_key_digest IS NULL;
+where
+	active_key_digest = @active_key_digest::text and revoked_key_digest is null;
 
 -- name: InsertDBCryptKey :exec
-INSERT INTO dbcrypt_keys
-	(number, active_key_digest, created_at, test)
-VALUES (@number::int, @active_key_digest::text, CURRENT_TIMESTAMP, @test::text);
+insert into dbcrypt_keys (number,
+active_key_digest,
+created_at,
+test)
+values (@number::int, @active_key_digest::text, CURRENT_TIMESTAMP, @test::text);

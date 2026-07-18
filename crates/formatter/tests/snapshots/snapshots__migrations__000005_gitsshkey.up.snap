@@ -1,0 +1,11 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table if not exists gitsshkeys (
+	user_id uuid primary key not null references users (id),
+	created_at timestamptz not null,
+	updated_at timestamptz not null,
+	private_key text not null,
+	public_key text not null
+);

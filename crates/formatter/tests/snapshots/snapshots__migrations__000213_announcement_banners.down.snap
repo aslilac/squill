@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+update site_configs
+set key = 'notification_banners'
+where key = 'announcement_banners';

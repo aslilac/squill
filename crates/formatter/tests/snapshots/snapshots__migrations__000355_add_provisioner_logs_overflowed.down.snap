@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table provisioner_jobs drop column logs_length;
+alter table provisioner_jobs drop column logs_overflowed;

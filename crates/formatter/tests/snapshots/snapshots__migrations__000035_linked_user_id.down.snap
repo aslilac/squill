@@ -1,0 +1,17 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- This migration makes no attempt to try to populate
+-- the oauth_access_token, oauth_refresh_token, and oauth_expiry
+-- columns of api_key rows with the values from the dropped user_links
+-- table.
+drop table if exists user_links;
+
+alter table api_keys add column oauth_access_token text default ''::text not null;
+
+alter table api_keys add column oauth_refresh_token text default ''::text not null;
+
+alter table api_keys add column oauth_expiry timestamp with time zone default '0001-01-01 00:00:00+00'::timestamp with time zone not null;
+
+alter table users drop column login_type;

@@ -1,0 +1,16 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table aibridge_model_thoughts (
+	interception_id uuid not null,
+	content text not null,
+	metadata jsonb,
+	created_at timestamptz not null
+);
+
+comment on table aibridge_model_thoughts is 'Audit log of model thinking in intercepted requests in AI Bridge';
+
+create index idx_aibridge_model_thoughts_interception_id on aibridge_model_thoughts (
+	interception_id
+);

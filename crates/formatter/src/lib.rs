@@ -124,7 +124,10 @@ pub fn format_cst(cst: &Cst, options: &Options) -> Formatted {
                             lex_options,
                         );
                         if safe {
-                            pieces.push((blank, rendered));
+                            // Statement assembly owns inter-statement
+                            // newlines; drop any the doc produced (e.g. a
+                            // trailing comment's fresh line).
+                            pieces.push((blank, rendered.trim_end().to_string()));
                         } else {
                             fallbacks += 1;
                             if std::env::var_os("SQUILL_DEBUG").is_some() {
@@ -187,4 +190,10 @@ fn leading_blank(original: &str) -> bool {
 /// whitespace that statement assembly regenerates.
 fn trim_verbatim(original: &str) -> String {
     original.trim().to_string()
+}
+
+/// Dev-tool access to the statement lowering (see examples/).
+#[doc(hidden)]
+pub fn debug_lower(node: &parser::syntax::SyntaxNode) -> Option<Doc> {
+    rules::lower_statement(node)
 }

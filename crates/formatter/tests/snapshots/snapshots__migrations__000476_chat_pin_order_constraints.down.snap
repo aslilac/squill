@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table chats drop constraint if exists chats_pin_order_parent_check;
+alter table chats drop constraint if exists chats_pin_order_archived_check;

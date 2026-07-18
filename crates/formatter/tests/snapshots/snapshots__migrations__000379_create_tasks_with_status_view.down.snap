@@ -1,0 +1,36 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop view if exists tasks_with_status;
+drop type if exists task_status;
+
+drop index if exists tasks_organization_id_idx;
+drop index if exists tasks_owner_id_idx;
+drop index if exists tasks_workspace_id_idx;
+
+alter table task_workspace_apps drop constraint if exists task_workspace_apps_pkey;
+
+-- Add back workspace_build_id column.
+alter table task_workspace_apps add column workspace_build_id uuid;
+
+-- Try to populate workspace_build_id from workspace_builds.
+update task_workspace_apps
+set workspace_build_id = workspace_builds.id
+from workspace_builds
+where
+	workspace_builds.build_number = task_workspace_apps.workspace_build_number
+	and workspace_builds.workspace_id in (
+		select workspace_id
+		from tasks
+		where tasks.id = task_workspace_apps.task_id
+	);
+
+-- Remove rows that couldn't be restored.
+delete from task_workspace_apps where workspace_build_id is null;
+
+-- Restore original schema.
+alter table task_workspace_apps drop column workspace_build_number,
+alter column workspace_build_id set not null,
+alter column workspace_agent_id set not null,
+alter column workspace_app_id set not null;

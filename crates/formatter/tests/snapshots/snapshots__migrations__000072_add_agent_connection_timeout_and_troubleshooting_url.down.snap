@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_agents drop column connection_timeout_seconds;
+
+alter table workspace_agents drop column troubleshooting_url;

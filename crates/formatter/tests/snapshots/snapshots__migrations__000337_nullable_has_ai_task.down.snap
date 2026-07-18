@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table template_versions alter column has_ai_task set default false;
+alter table template_versions alter column has_ai_task set not null;
+alter table workspace_builds alter column has_ai_task set default false;
+alter table workspace_builds alter column has_ai_task set not null;

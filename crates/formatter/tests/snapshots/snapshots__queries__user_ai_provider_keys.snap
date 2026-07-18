@@ -24,65 +24,50 @@ order by user_id asc, ai_provider_id asc, created_at asc, id asc;
 -- user/provider pair already exists. On conflict, callers provide id and
 -- created_at for the insert path only.
 -- name: UpsertUserAIProviderKey :one
-INSERT INTO user_ai_provider_keys (
-    id,
-    user_id,
-    ai_provider_id,
-    api_key,
-    api_key_key_id,
-    created_at,
-    updated_at
-) VALUES (
-    @id::uuid,
-    @user_id::uuid,
-    @ai_provider_id::uuid,
-    @api_key::text,
-    sqlc.narg('api_key_key_id')::text,
-    @created_at::timestamptz,
-    @updated_at::timestamptz
-)
-ON CONFLICT (user_id, ai_provider_id) DO UPDATE
-SET
-    api_key = EXCLUDED.api_key,
-    api_key_key_id = EXCLUDED.api_key_key_id,
-    updated_at = EXCLUDED.updated_at
-RETURNING
-    *;
+insert into user_ai_provider_keys (id,
+user_id,
+ai_provider_id,
+api_key,
+api_key_key_id,
+created_at,
+updated_at)
+values
+	(@id::uuid,
+	@user_id::uuid,
+	@ai_provider_id::uuid,
+	@api_key::text,
+	sqlc.narg('api_key_key_id')::text,
+	@created_at::timestamptz,
+	@updated_at::timestamptz)
+on conflict
+	(user_id,
+	ai_provider_id) do update set
+		api_key = EXCLUDED.api_key,
+		api_key_key_id = EXCLUDED.api_key_key_id,
+		updated_at = EXCLUDED.updated_at
+returning *;
 
 -- name: UpdateUserAIProviderKey :one
-UPDATE
-    user_ai_provider_keys
-SET
-    api_key = @api_key::text,
-    api_key_key_id = sqlc.narg('api_key_key_id')::text,
-    updated_at = NOW()
-WHERE
-    user_id = @user_id::uuid
-    AND ai_provider_id = @ai_provider_id::uuid
-RETURNING
-    *;
+update user_ai_provider_keys
+set
+	api_key = @api_key::text,
+	api_key_key_id = sqlc.narg('api_key_key_id')::text,
+	updated_at = NOW()
+where user_id = @user_id::uuid and ai_provider_id = @ai_provider_id::uuid
+returning *;
 
 -- name: DeleteUserAIProviderKey :exec
-DELETE FROM
-    user_ai_provider_keys
-WHERE
-    user_id = @user_id::uuid
-    AND ai_provider_id = @ai_provider_id::uuid;
+delete from user_ai_provider_keys
+where user_id = @user_id::uuid and ai_provider_id = @ai_provider_id::uuid;
 
 -- name: DeleteUserAIProviderKeysByProviderID :exec
-DELETE FROM
-    user_ai_provider_keys
-WHERE
-    ai_provider_id = @ai_provider_id::uuid;
+delete from user_ai_provider_keys where ai_provider_id = @ai_provider_id::uuid;
 
 -- name: UpdateEncryptedUserAIProviderKey :one
-UPDATE
-    user_ai_provider_keys
-SET
-    api_key = @api_key::text,
-    api_key_key_id = sqlc.narg('api_key_key_id')::text,
-    updated_at = NOW()
-WHERE
-    id = @id::uuid
-RETURNING
-    *;
+update user_ai_provider_keys
+set
+	api_key = @api_key::text,
+	api_key_key_id = sqlc.narg('api_key_key_id')::text,
+	updated_at = NOW()
+where id = @id::uuid
+returning *;

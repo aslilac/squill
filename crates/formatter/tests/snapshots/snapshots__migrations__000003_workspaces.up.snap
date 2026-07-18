@@ -1,0 +1,25 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table workspaces (
+	id uuid not null,
+	created_at timestamptz not null,
+	updated_at timestamptz not null,
+	-- Use ON DELETE RESTRICT so that we can cleanup external workspace
+	-- resources first.
+	owner_id uuid not null references users (id) on delete restrict,
+	organization_id uuid not null references organizations (
+		id
+	) on delete restrict,
+	template_id uuid not null references templates (id) on delete restrict,
+	deleted boolean not null default false,
+	name varchar (64) not null,
+	primary key (id)
+);
+
+-- Enforces no active workspaces have the same name.
+create unique index on workspaces using btree(owner_id, lower(name))
+where deleted = false;
+
+create type workspace_transition as enum ('start', 'stop', 'delete');

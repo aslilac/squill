@@ -1,0 +1,35 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type new_audit_action as enum (
+	'create',
+	'write',
+	'delete',
+	'start',
+	'stop'
+);
+
+create type new_resource_type as enum (
+	'organization',
+	'template',
+	'template_version',
+	'user',
+	'workspace',
+	'git_ssh_key',
+	'api_key',
+	'group',
+	'workspace_build'
+);
+
+alter table audit_logs alter column action type new_audit_action using (
+	action::text::new_audit_action
+),
+alter column resource_type type new_resource_type using (
+	resource_type::text::new_resource_type
+);
+
+drop type audit_action;
+alter type new_audit_action rename to audit_action;
+drop type resource_type;
+alter type new_resource_type rename to resource_type;

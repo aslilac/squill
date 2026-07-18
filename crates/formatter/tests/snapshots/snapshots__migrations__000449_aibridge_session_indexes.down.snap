@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop index if exists idx_aibridge_interceptions_session_id;
+drop index if exists idx_aibridge_user_prompts_interception_created;
+drop index if exists idx_aibridge_interceptions_sessions_filter;
+
+alter table aibridge_interceptions drop column if exists session_id;

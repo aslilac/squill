@@ -1,0 +1,107 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Postgres requires the referenced column set of a composite foreign
+-- key to have its own unique constraint, even though id is already
+-- unique.
+alter table workspace_builds add constraint workspace_builds_id_workspace_id_key unique (
+	id,
+	workspace_id
+);
+
+alter table template_version_presets add constraint template_version_presets_id_template_version_id_key unique (
+	id,
+	template_version_id
+);
+
+create table workspace_build_orchestrations (
+	id uuid primary key not null,
+	created_at timestamptz not null,
+	updated_at timestamptz not null,
+	workspace_id uuid not null,
+	parent_build_id uuid unique not null,
+	child_build_id uuid unique,
+	child_transition workspace_transition not null,
+	child_template_version_id uuid references template_versions (
+		id
+	) on delete cascade,
+	child_template_version_preset_id uuid, -- a constraint is added below
+	child_rich_parameter_values jsonb default '[]'::jsonb not null,
+	child_log_level text default '' not null,
+	child_reason build_reason,
+	attempt_count integer default 0 not null,
+	next_retry_after timestamptz,
+	status text default 'pending' not null,
+	error text,
+	constraint workspace_build_orchestrations_status_check check (
+		status in ('pending', 'completed', 'failed', 'canceled')
+	),
+	constraint workspace_build_orchestrations_completed_child_check check (
+		status <> 'completed' or child_build_id is not null
+	),
+	constraint workspace_build_orchestrations_child_parameters_check check (
+		jsonb_typeof(child_rich_parameter_values) = 'array'
+	),
+	constraint workspace_build_orchestrations_attempt_count_check check (
+		attempt_count >= 0
+	),
+	constraint workspace_build_orchestrations_next_retry_after_check check (
+		status = 'pending' or next_retry_after is null
+	),
+	constraint workspace_build_orchestrations_child_preset_version_check check (
+		child_template_version_preset_id is null
+		or child_template_version_id is not null
+	),
+	-- Mirrors CreateWorkspaceBuildRequest validation, where the optional
+	-- log level is either unset or debug.
+	constraint workspace_build_orchestrations_child_log_level_check check (
+		child_log_level in ('', 'debug')
+	),
+	-- These constraints enforce that any stored child preset belongs to
+	-- the requested child template version, while preset deletion still
+	-- clears only the preset column.
+	constraint workspace_build_orchestrations_child_preset_id_fkey foreign key (
+		child_template_version_preset_id
+	) references template_version_presets (id) on delete set null,
+	constraint workspace_build_orchestrations_child_preset_version_fkey foreign key (
+		child_template_version_preset_id,
+		child_template_version_id
+	) references template_version_presets (id, template_version_id),
+	-- Composite foreign keys enforce that the parent and child builds
+	-- belong to the same workspace.
+	constraint workspace_build_orchestrations_parent_build_workspace_id_fkey foreign key (
+		parent_build_id,
+		workspace_id
+	) references workspace_builds (id, workspace_id) on delete cascade,
+	constraint workspace_build_orchestrations_child_build_workspace_id_fkey foreign key (
+		child_build_id,
+		workspace_id
+	) references workspace_builds (id, workspace_id) on delete cascade
+);
+
+-- The orchestrator scans eligible pending rows oldest first and skips
+-- terminal rows and retry rows whose delay has not elapsed.
+create index idx_workspace_build_orchestrations_pending on workspace_build_orchestrations (
+	created_at
+)
+where status = 'pending';
+
+comment on table workspace_build_orchestrations is 'Tracks durable follow-up workspace build operations, such as server-side restart, where one child build is created after a parent build completes successfully.';
+
+comment on column workspace_build_orchestrations.parent_build_id is 'Unique because we only support sequences with one child build per parent build.';
+
+comment on column workspace_build_orchestrations.workspace_id is 'Copied from the parent build so the database can enforce that parent and child builds belong to the same workspace.';
+
+comment on column workspace_build_orchestrations.child_build_id is 'Nullable because the child build is created only after the parent build completes successfully.';
+
+comment on column workspace_build_orchestrations.attempt_count is 'Counts retryable child build creation failures for this orchestration row.';
+
+comment on column workspace_build_orchestrations.next_retry_after is 'When set, the orchestrator skips this pending row until the timestamp has passed.';
+
+-- Add workspace_build_orchestration scopes for RBAC.
+alter type api_key_scope add value if not exists 'workspace_build_orchestration:*';
+alter type api_key_scope add value if not exists 'workspace_build_orchestration:create';
+alter type api_key_scope add value if not exists 'workspace_build_orchestration:delete';
+alter type api_key_scope add value if not exists 'workspace_build_orchestration:read';
+alter type api_key_scope add value if not exists 'workspace_build_orchestration:update';

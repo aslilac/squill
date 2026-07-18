@@ -1,0 +1,10 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Remove Task 'paused' transition template notification
+delete from notification_templates
+where id = '2a74f3d3-ab09-4123-a4a5-ca238f4f65a1';
+-- Remove Task 'resumed' transition template notification
+delete from notification_templates
+where id = '843ee9c3-a8fb-4846-afa9-977bec578649';

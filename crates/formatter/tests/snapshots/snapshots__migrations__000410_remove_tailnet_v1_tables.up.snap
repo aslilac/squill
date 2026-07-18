@@ -1,0 +1,24 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Remove unused tailnet v1 API tables.
+-- These tables were superseded by tailnet_peers and tailnet_tunnels in migration
+-- 000168. The v1 API code was removed in commit d6154c4310 ("remove tailnet v1
+-- API support"), but the tables and queries were never cleaned up.
+
+-- Drop triggers first (they reference the functions).
+drop trigger if exists tailnet_notify_agent_change on tailnet_agents;
+drop trigger if exists tailnet_notify_client_change on tailnet_clients;
+drop trigger if exists tailnet_notify_client_subscription_change on tailnet_client_subscriptions;
+
+-- Drop the trigger functions.
+drop function IF exists tailnet_notify_agent_change ();
+drop function IF exists tailnet_notify_client_change ();
+drop function IF exists tailnet_notify_client_subscription_change ();
+
+-- Drop the tables. Foreign keys and indexes are dropped automatically via CASCADE.
+-- Order matters due to potential foreign key relationships.
+drop table if exists tailnet_client_subscriptions;
+drop table if exists tailnet_agents;
+drop table if exists tailnet_clients;

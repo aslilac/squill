@@ -1,0 +1,39 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table template_usage_stats (
+	start_time timestamptz not null,
+	end_time timestamptz not null,
+	template_id uuid not null,
+	user_id uuid not null,
+	median_latency_ms real null,
+	usage_mins smallint not null,
+	ssh_mins smallint not null,
+	sftp_mins smallint not null,
+	reconnecting_pty_mins smallint not null,
+	vscode_mins smallint not null,
+	jetbrains_mins smallint not null,
+	app_usage_mins jsonb null,
+	primary key (start_time, template_id, user_id)
+);
+
+comment on table template_usage_stats is 'Records aggregated usage statistics for templates/users. All usage is rounded up to the nearest minute.';
+comment on column template_usage_stats.start_time is 'Start time of the usage period.';
+comment on column template_usage_stats.end_time is 'End time of the usage period.';
+comment on column template_usage_stats.template_id is 'ID of the template being used.';
+comment on column template_usage_stats.user_id is 'ID of the user using the template.';
+comment on column template_usage_stats.median_latency_ms is 'Median latency the user is experiencing, in milliseconds. Null means no value was recorded.';
+comment on column template_usage_stats.usage_mins is 'Total minutes the user has been using the template.';
+comment on column template_usage_stats.ssh_mins is 'Total minutes the user has been using SSH.';
+comment on column template_usage_stats.sftp_mins is 'Total minutes the user has been using SFTP.';
+comment on column template_usage_stats.reconnecting_pty_mins is 'Total minutes the user has been using the reconnecting PTY.';
+comment on column template_usage_stats.vscode_mins is 'Total minutes the user has been using VSCode.';
+comment on column template_usage_stats.jetbrains_mins is 'Total minutes the user has been using JetBrains.';
+comment on column template_usage_stats.app_usage_mins is 'Object with app names as keys and total minutes used as values. Null means no app usage was recorded.';
+
+create unique index on template_usage_stats (start_time, template_id, user_id);
+create index on template_usage_stats (start_time desc);
+
+comment on index template_usage_stats_start_time_template_id_user_id_idx is 'Index for primary key.';
+comment on index template_usage_stats_start_time_idx is 'Index for querying MAX(start_time).';

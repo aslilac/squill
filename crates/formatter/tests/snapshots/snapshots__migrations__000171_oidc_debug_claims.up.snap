@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table user_links add column debug_context jsonb default '{}' not null;
+comment on column user_links.debug_context is 'Debug information includes information like id_token and userinfo claims.';

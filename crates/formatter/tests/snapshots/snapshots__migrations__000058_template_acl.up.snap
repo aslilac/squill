@@ -1,0 +1,40 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table templates add column user_acl jsonb not null default '{}';
+alter table templates add column group_acl jsonb not null default '{}';
+
+create table groups (
+	id uuid not null,
+	name text not null,
+	organization_id uuid not null references organizations (id) on delete cascade,
+	primary key (id),
+	UNIQUE(name, organization_id)
+);
+
+create table group_members (
+	user_id uuid not null,
+	group_id uuid not null,
+	foreign key (user_id) references users (id) on delete cascade,
+	foreign key (group_id) references groups (id) on delete cascade,
+	UNIQUE(user_id, group_id)
+);
+
+-- Insert a group for every organization (which should just be 1).
+insert into groups (id,
+name,
+organization_id)
+select id, 'Everyone' as name, id
+from organizations;
+
+-- Insert allUsers groups into every existing template to avoid breaking
+-- existing deployments.
+update templates
+set
+	group_acl = (
+		select
+			json_build_object(organizations.id, array_to_json('{"read"}'::text[]))
+		from organizations
+		where templates.organization_id = organizations.id
+	);

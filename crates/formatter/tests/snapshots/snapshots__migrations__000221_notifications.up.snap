@@ -1,0 +1,75 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type notification_message_status as enum (
+	'pending',
+	'leased',
+	'sent',
+	'permanent_failure',
+	'temporary_failure',
+	'unknown'
+);
+
+create type notification_method as enum ('smtp', 'webhook');
+
+create table notification_templates (
+	id uuid not null,
+	name text not null,
+	title_template text not null,
+	body_template text not null,
+	actions jsonb,
+	"group" text,
+	primary key (id),
+	UNIQUE(name)
+);
+
+comment on table notification_templates is 'Templates from which to create notification messages.';
+
+create table notification_messages (
+	id uuid not null,
+	notification_template_id uuid not null,
+	user_id uuid not null,
+	method notification_method not null,
+	status notification_message_status not null default 'pending'::notification_message_status,
+	status_reason text,
+	created_by text not null,
+	payload jsonb not null,
+	attempt_count int default 0,
+	targets uuid [],
+	created_at timestamp with time zone not null default CURRENT_TIMESTAMP,
+	updated_at timestamp with time zone,
+	leased_until timestamp with time zone,
+	next_retry_after timestamp with time zone,
+	primary key (id),
+	foreign key (notification_template_id) references notification_templates (
+		id
+	) on delete cascade,
+	foreign key (user_id) references users (id) on delete cascade
+);
+
+create index idx_notification_messages_status on notification_messages (status);
+
+-- TODO: autogenerate constants which reference the UUIDs
+insert into notification_templates (id,
+name,
+title_template,
+body_template,
+"group",
+actions)
+values
+	('f517da0b-cdc9-410f-ab89-a86107c420ed',
+	'Workspace Deleted',
+	E'Workspace "{{.Labels.name}}" deleted',
+	E'Hi {{.UserName}}\n\nYour workspace **{{.Labels.name}}** was deleted.\nThe specified reason was "**{{.Labels.reason}}{{ if .Labels.initiator }} ({{ .Labels.initiator }}){{end}}**".',
+	'Workspace Events',
+	'[
+        {
+            "label": "View workspaces",
+            "url": "{{ base_url }}/workspaces"
+        },
+        {
+            "label": "View templates",
+            "url": "{{ base_url }}/templates"
+        }
+    ]'::jsonb);

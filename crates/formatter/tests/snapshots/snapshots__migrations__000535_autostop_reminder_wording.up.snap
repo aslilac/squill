@@ -1,0 +1,10 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Reword the autostop reminder to use a relative countdown instead of an
+-- absolute timestamp.
+update notification_templates
+set
+	body_template = E'Your workspace **{{.Labels.workspace}}** will automatically stop {{.Labels.timeTilShutdown}}.\n\nConnect to it or extend the deadline to keep it running.'
+where id = '6f6cb984-c167-4fa5-bb87-1058dd642779';

@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspaces drop column if exists automatic_updates;
+drop type if exists automatic_updates;

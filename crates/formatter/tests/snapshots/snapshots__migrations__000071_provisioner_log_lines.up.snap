@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table provisioner_job_logs drop column id;
+
+alter table provisioner_job_logs add column id bigserial primary key;

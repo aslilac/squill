@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop trigger if exists remove_organization_member_custom_role on custom_roles;
+drop function IF exists remove_organization_member_role;

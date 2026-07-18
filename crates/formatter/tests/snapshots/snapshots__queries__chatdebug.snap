@@ -5,39 +5,36 @@ expression: formatted
 -- updated_at is the retention clock used by DeleteOldChatDebugRuns.
 -- Set it on every write to keep retention semantics correct.
 -- name: InsertChatDebugRun :one
-INSERT INTO chat_debug_runs (
-    chat_id,
-    root_chat_id,
-    parent_chat_id,
-    model_config_id,
-    trigger_message_id,
-    history_tip_message_id,
-    kind,
-    status,
-    provider,
-    model,
-    summary,
-    started_at,
-    updated_at,
-    finished_at
-)
-VALUES (
-    @chat_id::uuid,
-    sqlc.narg('root_chat_id')::uuid,
-    sqlc.narg('parent_chat_id')::uuid,
-    sqlc.narg('model_config_id')::uuid,
-    sqlc.narg('trigger_message_id')::bigint,
-    sqlc.narg('history_tip_message_id')::bigint,
-    @kind::text,
-    @status::text,
-    sqlc.narg('provider')::text,
-    sqlc.narg('model')::text,
-    COALESCE(sqlc.narg('summary')::jsonb, '{}'::jsonb),
-    COALESCE(sqlc.narg('started_at')::timestamptz, NOW()),
-    COALESCE(sqlc.narg('updated_at')::timestamptz, NOW()),
-    sqlc.narg('finished_at')::timestamptz
-)
-RETURNING *;
+insert into chat_debug_runs (chat_id,
+root_chat_id,
+parent_chat_id,
+model_config_id,
+trigger_message_id,
+history_tip_message_id,
+kind,
+status,
+provider,
+model,
+summary,
+started_at,
+updated_at,
+finished_at)
+values
+	(@chat_id::uuid,
+	sqlc.narg('root_chat_id')::uuid,
+	sqlc.narg('parent_chat_id')::uuid,
+	sqlc.narg('model_config_id')::uuid,
+	sqlc.narg('trigger_message_id')::bigint,
+	sqlc.narg('history_tip_message_id')::bigint,
+	@kind::text,
+	@status::text,
+	sqlc.narg('provider')::text,
+	sqlc.narg('model')::text,
+	COALESCE(sqlc.narg('summary')::jsonb, '{}'::jsonb),
+	COALESCE(sqlc.narg('started_at')::timestamptz, NOW()),
+	COALESCE(sqlc.narg('updated_at')::timestamptz, NOW()),
+	sqlc.narg('finished_at')::timestamptz)
+returning *;
 
 -- name: UpdateChatDebugRun :one
 -- Uses COALESCE so that passing NULL from Go means "keep the
@@ -54,22 +51,30 @@ RETURNING *;
 -- completion timestamp, which keeps duration and ordering
 -- calculations stable regardless of how many times the row is
 -- updated.
-UPDATE chat_debug_runs
-SET
-    root_chat_id = COALESCE(sqlc.narg('root_chat_id')::uuid, root_chat_id),
-    parent_chat_id = COALESCE(sqlc.narg('parent_chat_id')::uuid, parent_chat_id),
-    model_config_id = COALESCE(sqlc.narg('model_config_id')::uuid, model_config_id),
-    trigger_message_id = COALESCE(sqlc.narg('trigger_message_id')::bigint, trigger_message_id),
-    history_tip_message_id = COALESCE(sqlc.narg('history_tip_message_id')::bigint, history_tip_message_id),
-    status = COALESCE(sqlc.narg('status')::text, status),
-    provider = COALESCE(sqlc.narg('provider')::text, provider),
-    model = COALESCE(sqlc.narg('model')::text, model),
-    summary = COALESCE(sqlc.narg('summary')::jsonb, summary),
-    finished_at = COALESCE(finished_at, sqlc.narg('finished_at')::timestamptz),
-    updated_at = @now::timestamptz
-WHERE id = @id::uuid
-    AND chat_id = @chat_id::uuid
-RETURNING *;
+update chat_debug_runs
+set
+	root_chat_id = COALESCE(sqlc.narg('root_chat_id')::uuid, root_chat_id),
+	parent_chat_id = COALESCE(sqlc.narg('parent_chat_id')::uuid, parent_chat_id),
+	model_config_id = COALESCE(
+		sqlc.narg('model_config_id')::uuid,
+		model_config_id
+	),
+	trigger_message_id = COALESCE(
+		sqlc.narg('trigger_message_id')::bigint,
+		trigger_message_id
+	),
+	history_tip_message_id = COALESCE(
+		sqlc.narg('history_tip_message_id')::bigint,
+		history_tip_message_id
+	),
+	status = COALESCE(sqlc.narg('status')::text, status),
+	provider = COALESCE(sqlc.narg('provider')::text, provider),
+	model = COALESCE(sqlc.narg('model')::text, model),
+	summary = COALESCE(sqlc.narg('summary')::jsonb, summary),
+	finished_at = COALESCE(finished_at, sqlc.narg('finished_at')::timestamptz),
+	updated_at = @now::timestamptz
+where id = @id::uuid and chat_id = @chat_id::uuid
+returning *;
 
 -- name: InsertChatDebugStep :one
 -- The CTE atomically locks the parent run via UPDATE, bumps its
@@ -78,51 +83,48 @@ RETURNING *;
 -- finished, the UPDATE returns zero rows, the INSERT gets no source
 -- rows, and sql.ErrNoRows is returned. The UPDATE also serializes
 -- with concurrent FinalizeStale under READ COMMITTED isolation.
-WITH locked_run AS (
-    UPDATE chat_debug_runs
-    SET updated_at = COALESCE(sqlc.narg('updated_at')::timestamptz, NOW())
-    WHERE id = @run_id::uuid
-        AND chat_id = @chat_id::uuid
-        AND finished_at IS NULL
-    RETURNING chat_id
-)
-INSERT INTO chat_debug_steps (
-    run_id,
-    chat_id,
-    step_number,
-    operation,
-    status,
-    history_tip_message_id,
-    assistant_message_id,
-    normalized_request,
-    normalized_response,
-    usage,
-    attempts,
-    error,
-    metadata,
-    started_at,
-    updated_at,
-    finished_at
-)
-SELECT
-    @run_id::uuid,
-    locked_run.chat_id,
-    @step_number::int,
-    @operation::text,
-    @status::text,
-    sqlc.narg('history_tip_message_id')::bigint,
-    sqlc.narg('assistant_message_id')::bigint,
-    COALESCE(sqlc.narg('normalized_request')::jsonb, '{}'::jsonb),
-    sqlc.narg('normalized_response')::jsonb,
-    sqlc.narg('usage')::jsonb,
-    COALESCE(sqlc.narg('attempts')::jsonb, '[]'::jsonb),
-    sqlc.narg('error')::jsonb,
-    COALESCE(sqlc.narg('metadata')::jsonb, '{}'::jsonb),
-    COALESCE(sqlc.narg('started_at')::timestamptz, NOW()),
-    COALESCE(sqlc.narg('updated_at')::timestamptz, NOW()),
-    sqlc.narg('finished_at')::timestamptz
-FROM locked_run
-RETURNING *;
+with
+	locked_run as (
+		update chat_debug_runs
+		set updated_at = COALESCE(sqlc.narg('updated_at')::timestamptz, NOW())
+		where
+			id = @run_id::uuid and chat_id = @chat_id::uuid and finished_at is null
+		returning chat_id
+	) insert into chat_debug_steps (run_id,
+chat_id,
+step_number,
+operation,
+status,
+history_tip_message_id,
+assistant_message_id,
+normalized_request,
+normalized_response,
+usage,
+attempts,
+error,
+metadata,
+started_at,
+updated_at,
+finished_at)
+select
+	@run_id::uuid,
+	locked_run.chat_id,
+	@step_number::int,
+	@operation::text,
+	@status::text,
+	sqlc.narg('history_tip_message_id')::bigint,
+	sqlc.narg('assistant_message_id')::bigint,
+	COALESCE(sqlc.narg('normalized_request')::jsonb, '{}'::jsonb),
+	sqlc.narg('normalized_response')::jsonb,
+	sqlc.narg('usage')::jsonb,
+	COALESCE(sqlc.narg('attempts')::jsonb, '[]'::jsonb),
+	sqlc.narg('error')::jsonb,
+	COALESCE(sqlc.narg('metadata')::jsonb, '{}'::jsonb),
+	COALESCE(sqlc.narg('started_at')::timestamptz, NOW()),
+	COALESCE(sqlc.narg('updated_at')::timestamptz, NOW()),
+	sqlc.narg('finished_at')::timestamptz
+from locked_run
+returning *;
 
 -- name: UpdateChatDebugStep :one
 -- Uses COALESCE so that passing NULL from Go means "keep the
@@ -131,22 +133,33 @@ RETURNING *;
 -- or finalization and never cleared back to NULL. The @now
 -- parameter keeps updated_at under the caller's clock, matching
 -- the injectable quartz.Clock used by FinalizeStale sweeps.
-UPDATE chat_debug_steps
-SET
-    status = COALESCE(sqlc.narg('status')::text, status),
-    history_tip_message_id = COALESCE(sqlc.narg('history_tip_message_id')::bigint, history_tip_message_id),
-    assistant_message_id = COALESCE(sqlc.narg('assistant_message_id')::bigint, assistant_message_id),
-    normalized_request = COALESCE(sqlc.narg('normalized_request')::jsonb, normalized_request),
-    normalized_response = COALESCE(sqlc.narg('normalized_response')::jsonb, normalized_response),
-    usage = COALESCE(sqlc.narg('usage')::jsonb, usage),
-    attempts = COALESCE(sqlc.narg('attempts')::jsonb, attempts),
-    error = COALESCE(sqlc.narg('error')::jsonb, error),
-    metadata = COALESCE(sqlc.narg('metadata')::jsonb, metadata),
-    finished_at = COALESCE(sqlc.narg('finished_at')::timestamptz, finished_at),
-    updated_at = @now::timestamptz
-WHERE id = @id::uuid
-    AND chat_id = @chat_id::uuid
-RETURNING *;
+update chat_debug_steps
+set
+	status = COALESCE(sqlc.narg('status')::text, status),
+	history_tip_message_id = COALESCE(
+		sqlc.narg('history_tip_message_id')::bigint,
+		history_tip_message_id
+	),
+	assistant_message_id = COALESCE(
+		sqlc.narg('assistant_message_id')::bigint,
+		assistant_message_id
+	),
+	normalized_request = COALESCE(
+		sqlc.narg('normalized_request')::jsonb,
+		normalized_request
+	),
+	normalized_response = COALESCE(
+		sqlc.narg('normalized_response')::jsonb,
+		normalized_response
+	),
+	usage = COALESCE(sqlc.narg('usage')::jsonb, usage),
+	attempts = COALESCE(sqlc.narg('attempts')::jsonb, attempts),
+	error = COALESCE(sqlc.narg('error')::jsonb, error),
+	metadata = COALESCE(sqlc.narg('metadata')::jsonb, metadata),
+	finished_at = COALESCE(sqlc.narg('finished_at')::timestamptz, finished_at),
+	updated_at = @now::timestamptz
+where id = @id::uuid and chat_id = @chat_id::uuid
+returning *;
 
 -- name: TouchChatDebugRunUpdatedAt :exec
 -- Overrides updated_at on the parent run without touching any
@@ -157,10 +170,9 @@ RETURNING *;
 -- itself does not call this: heartbeats go through
 -- TouchChatDebugStepAndRun, and step creation updates the parent
 -- run via the InsertChatDebugStep CTE.
-UPDATE chat_debug_runs
-SET updated_at = @now::timestamptz
-WHERE id = @id::uuid
-    AND chat_id = @chat_id::uuid;
+update chat_debug_runs
+set updated_at = @now::timestamptz
+where id = @id::uuid and chat_id = @chat_id::uuid;
 
 -- name: TouchChatDebugStepAndRun :exec
 -- Atomically bumps updated_at on both the step and its parent run
@@ -178,19 +190,19 @@ WHERE id = @id::uuid
 -- join also constrains the step update to the specified run so a
 -- mismatched (run_id, step_id) pair cannot silently refresh an
 -- unrelated step.
-WITH touched_run AS (
-    UPDATE chat_debug_runs
-    SET updated_at = @now::timestamptz
-    WHERE id = @run_id::uuid
-        AND chat_id = @chat_id::uuid
-    RETURNING id, chat_id
-)
-UPDATE chat_debug_steps
-SET updated_at = @now::timestamptz
-FROM touched_run
-WHERE chat_debug_steps.id = @step_id::uuid
-    AND chat_debug_steps.run_id = touched_run.id
-    AND chat_debug_steps.chat_id = touched_run.chat_id;
+with
+	touched_run as (
+		update chat_debug_runs
+		set updated_at = @now::timestamptz
+		where id = @run_id::uuid and chat_id = @chat_id::uuid
+		returning id, chat_id
+	) update chat_debug_steps
+set updated_at = @now::timestamptz
+from touched_run
+where
+	chat_debug_steps.id = @step_id::uuid
+	and chat_debug_steps.run_id = touched_run.id
+	and chat_debug_steps.chat_id = touched_run.chat_id;
 
 -- name: GetChatDebugRunsByChatID :many
 -- Returns the most recent debug runs for a chat, ordered newest-first.
@@ -215,58 +227,58 @@ order by step_number asc, started_at asc;
 -- runs created by a replacement turn that races ahead of the retry
 -- window (for example, after an unarchive races with a pending
 -- archive-cleanup retry).
-DELETE FROM chat_debug_runs
-WHERE chat_id = @chat_id::uuid
-    AND started_at < @started_before::timestamptz;
+delete from chat_debug_runs
+where chat_id = @chat_id::uuid and started_at < @started_before::timestamptz;
 
 -- name: DeleteChatDebugDataAfterMessageID :execrows
 -- Deletes debug runs (and their cascaded steps) whose message IDs
 -- exceed the cutoff. The started_before bound prevents retried
 -- cleanup from deleting runs created by a replacement turn that
 -- raced ahead of the retry window.
-WITH affected_runs AS (
-    SELECT DISTINCT run.id
-    FROM chat_debug_runs run
-    WHERE run.chat_id = @chat_id::uuid
-        AND run.started_at < @started_before::timestamptz
-        AND (
-            run.history_tip_message_id > @message_id::bigint
-            OR run.trigger_message_id > @message_id::bigint
-        )
-
-    UNION
-
-    SELECT DISTINCT step.run_id AS id
-    FROM chat_debug_steps step
-    JOIN chat_debug_runs run ON run.id = step.run_id
-        AND run.chat_id = step.chat_id
-    WHERE step.chat_id = @chat_id::uuid
-        AND run.started_at < @started_before::timestamptz
-        AND (
-            step.assistant_message_id > @message_id::bigint
-            OR step.history_tip_message_id > @message_id::bigint
-        )
-)
-DELETE FROM chat_debug_runs
-WHERE chat_id = @chat_id::uuid
-    AND id IN (SELECT id FROM affected_runs);
+with
+	affected_runs as (
+		select distinct run.id
+		from chat_debug_runs run
+		where
+			run.chat_id = @chat_id::uuid
+			and run.started_at < @started_before::timestamptz
+			and (
+				run.history_tip_message_id > @message_id::bigint
+				or run.trigger_message_id > @message_id::bigint
+			)
+		union
+		select distinct step.run_id as id
+		from
+			chat_debug_steps step
+			join chat_debug_runs run on run.id = step.run_id
+			and run.chat_id = step.chat_id
+		where
+			step.chat_id = @chat_id::uuid
+			and run.started_at < @started_before::timestamptz
+			and (
+				step.assistant_message_id > @message_id::bigint
+				or step.history_tip_message_id > @message_id::bigint
+			)
+	) delete from chat_debug_runs
+where chat_id = @chat_id::uuid and id in (select id from affected_runs);
 
 -- updated_at is the retention clock, so the window starts after the run
 -- stops being written to.
 -- Intentionally no finished_at IS NOT NULL guard: abandoned in-flight rows
 -- older than the cutoff are also purged.
 -- name: DeleteOldChatDebugRuns :execrows
-WITH deletable AS (
-    SELECT id, chat_id
-    FROM chat_debug_runs
-    WHERE updated_at < @before_time::timestamptz
-    ORDER BY updated_at ASC
-    LIMIT @limit_count::int
-)
-DELETE FROM chat_debug_runs
-USING deletable
-WHERE chat_debug_runs.id = deletable.id
-    AND chat_debug_runs.chat_id = deletable.chat_id;
+with
+	deletable as (
+		select id, chat_id
+		from chat_debug_runs
+		where updated_at < @before_time::timestamptz
+		order by updated_at asc
+		limit @limit_count::int
+	) delete from chat_debug_runs
+using deletable
+where
+	chat_debug_runs.id = deletable.id
+	and chat_debug_runs.chat_id = deletable.chat_id;
 
 -- name: FinalizeStaleChatDebugRows :one
 -- Marks orphaned in-progress rows as interrupted so they do not stay
@@ -281,30 +293,34 @@ WHERE chat_debug_runs.id = deletable.id
 --
 -- @now is the caller's clock timestamp so that mock-clock tests stay
 -- consistent with the @updated_before cutoff.
-WITH finalized_runs AS (
-    UPDATE chat_debug_runs
-    SET
-        status = 'interrupted',
-        updated_at = @now::timestamptz,
-        finished_at = @now::timestamptz
-    WHERE updated_at < @updated_before::timestamptz
-        AND finished_at IS NULL
-        AND status NOT IN ('completed', 'error', 'interrupted')
-    RETURNING id
-), finalized_steps AS (
-    UPDATE chat_debug_steps
-    SET
-        status = 'interrupted',
-        updated_at = @now::timestamptz,
-        finished_at = @now::timestamptz
-    WHERE (
-            updated_at < @updated_before::timestamptz
-            OR run_id IN (SELECT id FROM finalized_runs)
-        )
-        AND finished_at IS NULL
-        AND status NOT IN ('completed', 'error', 'interrupted')
-    RETURNING 1
-)
-SELECT
-    (SELECT COUNT(*) FROM finalized_runs)::bigint AS runs_finalized,
-    (SELECT COUNT(*) FROM finalized_steps)::bigint AS steps_finalized;
+with
+	finalized_runs as (
+		update chat_debug_runs
+		set
+			status = 'interrupted',
+			updated_at = @now::timestamptz,
+			finished_at = @now::timestamptz
+		where
+			updated_at < @updated_before::timestamptz
+			and finished_at is null
+			and status not in ('completed', 'error', 'interrupted')
+		returning id
+	),
+	finalized_steps as (
+		update chat_debug_steps
+		set
+			status = 'interrupted',
+			updated_at = @now::timestamptz,
+			finished_at = @now::timestamptz
+		where
+			(
+				updated_at < @updated_before::timestamptz
+				or run_id in (select id from finalized_runs)
+			)
+			and finished_at is null
+			and status not in ('completed', 'error', 'interrupted')
+		returning 1
+	)
+select
+	(select COUNT(*) from finalized_runs)::bigint as runs_finalized,
+	(select COUNT(*) from finalized_steps)::bigint as steps_finalized;

@@ -1,0 +1,13 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Restore the original telemetry_locks event_type constraint.
+alter table telemetry_locks drop constraint telemetry_lock_event_type_constraint;
+alter table telemetry_locks add constraint telemetry_lock_event_type_constraint check (
+	event_type in ('aibridge_interceptions_summary')
+);
+
+drop table boundary_usage_stats;
+
+-- No-op for boundary_usage scopes: keep enum values to avoid dependency churn.

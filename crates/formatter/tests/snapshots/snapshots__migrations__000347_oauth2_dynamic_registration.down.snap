@@ -1,0 +1,30 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Remove RFC 7591 Dynamic Client Registration fields from oauth2_provider_apps
+
+-- Remove RFC 7592 Management Fields
+alter table oauth2_provider_apps drop column if exists registration_access_token,
+drop column if exists registration_client_uri;
+
+-- Remove RFC 7591 Advanced Fields
+alter table oauth2_provider_apps drop column if exists jwks_uri,
+drop column if exists jwks,
+drop column if exists software_id,
+drop column if exists software_version;
+
+-- Remove RFC 7591 Optional Metadata Fields
+alter table oauth2_provider_apps drop column if exists client_uri,
+drop column if exists logo_uri,
+drop column if exists tos_uri,
+drop column if exists policy_uri;
+
+-- Remove RFC 7591 Core Fields
+alter table oauth2_provider_apps drop column if exists client_id_issued_at,
+drop column if exists client_secret_expires_at,
+drop column if exists grant_types,
+drop column if exists response_types,
+drop column if exists token_endpoint_auth_method,
+drop column if exists scope,
+drop column if exists contacts;

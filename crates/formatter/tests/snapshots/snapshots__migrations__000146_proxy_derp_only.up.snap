@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_proxies add column derp_only boolean not null default false;
+
+comment on column workspace_proxies.derp_only is 'Disables app/terminal proxying for this proxy and only acts as a DERP relay.';

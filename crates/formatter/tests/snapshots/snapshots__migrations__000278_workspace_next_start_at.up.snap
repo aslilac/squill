@@ -1,0 +1,60 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table only workspaces add column if not exists next_start_at timestamptz default null;
+
+create index workspace_next_start_at_idx on workspaces using btree(
+	next_start_at
+)
+where (deleted = false);
+create index workspace_template_id_idx on workspaces using btree(template_id)
+where (deleted = false);
+
+create function nullify_next_start_at_on_workspace_autostart_modification(
+) returns trigger language plpgsql as $$
+DECLARE
+BEGIN
+	-- A workspace's next_start_at might be invalidated by the following:
+	--   * The autostart schedule has changed independent to next_start_at
+	--   * The workspace has been marked as dormant
+	IF (NEW.autostart_schedule <> OLD.autostart_schedule AND NEW.next_start_at = OLD.next_start_at)
+		OR (NEW.dormant_at IS NOT NULL AND NEW.next_start_at IS NOT NULL)
+	THEN
+		UPDATE workspaces
+		SET next_start_at = NULL
+		WHERE id = NEW.id;
+	END IF;
+	RETURN NEW;
+END;
+$$;
+
+create trigger trigger_nullify_next_start_at_on_workspace_autostart_modification after update on workspaces for each row execute procedure nullify_next_start_at_on_workspace_autostart_modification(
+);
+
+-- Recreate view
+drop view workspaces_expanded;
+
+create view workspaces_expanded as
+select
+	workspaces.*,
+	-- Owner
+	visible_users.avatar_url as owner_avatar_url,
+	visible_users.username as owner_username,
+	-- Organization
+	organizations.name as organization_name,
+	organizations.display_name as organization_display_name,
+	organizations.icon as organization_icon,
+	organizations.description as organization_description,
+	-- Template
+	templates.name as template_name,
+	templates.display_name as template_display_name,
+	templates.icon as template_icon,
+	templates.description as template_description
+from
+	workspaces
+	inner join visible_users on workspaces.owner_id = visible_users.id
+	inner join organizations on workspaces.organization_id = organizations.id
+	inner join templates on workspaces.template_id = templates.id;
+
+comment on view workspaces_expanded is 'Joins in the display name information such as username, avatar, and organization name.';

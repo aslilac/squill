@@ -1,0 +1,15 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table chats add column file_ids uuid [ ] default '{}'::uuid[] not null;
+
+update chats
+set
+	file_ids = (
+		select COALESCE(array_agg(cfl.file_id), '{}')
+		from chat_file_links cfl
+		where cfl.chat_id = chats.id
+	);
+
+drop table chat_file_links;

@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop index if exists idx_provisioner_daemons_name_owner_key;
+
+alter table only provisioner_daemons add constraint provisioner_daemons_name_key unique (
+	name
+);

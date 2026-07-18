@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_builds drop column daily_cost;
+alter table workspace_resources drop column daily_cost;
+alter table groups drop column quota_allowance;

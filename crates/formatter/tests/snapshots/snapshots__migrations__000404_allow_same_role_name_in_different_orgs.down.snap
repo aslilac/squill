@@ -1,0 +1,12 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Restore the original unique constraint (name only, no organization_id).
+drop index if exists idx_custom_roles_name_lower_organization_id;
+
+alter table custom_roles drop constraint if exists organization_id_not_zero;
+
+create unique index idx_custom_roles_name_lower on custom_roles using btree(
+	LOWER(name)
+);

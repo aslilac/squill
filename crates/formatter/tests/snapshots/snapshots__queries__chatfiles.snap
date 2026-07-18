@@ -3,9 +3,18 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertChatFile :one
-INSERT INTO chat_files (owner_id, organization_id, name, mimetype, data)
-VALUES (@owner_id::uuid, @organization_id::uuid, @name::text, @mimetype::text, @data::bytea)
-RETURNING id, owner_id, organization_id, created_at, name, mimetype;
+insert into chat_files (owner_id,
+organization_id,
+name,
+mimetype,
+data)
+values
+	(@owner_id::uuid,
+	@organization_id::uuid,
+	@name::text,
+	@mimetype::text,
+	@data::bytea)
+returning id, owner_id, organization_id, created_at, name, mimetype;
 
 -- name: GetChatFileByID :one
 select * from chat_files where id = @id::uuid;
@@ -45,26 +54,23 @@ order by cf.created_at asc;
 -- 1. Orphaned files not linked to any chat.
 -- 2. Files whose every referencing chat has been archived for longer
 --    than the retention period.
-WITH kept_file_ids AS (
-    -- NOTE: This uses updated_at as a proxy for archive time
-    -- because there is no archived_at column. Correctness
-    -- requires that updated_at is never backdated on archived
-    -- chats. See ArchiveChatByID.
-    SELECT DISTINCT cfl.file_id
-    FROM chat_file_links cfl
-    JOIN chats c ON c.id = cfl.chat_id
-    WHERE c.archived = false
-       OR c.updated_at >= @before_time::timestamptz
-),
-deletable AS (
-    SELECT cf.id
-    FROM chat_files cf
-    LEFT JOIN kept_file_ids k ON cf.id = k.file_id
-    WHERE cf.created_at < @before_time::timestamptz
-      AND k.file_id IS NULL
-    ORDER BY cf.created_at ASC
-    LIMIT @limit_count
-)
-DELETE FROM chat_files
-USING deletable
-WHERE chat_files.id = deletable.id;
+with
+	kept_file_ids as (
+		-- NOTE: This uses updated_at as a proxy for archive time
+		-- because there is no archived_at column. Correctness
+		-- requires that updated_at is never backdated on archived
+		-- chats. See ArchiveChatByID.
+		select distinct
+			cfl.file_id
+		from chat_file_links cfl join chats c on c.id = cfl.chat_id
+		where c.archived = false or c.updated_at >= @before_time::timestamptz
+	),
+	deletable as (
+		select cf.id
+		from chat_files cf left join kept_file_ids k on cf.id = k.file_id
+		where cf.created_at < @before_time::timestamptz and k.file_id is null
+		order by cf.created_at asc
+		limit @limit_count
+	) delete from chat_files
+using deletable
+where chat_files.id = deletable.id;

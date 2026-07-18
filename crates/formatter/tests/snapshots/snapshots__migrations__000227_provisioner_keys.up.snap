@@ -1,0 +1,16 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table provisioner_keys (
+	id uuid primary key,
+	created_at timestamptz not null,
+	organization_id uuid not null references organizations (id) on delete cascade,
+	name varchar (64) not null,
+	hashed_secret bytea not null
+);
+
+create unique index provisioner_keys_organization_id_name_idx on provisioner_keys using btree(
+	organization_id,
+	lower(name)
+);

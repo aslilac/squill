@@ -1,0 +1,30 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Add chat_message_role enum.
+create type chat_message_role as enum ('system', 'user', 'assistant', 'tool');
+
+-- Drop the partial index that references role as text before
+-- converting the column type.
+drop index idx_chat_messages_compressed_summary_boundary;
+
+-- Convert role column from text to enum.
+alter table chat_messages alter column role type chat_message_role using (
+	role::chat_message_role
+);
+
+-- Recreate the partial index with enum-typed comparison.
+create index idx_chat_messages_compressed_summary_boundary on chat_messages (
+	chat_id,
+	created_at desc,
+	id desc
+)
+where compressed = true and role = 'system' and visibility in ('model', 'both');
+
+-- Add content_version column. Default 0 backfills existing rows.
+-- The default is then dropped so future inserts must specify the
+-- version explicitly.
+alter table chat_messages add column content_version smallint not null default 0;
+
+alter table chat_messages alter column content_version drop default;

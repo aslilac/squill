@@ -1,0 +1,14 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop trigger if exists tailnet_notify_tunnel_change on tailnet_tunnels;
+drop function IF exists tailnet_notify_tunnel_change;
+drop table if exists tailnet_tunnels;
+
+drop trigger if exists tailnet_notify_peer_change on tailnet_peers;
+drop function IF exists tailnet_notify_peer_change;
+drop index if exists idx_tailnet_peers_coordinator;
+drop table if exists tailnet_peers;
+
+drop type if exists tailnet_status;

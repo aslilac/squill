@@ -1,0 +1,11 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+update organizations
+set name = 'coder', display_name = 'Coder'
+where
+	-- The old name was too long.
+	name
+	= 'first-organization'
+	and is_default = true;

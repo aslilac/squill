@@ -1,0 +1,183 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table if not exists provisioner_daemons (
+	id uuid not null,
+	created_at timestamptz not null,
+	updated_at timestamptz,
+	organization_id uuid,
+	-- Name is generated for ease of differentiation.
+	-- eg. WowBananas16
+	name varchar (64) not null unique,
+	provisioners provisioner_type [] not null,
+	primary key (id)
+);
+
+create type provisioner_job_type as enum (
+	'template_version_import',
+	'workspace_build'
+);
+
+create type provisioner_storage_method as enum ('file');
+
+create table if not exists provisioner_jobs (
+	id uuid not null,
+	created_at timestamptz not null,
+	updated_at timestamptz not null,
+	started_at timestamptz,
+	canceled_at timestamptz,
+	completed_at timestamptz,
+	error text,
+	organization_id uuid not null references organizations (id) on delete cascade,
+	-- foreign key?
+	initiator_id uuid not null,
+	provisioner provisioner_type not null,
+	storage_method provisioner_storage_method not null,
+	storage_source text not null,
+	type provisioner_job_type not null,
+	input jsonb not null,
+	worker_id uuid,
+	primary key (id)
+);
+
+create type log_level as enum ('trace', 'debug', 'info', 'warn', 'error');
+
+create type log_source as enum ('provisioner_daemon', 'provisioner');
+
+create table if not exists provisioner_job_logs (
+	id uuid not null,
+	job_id uuid not null references provisioner_jobs (id) on delete cascade,
+	created_at timestamptz not null,
+	source log_source not null,
+	level log_level not null,
+	stage varchar (128) not null,
+	output varchar (1024) not null,
+	primary key (id)
+);
+
+create table workspace_resources (
+	id uuid not null,
+	created_at timestamptz not null,
+	job_id uuid not null references provisioner_jobs (id) on delete cascade,
+	transition workspace_transition not null,
+	type varchar (192) not null,
+	name varchar (64) not null,
+	primary key (id)
+);
+
+create table workspace_agents (
+	id uuid not null,
+	created_at timestamptz not null,
+	updated_at timestamptz not null,
+	name varchar (64) not null,
+	first_connected_at timestamptz,
+	last_connected_at timestamptz,
+	disconnected_at timestamptz,
+	resource_id uuid not null references workspace_resources (
+		id
+	) on delete cascade,
+	auth_token uuid not null,
+	auth_instance_id varchar (64),
+	architecture varchar (64) not null,
+	environment_variables jsonb,
+	operating_system varchar (64) not null,
+	startup_script varchar (65534),
+	instance_metadata jsonb,
+	resource_metadata jsonb,
+	primary key (id)
+);
+
+create type parameter_scope as enum (
+	'organization',
+	'template',
+	'import_job',
+	'user',
+	'workspace'
+);
+
+-- Types of parameters the automator supports.
+create type parameter_type_system as enum ('none', 'hcl');
+
+-- Supported schemes for a parameter source.
+create type parameter_source_scheme as enum ('none', 'data');
+
+-- Supported schemes for a parameter destination.
+create type parameter_destination_scheme as enum (
+	'none',
+	'environment_variable',
+	'provisioner_variable'
+);
+
+-- Stores template version parameters parsed on import.
+-- No secrets are stored here.
+--
+-- All parameter validation occurs server-side to process
+-- complex validations.
+--
+-- Parameter types, description, and validation will produce
+-- a UI for users to enter values.
+-- Needs to be made consistent with the examples below.
+create table parameter_schemas (
+	id uuid not null,
+	created_at timestamptz not null,
+	job_id uuid not null references provisioner_jobs (id) on delete cascade,
+	name varchar (64) not null,
+	description varchar (8192) not null default '',
+	default_source_scheme parameter_source_scheme,
+	default_source_value text not null,
+	-- Allows the user to override the source.
+	allow_override_source boolean not null,
+	default_destination_scheme parameter_destination_scheme,
+	-- Allows the user to override the destination.
+	allow_override_destination boolean not null,
+	default_refresh text not null,
+	-- Whether the consumer can view the source and destinations.
+	redisplay_value boolean not null,
+	-- This error would appear in the UI if the condition is not met.
+	validation_error varchar (256) not null,
+	validation_condition varchar (512) not null,
+	validation_type_system parameter_type_system not null,
+	validation_value_type varchar (64) not null,
+	primary key (id),
+	UNIQUE(job_id, name)
+);
+
+-- Parameters are provided to jobs for provisioning and to workspaces.
+create table parameter_values (
+	id uuid not null,
+	created_at timestamptz not null,
+	updated_at timestamptz not null,
+	scope parameter_scope not null,
+	scope_id uuid not null,
+	name varchar (64) not null,
+	source_scheme parameter_source_scheme not null,
+	source_value text not null,
+	destination_scheme parameter_destination_scheme not null,
+	primary key (id),
+	-- Prevents duplicates for parameters in the same scope.
+	UNIQUE(scope_id, name)
+);
+
+create table workspace_builds (
+	id uuid not null,
+	created_at timestamptz not null,
+	updated_at timestamptz not null,
+	workspace_id uuid not null references workspaces (id) on delete cascade,
+	template_version_id uuid not null references template_versions (
+		id
+	) on delete cascade,
+	name varchar (64) not null,
+	build_number integer not null,
+	transition workspace_transition not null,
+	initiator_id uuid not null,
+	-- State stored by the provisioner
+	provisioner_state bytea,
+	-- Job ID of the action
+	job_id uuid not null unique references provisioner_jobs (
+		id
+	) on delete cascade,
+	primary key (id),
+	UNIQUE(workspace_id, name),
+	UNIQUE(workspace_id, build_number)
+);

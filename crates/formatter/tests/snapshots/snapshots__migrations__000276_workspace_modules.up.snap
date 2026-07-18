@@ -1,0 +1,17 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_resources add column module_path text;
+
+create table workspace_modules (
+	id uuid not null,
+	job_id uuid not null references provisioner_jobs (id) on delete cascade,
+	transition workspace_transition not null,
+	source text not null,
+	version text not null,
+	key text not null,
+	created_at timestamp with time zone not null
+);
+
+create index workspace_modules_created_at_idx on workspace_modules (created_at);

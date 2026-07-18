@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table boundary_logs drop constraint if exists boundary_logs_owner_id_fkey;
+alter table boundary_logs drop column if exists owner_id;

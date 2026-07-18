@@ -1,0 +1,18 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Transition 'agents-access' from a site-wide role to a per-org role.
+
+-- For every user who has 'agents-access' in users.rbac_roles,
+-- grant the org-scoped role in each org they belong to.
+update organization_members
+set roles = array_append(roles, 'agents-access')
+where
+	user_id in (select id from users where 'agents-access' = any(rbac_roles))
+	and not ('agents-access' = any(roles));
+
+-- Remove 'agents-access' from site-level roles.
+update users
+set rbac_roles = array_remove(rbac_roles, 'agents-access')
+where 'agents-access' = any(rbac_roles);

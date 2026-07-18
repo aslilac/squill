@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type chat_plan_mode as enum ('plan');
+alter table chats add column plan_mode chat_plan_mode;

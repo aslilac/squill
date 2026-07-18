@@ -1,0 +1,13 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type workspace_agent_monitor_state as enum ('OK', 'NOK');
+
+alter table workspace_agent_memory_resource_monitors add column updated_at timestamp with time zone not null default CURRENT_TIMESTAMP,
+add column state workspace_agent_monitor_state not null default 'OK',
+add column debounced_until timestamp with time zone not null default '0001-01-01 00:00:00'::timestamptz;
+
+alter table workspace_agent_volume_resource_monitors add column updated_at timestamp with time zone not null default CURRENT_TIMESTAMP,
+add column state workspace_agent_monitor_state not null default 'OK',
+add column debounced_until timestamp with time zone not null default '0001-01-01 00:00:00'::timestamptz;

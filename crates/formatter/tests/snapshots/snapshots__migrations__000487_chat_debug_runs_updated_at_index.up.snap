@@ -1,0 +1,5 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create index idx_chat_debug_runs_updated_at on chat_debug_runs (updated_at);

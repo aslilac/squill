@@ -1,0 +1,43 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type resource_type as enum (
+	'organization',
+	'template',
+	'template_version',
+	'user',
+	'workspace'
+);
+
+create type audit_action as enum (
+	'create',
+	-- We intentionally do not track reads. They're way too spammy.
+	'write',
+	'delete'
+);
+
+create table audit_logs (
+	id uuid not null,
+	time timestamp with time zone not null,
+	user_id uuid not null,
+	organization_id uuid not null,
+	ip inet not null,
+	user_agent varchar (256) not null,
+	resource_type resource_type not null,
+	resource_id uuid not null,
+	-- resource_target is the name of the resource that `resource_id` points to.
+	-- it's stored here because resources we point to can be deleted.
+	resource_target text not null,
+	action audit_action not null,
+	diff jsonb not null,
+	status_code integer not null,
+	primary key (id)
+);
+
+create index idx_audit_logs_time_desc on audit_logs using btree (time desc);
+create index idx_audit_log_user_id on audit_logs using btree(user_id);
+create index idx_audit_log_organization_id on audit_logs using btree(
+	organization_id
+);
+create index idx_audit_log_resource_id on audit_logs using btree(resource_id);

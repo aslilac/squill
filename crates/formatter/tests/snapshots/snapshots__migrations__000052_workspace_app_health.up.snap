@@ -1,0 +1,15 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type workspace_app_health as enum (
+	'disabled',
+	'initializing',
+	'healthy',
+	'unhealthy'
+);
+
+alter table only workspace_apps add column if not exists healthcheck_url text not null default '',
+add column if not exists healthcheck_interval int not null default 0,
+add column if not exists healthcheck_threshold int not null default 0,
+add column if not exists health workspace_app_health not null default 'disabled';

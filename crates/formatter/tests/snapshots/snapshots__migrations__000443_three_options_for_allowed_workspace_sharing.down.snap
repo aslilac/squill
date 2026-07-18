@@ -1,0 +1,53 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+delete from custom_roles
+where name = 'organization-service-account' and is_system = true;
+
+alter table organizations add column workspace_sharing_disabled boolean not null default false;
+
+-- Migrate back: 'none' -> disabled, everything else -> enabled.
+update organizations
+set workspace_sharing_disabled = true
+where shareable_workspace_owners = 'none';
+
+alter table organizations drop column shareable_workspace_owners;
+
+drop type shareable_workspace_owners;
+
+-- Restore the original single-role trigger from migration 408.
+drop trigger if exists trigger_insert_organization_system_roles on organizations;
+drop function IF exists insert_organization_system_roles;
+
+create or replace function insert_org_member_system_role() returns trigger as $$
+BEGIN
+    INSERT INTO custom_roles (
+        name,
+        display_name,
+        organization_id,
+        site_permissions,
+        org_permissions,
+        user_permissions,
+        member_permissions,
+        is_system,
+        created_at,
+        updated_at
+    ) VALUES (
+        'organization-member',
+        '',
+        NEW.id,
+        '[]'::jsonb,
+        '[]'::jsonb,
+        '[]'::jsonb,
+        '[]'::jsonb,
+        true,
+        NOW(),
+        NOW()
+    );
+    RETURN NEW;
+END;
+$$ language plpgsql;
+
+create trigger trigger_insert_org_member_system_role after insert on organizations for each row execute function insert_org_member_system_role(
+);

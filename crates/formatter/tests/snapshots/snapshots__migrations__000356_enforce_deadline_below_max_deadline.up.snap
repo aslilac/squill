@@ -1,0 +1,25 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- New constraint: (deadline IS NOT zero AND deadline <= max_deadline) UNLESS max_deadline is zero.
+-- Unfortunately, "zero" here means `time.Time{}`...
+
+-- Update previous builds that would fail this new constraint. This matches the
+-- intended behaviour of the autostop algorithm.
+update workspace_builds
+set deadline = max_deadline
+where
+	(deadline = '0001-01-01 00:00:00+00'::timestamptz or deadline > max_deadline)
+	and max_deadline != '0001-01-01 00:00:00+00'::timestamptz;
+
+-- Add the new constraint.
+alter table workspace_builds add constraint workspace_builds_deadline_below_max_deadline check (
+	-- (deadline is not zero AND deadline <= max_deadline)...
+	(
+		deadline != '0001-01-01 00:00:00+00'::timestamptz
+		and deadline <= max_deadline
+	)
+	-- UNLESS max_deadline is zero.
+	or max_deadline = '0001-01-01 00:00:00+00'::timestamptz
+);

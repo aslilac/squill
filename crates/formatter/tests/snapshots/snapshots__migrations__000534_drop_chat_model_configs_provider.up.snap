@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop index idx_chat_model_configs_provider;
+drop index idx_chat_model_configs_provider_model;
+
+alter table chat_model_configs drop column provider;

@@ -1,0 +1,23 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Create task_snapshots table for storing log snapshots when tasks are paused.
+-- This table holds the conversation history from AgentAPI, allowing users to view
+-- task logs even when the workspace is stopped.
+create table task_snapshots (
+	task_id uuid not null primary key references tasks (id) on delete cascade,
+	log_snapshot jsonb not null,
+	log_snapshot_created_at timestamptz not null default NOW()
+);
+
+comment on table task_snapshots is 'Stores snapshots of task state when paused, currently limited to conversation history.';
+comment on column task_snapshots.task_id is 'The task this snapshot belongs to.';
+comment on column task_snapshots.log_snapshot is 'Task conversation history in JSON format, allowing users to view logs when the workspace is stopped.';
+comment on column task_snapshots.log_snapshot_created_at is 'When this log snapshot was captured.';
+
+-- Add build reasons for task lifecycle events.
+-- These distinguish task pause/resume operations from regular workspace lifecycle events.
+alter type build_reason add value if not exists 'task_auto_pause';
+alter type build_reason add value if not exists 'task_manual_pause';
+alter type build_reason add value if not exists 'task_resume';

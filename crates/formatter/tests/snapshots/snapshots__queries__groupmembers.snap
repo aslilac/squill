@@ -148,42 +148,26 @@ group by group_id;
 
 -- InsertUserGroupsByID adds a user to all provided groups, if they exist.
 -- name: InsertUserGroupsByID :many
-WITH groups AS (
-	SELECT
-		id
-	FROM
-		groups
-	WHERE
-		groups.id = ANY(@group_ids :: uuid [])
-)
-INSERT INTO
-	group_members (user_id, group_id)
-SELECT
-	@user_id,
-	groups.id
-FROM
-	groups
+with
+	groups as (
+		select id
+		from groups
+		where groups.id = any(@group_ids::uuid[])
+	) insert into group_members (user_id,
+group_id)
+select @user_id, groups.id
+from groups
 -- If there is a conflict, the user is already a member
-ON CONFLICT DO NOTHING
-RETURNING group_id;
+on conflict do nothing
+returning group_id;
 
 -- name: RemoveUserFromGroups :many
-DELETE FROM
-	group_members
-WHERE
-	user_id = @user_id AND
-	group_id = ANY(@group_ids :: uuid [])
-RETURNING group_id;
+delete from group_members
+where user_id = @user_id and group_id = any(@group_ids::uuid[])
+returning group_id;
 
 -- name: InsertGroupMember :exec
-INSERT INTO
-    group_members (user_id, group_id)
-VALUES
-    ($1, $2);
+insert into group_members (user_id, group_id) values ($1, $2);
 
 -- name: DeleteGroupMemberFromGroup :exec
-DELETE FROM
-	group_members
-WHERE
-	user_id = $1 AND
-	group_id = $2;
+delete from group_members where user_id = $1 and group_id = $2;

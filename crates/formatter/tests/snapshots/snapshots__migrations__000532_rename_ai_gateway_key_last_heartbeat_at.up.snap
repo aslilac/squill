@@ -1,0 +1,5 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table ai_gateway_keys rename column last_used_at to last_heartbeat_at;

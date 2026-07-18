@@ -3,41 +3,42 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertTask :one
-INSERT INTO tasks
-	(id, organization_id, owner_id, name, display_name, workspace_id, template_version_id, template_parameters, prompt, created_at)
-VALUES
-	($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING *;
+insert into tasks (id,
+organization_id,
+owner_id,
+name,
+display_name,
+workspace_id,
+template_version_id,
+template_parameters,
+prompt,
+created_at)
+values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+returning *;
 
 -- name: UpdateTaskWorkspaceID :one
-UPDATE
-	tasks
-SET
-	workspace_id = $2
-FROM
-	workspaces w
-JOIN
-	template_versions tv
-ON
-	tv.template_id = w.template_id
-WHERE
+update tasks
+set workspace_id = $2
+from workspaces w join template_versions tv on tv.template_id = w.template_id
+where
 	tasks.id = $1
-	AND tasks.workspace_id IS NULL
-	AND w.id = $2
-	AND tv.id = tasks.template_version_id
-RETURNING
-	tasks.*;
+	and tasks.workspace_id is null
+	and w.id = $2
+	and tv.id = tasks.template_version_id
+returning tasks.*;
 
 -- name: UpsertTaskWorkspaceApp :one
-INSERT INTO task_workspace_apps
-	(task_id, workspace_build_number, workspace_agent_id, workspace_app_id)
-VALUES
-	($1, $2, $3, $4)
-ON CONFLICT (task_id, workspace_build_number)
-DO UPDATE SET
-	workspace_agent_id = EXCLUDED.workspace_agent_id,
-	workspace_app_id = EXCLUDED.workspace_app_id
-RETURNING *;
+insert into task_workspace_apps (task_id,
+workspace_build_number,
+workspace_agent_id,
+workspace_app_id)
+values ($1, $2, $3, $4)
+on conflict
+	(task_id,
+	workspace_build_number) do update set
+		workspace_agent_id = EXCLUDED.workspace_agent_id,
+		workspace_app_id = EXCLUDED.workspace_app_id
+returning *;
 
 -- name: GetTaskByID :one
 select * from tasks_with_status where id = @id::uuid;
@@ -75,40 +76,32 @@ where
 order by tws.created_at desc;
 
 -- name: DeleteTask :one
-WITH deleted_task AS (
-	UPDATE tasks
-	SET
-		deleted_at = @deleted_at::timestamptz
-	WHERE
-		id = @id::uuid
-		AND deleted_at IS NULL
-	RETURNING id
-), deleted_snapshot AS (
-	DELETE FROM task_snapshots
-	WHERE task_id = @id::uuid
-)
-SELECT id FROM deleted_task;
+with
+	deleted_task as (
+		update tasks
+		set deleted_at = @deleted_at::timestamptz
+		where id = @id::uuid and deleted_at is null
+		returning id
+	),
+	deleted_snapshot as (delete from task_snapshots where task_id = @id::uuid)
+select id
+from deleted_task;
 
 -- name: UpdateTaskPrompt :one
-UPDATE
-	tasks
-SET
-	prompt = @prompt::text
-WHERE
-	id = @id::uuid
-	AND deleted_at IS NULL
-RETURNING *;
+update tasks
+set prompt = @prompt::text
+where id = @id::uuid and deleted_at is null
+returning *;
 
 -- name: UpsertTaskSnapshot :exec
-INSERT INTO
-	task_snapshots (task_id, log_snapshot, log_snapshot_created_at)
-VALUES
-	($1, $2, $3)
-ON CONFLICT
-	(task_id)
-DO UPDATE SET
-	log_snapshot = EXCLUDED.log_snapshot,
-	log_snapshot_created_at = EXCLUDED.log_snapshot_created_at;
+insert into task_snapshots (task_id,
+log_snapshot,
+log_snapshot_created_at)
+values ($1, $2, $3)
+on conflict
+	(task_id) do update set
+		log_snapshot = EXCLUDED.log_snapshot,
+		log_snapshot_created_at = EXCLUDED.log_snapshot_created_at;
 
 -- name: GetTaskSnapshot :one
 select * from task_snapshots where task_id = $1;

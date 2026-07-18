@@ -1,0 +1,11 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table licenses;
+drop table api_keys;
+drop table organization_members;
+drop table organizations;
+drop table users;
+
+drop type login_type;

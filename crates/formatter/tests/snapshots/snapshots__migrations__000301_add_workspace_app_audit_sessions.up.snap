@@ -1,0 +1,45 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Keep all unique fields as non-null because `UNIQUE NULLS NOT DISTINCT`
+-- requires PostgreSQL 15+.
+create unlogged table workspace_app_audit_sessions (
+	agent_id uuid not null,
+	app_id uuid not null, -- Can be NULL, but must be uuid.Nil.
+	user_id uuid not null, -- Can be NULL, but must be uuid.Nil.
+	ip text not null,
+	user_agent text not null,
+	slug_or_port text not null,
+	status_code int4 not null,
+	started_at timestamp with time zone not null,
+	updated_at timestamp with time zone not null,
+	foreign key (agent_id) references workspace_agents (id) on delete cascade,
+	-- Skip foreign keys that we can't enforce due to NOT NULL constraints.
+	-- FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+	-- FOREIGN KEY (app_id) REFERENCES workspace_apps (id) ON DELETE CASCADE,
+	UNIQUE(agent_id, app_id, user_id, ip, user_agent, slug_or_port, status_code)
+);
+
+comment on table workspace_app_audit_sessions is 'Audit sessions for workspace apps, the data in this table is ephemeral and is used to deduplicate audit log entries for workspace apps. While a session is active, the same data will not be logged again. This table does not store historical data.';
+comment on column workspace_app_audit_sessions.agent_id is 'The agent that the workspace app or port forward belongs to.';
+comment on column workspace_app_audit_sessions.app_id is 'The app that is currently in the workspace app. This is may be uuid.Nil because ports are not associated with an app.';
+comment on column workspace_app_audit_sessions.user_id is 'The user that is currently using the workspace app. This is may be uuid.Nil if we cannot determine the user.';
+comment on column workspace_app_audit_sessions.ip is 'The IP address of the user that is currently using the workspace app.';
+comment on column workspace_app_audit_sessions.user_agent is 'The user agent of the user that is currently using the workspace app.';
+comment on column workspace_app_audit_sessions.slug_or_port is 'The slug or port of the workspace app that the user is currently using.';
+comment on column workspace_app_audit_sessions.status_code is 'The HTTP status produced by the token authorization. Defaults to 200 if no status is provided.';
+comment on column workspace_app_audit_sessions.started_at is 'The time the user started the session.';
+comment on column workspace_app_audit_sessions.updated_at is 'The time the session was last updated.';
+
+create unique index workspace_app_audit_sessions_unique_index on workspace_app_audit_sessions (
+	agent_id,
+	app_id,
+	user_id,
+	ip,
+	user_agent,
+	slug_or_port,
+	status_code
+);
+
+comment on index workspace_app_audit_sessions_unique_index is 'Unique index to ensure that we do not allow duplicate entries from multiple transactions.';

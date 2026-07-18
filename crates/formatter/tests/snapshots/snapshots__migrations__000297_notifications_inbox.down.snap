@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table if exists inbox_notifications;
+
+drop type if exists inbox_notification_read_status;

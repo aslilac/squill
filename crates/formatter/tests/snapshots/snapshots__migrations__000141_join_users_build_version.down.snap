@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop view workspace_build_with_user;
+drop view template_version_with_user;

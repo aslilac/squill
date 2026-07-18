@@ -1,0 +1,10 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Enum additions to resource_type and api_key_scope are intentionally not
+-- reverted because Postgres cannot drop enum values safely.
+drop index if exists ai_gateway_keys_hashed_secret_idx;
+drop index if exists ai_gateway_keys_secret_prefix_idx;
+drop index if exists ai_gateway_keys_name_idx;
+drop table if exists ai_gateway_keys;

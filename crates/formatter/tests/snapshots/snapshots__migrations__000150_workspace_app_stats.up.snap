@@ -1,0 +1,38 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table workspace_app_stats (
+	id bigserial primary key,
+	user_id uuid not null references users (id),
+	workspace_id uuid not null references workspaces (id),
+	agent_id uuid not null references workspace_agents (id),
+	access_method text not null,
+	slug_or_port text not null,
+	session_id uuid not null,
+	session_started_at timestamptz not null,
+	session_ended_at timestamptz not null,
+	requests integer not null,
+
+	-- Set a unique constraint to allow upserting the session_ended_at
+	-- and requests fields without risk of collisions.
+	UNIQUE(user_id, agent_id, session_id)
+);
+
+comment on table workspace_app_stats is 'A record of workspace app usage statistics';
+
+comment on column workspace_app_stats.id is 'The ID of the record';
+comment on column workspace_app_stats.user_id is 'The user who used the workspace app';
+comment on column workspace_app_stats.workspace_id is 'The workspace that the workspace app was used in';
+comment on column workspace_app_stats.agent_id is 'The workspace agent that was used';
+comment on column workspace_app_stats.access_method is 'The method used to access the workspace app';
+comment on column workspace_app_stats.slug_or_port is 'The slug or port used to to identify the app';
+comment on column workspace_app_stats.session_id is 'The unique identifier for the session';
+comment on column workspace_app_stats.session_started_at is 'The time the session started';
+comment on column workspace_app_stats.session_ended_at is 'The time the session ended';
+comment on column workspace_app_stats.requests is 'The number of requests made during the session, a number larger than 1 indicates that multiple sessions were rolled up into one';
+
+-- Create index on workspace_id for joining/filtering by templates.
+create index workspace_app_stats_workspace_id_idx on workspace_app_stats (
+	workspace_id
+);

@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_agents add column display_order integer not null default 0;
+
+comment on column workspace_agents.display_order is 'Specifies the order in which to display agents in user interfaces.';

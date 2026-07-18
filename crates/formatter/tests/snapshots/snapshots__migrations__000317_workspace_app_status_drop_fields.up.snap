@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table only workspace_app_statuses drop column if exists needs_user_attention,
+drop column if exists icon;

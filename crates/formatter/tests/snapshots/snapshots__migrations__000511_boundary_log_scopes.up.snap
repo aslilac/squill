@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Add boundary_log scopes for RBAC.
+alter type api_key_scope add value if not exists 'boundary_log:*';
+alter type api_key_scope add value if not exists 'boundary_log:create';
+alter type api_key_scope add value if not exists 'boundary_log:delete';
+alter type api_key_scope add value if not exists 'boundary_log:read';

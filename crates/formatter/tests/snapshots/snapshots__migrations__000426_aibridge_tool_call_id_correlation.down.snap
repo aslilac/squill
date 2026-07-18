@@ -1,0 +1,13 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop index if exists idx_aibridge_tool_usages_provider_tool_call_id;
+
+alter table aibridge_tool_usages drop column provider_tool_call_id;
+
+drop index if exists idx_aibridge_interceptions_thread_root_id;
+drop index if exists idx_aibridge_interceptions_thread_parent_id;
+
+alter table aibridge_interceptions drop column thread_root_id;
+alter table aibridge_interceptions drop column thread_parent_id;

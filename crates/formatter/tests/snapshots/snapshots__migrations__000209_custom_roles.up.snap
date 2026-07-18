@@ -1,0 +1,32 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table custom_roles (
+	-- name is globally unique. Org scoped roles have their orgid appended
+	-- like:  "name":"organization-admin:bbe8c156-c61e-4d36-b91e-697c6b1477e8"
+	name text primary key,
+	-- display_name is the actual name of the role displayed to the user.
+	display_name text not null,
+
+	-- Unfortunately these values are schemaless json documents.
+	-- If there was a permission table for these, that would involve
+	-- many necessary joins to accomplish this simple json.
+
+	-- site_permissions is '[]Permission'
+	site_permissions jsonb not null default '[]',
+	-- org_permissions is 'map[<org_id>][]Permission'
+	org_permissions jsonb not null default '{}',
+	-- user_permissions is '[]Permission'
+	user_permissions jsonb not null default '[]',
+
+	-- extra convenience meta data.
+	created_at timestamp with time zone not null default CURRENT_TIMESTAMP,
+	updated_at timestamp with time zone not null default CURRENT_TIMESTAMP
+);
+
+-- Ensure no case variants of the same roles
+create unique index idx_custom_roles_name_lower on custom_roles using btree(
+	lower(name)
+);
+comment on table custom_roles is 'Custom roles allow dynamic roles expanded at runtime';

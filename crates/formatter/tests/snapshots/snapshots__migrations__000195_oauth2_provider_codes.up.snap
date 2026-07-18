@@ -1,0 +1,100 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table oauth2_provider_app_codes (
+	id uuid not null,
+	created_at timestamp with time zone not null,
+	expires_at timestamp with time zone not null,
+	secret_prefix bytea not null,
+	hashed_secret bytea not null,
+	user_id uuid not null references users (id) on delete cascade,
+	app_id uuid not null references oauth2_provider_apps (id) on delete cascade,
+	primary key (id),
+	UNIQUE(secret_prefix)
+);
+
+comment on table oauth2_provider_app_codes is 'Codes are meant to be exchanged for access tokens.';
+
+create table oauth2_provider_app_tokens (
+	id uuid not null,
+	created_at timestamp with time zone not null,
+	expires_at timestamp with time zone not null,
+	hash_prefix bytea not null,
+	refresh_hash bytea not null,
+	app_secret_id uuid not null references oauth2_provider_app_secrets (
+		id
+	) on delete cascade,
+	api_key_id text not null references api_keys (id) on delete cascade,
+	primary key (id),
+	UNIQUE(hash_prefix)
+);
+
+comment on column oauth2_provider_app_tokens.refresh_hash is 'Refresh tokens provide a way to refresh an access token (API key). An expired API key can be refreshed if this token is not yet expired, meaning this expiry can outlive an API key.';
+
+-- When we delete a token, delete the API key associated with it.
+create function delete_deleted_oauth2_provider_app_token_api_key(
+) returns trigger language plpgsql as $$
+DECLARE
+BEGIN
+    DELETE FROM api_keys
+    WHERE id = OLD.api_key_id;
+    RETURN OLD;
+END;
+$$;
+
+create trigger trigger_delete_oauth2_provider_app_token after delete on oauth2_provider_app_tokens for each row execute procedure delete_deleted_oauth2_provider_app_token_api_key(
+);
+
+-- This migration has been modified after its initial commit.
+-- The new implementation makes the same changes as the original, but
+-- takes into account the message in create_migration.sh. This is done
+-- to allow the insertion of a user with the "none" login type in later migrations.
+create type new_logintype as enum (
+	'password',
+	'github',
+	'oidc',
+	'token',
+	'none',
+	'oauth2_provider_app'
+);
+comment on type new_logintype is 'Specifies the method of authentication. "none" is a special case in which no authentication method is allowed.';
+
+alter table users alter column login_type drop default,
+alter column login_type type new_logintype using (
+	login_type::text::new_logintype
+),
+alter column login_type set default 'password'::new_logintype;
+
+drop index if exists idx_api_key_name;
+alter table api_keys alter column login_type type new_logintype using (
+	login_type::text::new_logintype
+);
+create unique index idx_api_key_name on api_keys (user_id, token_name)
+where (login_type = 'token'::new_logintype);
+
+alter table user_links alter column login_type type new_logintype using (
+	login_type::text::new_logintype
+);
+
+drop type login_type;
+alter type new_logintype rename to login_type;
+
+-- Switch to an ID we will prefix to the raw secret that we give to the user
+-- (instead of matching on the entire secret as the ID, since they will be
+-- salted and we can no longer do that).  OAuth2 is blocked outside of
+-- development mode so there should be no production secrets unless they
+-- previously upgraded, in which case they keep their original prefixes and will
+-- be fine.  Add a random ID for the development mode case so the upgrade does
+-- not fail, at least.
+alter table only oauth2_provider_app_secrets add column if not exists secret_prefix bytea null;
+
+update oauth2_provider_app_secrets
+set secret_prefix = substr(md5(random()::text), 0, 10)::bytea
+where secret_prefix is null;
+
+alter table only oauth2_provider_app_secrets alter column secret_prefix set not null,
+add constraint oauth2_provider_app_secrets_secret_prefix_key unique (
+	secret_prefix
+),
+drop constraint if exists oauth2_provider_app_secrets_app_id_hashed_secret_key;

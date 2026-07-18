@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table audit_logs drop column additional_fields,
+drop column request_id,
+drop column resource_icon;

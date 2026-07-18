@@ -1,0 +1,26 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- This migration is intended to maintain the existing behavior of single org
+-- deployments, while allowing for multi-org deployments. By default, this organization
+-- will be used when no organization is specified.
+alter table organizations add column is_default boolean not null default false;
+
+-- Only 1 org should ever be set to is_default.
+create unique index organizations_single_default_org on organizations (
+	is_default
+)
+where is_default = true;
+
+update organizations
+set is_default = true
+where
+	-- The first organization created will be the default.
+	id
+	= (
+		select id
+		from organizations
+		order by organizations.created_at asc
+		limit 1
+	);

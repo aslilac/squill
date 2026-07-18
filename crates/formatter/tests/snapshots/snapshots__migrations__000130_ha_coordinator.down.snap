@@ -1,0 +1,18 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop trigger if exists tailnet_notify_client_change on tailnet_clients;
+drop function IF exists tailnet_notify_client_change;
+drop index if exists idx_tailnet_clients_agent;
+drop index if exists idx_tailnet_clients_coordinator;
+drop table tailnet_clients;
+
+drop trigger if exists tailnet_notify_agent_change on tailnet_agents;
+drop function IF exists tailnet_notify_agent_change;
+drop index if exists idx_tailnet_agents_coordinator;
+drop table if exists tailnet_agents;
+
+drop trigger if exists tailnet_notify_coordinator_heartbeat on tailnet_coordinators;
+drop function IF exists tailnet_notify_coordinator_heartbeat;
+drop table if exists tailnet_coordinators;

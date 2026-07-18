@@ -1,0 +1,57 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop view if exists group_members_expanded;
+create view group_members_expanded as
+with
+	all_members as (
+		select group_members.user_id, group_members.group_id
+		from group_members
+		union
+		select
+			organization_members.user_id,
+			organization_members.organization_id as group_id
+		from organization_members
+	)
+select
+	users.id as user_id,
+	users.email as user_email,
+	users.username as user_username,
+	users.hashed_password as user_hashed_password,
+	users.created_at as user_created_at,
+	users.updated_at as user_updated_at,
+	users.status as user_status,
+	users.rbac_roles as user_rbac_roles,
+	users.login_type as user_login_type,
+	users.avatar_url as user_avatar_url,
+	users.deleted as user_deleted,
+	users.last_seen_at as user_last_seen_at,
+	users.quiet_hours_schedule as user_quiet_hours_schedule,
+	users.name as user_name,
+	users.github_com_user_id as user_github_com_user_id,
+	groups.organization_id,
+	groups.name as group_name,
+	all_members.group_id
+from
+	(
+		(all_members join users on ((users.id = all_members.user_id)))
+		join groups on ((groups.id = all_members.group_id))
+	)
+where (users.deleted = false);
+
+comment on view group_members_expanded is 'Joins group members with user information, organization ID, group name. Includes both regular group members and organization members (as part of the "Everyone" group).';
+
+-- Remove system user from organizations
+delete from organization_members
+where user_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0';
+
+-- Delete user status changes
+delete from user_status_changes
+where user_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0';
+
+-- Delete system user
+delete from users where id = 'c42fdf75-3097-471c-8c33-fb52454d81c0';
+
+-- Drop column
+alter table users drop column if exists is_system;

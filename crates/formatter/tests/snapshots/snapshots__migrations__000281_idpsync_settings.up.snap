@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Allow modifications to notification templates to be audited.
+alter type resource_type add value if not exists 'idp_sync_settings_organization';
+alter type resource_type add value if not exists 'idp_sync_settings_group';
+alter type resource_type add value if not exists 'idp_sync_settings_role';

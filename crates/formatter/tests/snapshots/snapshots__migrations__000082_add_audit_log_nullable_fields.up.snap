@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table audit_logs alter column ip drop not null;
+alter table audit_logs alter column user_agent drop not null;

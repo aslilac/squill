@@ -1,0 +1,17 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop view template_with_users;
+
+alter table templates drop column activity_bump;
+
+create view template_with_users as
+select
+	templates.*,
+	coalesce(visible_users.avatar_url, '') as created_by_avatar_url,
+	coalesce(visible_users.username, '') as created_by_username
+from
+	templates left join visible_users on templates.created_by = visible_users.id;
+
+comment on view template_with_users is 'Joins in the username + avatar url of the created by user.';

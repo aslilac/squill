@@ -1,0 +1,129 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Restore tailnet v1 API tables (unused, but required for rollback).
+
+-- Create tables.
+create table tailnet_clients (
+	id uuid not null,
+	coordinator_id uuid not null,
+	updated_at timestamp with time zone not null,
+	node jsonb not null,
+	primary key (id, coordinator_id),
+	foreign key (coordinator_id) references tailnet_coordinators (
+		id
+	) on delete cascade
+);
+
+create table tailnet_agents (
+	id uuid not null,
+	coordinator_id uuid not null,
+	updated_at timestamp with time zone not null,
+	node jsonb not null,
+	primary key (id, coordinator_id),
+	foreign key (coordinator_id) references tailnet_coordinators (
+		id
+	) on delete cascade
+);
+
+create table tailnet_client_subscriptions (
+	client_id uuid not null,
+	coordinator_id uuid not null,
+	agent_id uuid not null,
+	updated_at timestamp with time zone not null,
+	primary key (client_id, coordinator_id, agent_id),
+	foreign key (coordinator_id) references tailnet_coordinators (
+		id
+	) on delete cascade
+);
+
+-- Create indexes.
+create index idx_tailnet_agents_coordinator on tailnet_agents using btree(
+	coordinator_id
+);
+create index idx_tailnet_clients_coordinator on tailnet_clients using btree(
+	coordinator_id
+);
+
+-- Create trigger functions.
+create function tailnet_notify_agent_change(
+) returns trigger language plpgsql as $$
+BEGIN
+	IF (OLD IS NOT NULL) THEN
+		PERFORM pg_notify('tailnet_agent_update', OLD.id::text);
+		RETURN NULL;
+	END IF;
+	IF (NEW IS NOT NULL) THEN
+		PERFORM pg_notify('tailnet_agent_update', NEW.id::text);
+		RETURN NULL;
+	END IF;
+END;
+$$;
+
+create function tailnet_notify_client_change(
+) returns trigger language plpgsql as $$
+DECLARE
+	var_client_id uuid;
+	var_coordinator_id uuid;
+	var_agent_ids uuid[];
+	var_agent_id uuid;
+BEGIN
+	IF (NEW.id IS NOT NULL) THEN
+		var_client_id = NEW.id;
+		var_coordinator_id = NEW.coordinator_id;
+	ELSIF (OLD.id IS NOT NULL) THEN
+		var_client_id = OLD.id;
+		var_coordinator_id = OLD.coordinator_id;
+	END IF;
+
+	-- Read all agents the client is subscribed to, so we can notify them.
+	SELECT
+		array_agg(agent_id)
+	INTO
+		var_agent_ids
+	FROM
+		tailnet_client_subscriptions subs
+	WHERE
+		subs.client_id = NEW.id AND
+		subs.coordinator_id = NEW.coordinator_id;
+
+	-- No agents to notify
+	if (var_agent_ids IS NULL) THEN
+		return NULL;
+	END IF;
+
+	-- pg_notify is limited to 8k bytes, which is approximately 221 UUIDs.
+	-- Instead of sending all agent ids in a single update, send one for each
+	-- agent id to prevent overflow.
+	FOREACH var_agent_id IN ARRAY var_agent_ids
+	LOOP
+		PERFORM pg_notify('tailnet_client_update', var_client_id || ',' || var_agent_id);
+	END LOOP;
+
+	return NULL;
+END;
+$$;
+
+create function tailnet_notify_client_subscription_change(
+) returns trigger language plpgsql as $$
+BEGIN
+	IF (NEW IS NOT NULL) THEN
+		PERFORM pg_notify('tailnet_client_update', NEW.client_id || ',' || NEW.agent_id);
+		RETURN NULL;
+	ELSIF (OLD IS NOT NULL) THEN
+		PERFORM pg_notify('tailnet_client_update', OLD.client_id || ',' || OLD.agent_id);
+		RETURN NULL;
+	END IF;
+END;
+$$;
+
+-- Create triggers.
+create trigger tailnet_notify_agent_change after insert or delete or update on tailnet_agents for each row execute function tailnet_notify_agent_change(
+);
+
+create trigger tailnet_notify_client_change after insert or delete or update on tailnet_clients for each row execute function tailnet_notify_client_change(
+);
+
+create trigger tailnet_notify_client_subscription_change after insert or delete or update on tailnet_client_subscriptions for each row execute function tailnet_notify_client_subscription_change(
+);

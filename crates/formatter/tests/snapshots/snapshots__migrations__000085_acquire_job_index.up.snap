@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create index provisioner_jobs_started_at_idx on provisioner_jobs using btree(
+	started_at
+)
+where started_at is null;

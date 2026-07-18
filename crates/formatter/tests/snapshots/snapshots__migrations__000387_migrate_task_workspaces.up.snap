@@ -1,0 +1,111 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Migrate existing task workspaces to the new tasks data model. This migration
+-- identifies workspaces that were created as tasks (has_ai_task = true) and
+-- populates the tasks and task_workspace_apps tables with their data.
+
+-- Step 1: Create tasks from workspaces with has_ai_task TRUE in their latest build.
+insert into tasks (id,
+organization_id,
+owner_id,
+name,
+workspace_id,
+template_version_id,
+template_parameters,
+prompt,
+created_at,
+deleted_at)
+select
+	gen_random_uuid() as id,
+	w.organization_id,
+	w.owner_id,
+	w.name,
+	w.id as workspace_id,
+	latest_task_build.template_version_id,
+	COALESCE(params.template_parameters, '{}'::jsonb) as template_parameters,
+	COALESCE(ai_prompt.value, '') as prompt,
+	w.created_at,
+	case when w.deleted = true then w.deleting_at else null end as deleted_at
+from
+	workspaces w
+	inner join LATERAL (
+		-- Find the latest build for this workspace that has has_ai_task = true.
+		select
+			wb.template_version_id
+		from workspace_builds wb
+		where wb.workspace_id = w.id and wb.has_ai_task = true
+		order by wb.build_number desc
+		limit 1
+	) latest_task_build on true
+	left join LATERAL (
+		-- Find the latest build that has a non-empty AI Prompt parameter.
+		select
+			wb.id
+		from workspace_builds wb
+		where
+			wb.workspace_id = w.id
+			and exists (
+				select 1
+				from workspace_build_parameters wbp
+				where
+					wbp.workspace_build_id = wb.id
+					and wbp.name = 'AI Prompt'
+					and wbp.value != ''
+			)
+		order by wb.build_number desc
+		limit 1
+	) latest_prompt_build on true
+	left join LATERAL (
+		-- Extract the AI Prompt parameter value from the prompt build.
+		select
+			wbp.value
+		from workspace_build_parameters wbp
+		where
+			wbp.workspace_build_id = latest_prompt_build.id and wbp.name = 'AI Prompt'
+		limit 1
+	) ai_prompt on true
+	left join LATERAL (
+		-- Aggregate all other parameters (excluding AI Prompt) from the prompt build.
+		select
+			jsonb_object_agg(wbp.name, wbp.value) as template_parameters
+		from workspace_build_parameters wbp
+		where
+			wbp.workspace_build_id = latest_prompt_build.id
+			and wbp.name != 'AI Prompt'
+	) params on true
+where
+	-- Skip deleted workspaces because of duplicate name.
+	w.deleted
+	= false
+	-- Safe-guard, do not create tasks for workspaces that are already tasks.
+	and not exists (select 1 from tasks t where t.workspace_id = w.id);
+
+-- Step 2: Populate task_workspace_apps table with build/agent/app information.
+insert into task_workspace_apps (task_id,
+workspace_build_number,
+workspace_agent_id,
+workspace_app_id)
+select
+	t.id as task_id,
+	latest_build.build_number as workspace_build_number,
+	sidebar_app.agent_id as workspace_agent_id,
+	sidebar_app.id as workspace_app_id
+from
+	tasks t
+	inner join LATERAL (
+		-- Find the latest build for this tasks workspace.
+		select
+			wb.build_number, wb.ai_task_sidebar_app_id
+		from workspace_builds wb
+		where wb.workspace_id = t.workspace_id
+		order by wb.build_number desc
+		limit 1
+	) latest_build on true
+	-- Get the sidebar app (optional, can be NULL).
+	left join workspace_apps sidebar_app on sidebar_app.id
+	= latest_build.ai_task_sidebar_app_id
+where
+	-- Safe-guard, do not create for existing tasks.
+	not exists (select 1 from task_workspace_apps twa where twa.task_id = t.id);

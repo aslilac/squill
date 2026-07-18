@@ -1,0 +1,78 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type connection_status as enum ('connected', 'disconnected');
+
+create type connection_type as enum (
+	-- SSH events
+	'ssh',
+	'vscode',
+	'jetbrains',
+	'reconnecting_pty',
+	-- Web events
+	'workspace_app',
+	'port_forwarding'
+);
+
+create table connection_logs (
+	id uuid not null,
+	connect_time timestamp with time zone not null,
+	organization_id uuid not null references organizations (id) on delete cascade,
+	workspace_owner_id uuid not null references users (id) on delete cascade,
+	workspace_id uuid not null references workspaces (id) on delete cascade,
+	workspace_name text not null,
+	agent_name text not null,
+	type connection_type not null,
+	ip inet not null,
+	code integer,
+
+	-- Only set for web events
+	user_agent text,
+	user_id uuid,
+	slug_or_port text,
+
+	-- Null for web events
+	connection_id uuid,
+	disconnect_time timestamp with time zone, -- Null until we upsert a disconnect log for the same connection_id.
+	disconnect_reason text,
+	primary key (id)
+);
+
+comment on column connection_logs.code is 'Either the HTTP status code of the web request, or the exit code of an SSH connection. For non-web connections, this is Null until we receive a disconnect event for the same connection_id.';
+
+comment on column connection_logs.user_agent is 'Null for SSH events. For web connections, this is the User-Agent header from the request.';
+
+comment on column connection_logs.user_id is 'Null for SSH events. For web connections, this is the ID of the user that made the request.';
+
+comment on column connection_logs.slug_or_port is 'Null for SSH events. For web connections, this is the slug of the app or the port number being forwarded.';
+
+comment on column connection_logs.connection_id is 'The SSH connection ID. Used to correlate connections and disconnections. As it originates from the agent, it is not guaranteed to be unique.';
+
+comment on column connection_logs.disconnect_time is 'The time the connection was closed. Null for web connections. For other connections, this is null until we receive a disconnect event for the same connection_id.';
+
+comment on column connection_logs.disconnect_reason is 'The reason the connection was closed. Null for web connections. For other connections, this is null until we receive a disconnect event for the same connection_id.';
+
+comment on type audit_action is 'NOTE: `connect`, `disconnect`, `open`, and `close` are deprecated and no longer used - these events are now tracked in the connection_logs table.';
+
+-- To associate connection closure events with the connection start events.
+create unique index idx_connection_logs_connection_id_workspace_id_agent_name on connection_logs (
+	connection_id,
+	workspace_id,
+	agent_name
+);
+
+comment on index idx_connection_logs_connection_id_workspace_id_agent_name is 'Connection ID is NULL for web events, but present for SSH events. Therefore, this index allows multiple web events for the same workspace & agent. For SSH events, the upsertion query handles duplicates on this index by upserting the disconnect_time and disconnect_reason for the same connection_id when the connection is closed.';
+
+create index idx_connection_logs_connect_time_desc on connection_logs using btree (
+	connect_time desc
+);
+create index idx_connection_logs_organization_id on connection_logs using btree(
+	organization_id
+);
+create index idx_connection_logs_workspace_owner_id on connection_logs using btree(
+	workspace_owner_id
+);
+create index idx_connection_logs_workspace_id on connection_logs using btree(
+	workspace_id
+);

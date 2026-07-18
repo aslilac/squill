@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- add "slug" min_autostart_interval to "templates" table
+alter table templates add column min_autostart_interval int default 0;
+
+-- rename "default_ttl" to "max_ttl" on "templates" table
+alter table templates rename column default_ttl to max_ttl;

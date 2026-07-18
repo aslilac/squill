@@ -3,17 +3,14 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertProvisionerKey :one
-INSERT INTO
-    provisioner_keys (
-        id,
-        created_at,
-        organization_id,
-        name,
-        hashed_secret,
-        tags
-    )
-VALUES
-    ($1, $2, $3, lower(@name), $4, $5) RETURNING *;
+insert into provisioner_keys (id,
+created_at,
+organization_id,
+name,
+hashed_secret,
+tags)
+values ($1, $2, $3, lower(@name), $4, $5)
+returning *;
 
 -- name: GetProvisionerKeyByID :one
 select * from provisioner_keys where id = $1;
@@ -48,7 +45,4 @@ where
 select * from provisioner_keys where organization_id = $1;
 
 -- name: DeleteProvisionerKey :exec
-DELETE FROM
-    provisioner_keys
-WHERE
-    id = $1;
+delete from provisioner_keys where id = $1;

@@ -1,0 +1,174 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type chat_status as enum (
+	'waiting',
+	'pending',
+	'running',
+	'paused',
+	'completed',
+	'error'
+);
+
+create type chat_message_visibility as enum ('user', 'model', 'both');
+
+create table chats (
+	id uuid primary key default gen_random_uuid(),
+	owner_id uuid not null references users (id) on delete cascade,
+	workspace_id uuid references workspaces (id) on delete set null,
+	workspace_agent_id uuid references workspace_agents (id) on delete set null,
+	title text not null default 'New Chat',
+	status chat_status not null default 'waiting',
+	worker_id uuid,
+	started_at timestamptz,
+	heartbeat_at timestamptz,
+	created_at timestamptz not null default NOW(),
+	updated_at timestamptz not null default NOW(),
+	parent_chat_id uuid references chats (id) on delete set null,
+	root_chat_id uuid references chats (id) on delete set null,
+	last_model_config_id uuid not null
+);
+
+create index idx_chats_owner on chats (owner_id);
+create index idx_chats_workspace on chats (workspace_id);
+create index idx_chats_pending on chats (status) where status = 'pending';
+create index idx_chats_parent_chat_id on chats (parent_chat_id);
+create index idx_chats_root_chat_id on chats (root_chat_id);
+create index idx_chats_last_model_config_id on chats (last_model_config_id);
+
+create table chat_messages (
+	id bigserial primary key,
+	chat_id uuid not null references chats (id) on delete cascade,
+	model_config_id uuid,
+	created_at timestamptz not null default NOW(),
+	role text not null,
+	content jsonb,
+	visibility chat_message_visibility not null default 'both',
+	input_tokens bigint,
+	output_tokens bigint,
+	total_tokens bigint,
+	reasoning_tokens bigint,
+	cache_creation_tokens bigint,
+	cache_read_tokens bigint,
+	context_limit bigint,
+	compressed boolean not null default false
+);
+
+create index idx_chat_messages_chat on chat_messages (chat_id);
+create index idx_chat_messages_chat_created on chat_messages (
+	chat_id,
+	created_at
+);
+create index idx_chat_messages_compressed_summary_boundary on chat_messages (
+	chat_id,
+	created_at desc,
+	id desc
+)
+where compressed = true and role = 'system' and visibility in ('model', 'both');
+
+create table chat_diff_statuses (
+	chat_id uuid primary key references chats (id) on delete cascade,
+	url text,
+	pull_request_state text,
+	changes_requested boolean not null default false,
+	additions integer not null default 0,
+	deletions integer not null default 0,
+	changed_files integer not null default 0,
+	refreshed_at timestamptz,
+	stale_at timestamptz not null default NOW(),
+	created_at timestamptz not null default NOW(),
+	updated_at timestamptz not null default NOW(),
+	git_branch text not null default '',
+	git_remote_origin text not null default ''
+);
+
+create index idx_chat_diff_statuses_stale_at on chat_diff_statuses (stale_at);
+
+create table chat_providers (
+	id uuid primary key default gen_random_uuid(),
+	provider text not null unique,
+	display_name text not null default '',
+	api_key text not null default '',
+	api_key_key_id text references dbcrypt_keys (active_key_digest),
+	created_by uuid references users (id),
+	enabled boolean not null default true,
+	created_at timestamptz not null default NOW(),
+	updated_at timestamptz not null default NOW(),
+	base_url text not null default '',
+	constraint chat_providers_provider_check check (
+		provider
+		= any(
+			array [
+				'anthropic'::text,
+				'azure'::text,
+				'bedrock'::text,
+				'google'::text,
+				'openai'::text,
+				'openai-compat'::text,
+				'openrouter'::text,
+				'vercel'::text
+			]
+		)
+	)
+);
+
+comment on column chat_providers.api_key_key_id is 'The ID of the key used to encrypt the provider API key. If this is NULL, the API key is not encrypted';
+
+create index idx_chat_providers_enabled on chat_providers (enabled);
+
+create table chat_model_configs (
+	id uuid primary key default gen_random_uuid(),
+	provider text not null references chat_providers (provider) on delete cascade,
+	model text not null,
+	display_name text not null default '',
+	created_by uuid references users (id),
+	updated_by uuid references users (id),
+	enabled boolean not null default true,
+	is_default boolean not null default false,
+	deleted boolean not null default false,
+	deleted_at timestamptz,
+	created_at timestamptz not null default NOW(),
+	updated_at timestamptz not null default NOW(),
+	context_limit bigint not null,
+	compression_threshold integer not null,
+	options jsonb not null default '{}'::jsonb,
+	constraint chat_model_configs_context_limit_check check (context_limit > 0),
+	constraint chat_model_configs_compression_threshold_check check (
+		compression_threshold >= 0 and compression_threshold <= 100
+	)
+);
+
+create index idx_chat_model_configs_enabled on chat_model_configs (enabled);
+create index idx_chat_model_configs_provider on chat_model_configs (provider);
+create index idx_chat_model_configs_provider_model on chat_model_configs (
+	provider,
+	model
+);
+create unique index idx_chat_model_configs_single_default on chat_model_configs (
+	(1)
+)
+where is_default = true and deleted = false;
+
+alter table chat_messages add constraint chat_messages_model_config_id_fkey foreign key (
+	model_config_id
+) references chat_model_configs (id);
+
+alter table chats add constraint chats_last_model_config_id_fkey foreign key (
+	last_model_config_id
+) references chat_model_configs (id);
+
+create table chat_queued_messages (
+	id bigserial primary key,
+	chat_id uuid not null references chats (id) on delete cascade,
+	content jsonb not null,
+	created_at timestamptz not null default NOW()
+);
+
+create index idx_chat_queued_messages_chat_id on chat_queued_messages (chat_id);
+
+alter type api_key_scope add value if not exists 'chat:create';
+alter type api_key_scope add value if not exists 'chat:read';
+alter type api_key_scope add value if not exists 'chat:update';
+alter type api_key_scope add value if not exists 'chat:delete';
+alter type api_key_scope add value if not exists 'chat:*';

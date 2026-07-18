@@ -10,6 +10,8 @@
 //! [`Diagnostic`], and parsing resumes at the next top-level `;`. The tree
 //! never drops tokens.
 
+mod ddl;
+mod dml;
 mod expr;
 mod grammar;
 
@@ -295,8 +297,23 @@ impl Parser<'_> {
     }
 
     fn statement_inner(&mut self) -> PResult {
-        if self.at_any_kw(&["select", "with", "values", "table"]) || self.at(SyntaxKind::LParen) {
+        if self.at_any_kw(&["select", "values", "table"]) || self.at(SyntaxKind::LParen) {
             grammar::select_stmt(self)
+        } else if self.at_kw("with") {
+            dml::with_statement(self)
+        } else if self.at_kw("insert") {
+            dml::insert_stmt(self)
+        } else if self.at_kw("update") {
+            dml::update_stmt(self)
+        } else if self.at_kw("delete") {
+            dml::delete_stmt(self)
+        } else if self
+            .toks
+            .get(self.pos)
+            .is_some_and(|t| t.kind == SyntaxKind::Ident)
+            && ddl::DDL_STARTERS.iter().any(|kw| self.at_kw(kw))
+        {
+            ddl::ddl_stmt(self)
         } else {
             Err(self.error("expected a statement"))
         }
@@ -338,7 +355,7 @@ impl Parser<'_> {
 
     /// Distinguish SQLite `BEGIN [DEFERRED|IMMEDIATE|EXCLUSIVE]
     /// [TRANSACTION]` from a trigger body's `BEGIN stmt; ... END`.
-    fn begin_is_transaction(&self) -> bool {
+    pub(crate) fn begin_is_transaction(&self) -> bool {
         self.nth_at(1, SyntaxKind::Semicolon)
             || self.nth_at_kw(1, "transaction")
             || self.nth_at_kw(1, "deferred")

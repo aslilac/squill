@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop index if exists idx_aibridge_interceptions_started_id_desc;
+
+drop index if exists idx_aibridge_interceptions_provider;
+
+drop index if exists idx_aibridge_interceptions_model;

@@ -1,0 +1,12 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_agent_scripts add column display_name text;
+
+update workspace_agent_scripts
+set display_name = workspace_agent_log_sources.display_name
+from workspace_agent_log_sources
+where workspace_agent_scripts.log_source_id = workspace_agent_log_sources.id;
+
+alter table workspace_agent_scripts alter column display_name set not null;

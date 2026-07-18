@@ -40,79 +40,56 @@ where
 	and ap.deleted = false;
 
 -- name: InsertChatModelConfig :one
-INSERT INTO chat_model_configs (
-    model,
-    display_name,
-    created_by,
-    updated_by,
-    enabled,
-    is_default,
-    context_limit,
-    compression_threshold,
-    options,
-    ai_provider_id
-) VALUES (
-    @model::text,
-    @display_name::text,
-    sqlc.narg('created_by')::uuid,
-    sqlc.narg('updated_by')::uuid,
-    @enabled::boolean,
-    @is_default::boolean,
-    @context_limit::bigint,
-    @compression_threshold::integer,
-    @options::jsonb,
-    sqlc.narg('ai_provider_id')::uuid
-)
-RETURNING
-    *;
+insert into chat_model_configs (model,
+display_name,
+created_by,
+updated_by,
+enabled,
+is_default,
+context_limit,
+compression_threshold,
+options,
+ai_provider_id)
+values
+	(@model::text,
+	@display_name::text,
+	sqlc.narg('created_by')::uuid,
+	sqlc.narg('updated_by')::uuid,
+	@enabled::boolean,
+	@is_default::boolean,
+	@context_limit::bigint,
+	@compression_threshold::integer,
+	@options::jsonb,
+	sqlc.narg('ai_provider_id')::uuid)
+returning *;
 
 -- name: UpdateChatModelConfig :one
-UPDATE
-    chat_model_configs
-SET
-    model = @model::text,
-    display_name = @display_name::text,
-    updated_by = sqlc.narg('updated_by')::uuid,
-    enabled = @enabled::boolean,
-    is_default = @is_default::boolean,
-    context_limit = @context_limit::bigint,
-    compression_threshold = @compression_threshold::integer,
-    options = @options::jsonb,
-    ai_provider_id = sqlc.narg('ai_provider_id')::uuid,
-    updated_at = NOW()
-WHERE
-    id = @id::uuid
-    AND deleted = FALSE
-RETURNING
-    *;
+update chat_model_configs
+set
+	model = @model::text,
+	display_name = @display_name::text,
+	updated_by = sqlc.narg('updated_by')::uuid,
+	enabled = @enabled::boolean,
+	is_default = @is_default::boolean,
+	context_limit = @context_limit::bigint,
+	compression_threshold = @compression_threshold::integer,
+	options = @options::jsonb,
+	ai_provider_id = sqlc.narg('ai_provider_id')::uuid,
+	updated_at = NOW()
+where id = @id::uuid and deleted = false
+returning *;
 
 -- name: UnsetDefaultChatModelConfigs :exec
-UPDATE
-    chat_model_configs
-SET
-    is_default = FALSE,
-    updated_at = NOW()
-WHERE
-    is_default = TRUE
-    AND deleted = FALSE;
+update chat_model_configs
+set is_default = false, updated_at = NOW()
+where is_default = true and deleted = false;
 
 -- name: DeleteChatModelConfigByID :exec
-UPDATE
-    chat_model_configs
-SET
-    deleted = TRUE,
-    deleted_at = NOW(),
-    updated_at = NOW()
-WHERE
-    id = @id::uuid;
+update chat_model_configs
+set deleted = true, deleted_at = NOW(), updated_at = NOW()
+where id = @id::uuid;
 
 -- name: DeleteChatModelConfigsByAIProviderID :exec
-UPDATE
-    chat_model_configs
-SET
-    deleted = TRUE,
-    deleted_at = NOW(),
-    updated_at = NOW()
-WHERE
-    ai_provider_id = @ai_provider_id::uuid
-    AND deleted = FALSE;
+update chat_model_configs
+set deleted = true, deleted_at = NOW(), updated_at = NOW()
+where ai_provider_id = @ai_provider_id::uuid and deleted = false;

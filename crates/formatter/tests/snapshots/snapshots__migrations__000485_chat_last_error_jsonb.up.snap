@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table chats alter column last_error type jsonb using case
+	when last_error is null then null
+	else jsonb_build_object('message', last_error, 'kind', 'generic')
+end;

@@ -1,0 +1,13 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Add high-level composite coder:* API key scopes
+-- These values are persisted so that tokens can store coder:* names directly.
+alter type api_key_scope add value if not exists 'coder:workspaces.create';
+alter type api_key_scope add value if not exists 'coder:workspaces.operate';
+alter type api_key_scope add value if not exists 'coder:workspaces.delete';
+alter type api_key_scope add value if not exists 'coder:workspaces.access';
+alter type api_key_scope add value if not exists 'coder:templates.build';
+alter type api_key_scope add value if not exists 'coder:templates.author';
+alter type api_key_scope add value if not exists 'coder:apikeys.manage_self';

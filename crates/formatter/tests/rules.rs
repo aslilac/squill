@@ -115,7 +115,23 @@ fn blank_lines_between_statements_survive() {
 
 #[test]
 fn error_statements_pass_through_verbatim() {
-    let source = "UPDATE t SET x = 1   WHERE  weird ; select 1;";
+    let source = "INSERT   INTO ; select 1;";
     let out = format(source);
-    assert_eq!(out, "UPDATE t SET x = 1   WHERE  weird ;\nselect 1;\n");
+    assert_eq!(out, "INSERT   INTO ;\nselect 1;\n");
+}
+
+#[test]
+fn dml_and_ddl_format() {
+    let out = format(
+        "UPDATE users SET name = 'x', updated_at = NOW() WHERE id = @id RETURNING *;\n\
+         INSERT INTO t (a, b) VALUES (1, 2) ON CONFLICT (a) DO NOTHING;\n\
+         CREATE TABLE t (id uuid NOT NULL, PRIMARY KEY (id));",
+    );
+    // Short statements collapse; the parens stay tight.
+    assert_eq!(
+        out,
+        "update users set name = 'x', updated_at = NOW() where id = @id returning *;\n\
+         insert into t (a, b) values (1, 2) on conflict (a) do nothing;\n\
+         create table t (id uuid not null, primary key (id));\n"
+    );
 }

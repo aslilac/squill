@@ -1,0 +1,24 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- WARNING: this rollback is lossy. If an admin later revoked
+-- agents-access from a specific org, rolling back will re-grant the
+-- site-wide role (which covers ALL orgs) to any user who still holds
+-- agents-access in at least one org.
+
+-- Step 1: Move agents-access back to site-level for any user who has it in any org.
+update users
+set rbac_roles = array_append(rbac_roles, 'agents-access')
+where
+	id in (
+		select distinct user_id
+		from organization_members
+		where 'agents-access' = any(roles)
+	)
+	and not ('agents-access' = any(rbac_roles));
+
+-- Step 2: Remove from org memberships.
+update organization_members
+set roles = array_remove(roles, 'agents-access')
+where 'agents-access' = any(roles);

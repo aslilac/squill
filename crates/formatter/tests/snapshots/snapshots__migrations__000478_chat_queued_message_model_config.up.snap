@@ -1,0 +1,10 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table chat_queued_messages add column model_config_id uuid;
+
+update chat_queued_messages as cqm
+set model_config_id = chats.last_model_config_id
+from chats
+where chats.id = cqm.chat_id and cqm.model_config_id is null;

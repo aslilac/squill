@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table only workspace_app_statuses add column if not exists needs_user_attention boolean not null default false,
+add column if not exists icon text;

@@ -1,0 +1,62 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- We cannot alter the column type while a view depends on it, so we drop it and recreate it.
+drop view template_version_with_user;
+
+-- Turns the list of provider names into JSONB with the type `Array<{ id: string; optional?: boolean }>`
+-- eg. `'{github,gitlab}'::text[]` would become `'[{"id": "github"}, {"id": "gitlab"}]'::jsonb`
+create or replace function migrate_external_auth_providers_to_jsonb(
+	text[]
+) returns jsonb language plpgsql as $$
+DECLARE
+  result jsonb;
+BEGIN
+  SELECT
+    jsonb_agg(jsonb_build_object('id', value::text)) INTO result
+  FROM
+    unnest($1) AS value;
+  RETURN result;
+END;
+$$;
+
+-- Update the column type and migrate the values
+alter table template_versions alter column external_auth_providers type jsonb using migrate_external_auth_providers_to_jsonb(
+	external_auth_providers
+);
+
+-- Make the column non-nullable to make the types nicer on the Go side
+update template_versions
+set external_auth_providers = '[]'::jsonb
+where external_auth_providers is null;
+alter table template_versions alter column external_auth_providers set default '[]'::jsonb;
+alter table template_versions alter column external_auth_providers set not null;
+
+-- Recreate `template_version_with_user` as described in dump.sql
+create view template_version_with_user as
+select
+	template_versions.id,
+	template_versions.template_id,
+	template_versions.organization_id,
+	template_versions.created_at,
+	template_versions.updated_at,
+	template_versions.name,
+	template_versions.readme,
+	template_versions.job_id,
+	template_versions.created_by,
+	template_versions.external_auth_providers,
+	template_versions.message,
+	template_versions.archived,
+	COALESCE(visible_users.avatar_url, ''::text) as created_by_avatar_url,
+	COALESCE(visible_users.username, ''::text) as created_by_username
+from
+	(
+		template_versions
+		left join visible_users on (template_versions.created_by = visible_users.id)
+	);
+
+comment on view template_version_with_user is 'Joins in the username + avatar url of the created by user.';
+
+-- Cleanup
+drop function migrate_external_auth_providers_to_jsonb;

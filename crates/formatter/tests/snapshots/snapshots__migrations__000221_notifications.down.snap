@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table if exists notification_messages;
+drop table if exists notification_templates;
+drop type if exists notification_method;
+drop type if exists notification_message_status;

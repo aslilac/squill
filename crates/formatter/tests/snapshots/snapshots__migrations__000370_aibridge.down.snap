@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table if exists aibridge_tool_usages cascade;
+drop table if exists aibridge_user_prompts cascade;
+drop table if exists aibridge_token_usages cascade;
+drop table if exists aibridge_interceptions cascade;

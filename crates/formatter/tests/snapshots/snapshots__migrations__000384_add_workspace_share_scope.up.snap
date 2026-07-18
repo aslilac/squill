@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter type api_key_scope add value if not exists 'workspace:share';
+alter type api_key_scope add value if not exists 'workspace_dormant:share';

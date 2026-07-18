@@ -9,22 +9,17 @@ where
 	template_version_terraform_values.template_version_id = @template_version_id;
 
 -- name: InsertTemplateVersionTerraformValuesByJobID :exec
-INSERT INTO
-	template_version_terraform_values (
-		template_version_id,
-		cached_plan,
-		cached_module_files,
-		updated_at,
-	    provisionerd_version
-	)
-VALUES
-	(
-		(select id from template_versions where job_id = @job_id),
-		@cached_plan,
-		@cached_module_files,
-		@updated_at,
-		@provisionerd_version
-	);
+insert into template_version_terraform_values (template_version_id,
+cached_plan,
+cached_module_files,
+updated_at,
+provisionerd_version)
+values
+	((select id from template_versions where job_id = @job_id),
+	@cached_plan,
+	@cached_module_files,
+	@updated_at,
+	@provisionerd_version);
 
 -- name: HasTemplateVersionsUsingCachedModuleFileInOrg :one
 -- Reports whether the given file is referenced as cached module files by any

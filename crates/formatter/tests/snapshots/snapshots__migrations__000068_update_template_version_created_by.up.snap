@@ -1,0 +1,28 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+update template_versions
+set
+	created_by = COALESCE(
+		-- Best effort to convert all unowned template versions to the first owner.
+		(
+			select id
+			from users
+			where rbac_roles @> '{owner}' and deleted = 'f'
+			order by created_at asc
+			limit 1
+		),
+		-- If there are no owners, assign to the first user.
+		(
+			select id
+			from users
+			where deleted = 'f'
+			order by created_at asc
+			limit 1
+		)
+		-- If you have no users I'm not sure what else to tell you.
+	)
+where created_by is null;
+
+alter table template_versions alter column created_by set not null;

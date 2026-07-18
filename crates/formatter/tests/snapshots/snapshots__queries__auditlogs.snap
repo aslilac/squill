@@ -129,41 +129,23 @@ limit -- a limit of 0 means "no limit". The audit log table is unbounded
 offset @offset_opt;
 
 -- name: InsertAuditLog :one
-INSERT INTO audit_logs (
-		id,
-		"time",
-		user_id,
-		organization_id,
-		ip,
-		user_agent,
-		resource_type,
-		resource_id,
-		resource_target,
-		action,
-		diff,
-		status_code,
-		additional_fields,
-		request_id,
-		resource_icon
-	)
-VALUES (
-		$1,
-		$2,
-		$3,
-		$4,
-		$5,
-		$6,
-		$7,
-		$8,
-		$9,
-		$10,
-		$11,
-		$12,
-		$13,
-		$14,
-		$15
-	)
-RETURNING *;
+insert into audit_logs (id,
+time,
+user_id,
+organization_id,
+ip,
+user_agent,
+resource_type,
+resource_id,
+resource_target,
+action,
+diff,
+status_code,
+additional_fields,
+request_id,
+resource_icon)
+values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+returning *;
 
 -- name: CountAuditLogs :one
 select COUNT(*)
@@ -282,34 +264,36 @@ from
 	) as limited_count;
 
 -- name: DeleteOldAuditLogConnectionEvents :exec
-DELETE FROM audit_logs
-WHERE id IN (
-    SELECT id FROM audit_logs
-    WHERE
-        (
-            action = 'connect'
-            OR action = 'disconnect'
-            OR action = 'open'
-            OR action = 'close'
-        )
-        AND "time" < @before_time::timestamp with time zone
-    ORDER BY "time" ASC
-    LIMIT @limit_count
-);
+delete from audit_logs
+where
+	id in (
+		select id
+		from audit_logs
+		where
+			(
+				action = 'connect'
+				or action = 'disconnect'
+				or action = 'open'
+				or action = 'close'
+			)
+			and time < @before_time::timestamp with time zone
+		order by time asc
+		limit @limit_count
+	);
 
 -- name: DeleteOldAuditLogs :execrows
 -- Deletes old audit logs based on retention policy, excluding deprecated
 -- connection events (connect, disconnect, open, close) which are handled
 -- separately by DeleteOldAuditLogConnectionEvents.
-WITH old_logs AS (
-    SELECT id
-    FROM audit_logs
-    WHERE
-        "time" < @before_time::timestamp with time zone
-        AND action NOT IN ('connect', 'disconnect', 'open', 'close')
-    ORDER BY "time" ASC
-    LIMIT @limit_count
-)
-DELETE FROM audit_logs
-USING old_logs
-WHERE audit_logs.id = old_logs.id;
+with
+	old_logs as (
+		select id
+		from audit_logs
+		where
+			time < @before_time::timestamp with time zone
+			and action not in ('connect', 'disconnect', 'open', 'close')
+		order by time asc
+		limit @limit_count
+	) delete from audit_logs
+using old_logs
+where audit_logs.id = old_logs.id;

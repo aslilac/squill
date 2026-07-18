@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Since src_id and dst_id are UUIDs, we only ever compare them with equality, so hash is better
+create index idx_tailnet_tunnels_src_id on tailnet_tunnels using hash(src_id);
+create index idx_tailnet_tunnels_dst_id on tailnet_tunnels using hash(dst_id);

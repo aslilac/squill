@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table users add column github_com_user_id bigint;
+
+comment on column users.github_com_user_id is 'The GitHub.com numerical user ID. At time of implementation, this is used to check if the user has starred the Coder repository.';

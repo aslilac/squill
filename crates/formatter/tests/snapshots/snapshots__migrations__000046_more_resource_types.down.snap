@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- It's not possible to drop enum values from enum types, so the UP has "IF NOT
+-- EXISTS".
+
+-- Delete all jobs that use the new enum value.
+delete from provisioner_jobs where type = 'template_version_dry_run';

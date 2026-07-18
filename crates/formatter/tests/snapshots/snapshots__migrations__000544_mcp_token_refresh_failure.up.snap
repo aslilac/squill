@@ -1,0 +1,5 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table mcp_server_user_tokens add column oauth_refresh_failure_reason text not null default '';

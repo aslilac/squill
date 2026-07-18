@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table chat_diff_statuses add column pull_request_title text not null default '';
+alter table chat_diff_statuses add column pull_request_draft boolean not null default false;

@@ -1,0 +1,11 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Add is_system column to identify system-managed roles.
+alter table custom_roles add column is_system boolean not null default false;
+
+-- Add member_permissions column for member-scoped permissions within an organization.
+alter table custom_roles add column member_permissions jsonb not null default '[]'::jsonb;
+
+comment on column custom_roles.is_system is 'System roles are managed by Coder and cannot be modified or deleted by users.';

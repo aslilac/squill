@@ -1,0 +1,34 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table boundary_usage_stats (
+	replica_id uuid primary key,
+	unique_workspaces_count bigint not null default 0,
+	unique_users_count bigint not null default 0,
+	allowed_requests bigint not null default 0,
+	denied_requests bigint not null default 0,
+	window_start timestamptz not null default NOW(),
+	updated_at timestamptz not null default NOW()
+);
+
+comment on table boundary_usage_stats is 'Per-replica boundary usage statistics for telemetry aggregation.';
+comment on column boundary_usage_stats.replica_id is 'The unique identifier of the replica reporting stats.';
+comment on column boundary_usage_stats.unique_workspaces_count is 'Count of unique workspaces that used boundary on this replica.';
+comment on column boundary_usage_stats.unique_users_count is 'Count of unique users that used boundary on this replica.';
+comment on column boundary_usage_stats.allowed_requests is 'Total allowed requests through boundary on this replica.';
+comment on column boundary_usage_stats.denied_requests is 'Total denied requests through boundary on this replica.';
+comment on column boundary_usage_stats.window_start is 'Start of the time window for these stats, set on first flush after reset.';
+comment on column boundary_usage_stats.updated_at is 'Timestamp of the last update to this row.';
+
+-- Add boundary_usage_summary to the telemetry_locks event_type constraint.
+alter table telemetry_locks drop constraint telemetry_lock_event_type_constraint;
+alter table telemetry_locks add constraint telemetry_lock_event_type_constraint check (
+	event_type in ('aibridge_interceptions_summary', 'boundary_usage_summary')
+);
+
+-- Add boundary_usage scopes for RBAC.
+alter type api_key_scope add value if not exists 'boundary_usage:*';
+alter type api_key_scope add value if not exists 'boundary_usage:delete';
+alter type api_key_scope add value if not exists 'boundary_usage:read';
+alter type api_key_scope add value if not exists 'boundary_usage:update';

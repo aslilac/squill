@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop trigger if exists update_notification_message_dedupe_hash on notification_messages;
+drop function IF exists compute_notification_message_dedupe_hash ();
+alter table if exists notification_messages drop column if exists dedupe_hash;

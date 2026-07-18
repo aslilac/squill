@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_agent_startup_logs add column eof boolean not null default false;
+
+comment on column workspace_agent_startup_logs.eof is 'End of file reached';

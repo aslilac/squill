@@ -11,64 +11,27 @@ where workspace_id = $1 and agent_name = $2 and port = $3;
 select * from workspace_agent_port_share where workspace_id = $1;
 
 -- name: DeleteWorkspaceAgentPortShare :exec
-DELETE FROM
-	workspace_agent_port_share
-WHERE
-	workspace_id = $1
-	AND agent_name = $2
-	AND port = $3;
+delete from workspace_agent_port_share
+where workspace_id = $1 and agent_name = $2 and port = $3;
 
 -- name: UpsertWorkspaceAgentPortShare :one
-INSERT INTO
-	workspace_agent_port_share (
-		workspace_id,
-		agent_name,
-		port,
-		share_level,
-		protocol
-	)
-VALUES (
-	$1,
-	$2,
-	$3,
-	$4,
-	$5
-)
-ON CONFLICT (
-	workspace_id,
-	agent_name,
-	port
-)
-DO UPDATE SET
-	share_level = $4,
-	protocol = $5
-RETURNING *;
+insert into workspace_agent_port_share (workspace_id,
+agent_name,
+port,
+share_level,
+protocol)
+values ($1, $2, $3, $4, $5)
+on conflict
+	(workspace_id, agent_name, port) do update set share_level = $4, protocol = $5
+returning *;
 
 -- name: ReduceWorkspaceAgentShareLevelToAuthenticatedByTemplate :exec
-UPDATE
-	workspace_agent_port_share
-SET
-	share_level = 'authenticated'
-WHERE
+update workspace_agent_port_share
+set share_level = 'authenticated'
+where
 	share_level = 'public'
-	AND workspace_id IN (
-		SELECT
-			id
-		FROM
-			workspaces
-		WHERE
-			template_id = $1
-	);
+	and workspace_id in (select id from workspaces where template_id = $1);
 
 -- name: DeleteWorkspaceAgentPortSharesByTemplate :exec
-DELETE FROM
-	workspace_agent_port_share
-WHERE
-	workspace_id IN (
-		SELECT
-			id
-		FROM
-			workspaces
-		WHERE
-			template_id = $1
-	);
+delete from workspace_agent_port_share
+where workspace_id in (select id from workspaces where template_id = $1);

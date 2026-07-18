@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table user_links rename column debug_context to claims;
+
+comment on column user_links.claims is 'Claims from the IDP for the linked user. Includes both id_token and userinfo claims. ';

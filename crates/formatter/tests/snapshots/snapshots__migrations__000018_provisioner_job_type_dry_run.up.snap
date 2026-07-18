@@ -1,0 +1,16 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type new_provisioner_job_type as enum (
+	'template_version_import',
+	'workspace_build',
+	'template_version_dry_run'
+);
+
+alter table provisioner_jobs alter column type type new_provisioner_job_type using (
+	type::text::new_provisioner_job_type
+);
+
+drop type provisioner_job_type;
+alter type new_provisioner_job_type rename to provisioner_job_type;

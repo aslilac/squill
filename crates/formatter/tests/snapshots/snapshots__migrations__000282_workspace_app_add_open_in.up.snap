@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type workspace_app_open_in as enum ('tab', 'window', 'slim-window');
+
+alter table workspace_apps add column open_in workspace_app_open_in not null default 'slim-window'::workspace_app_open_in;

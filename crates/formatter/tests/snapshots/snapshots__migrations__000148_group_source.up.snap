@@ -1,0 +1,14 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type group_source as enum (
+	-- User created groups
+	'user',
+	-- Groups created by the system through oidc sync
+	'oidc'
+);
+
+alter table groups add column source group_source not null default 'user';
+
+comment on column groups.source is 'Source indicates how the group was created. It can be created by a user manually, or through some system process like OIDC group sync.';

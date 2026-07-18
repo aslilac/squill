@@ -1,0 +1,12 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table notification_templates drop column if exists method,
+drop column if exists kind;
+
+drop table if exists notification_preferences;
+drop type if exists notification_template_kind;
+
+drop trigger if exists inhibit_enqueue_if_disabled on notification_messages;
+drop function IF exists inhibit_enqueue_if_disabled;

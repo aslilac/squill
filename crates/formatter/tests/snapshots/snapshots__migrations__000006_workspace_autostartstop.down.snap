@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table only workspaces drop column if exists autostart_schedule,
+drop column if exists autostop_schedule;

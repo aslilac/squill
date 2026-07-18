@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop trigger if exists trigger_update_users on users;
+drop function IF exists delete_deleted_user_api_keys;
+
+drop trigger if exists trigger_insert_apikeys on api_keys;
+drop function IF exists insert_apikey_fail_if_user_deleted;

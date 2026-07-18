@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_agent_stats drop column session_count_vscode,
+drop column session_count_jetbrains,
+drop column session_count_reconnecting_pty,
+drop column session_count_ssh,
+drop column connection_median_latency_ms;

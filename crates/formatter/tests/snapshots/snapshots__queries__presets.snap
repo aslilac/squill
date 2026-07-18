@@ -3,21 +3,19 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertPreset :one
-INSERT INTO template_version_presets (
-	id,
-	template_version_id,
-	name,
-	created_at,
-	desired_instances,
-	invalidate_after_secs,
-	scheduling_timezone,
-	is_default,
-	description,
-	icon,
-	last_invalidated_at
-)
-VALUES (
-	@id,
+insert into template_version_presets (id,
+template_version_id,
+name,
+created_at,
+desired_instances,
+invalidate_after_secs,
+scheduling_timezone,
+is_default,
+description,
+icon,
+last_invalidated_at)
+values
+	(@id,
 	@template_version_id,
 	@name,
 	@created_at,
@@ -27,34 +25,28 @@ VALUES (
 	@is_default,
 	@description,
 	@icon,
-	@last_invalidated_at
-) RETURNING *;
+	@last_invalidated_at)
+returning *;
 
 -- name: InsertPresetParameters :many
-INSERT INTO
-	template_version_preset_parameters (template_version_preset_id, name, value)
-SELECT
-	@template_version_preset_id,
-	unnest(@names :: TEXT[]),
-	unnest(@values :: TEXT[])
-RETURNING *;
+insert into template_version_preset_parameters (template_version_preset_id,
+name,
+value)
+select
+	@template_version_preset_id, unnest(@names::text[]), unnest(@values::text[])
+returning *;
 
 -- name: InsertPresetPrebuildSchedule :one
-INSERT INTO template_version_preset_prebuild_schedules (
-	preset_id,
-	cron_expression,
-	desired_instances
-)
-VALUES (
-	@preset_id,
-	@cron_expression,
-	@desired_instances
-) RETURNING *;
+insert into template_version_preset_prebuild_schedules (preset_id,
+cron_expression,
+desired_instances)
+values (@preset_id, @cron_expression, @desired_instances)
+returning *;
 
 -- name: UpdatePresetPrebuildStatus :exec
-UPDATE template_version_presets
-SET prebuild_status = @status
-WHERE id = @preset_id;
+update template_version_presets
+set prebuild_status = @status
+where id = @preset_id;
 
 -- name: GetPresetsByTemplateVersionID :many
 select *
@@ -104,17 +96,11 @@ where
 	and t.deprecated = '';
 
 -- name: UpdatePresetsLastInvalidatedAt :many
-UPDATE
-	template_version_presets tvp
-SET
-	last_invalidated_at = @last_invalidated_at
-FROM
-	templates t
-	JOIN template_versions tv ON tv.id = t.active_version_id
-WHERE
-	t.id = @template_id
-	AND tvp.template_version_id = tv.id
-RETURNING
-	t.name AS template_name,
-	tv.name AS template_version_name,
-	tvp.name AS template_version_preset_name;
+update template_version_presets tvp
+set last_invalidated_at = @last_invalidated_at
+from templates t join template_versions tv on tv.id = t.active_version_id
+where t.id = @template_id and tvp.template_version_id = tv.id
+returning
+	t.name as template_name,
+	tv.name as template_version_name,
+	tvp.name as template_version_preset_name;

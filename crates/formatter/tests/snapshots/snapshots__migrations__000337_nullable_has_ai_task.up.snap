@@ -1,0 +1,11 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- The fields must be nullable because there's a period of time between
+-- inserting a row into the database and finishing the "plan" provisioner job
+-- when the final value of the field is unknown.
+alter table template_versions alter column has_ai_task drop default;
+alter table template_versions alter column has_ai_task drop not null;
+alter table workspace_builds alter column has_ai_task drop default;
+alter table workspace_builds alter column has_ai_task drop not null;

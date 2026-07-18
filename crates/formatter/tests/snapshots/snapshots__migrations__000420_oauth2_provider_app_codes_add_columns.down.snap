@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table oauth2_provider_app_codes drop column state_hash,
+drop column redirect_uri;

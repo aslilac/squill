@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table only workspaces add column favorite boolean not null default false;
+comment on column workspaces.favorite is 'Favorite is true if the workspace owner has favorited the workspace.';

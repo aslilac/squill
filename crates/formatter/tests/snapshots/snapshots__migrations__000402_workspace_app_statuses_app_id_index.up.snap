@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create index workspace_app_statuses_app_id_idx on workspace_app_statuses (
+	app_id,
+	created_at desc
+);

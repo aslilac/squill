@@ -3,31 +3,58 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertAIBridgeInterception :one
-INSERT INTO aibridge_interceptions (
-	id, api_key_id, initiator_id, provider, provider_name, model, metadata, started_at, client, client_session_id, thread_parent_id, thread_root_id, credential_kind, credential_hint, agent_firewall_session_id, agent_firewall_sequence_number
-) VALUES (
-	@id, @api_key_id, @initiator_id, @provider, @provider_name, @model, COALESCE(@metadata::jsonb, '{}'::jsonb), @started_at, @client, sqlc.narg('client_session_id'), sqlc.narg('thread_parent_interception_id')::uuid, sqlc.narg('thread_root_interception_id')::uuid, @credential_kind, @credential_hint, sqlc.narg('agent_firewall_session_id')::uuid, sqlc.narg('agent_firewall_sequence_number')
-)
-RETURNING *;
+insert into aibridge_interceptions (id,
+api_key_id,
+initiator_id,
+provider,
+provider_name,
+model,
+metadata,
+started_at,
+client,
+client_session_id,
+thread_parent_id,
+thread_root_id,
+credential_kind,
+credential_hint,
+agent_firewall_session_id,
+agent_firewall_sequence_number)
+values
+	(@id,
+	@api_key_id,
+	@initiator_id,
+	@provider,
+	@provider_name,
+	@model,
+	COALESCE(@metadata::jsonb, '{}'::jsonb),
+	@started_at,
+	@client,
+	sqlc.narg('client_session_id'),
+	sqlc.narg('thread_parent_interception_id')::uuid,
+	sqlc.narg('thread_root_interception_id')::uuid,
+	@credential_kind,
+	@credential_hint,
+	sqlc.narg('agent_firewall_session_id')::uuid,
+	sqlc.narg('agent_firewall_sequence_number'))
+returning *;
 
 -- name: UpdateAIBridgeInterceptionEnded :one
-UPDATE aibridge_interceptions
-	SET ended_at = @ended_at::timestamptz,
-		-- BYOK records its hint at the start of the interception.
-		-- Centralized uses key failover, so its hint is only known
-		-- at end-of-interception.
-		credential_hint = CASE
-			WHEN credential_kind = 'centralized' THEN @credential_hint::text
-			ELSE credential_hint
-		END,
-		-- Terminal upstream error, only set when the interception failed.
-		-- NULL leaves the columns empty for successful interceptions.
-		error_type = sqlc.narg('error_type')::aibridge_interception_error_type,
-		error_message = sqlc.narg('error_message')::text
-WHERE
-	id = @id::uuid
-	AND ended_at IS NULL
-RETURNING *;
+update aibridge_interceptions
+set
+	ended_at = @ended_at::timestamptz,
+	-- BYOK records its hint at the start of the interception.
+	-- Centralized uses key failover, so its hint is only known
+	-- at end-of-interception.
+	credential_hint = case
+		when credential_kind = 'centralized' then @credential_hint::text
+		else credential_hint
+	end,
+	-- Terminal upstream error, only set when the interception failed.
+	-- NULL leaves the columns empty for successful interceptions.
+	error_type = sqlc.narg('error_type')::aibridge_interception_error_type,
+	error_message = sqlc.narg('error_message')::text
+where id = @id::uuid and ended_at is null
+returning *;
 
 -- name: GetAIBridgeInterceptionLineageByToolCallID :one
 -- Look up the parent interception and the root of the thread by finding
@@ -52,38 +79,94 @@ where
 	);
 
 -- name: InsertAIBridgeTokenUsage :one
-INSERT INTO aibridge_token_usages (
-  id, interception_id, provider_response_id, input_tokens, output_tokens, cache_read_input_tokens, cache_write_input_tokens, metadata, created_at,
-  effective_group_id, input_price_micros, output_price_micros, cache_read_price_micros, cache_write_price_micros, cost_micros
-) VALUES (
-  @id, @interception_id, @provider_response_id, @input_tokens, @output_tokens, @cache_read_input_tokens, @cache_write_input_tokens, COALESCE(@metadata::jsonb, '{}'::jsonb), @created_at,
-  @effective_group_id, @input_price_micros, @output_price_micros, @cache_read_price_micros, @cache_write_price_micros, @cost_micros
-)
-RETURNING *;
+insert into aibridge_token_usages (id,
+interception_id,
+provider_response_id,
+input_tokens,
+output_tokens,
+cache_read_input_tokens,
+cache_write_input_tokens,
+metadata,
+created_at,
+effective_group_id,
+input_price_micros,
+output_price_micros,
+cache_read_price_micros,
+cache_write_price_micros,
+cost_micros)
+values
+	(@id,
+	@interception_id,
+	@provider_response_id,
+	@input_tokens,
+	@output_tokens,
+	@cache_read_input_tokens,
+	@cache_write_input_tokens,
+	COALESCE(@metadata::jsonb, '{}'::jsonb),
+	@created_at,
+	@effective_group_id,
+	@input_price_micros,
+	@output_price_micros,
+	@cache_read_price_micros,
+	@cache_write_price_micros,
+	@cost_micros)
+returning *;
 
 -- name: InsertAIBridgeUserPrompt :one
-INSERT INTO aibridge_user_prompts (
-  id, interception_id, provider_response_id, prompt, metadata, created_at
-) VALUES (
-  @id, @interception_id, @provider_response_id, @prompt, COALESCE(@metadata::jsonb, '{}'::jsonb), @created_at
-)
-RETURNING *;
+insert into aibridge_user_prompts (id,
+interception_id,
+provider_response_id,
+prompt,
+metadata,
+created_at)
+values
+	(@id,
+	@interception_id,
+	@provider_response_id,
+	@prompt,
+	COALESCE(@metadata::jsonb, '{}'::jsonb),
+	@created_at)
+returning *;
 
 -- name: InsertAIBridgeToolUsage :one
-INSERT INTO aibridge_tool_usages (
-  id, interception_id, provider_response_id, provider_tool_call_id, provider_item_id, tool, server_url, input, injected, invocation_error, metadata, created_at
-) VALUES (
-  @id, @interception_id, @provider_response_id, @provider_tool_call_id, @provider_item_id, @tool, @server_url, @input, @injected, @invocation_error, COALESCE(@metadata::jsonb, '{}'::jsonb), @created_at
-)
-RETURNING *;
+insert into aibridge_tool_usages (id,
+interception_id,
+provider_response_id,
+provider_tool_call_id,
+provider_item_id,
+tool,
+server_url,
+input,
+injected,
+invocation_error,
+metadata,
+created_at)
+values
+	(@id,
+	@interception_id,
+	@provider_response_id,
+	@provider_tool_call_id,
+	@provider_item_id,
+	@tool,
+	@server_url,
+	@input,
+	@injected,
+	@invocation_error,
+	COALESCE(@metadata::jsonb, '{}'::jsonb),
+	@created_at)
+returning *;
 
 -- name: InsertAIBridgeModelThought :one
-INSERT INTO aibridge_model_thoughts (
-  interception_id, content, metadata, created_at
-) VALUES (
-  @interception_id, @content, COALESCE(@metadata::jsonb, '{}'::jsonb), @created_at
-)
-RETURNING *;
+insert into aibridge_model_thoughts (interception_id,
+content,
+metadata,
+created_at)
+values
+	(@interception_id,
+	@content,
+	COALESCE(@metadata::jsonb, '{}'::jsonb),
+	@created_at)
+returning *;
 
 -- name: GetAIBridgeInterceptionByID :one
 select * from aibridge_interceptions where id = @id::uuid;
@@ -257,46 +340,47 @@ from
 	tool_aggregates tool_agg;
 
 -- name: DeleteOldAIBridgeRecords :one
-WITH
-  -- We don't have FK relationships between the dependent tables and aibridge_interceptions, so we can't rely on DELETE CASCADE.
-  to_delete AS (
-    SELECT id FROM aibridge_interceptions
-    WHERE started_at < @before_time::timestamp with time zone
-  ),
-  -- CTEs are executed in order.
-  model_thoughts AS (
-    DELETE FROM aibridge_model_thoughts
-    WHERE interception_id IN (SELECT id FROM to_delete)
-    RETURNING 1
-  ),
-  tool_usages AS (
-    DELETE FROM aibridge_tool_usages
-    WHERE interception_id IN (SELECT id FROM to_delete)
-    RETURNING 1
-  ),
-  token_usages AS (
-    DELETE FROM aibridge_token_usages
-    WHERE interception_id IN (SELECT id FROM to_delete)
-    RETURNING 1
-  ),
-  user_prompts AS (
-    DELETE FROM aibridge_user_prompts
-    WHERE interception_id IN (SELECT id FROM to_delete)
-    RETURNING 1
-  ),
-  interceptions AS (
-    DELETE FROM aibridge_interceptions
-    WHERE id IN (SELECT id FROM to_delete)
-    RETURNING 1
-  )
+with
+	-- We don't have FK relationships between the dependent tables and aibridge_interceptions, so we can't rely on DELETE CASCADE.
+	to_delete as (
+		select id
+		from aibridge_interceptions
+		where started_at < @before_time::timestamp with time zone
+	),
+	-- CTEs are executed in order.
+	model_thoughts as (
+		delete from aibridge_model_thoughts
+		where interception_id in (select id from to_delete)
+		returning 1
+	),
+	tool_usages as (
+		delete from aibridge_tool_usages
+		where interception_id in (select id from to_delete)
+		returning 1
+	),
+	token_usages as (
+		delete from aibridge_token_usages
+		where interception_id in (select id from to_delete)
+		returning 1
+	),
+	user_prompts as (
+		delete from aibridge_user_prompts
+		where interception_id in (select id from to_delete)
+		returning 1
+	),
+	interceptions as (
+		delete from aibridge_interceptions
+		where id in (select id from to_delete)
+		returning 1
+	)
 -- Cumulative count.
-SELECT (
-  (SELECT COUNT(*) FROM model_thoughts) +
-  (SELECT COUNT(*) FROM tool_usages) +
-  (SELECT COUNT(*) FROM token_usages) +
-  (SELECT COUNT(*) FROM user_prompts) +
-  (SELECT COUNT(*) FROM interceptions)
-)::bigint as total_deleted;
+select
+	(
+		(select COUNT(*) from model_thoughts) + (select COUNT(*) from tool_usages)
+		+ (select COUNT(*) from token_usages)
+		+ (select COUNT(*) from user_prompts)
+		+ (select COUNT(*) from interceptions)
+	)::bigint as total_deleted;
 
 -- name: CountAIBridgeSessions :one
 select

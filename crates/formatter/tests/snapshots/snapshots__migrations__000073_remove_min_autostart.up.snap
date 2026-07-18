@@ -1,0 +1,10 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- drop "min_autostart_interval" column from "templates" table
+alter table templates drop column min_autostart_interval;
+
+-- rename "max_ttl" to "default_ttl" on "templates" table
+alter table templates rename column max_ttl to default_ttl;
+comment on column templates.default_ttl is 'The default duration for autostop for workspaces created from this template.';

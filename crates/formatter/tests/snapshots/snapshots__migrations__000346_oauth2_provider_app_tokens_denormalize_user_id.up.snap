@@ -1,0 +1,23 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Add user_id column to oauth2_provider_app_tokens for performance optimization
+-- This eliminates the need to join with api_keys table for authorization checks
+alter table oauth2_provider_app_tokens add column user_id uuid;
+
+-- Backfill existing records with user_id from the associated api_key
+update oauth2_provider_app_tokens
+set user_id = api_keys.user_id
+from api_keys
+where oauth2_provider_app_tokens.api_key_id = api_keys.id;
+
+-- Make user_id NOT NULL after backfilling
+alter table oauth2_provider_app_tokens alter column user_id set not null;
+
+-- Add foreign key constraint to maintain referential integrity
+alter table oauth2_provider_app_tokens add constraint fk_oauth2_provider_app_tokens_user_id foreign key (
+	user_id
+) references users (id) on delete cascade;
+
+comment on column oauth2_provider_app_tokens.user_id is 'Denormalized user ID for performance optimization in authorization checks';

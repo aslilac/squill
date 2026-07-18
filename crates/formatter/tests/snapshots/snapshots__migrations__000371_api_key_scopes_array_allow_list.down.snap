@@ -1,0 +1,24 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Recreate single-scope column and collapse arrays
+alter table api_keys add column scope api_key_scope default 'all'::api_key_scope not null;
+
+-- Collapse logic: prefer 'all', else 'application_connect', else 'all'
+update api_keys
+set
+	scope = case
+		when 'all'::api_key_scope = any(scopes) then 'all'::api_key_scope
+		when 'application_connect'::api_key_scope = any(scopes)
+			then 'application_connect'::api_key_scope
+		else 'all'::api_key_scope
+	end;
+
+-- Drop new columns
+alter table api_keys drop column allow_list;
+alter table api_keys drop column scopes;
+
+-- Note: We intentionally keep the expanded enum values to avoid dependency churn.
+-- If strict narrowing is required, create a new type with only ('all','application_connect'),
+-- cast column, drop the new type, and rename.

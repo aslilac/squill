@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_apps drop column open_in;
+
+drop type workspace_app_open_in;

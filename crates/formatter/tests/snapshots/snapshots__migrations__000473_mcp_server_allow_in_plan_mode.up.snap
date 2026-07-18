@@ -1,0 +1,5 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table mcp_server_configs add column allow_in_plan_mode boolean not null default false;

@@ -1,0 +1,5 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_builds drop constraint workspace_builds_deadline_below_max_deadline;

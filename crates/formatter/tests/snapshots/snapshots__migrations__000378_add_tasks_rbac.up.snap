@@ -1,0 +1,10 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Tasks RBAC.
+alter type api_key_scope add value if not exists 'task:create';
+alter type api_key_scope add value if not exists 'task:read';
+alter type api_key_scope add value if not exists 'task:update';
+alter type api_key_scope add value if not exists 'task:delete';
+alter type api_key_scope add value if not exists 'task:*';

@@ -1,0 +1,123 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type provisioner_job_timing_stage as enum (
+	'init',
+	'plan',
+	'graph',
+	'apply'
+);
+
+create table provisioner_job_timings (
+	job_id uuid not null references provisioner_jobs (id) on delete cascade,
+	started_at timestamp with time zone not null,
+	ended_at timestamp with time zone not null,
+	stage provisioner_job_timing_stage not null,
+	source text not null,
+	action text not null,
+	resource text not null
+);
+
+create view provisioner_job_stats as
+select
+	pj.id as job_id,
+	pj.job_status,
+	wb.workspace_id,
+	pj.worker_id,
+	pj.error,
+	pj.error_code,
+	pj.updated_at,
+	GREATEST(
+		EXTRACT(EPOCH from (pj.started_at - pj.created_at)),
+		0
+	) as queued_secs,
+	GREATEST(
+		EXTRACT(EPOCH from (pj.completed_at - pj.started_at)),
+		0
+	) as completion_secs,
+	GREATEST(
+		EXTRACT(EPOCH from (pj.canceled_at - pj.started_at)),
+		0
+	) as canceled_secs,
+	GREATEST(
+		EXTRACT(
+			EPOCH from (
+				MAX(
+					case
+						when pjt.stage = 'init'::provisioner_job_timing_stage
+							then pjt.ended_at
+					end
+				)
+				- MIN(
+					case
+						when pjt.stage = 'init'::provisioner_job_timing_stage
+							then pjt.started_at
+					end
+				)
+			)
+		),
+		0
+	) as init_secs,
+	GREATEST(
+		EXTRACT(
+			EPOCH from (
+				MAX(
+					case
+						when pjt.stage = 'plan'::provisioner_job_timing_stage
+							then pjt.ended_at
+					end
+				)
+				- MIN(
+					case
+						when pjt.stage = 'plan'::provisioner_job_timing_stage
+							then pjt.started_at
+					end
+				)
+			)
+		),
+		0
+	) as plan_secs,
+	GREATEST(
+		EXTRACT(
+			EPOCH from (
+				MAX(
+					case
+						when pjt.stage = 'graph'::provisioner_job_timing_stage
+							then pjt.ended_at
+					end
+				)
+				- MIN(
+					case
+						when pjt.stage = 'graph'::provisioner_job_timing_stage
+							then pjt.started_at
+					end
+				)
+			)
+		),
+		0
+	) as graph_secs,
+	GREATEST(
+		EXTRACT(
+			EPOCH from (
+				MAX(
+					case
+						when pjt.stage = 'apply'::provisioner_job_timing_stage
+							then pjt.ended_at
+					end
+				)
+				- MIN(
+					case
+						when pjt.stage = 'apply'::provisioner_job_timing_stage
+							then pjt.started_at
+					end
+				)
+			)
+		),
+		0
+	) as apply_secs
+from
+	provisioner_jobs pj
+	join workspace_builds wb on wb.job_id = pj.id
+	left join provisioner_job_timings pjt on pjt.job_id = pj.id
+group by pj.id, wb.workspace_id;

@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create index if not exists workspace_agents_auth_instance_id_deleted_idx on workspace_agents (
+	auth_instance_id,
+	deleted
+);

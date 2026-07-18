@@ -1,0 +1,10 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type new_login_type as enum ('password', 'github', 'oidc');
+alter table api_keys alter column login_type type new_login_type using (
+	login_type::text::new_login_type
+);
+drop type login_type;
+alter type new_login_type rename to login_type;

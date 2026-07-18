@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Remove the column from the table first (must happen before dropping the enum type)
+alter table template_version_presets drop column prebuild_status;
+
+-- Then drop the enum type
+drop type prebuild_status;

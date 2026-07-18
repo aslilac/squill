@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter type audit_action add value if not exists 'login';
+
+alter type audit_action add value if not exists 'logout';
+
+alter type resource_type add value if not exists 'api_key';

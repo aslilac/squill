@@ -1,0 +1,13 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_agent_stats rename to agent_stats;
+
+alter table agent_stats add column payload jsonb not null default '{}'::jsonb;
+alter table agent_stats drop column connections_by_proto,
+drop column connection_count,
+drop column rx_packets,
+drop column rx_bytes,
+drop column tx_packets,
+drop column tx_bytes;

@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table ai_seat_state;
+
+drop type ai_seat_usage_reason;

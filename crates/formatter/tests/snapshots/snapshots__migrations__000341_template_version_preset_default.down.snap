@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop index if exists idx_template_version_presets_default;
+alter table template_version_presets drop column if exists is_default;

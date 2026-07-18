@@ -1,0 +1,20 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table agent_stats (
+	id uuid not null,
+	primary key (id),
+	created_at timestamptz not null,
+	user_id uuid not null,
+	agent_id uuid not null,
+	workspace_id uuid not null,
+	template_id uuid not null,
+	payload jsonb not null
+);
+
+-- We use created_at for DAU analysis and pruning.
+create index idx_agent_stats_created_at on agent_stats using btree(created_at);
+
+-- We perform user grouping to analyze DAUs.
+create index idx_agent_stats_user_id on agent_stats using btree(user_id);

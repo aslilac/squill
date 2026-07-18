@@ -9,36 +9,38 @@ select * from replicas where updated_at > $1 and stopped_at is null;
 select * from replicas where id = $1;
 
 -- name: InsertReplica :one
-INSERT INTO replicas (
-    id,
-    created_at,
-    started_at,
-    updated_at,
-    hostname,
-    region_id,
-    relay_address,
-    version,
-    database_latency,
-	"primary",
-    cluster_host,
-    nats_port
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *;
+insert into replicas (id,
+created_at,
+started_at,
+updated_at,
+hostname,
+region_id,
+relay_address,
+version,
+database_latency,
+"primary",
+cluster_host,
+nats_port)
+values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+returning *;
 
 -- name: UpdateReplica :one
-UPDATE replicas SET
-    updated_at = $2,
-    started_at = $3,
-    stopped_at = $4,
-    relay_address = $5,
-    region_id = $6,
-    hostname = $7,
-    version = $8,
-    error = $9,
-    database_latency = $10,
+update replicas
+set
+	updated_at = $2,
+	started_at = $3,
+	stopped_at = $4,
+	relay_address = $5,
+	region_id = $6,
+	hostname = $7,
+	version = $8,
+	error = $9,
+	database_latency = $10,
 	"primary" = $11,
-    cluster_host = $12,
-    nats_port = $13
-WHERE id = $1 RETURNING *;
+	cluster_host = $12,
+	nats_port = $13
+where id = $1
+returning *;
 
 -- name: DeleteReplicasUpdatedBefore :exec
-DELETE FROM replicas WHERE updated_at < $1;
+delete from replicas where updated_at < $1;

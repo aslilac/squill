@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table only templates drop column if exists max_ttl;
+alter table only templates drop column if exists min_autostart_interval;

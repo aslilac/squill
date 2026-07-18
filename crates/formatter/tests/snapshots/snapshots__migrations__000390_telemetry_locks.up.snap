@@ -1,0 +1,19 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table telemetry_locks (
+	event_type text not null constraint telemetry_lock_event_type_constraint check (
+		event_type in ('aibridge_interceptions_summary')
+	),
+	period_ending_at timestamp with time zone not null,
+	primary key (event_type, period_ending_at)
+);
+
+comment on table telemetry_locks is 'Telemetry lock tracking table for deduplication of heartbeat events across replicas.';
+comment on column telemetry_locks.event_type is 'The type of event that was sent.';
+comment on column telemetry_locks.period_ending_at is 'The heartbeat period end timestamp.';
+
+create index idx_telemetry_locks_period_ending_at on telemetry_locks (
+	period_ending_at
+);

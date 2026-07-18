@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_builds add column daily_cost int not null default 0;
+alter table workspace_resources add column daily_cost int not null default 0;
+alter table groups add column quota_allowance int not null default 0;

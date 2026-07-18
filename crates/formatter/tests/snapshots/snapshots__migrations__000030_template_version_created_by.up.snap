@@ -1,0 +1,17 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table only template_versions add column if not exists created_by uuid references users (
+	id
+) on delete restrict;
+
+update template_versions
+set
+	created_by = (
+		select created_by
+		from templates
+		where template_versions.template_id = templates.id
+		limit 1
+	)
+where created_by is null;

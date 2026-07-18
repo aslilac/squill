@@ -1,0 +1,22 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table template_versions rename column git_auth_providers to external_auth_providers;
+
+alter table git_auth_links rename to external_auth_links;
+
+drop view template_version_with_user;
+-- If you need to update this view, put 'DROP VIEW template_version_with_user;' before this.
+create view template_version_with_user as
+select
+	template_versions.*,
+	coalesce(visible_users.avatar_url, '') as created_by_avatar_url,
+	coalesce(visible_users.username, '') as created_by_username
+from
+	template_versions
+	left join visible_users on template_versions.created_by = visible_users.id;
+
+comment on view template_version_with_user is 'Joins in the username + avatar url of the created by user.';
+
+comment on column template_versions.external_auth_providers is 'IDs of External auth providers for a specific template version';

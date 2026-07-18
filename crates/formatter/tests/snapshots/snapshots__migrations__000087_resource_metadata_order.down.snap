@@ -1,0 +1,10 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table workspace_resource_metadata drop column id;
+alter table workspace_resource_metadata drop constraint workspace_resource_metadata_name;
+alter table workspace_resource_metadata add constraint workspace_resource_metadata_pkey primary key (
+	workspace_resource_id,
+	key
+);

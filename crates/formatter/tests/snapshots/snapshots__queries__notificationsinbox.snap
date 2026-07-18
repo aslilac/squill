@@ -69,33 +69,22 @@ select * from inbox_notifications where id = $1;
 select COUNT(*) from inbox_notifications where user_id = $1 and read_at is null;
 
 -- name: InsertInboxNotification :one
-INSERT INTO
-    inbox_notifications (
-        id,
-        user_id,
-        template_id,
-        targets,
-        title,
-        content,
-        icon,
-        actions,
-        created_at
-    )
-VALUES
-    ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *;
+insert into inbox_notifications (id,
+user_id,
+template_id,
+targets,
+title,
+content,
+icon,
+actions,
+created_at)
+values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+returning *;
 
 -- name: UpdateInboxNotificationReadStatus :exec
-UPDATE
-    inbox_notifications
-SET
-    read_at = $1
-WHERE
-    id = $2;
+update inbox_notifications set read_at = $1 where id = $2;
 
 -- name: MarkAllInboxNotificationsAsRead :exec
-UPDATE
-	inbox_notifications
-SET
-	read_at = $1
-WHERE
-	user_id = $2 and read_at IS NULL;
+update inbox_notifications
+set read_at = $1
+where user_id = $2 and read_at is null;

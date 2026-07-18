@@ -56,70 +56,55 @@ order by build_number desc
 limit 1;
 
 -- name: GetLatestWorkspaceBuildsByWorkspaceIDs :many
-SELECT
-	DISTINCT ON (workspace_id)
-	*
-FROM
-	workspace_build_with_user AS workspace_builds
-WHERE
-	workspace_id = ANY(@ids :: uuid [ ])
-ORDER BY
-	workspace_id, build_number DESC -- latest first
-;
+select distinct on (workspace_id) *
+from workspace_build_with_user as workspace_builds
+where workspace_id = any(@ids::uuid[])
+order by
+	workspace_id,
+	build_number desc -- latest first
+	;
 
 -- name: InsertWorkspaceBuild :exec
-INSERT INTO
-	workspace_builds (
-		id,
-		created_at,
-		updated_at,
-		workspace_id,
-		template_version_id,
-		"build_number",
-		transition,
-		initiator_id,
-		job_id,
-		provisioner_state,
-		deadline,
-		max_deadline,
-		reason,
-		template_version_preset_id
-	)
-VALUES
-	($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
+insert into workspace_builds (id,
+created_at,
+updated_at,
+workspace_id,
+template_version_id,
+build_number,
+transition,
+initiator_id,
+job_id,
+provisioner_state,
+deadline,
+max_deadline,
+reason,
+template_version_preset_id)
+values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
 
 -- name: UpdateWorkspaceBuildCostByID :exec
-UPDATE
-	workspace_builds
-SET
-	daily_cost = $2
-WHERE
-	id = $1;
+update workspace_builds set daily_cost = $2 where id = $1;
 
 -- name: UpdateWorkspaceBuildDeadlineByID :exec
-UPDATE
-	workspace_builds
-SET
+update workspace_builds
+set
 	deadline = @deadline::timestamptz,
 	max_deadline = @max_deadline::timestamptz,
 	updated_at = @updated_at::timestamptz
-FROM
-	workspaces
-WHERE
+from workspaces
+where
 	workspace_builds.id = @id::uuid
-	AND workspace_builds.workspace_id = workspaces.id
+	and workspace_builds.workspace_id = workspaces.id
 	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
 	-- are managed by the reconciliation loop, not the lifecycle executor which handles
 	-- deadline and max_deadline
-	AND workspaces.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID;
+	and workspaces.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid;
 
 -- name: UpdateWorkspaceBuildProvisionerStateByID :exec
-UPDATE
-	workspace_builds
-SET
+update workspace_builds
+set
 	provisioner_state = @provisioner_state::bytea,
 	updated_at = @updated_at::timestamptz
-WHERE id = @id::uuid;
+where id = @id::uuid;
 
 -- name: UpdateWorkspaceBuildNotifiedAutostopDeadline :exec
 -- Stamps the deadline value that an autostop reminder was last sent for. Once
@@ -127,12 +112,11 @@ WHERE id = @id::uuid;
 -- lifecycle executor will not send another for this deadline, which makes the
 -- reminder idempotent and HA-safe. It re-arms automatically when the deadline
 -- changes (e.g. an activity bump).
-UPDATE
-	workspace_builds
-SET
+update workspace_builds
+set
 	notified_autostop_deadline = @notified_autostop_deadline::timestamptz,
 	updated_at = @updated_at::timestamptz
-WHERE id = @id::uuid;
+where id = @id::uuid;
 
 -- name: GetActiveWorkspaceBuildsByTemplateID :many
 select wb.*
@@ -189,13 +173,12 @@ where
 order by tv.name asc, wb.build_number desc;
 
 -- name: UpdateWorkspaceBuildFlagsByID :exec
-UPDATE
-	workspace_builds
-SET
+update workspace_builds
+set
 	has_ai_task = @has_ai_task,
 	has_external_agent = @has_external_agent,
 	updated_at = @updated_at::timestamptz
-WHERE id = @id::uuid;
+where id = @id::uuid;
 
 -- name: GetWorkspaceBuildMetricsByResourceID :one
 -- Returns build metadata for e2e workspace build duration metrics.
@@ -247,19 +230,17 @@ from
 where workspace_builds.id = @workspace_build_id;
 
 -- name: GetLatestWorkspaceBuildWithStatusByWorkspaceID :one
-SELECT
-	workspace_builds.transition, workspace_builds.build_number, provisioner_jobs.job_status,
-	sqlc.embed(workspaces) -- Used for dbauthz fetch() checks
-FROM
+select
+	workspace_builds.transition,
+	workspace_builds.build_number,
+	provisioner_jobs.job_status,
+	sqlc.embed(
+		workspaces
+	) -- Used for dbauthz fetch() checks
+from
 	workspace_builds
-INNER JOIN
-	provisioner_jobs ON workspace_builds.job_id = provisioner_jobs.id
-INNER JOIN
-	workspaces ON workspace_builds.workspace_id = workspaces.id
-WHERE
-	workspace_builds.workspace_id = $1 AND
-	workspaces.deleted = false
-ORDER BY
-	workspace_builds.build_number desc
-	LIMIT
-	1;
+	inner join provisioner_jobs on workspace_builds.job_id = provisioner_jobs.id
+	inner join workspaces on workspace_builds.workspace_id = workspaces.id
+where workspace_builds.workspace_id = $1 and workspaces.deleted = false
+order by workspace_builds.build_number desc
+limit 1;

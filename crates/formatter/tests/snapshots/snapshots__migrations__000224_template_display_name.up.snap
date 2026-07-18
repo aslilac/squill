@@ -1,0 +1,20 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Update the template_with_names view by recreating it.
+drop view template_with_names;
+create view template_with_names as
+select
+	templates.*,
+	coalesce(visible_users.avatar_url, '') as created_by_avatar_url,
+	coalesce(visible_users.username, '') as created_by_username,
+	coalesce(organizations.name, '') as organization_name,
+	coalesce(organizations.display_name, '') as organization_display_name,
+	coalesce(organizations.icon, '') as organization_icon
+from
+	templates
+	left join visible_users on templates.created_by = visible_users.id
+	left join organizations on templates.organization_id = organizations.id;
+
+comment on view template_with_names is 'Joins in the display name information such as username, avatar, and organization name.';

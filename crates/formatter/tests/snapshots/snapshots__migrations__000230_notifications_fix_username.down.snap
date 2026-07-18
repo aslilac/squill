@@ -1,0 +1,11 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+update notification_templates
+set
+	actions = REPLACE(
+		actions::text,
+		'@{{.UserUsername}}',
+		'@{{.UserName}}'
+	)::jsonb;

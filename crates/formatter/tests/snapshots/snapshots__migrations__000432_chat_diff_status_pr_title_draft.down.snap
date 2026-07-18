@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table chat_diff_statuses drop column pull_request_title;
+alter table chat_diff_statuses drop column pull_request_draft;

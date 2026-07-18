@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop index if exists idx_chat_messages_created_at;
+
+alter table chat_messages drop column total_cost_micros;

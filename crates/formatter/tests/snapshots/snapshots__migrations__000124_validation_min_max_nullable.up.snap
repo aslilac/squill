@@ -1,0 +1,12 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table template_version_parameters alter column validation_min drop not null;
+alter table template_version_parameters alter column validation_max drop not null;
+update template_version_parameters
+set validation_min = null
+where validation_min = 0;
+update template_version_parameters
+set validation_max = null
+where validation_max = 0;

@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create type provisioner_daemon_status as enum ('offline', 'idle', 'busy');
+
+comment on type provisioner_daemon_status is 'The status of a provisioner daemon.';

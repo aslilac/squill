@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- We can't guarantee that an IP will always be available, and omitting an IP
+-- is preferable to not creating a connection log at all.
+alter table connection_logs alter column ip drop not null;
