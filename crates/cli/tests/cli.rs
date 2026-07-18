@@ -328,3 +328,139 @@ fn stdin_uses_cwd_config() {
     assert_eq!(String::from_utf8_lossy(&output.stdout), "SELECT 1;\n");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+// ---- TREE-108: embedded SQL through the CLI ----
+
+const RS_FIXTURE: &str = r####"fn q(pool: &PgPool) {
+    let _ = sqlx::query!("SELECT id,name FROM users WHERE org=$1 ORDER BY name", org);
+}
+"####;
+
+#[test]
+fn explicit_rust_path_formats_sqlx_macros() {
+    let dir = temp_dir("embedrs");
+    let file = dir.join("q.rs");
+    std::fs::write(&file, RS_FIXTURE).expect("write");
+    let status = squill().arg("fmt").arg(&file).status().expect("run");
+    assert!(status.success());
+    let out = std::fs::read_to_string(&file).expect("read");
+    assert!(
+        out.contains(r#""select id, name from users where org = $1 order by name""#),
+        "sqlx macro not formatted: {out}"
+    );
+    // Idempotent second pass.
+    let before = out.clone();
+    let status = squill().arg("fmt").arg(&file).status().expect("run");
+    assert!(status.success());
+    assert_eq!(std::fs::read_to_string(&file).expect("read"), before);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn directory_recursion_needs_embed_flag() {
+    let dir = temp_dir("embeddir");
+    std::fs::write(dir.join("q.rs"), RS_FIXTURE).expect("write");
+    std::fs::write(dir.join("plain.sql"), "SELECT   1;\n").expect("write");
+
+    // Without --embed: only the .sql file changes.
+    let status = squill().arg("fmt").arg(&dir).status().expect("run");
+    assert!(status.success());
+    assert_eq!(
+        std::fs::read_to_string(dir.join("q.rs")).expect("read"),
+        RS_FIXTURE
+    );
+    assert_eq!(
+        std::fs::read_to_string(dir.join("plain.sql")).expect("read"),
+        "select 1;\n"
+    );
+
+    // With --embed: the .rs file formats too, and --check is then clean.
+    let status = squill()
+        .args(["fmt", "--embed"])
+        .arg(&dir)
+        .status()
+        .expect("run");
+    assert!(status.success());
+    assert!(
+        std::fs::read_to_string(dir.join("q.rs"))
+            .expect("read")
+            .contains("select id, name from users"),
+    );
+    let status = squill()
+        .args(["fmt", "--embed", "--check"])
+        .arg(&dir)
+        .status()
+        .expect("run");
+    assert!(status.success(), "--check after --embed fmt must be clean");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn check_mode_diffs_host_files() {
+    let dir = temp_dir("embedcheck");
+    let file = dir.join("q.rs");
+    std::fs::write(&file, RS_FIXTURE).expect("write");
+    let output = squill()
+        .args(["fmt", "--check"])
+        .arg(&file)
+        .output()
+        .expect("run");
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("+"), "diff expected: {stdout}");
+    assert_eq!(std::fs::read_to_string(&file).expect("read"), RS_FIXTURE);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn go_host_files_format() {
+    let dir = temp_dir("embedgo");
+    let file = dir.join("q.go");
+    std::fs::write(
+        &file,
+        "package main\n\nfunc f(db *sql.DB) {\n\tdb.QueryRow(`SELECT count(*) FROM t WHERE  a=1`)\n}\n",
+    )
+    .expect("write");
+    let status = squill().arg("fmt").arg(&file).status().expect("run");
+    assert!(status.success());
+    assert!(
+        std::fs::read_to_string(&file)
+            .expect("read")
+            .contains("`select count(*) from t where a = 1`"),
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn custom_embed_query_file() {
+    let dir = temp_dir("embedquery");
+    // A query that only matches `my_sql!` macros.
+    std::fs::write(
+        dir.join("only_mine.scm"),
+        "((macro_invocation macro: (identifier) @_name (token_tree (string_literal) @sql.postgres)) (#eq? @_name \"my_sql\"))",
+    )
+    .expect("write");
+    let file = dir.join("q.rs");
+    std::fs::write(
+        &file,
+        "fn f() { my_sql!(\"SELECT   1\"); sqlx::query!(\"SELECT   2\"); }\n",
+    )
+    .expect("write");
+    let status = squill()
+        .args(["fmt", "--embed-query"])
+        .arg(dir.join("only_mine.scm"))
+        .arg(&file)
+        .status()
+        .expect("run");
+    assert!(status.success());
+    let out = std::fs::read_to_string(&file).expect("read");
+    assert!(
+        out.contains("my_sql!(\"select 1\")"),
+        "custom query missed: {out}"
+    );
+    assert!(
+        out.contains("SELECT   2"),
+        "default macro must be untouched: {out}"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}

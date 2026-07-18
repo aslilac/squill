@@ -37,6 +37,10 @@ Options:
   --quote-idents <MODE>   unquote-safe (default) | always
   --at-params             Treat sqlc-style @name as parameters (Postgres)
   --no-config             Ignore squill.toml files
+  --embed                 Also format SQL embedded in .rs/.go files when
+                          recursing directories (explicit host paths
+                          always format)
+  --embed-query <SCM>     Override the tree-sitter extraction query
   -h, --help              Show this help
 
 Configuration: the nearest squill.toml at or above each formatted file
@@ -50,6 +54,10 @@ struct Args {
     stdin_mode: bool,
     strict: bool,
     no_config: bool,
+    /// Include .rs/.go host files when recursing directories.
+    embed: bool,
+    /// Override the tree-sitter extraction query (.scm source).
+    embed_query: Option<String>,
     overrides: PartialOptions,
     paths: Vec<PathBuf>,
 }
@@ -67,6 +75,8 @@ fn parse_args() -> Result<Args, String> {
         stdin_mode: false,
         strict: false,
         no_config: false,
+        embed: false,
+        embed_query: None,
         overrides: PartialOptions::default(),
         paths: Vec::new(),
     };
@@ -80,6 +90,14 @@ fn parse_args() -> Result<Args, String> {
             "--stdin" => args.stdin_mode = true,
             "--strict" => args.strict = true,
             "--no-config" => args.no_config = true,
+            "--embed" => args.embed = true,
+            "--embed-query" => {
+                let path = value(&mut argv, "--embed-query")?;
+                args.embed_query = Some(
+                    std::fs::read_to_string(&path)
+                        .map_err(|err| format!("--embed-query {path}: {err}"))?,
+                );
+            }
             "--at-params" => args.overrides.at_params = Some(true),
             "--dialect" => {
                 args.overrides.dialect =
@@ -149,6 +167,23 @@ fn resolve_options(
     Ok(options)
 }
 
+/// The embed host for a path, by extension.
+fn host_for(path: &Path) -> Option<embed::Host> {
+    match path.extension()?.to_str()? {
+        "rs" => Some(embed::Host::Rust),
+        "go" => Some(embed::Host::Go),
+        _ => None,
+    }
+}
+
+/// Default extraction query for a host.
+fn default_query(host: embed::Host) -> &'static str {
+    match host {
+        embed::Host::Rust => embed::RUST_SQLX_QUERY,
+        embed::Host::Go => embed::GO_DB_QUERY,
+    }
+}
+
 /// One formatted source, with human-readable diagnostics.
 struct Outcome {
     formatted: String,
@@ -193,7 +228,7 @@ fn line_col(source: &str, offset: usize) -> (usize, usize) {
     (line, col)
 }
 
-fn collect_files(path: &Path, out: &mut Vec<PathBuf>) -> std::io::Result<()> {
+fn collect_files(path: &Path, embed: bool, out: &mut Vec<PathBuf>) -> std::io::Result<()> {
     if path.is_dir() {
         let mut entries: Vec<_> = std::fs::read_dir(path)?
             .map(|entry| entry.map(|e| e.path()))
@@ -201,8 +236,11 @@ fn collect_files(path: &Path, out: &mut Vec<PathBuf>) -> std::io::Result<()> {
         entries.sort();
         for entry in entries {
             if entry.is_dir() {
-                collect_files(&entry, out)?;
-            } else if entry.extension().is_some_and(|ext| ext == "sql") {
+                collect_files(&entry, embed, out)?;
+            } else if entry
+                .extension()
+                .is_some_and(|ext| ext == "sql" || (embed && (ext == "rs" || ext == "go")))
+            {
                 out.push(entry);
             }
         }
@@ -265,7 +303,7 @@ fn main() -> ExitCode {
 
     let mut files = Vec::new();
     for path in &args.paths {
-        if let Err(err) = collect_files(path, &mut files) {
+        if let Err(err) = collect_files(path, args.embed, &mut files) {
             eprintln!("squill: {}: {err}", path.display());
             return ExitCode::from(2);
         }
@@ -300,7 +338,23 @@ fn main() -> ExitCode {
         .map(|(path, options)| {
             let source = std::fs::read_to_string(path)
                 .map_err(|err| format!("{}: {err}", path.display()))?;
-            let outcome = format_source(&source, options);
+            let outcome = match host_for(path) {
+                Some(host) => {
+                    // SQL embedded in a host-language file (sqlx macros,
+                    // database/sql calls) via the tree-sitter engine.
+                    let query = args
+                        .embed_query
+                        .as_deref()
+                        .unwrap_or_else(|| default_query(host));
+                    let formatted = embed::format_embedded(&source, host, query, options)
+                        .map_err(|err| format!("{}: {err}", path.display()))?;
+                    Outcome {
+                        formatted,
+                        diagnostics: Vec::new(),
+                    }
+                }
+                None => format_source(&source, options),
+            };
             Ok(FileResult {
                 path: path.clone(),
                 source,

@@ -30,6 +30,12 @@ lower|upper`, `--quote-idents unquote-safe|always`, `--at-params` for
 sqlc-style `@name` parameters, `--strict` to fail on statements that
 could not be parsed.
 
+SQL embedded in host code formats too: `squill fmt src/queries.rs`
+rewrites the string literals inside `sqlx::query!`-family macros (and
+`database/sql` calls in Go). Directories include host files with
+`--embed`; `--embed-query custom.scm` swaps the tree-sitter extraction
+query.
+
 ## Design
 
 - **`crates/parser`** — hand-written dual-dialect lexer (lossless: every

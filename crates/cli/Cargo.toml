@@ -8,6 +8,7 @@ parser.workspace = true
 formatter.workspace = true
 rayon = "1.12.0"
 similar = "3.1.1"
+embed = { version = "0.1.0", path = "../embed" }
 
 [[bin]]
 name = "squill"
