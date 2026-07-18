@@ -390,6 +390,8 @@ fn main() -> ExitCode {
             } else if let Err(err) = std::fs::write(&result.path, &result.outcome.formatted) {
                 eprintln!("squill: {path}: {err}");
                 io_error = true;
+            } else {
+                println!("{path}");
             }
         } else if args.stdout_mode {
             print!("{}", result.outcome.formatted);
