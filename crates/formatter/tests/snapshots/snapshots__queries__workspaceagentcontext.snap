@@ -3,17 +3,21 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: UpsertWorkspaceAgentContextSnapshot :one
-insert into workspace_agent_context_snapshots (workspace_agent_id,
-version,
-aggregate_hash,
-snapshot_error,
-received_at)
+insert into workspace_agent_context_snapshots (
+	workspace_agent_id,
+	version,
+	aggregate_hash,
+	snapshot_error,
+	received_at
+)
 values
-	(@workspace_agent_id,
-	@version,
-	@aggregate_hash,
-	@snapshot_error,
-	@received_at)
+	(
+		@workspace_agent_id,
+		@version,
+		@aggregate_hash,
+		@snapshot_error,
+		@received_at
+	)
 on conflict
 	(workspace_agent_id) do update set
 		version = EXCLUDED.version,
@@ -23,29 +27,33 @@ on conflict
 returning *;
 
 -- name: UpsertWorkspaceAgentContextResource :one
-insert into workspace_agent_context_resources (workspace_agent_id,
-source,
-body_kind,
-body,
-content_hash,
-size_bytes,
-status,
-error,
-source_path,
-created_at,
-updated_at)
+insert into workspace_agent_context_resources (
+	workspace_agent_id,
+	source,
+	body_kind,
+	body,
+	content_hash,
+	size_bytes,
+	status,
+	error,
+	source_path,
+	created_at,
+	updated_at
+)
 values
-	(@workspace_agent_id,
-	@source,
-	@body_kind,
-	@body,
-	@content_hash,
-	@size_bytes,
-	@status,
-	@error,
-	@source_path,
-	@now,
-	@now)
+	(
+		@workspace_agent_id,
+		@source,
+		@body_kind,
+		@body,
+		@content_hash,
+		@size_bytes,
+		@status,
+		@error,
+		@source_path,
+		@now,
+		@now
+	)
 on conflict
 	(workspace_agent_id,
 	source) do update set

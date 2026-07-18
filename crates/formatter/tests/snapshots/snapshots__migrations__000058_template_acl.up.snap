@@ -22,9 +22,7 @@ create table group_members (
 );
 
 -- Insert a group for every organization (which should just be 1).
-insert into groups (id,
-name,
-organization_id)
+insert into groups (id, name, organization_id)
 select id, 'Everyone' as name, id
 from organizations;
 

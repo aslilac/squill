@@ -28,25 +28,29 @@ where
 order by name asc;
 
 -- name: InsertAIProvider :one
-insert into ai_providers (id,
-type,
-name,
-display_name,
-icon,
-enabled,
-base_url,
-settings,
-settings_key_id)
+insert into ai_providers (
+	id,
+	type,
+	name,
+	display_name,
+	icon,
+	enabled,
+	base_url,
+	settings,
+	settings_key_id
+)
 values
-	(@id::uuid,
-	@type::ai_provider_type,
-	@name::text,
-	sqlc.narg('display_name')::text,
-	@icon::text,
-	@enabled::boolean,
-	@base_url::text,
-	sqlc.narg('settings')::text,
-	sqlc.narg('settings_key_id')::text)
+	(
+		@id::uuid,
+		@type::ai_provider_type,
+		@name::text,
+		sqlc.narg('display_name')::text,
+		@icon::text,
+		@enabled::boolean,
+		@base_url::text,
+		sqlc.narg('settings')::text,
+		sqlc.narg('settings_key_id')::text
+	)
 returning *;
 
 -- name: UpdateAIProvider :one

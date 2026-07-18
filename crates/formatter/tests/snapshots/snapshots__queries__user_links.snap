@@ -14,15 +14,17 @@ select * from user_links where user_id = $1 and login_type = $2;
 select * from user_links where user_id = $1;
 
 -- name: InsertUserLink :one
-insert into user_links (user_id,
-login_type,
-linked_id,
-oauth_access_token,
-oauth_access_token_key_id,
-oauth_refresh_token,
-oauth_refresh_token_key_id,
-oauth_expiry,
-claims)
+insert into user_links (
+	user_id,
+	login_type,
+	linked_id,
+	oauth_access_token,
+	oauth_access_token_key_id,
+	oauth_refresh_token,
+	oauth_refresh_token_key_id,
+	oauth_expiry,
+	claims
+)
 values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 returning *;
 

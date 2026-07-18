@@ -5,35 +5,39 @@ expression: formatted
 -- updated_at is the retention clock used by DeleteOldChatDebugRuns.
 -- Set it on every write to keep retention semantics correct.
 -- name: InsertChatDebugRun :one
-insert into chat_debug_runs (chat_id,
-root_chat_id,
-parent_chat_id,
-model_config_id,
-trigger_message_id,
-history_tip_message_id,
-kind,
-status,
-provider,
-model,
-summary,
-started_at,
-updated_at,
-finished_at)
+insert into chat_debug_runs (
+	chat_id,
+	root_chat_id,
+	parent_chat_id,
+	model_config_id,
+	trigger_message_id,
+	history_tip_message_id,
+	kind,
+	status,
+	provider,
+	model,
+	summary,
+	started_at,
+	updated_at,
+	finished_at
+)
 values
-	(@chat_id::uuid,
-	sqlc.narg('root_chat_id')::uuid,
-	sqlc.narg('parent_chat_id')::uuid,
-	sqlc.narg('model_config_id')::uuid,
-	sqlc.narg('trigger_message_id')::bigint,
-	sqlc.narg('history_tip_message_id')::bigint,
-	@kind::text,
-	@status::text,
-	sqlc.narg('provider')::text,
-	sqlc.narg('model')::text,
-	COALESCE(sqlc.narg('summary')::jsonb, '{}'::jsonb),
-	COALESCE(sqlc.narg('started_at')::timestamptz, NOW()),
-	COALESCE(sqlc.narg('updated_at')::timestamptz, NOW()),
-	sqlc.narg('finished_at')::timestamptz)
+	(
+		@chat_id::uuid,
+		sqlc.narg('root_chat_id')::uuid,
+		sqlc.narg('parent_chat_id')::uuid,
+		sqlc.narg('model_config_id')::uuid,
+		sqlc.narg('trigger_message_id')::bigint,
+		sqlc.narg('history_tip_message_id')::bigint,
+		@kind::text,
+		@status::text,
+		sqlc.narg('provider')::text,
+		sqlc.narg('model')::text,
+		COALESCE(sqlc.narg('summary')::jsonb, '{}'::jsonb),
+		COALESCE(sqlc.narg('started_at')::timestamptz, NOW()),
+		COALESCE(sqlc.narg('updated_at')::timestamptz, NOW()),
+		sqlc.narg('finished_at')::timestamptz
+	)
 returning *;
 
 -- name: UpdateChatDebugRun :one
@@ -90,22 +94,24 @@ with
 		where
 			id = @run_id::uuid and chat_id = @chat_id::uuid and finished_at is null
 		returning chat_id
-	) insert into chat_debug_steps (run_id,
-chat_id,
-step_number,
-operation,
-status,
-history_tip_message_id,
-assistant_message_id,
-normalized_request,
-normalized_response,
-usage,
-attempts,
-error,
-metadata,
-started_at,
-updated_at,
-finished_at)
+	) insert into chat_debug_steps (
+	run_id,
+	chat_id,
+	step_number,
+	operation,
+	status,
+	history_tip_message_id,
+	assistant_message_id,
+	normalized_request,
+	normalized_response,
+	usage,
+	attempts,
+	error,
+	metadata,
+	started_at,
+	updated_at,
+	finished_at
+)
 select
 	@run_id::uuid,
 	locked_run.chat_id,

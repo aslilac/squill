@@ -759,18 +759,20 @@ with
 			and was.user_id = mb.user_id
 			and was.connection_median_latency_ms > 0
 		group by mb.start_time, mb.template_id, mb.user_id
-	) insert into template_usage_stats as tus (start_time,
-end_time,
-template_id,
-user_id,
-usage_mins,
-median_latency_ms,
-ssh_mins,
-sftp_mins,
-reconnecting_pty_mins,
-vscode_mins,
-jetbrains_mins,
-app_usage_mins) (
+	) insert into template_usage_stats as tus (
+	start_time,
+	end_time,
+	template_id,
+	user_id,
+	usage_mins,
+	median_latency_ms,
+	ssh_mins,
+	sftp_mins,
+	reconnecting_pty_mins,
+	vscode_mins,
+	jetbrains_mins,
+	app_usage_mins
+) (
 	select
 		stats.start_time,
 		stats.end_time,

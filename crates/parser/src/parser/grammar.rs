@@ -634,7 +634,10 @@ fn values_clause(p: &mut Parser<'_>) -> PResult {
     p.start(SyntaxKind::ValuesClause);
     p.expect_kw("values")?;
     loop {
+        // Wrapped so long rows format as indented blocks.
+        p.start(SyntaxKind::ElementList);
         paren_expr_list(p)?;
+        p.finish();
         if !p.eat(SyntaxKind::Comma) {
             break;
         }

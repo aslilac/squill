@@ -3,14 +3,16 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertTemplateVersionVariable :one
-insert into template_version_variables (template_version_id,
-name,
-description,
-type,
-value,
-default_value,
-required,
-sensitive)
+insert into template_version_variables (
+	template_version_id,
+	name,
+	description,
+	type,
+	value,
+	default_value,
+	required,
+	sensitive
+)
 values ($1, $2, $3, $4, $5, $6, $7, $8)
 returning *;
 

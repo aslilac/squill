@@ -3,9 +3,7 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- This ensures a default everyone group exists for default org.
-insert into groups (name,
-id,
-organization_id)
+insert into groups (name, id, organization_id)
 select
 	-- This is a special keyword that must be exactly this.
 	'Everyone',

@@ -6,13 +6,10 @@ expression: formatted
 -- The default proxy is implied and not actually stored in the database.
 -- So we need to store it's configuration here for display purposes.
 -- The functional values are immutable and controlled implicitly.
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values
-	('default_proxy_display_name',
-	@display_name::text),
-	('default_proxy_icon_url',
-	@icon_url::text)
+	('default_proxy_display_name', @display_name::text),
+	('default_proxy_icon_url', @icon_url::text)
 on conflict
 	(key) do update set value = EXCLUDED.value where
 		site_configs.key = EXCLUDED.key;
@@ -41,8 +38,7 @@ insert into site_configs (key, value) values ('derp_mesh_key', $1);
 select value from site_configs where key = 'derp_mesh_key';
 
 -- name: UpsertLastUpdateCheck :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values ('last_update_check', $1)
 on conflict
 	(key) do update set value = $1 where site_configs.key = 'last_update_check';
@@ -51,8 +47,7 @@ on conflict
 select value from site_configs where key = 'last_update_check';
 
 -- name: UpsertAnnouncementBanners :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values ('announcement_banners', $1)
 on conflict
 	(key) do update set value = $1 where
@@ -62,8 +57,7 @@ on conflict
 select value from site_configs where key = 'announcement_banners';
 
 -- name: UpsertLogoURL :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values ('logo_url', $1)
 on conflict (key) do update set value = $1 where site_configs.key = 'logo_url';
 
@@ -71,8 +65,7 @@ on conflict (key) do update set value = $1 where site_configs.key = 'logo_url';
 select value from site_configs where key = 'logo_url';
 
 -- name: UpsertApplicationName :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values ('application_name', $1)
 on conflict
 	(key) do update set value = $1 where site_configs.key = 'application_name';
@@ -88,8 +81,7 @@ select
 	)::text as health_settings;
 
 -- name: UpsertHealthSettings :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values ('health_settings', $1)
 on conflict
 	(key) do update set value = $1 where site_configs.key = 'health_settings';
@@ -102,8 +94,7 @@ select
 	)::text as notifications_settings;
 
 -- name: UpsertNotificationsSettings :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values ('notifications_settings', $1)
 on conflict
 	(key) do update set value = $1 where
@@ -117,8 +108,7 @@ select
 	)::text as prebuilds_settings;
 
 -- name: UpsertPrebuildsSettings :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values ('prebuilds_settings', $1)
 on conflict
 	(key) do update set value = $1 where site_configs.key = 'prebuilds_settings';
@@ -127,8 +117,7 @@ on conflict
 select value from site_configs where site_configs.key = $1;
 
 -- name: UpsertRuntimeConfig :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values ($1, $2)
 on conflict (key) do update set value = $2 where site_configs.key = $1;
 
@@ -141,11 +130,12 @@ from site_configs
 where key = 'oauth2_github_default_eligible';
 
 -- name: UpsertOAuth2GithubDefaultEligible :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values
-	('oauth2_github_default_eligible',
-	case when sqlc.arg(eligible)::bool then 'true' else 'false' end)
+	(
+		'oauth2_github_default_eligible',
+		case when sqlc.arg(eligible)::bool then 'true' else 'false' end
+	)
 on conflict
 	(key) do update set
 		value = case
@@ -154,13 +144,10 @@ on conflict
 		end where site_configs.key = 'oauth2_github_default_eligible';
 
 -- name: UpsertWebpushVAPIDKeys :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values
-	('webpush_vapid_public_key',
-	@vapid_public_key::text),
-	('webpush_vapid_private_key',
-	@vapid_private_key::text)
+	('webpush_vapid_public_key', @vapid_public_key::text),
+	('webpush_vapid_private_key', @vapid_private_key::text)
 on conflict
 	(key) do update set value = EXCLUDED.value where
 		site_configs.key = EXCLUDED.key;
@@ -208,8 +195,7 @@ select
 	)::boolean as include_default_system_prompt;
 
 -- name: UpsertChatSystemPrompt :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values ('agents_chat_system_prompt', $1)
 on conflict
 	(key) do update set value = $1 where
@@ -227,8 +213,7 @@ select
 	)::text as plan_mode_instructions;
 
 -- name: UpsertChatPlanModeInstructions :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values ('agents_chat_plan_mode_instructions', $1)
 on conflict
 	(key) do update set value = $1 where
@@ -246,8 +231,7 @@ select
 	)::text as model_config_id;
 
 -- name: UpsertChatExploreModelOverride :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values ('agents_chat_explore_model_override', $1)
 on conflict
 	(key) do update set value = $1 where
@@ -265,8 +249,7 @@ select
 	)::text as model_config_id;
 
 -- name: UpsertChatGeneralModelOverride :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values ('agents_chat_general_model_override', $1)
 on conflict
 	(key) do update set value = $1 where
@@ -284,8 +267,7 @@ select
 	)::text as model_config_id;
 
 -- name: UpsertChatTitleGenerationModelOverride :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values ('agents_chat_title_generation_model_override', $1)
 on conflict
 	(key) do update set value = $1 where
@@ -303,8 +285,7 @@ select
 	)::text as model_config_id;
 
 -- name: UpsertChatCompactionModelOverride :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values ('agents_chat_compaction_model_override', $1)
 on conflict
 	(key) do update set value = $1 where
@@ -322,11 +303,12 @@ select
 	)::boolean as enable_desktop;
 
 -- name: UpsertChatDesktopEnabled :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values
-	('agents_desktop_enabled',
-	case when sqlc.arg(enable_desktop)::bool then 'true' else 'false' end)
+	(
+		'agents_desktop_enabled',
+		case when sqlc.arg(enable_desktop)::bool then 'true' else 'false' end
+	)
 on conflict
 	(key) do update set
 		value = case
@@ -349,8 +331,7 @@ select
 -- for the experimental chat advisor. Callers marshal codersdk.AdvisorConfig
 -- to JSON before invoking this query.
 -- name: UpsertChatAdvisorConfig :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values ('agents_advisor_config', $1)
 on conflict
 	(key) do update set value = $1 where
@@ -364,8 +345,7 @@ select
 	)::text as provider;
 
 -- name: UpsertChatComputerUseProvider :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values ('agents_computer_use_provider', sqlc.arg(provider))
 on conflict
 	(key) do update set value = sqlc.arg(provider) where
@@ -388,11 +368,12 @@ select
 -- UpsertChatDebugLoggingAllowUsers updates the runtime admin setting that
 -- allows users to opt into chat debug logging.
 -- name: UpsertChatDebugLoggingAllowUsers :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values
-	('agents_chat_debug_logging_allow_users',
-	case when sqlc.arg(allow_users)::bool then 'true' else 'false' end)
+	(
+		'agents_chat_debug_logging_allow_users',
+		case when sqlc.arg(allow_users)::bool then 'true' else 'false' end
+	)
 on conflict
 	(key) do update set
 		value = case
@@ -416,11 +397,12 @@ select
 -- UpsertChatPersonalModelOverridesEnabled updates whether users may configure
 -- personal chat model overrides.
 -- name: UpsertChatPersonalModelOverridesEnabled :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values
-	('agents_chat_personal_model_overrides_enabled',
-	case when sqlc.arg(enabled)::bool then 'true' else 'false' end)
+	(
+		'agents_chat_personal_model_overrides_enabled',
+		case when sqlc.arg(enabled)::bool then 'true' else 'false' end
+	)
 on conflict
 	(key) do update set
 		value = case when sqlc.arg(enabled)::bool then 'true' else 'false' end where
@@ -455,14 +437,15 @@ select
 	)::boolean as include_default_system_prompt;
 
 -- name: UpsertChatIncludeDefaultSystemPrompt :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values
-	('agents_chat_include_default_system_prompt',
-	case
-		when sqlc.arg(include_default_system_prompt)::bool then 'true'
-		else 'false'
-	end)
+	(
+		'agents_chat_include_default_system_prompt',
+		case
+			when sqlc.arg(include_default_system_prompt)::bool then 'true'
+			else 'false'
+		end
+	)
 on conflict
 	(key) do update set
 		value = case
@@ -480,16 +463,14 @@ select
 	)::text as workspace_ttl;
 
 -- name: UpsertChatTemplateAllowlist :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values ('agents_template_allowlist', @template_allowlist)
 on conflict
 	(key) do update set value = @template_allowlist where
 		site_configs.key = 'agents_template_allowlist';
 
 -- name: UpsertChatWorkspaceTTL :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values ('agents_workspace_ttl', @workspace_ttl::text)
 on conflict
 	(key) do update set value = @workspace_ttl::text where
@@ -511,8 +492,7 @@ select
 	)::integer as retention_days;
 
 -- name: UpsertChatRetentionDays :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values ('agents_chat_retention_days', cast (@retention_days as integer) :: text)
 on conflict
 	(key) do update set value = cast (@retention_days as integer) :: text where
@@ -531,11 +511,12 @@ select
 	)::integer as debug_retention_days;
 
 -- name: UpsertChatDebugRetentionDays :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values
-	('agents_chat_debug_retention_days',
-	cast (@debug_retention_days as integer) :: text)
+	(
+		'agents_chat_debug_retention_days',
+		cast (@debug_retention_days as integer) :: text
+	)
 on conflict
 	(key) do update set
 		value = cast (@debug_retention_days as integer) :: text where
@@ -554,11 +535,12 @@ select
 	)::integer as auto_archive_days;
 
 -- name: UpsertChatAutoArchiveDays :exec
-insert into site_configs (key,
-value)
+insert into site_configs (key, value)
 values
-	('agents_chat_auto_archive_days',
-	cast (@auto_archive_days as integer) :: text)
+	(
+		'agents_chat_auto_archive_days',
+		cast (@auto_archive_days as integer) :: text
+	)
 on conflict
 	(key) do update set value = cast (@auto_archive_days as integer) :: text where
 		site_configs.key = 'agents_chat_auto_archive_days';

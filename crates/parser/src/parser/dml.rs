@@ -102,7 +102,10 @@ fn insert_body(p: &mut Parser<'_>) -> PResult {
     p.expect_kws(&["insert", "into"])?;
     dml_target(p)?;
     if p.at(SyntaxKind::LParen) {
+        // Wrapped so long column lists format as an indented block.
+        p.start(SyntaxKind::ElementList);
         paren_name_list(p)?;
+        p.finish();
     }
     if p.at_kw("overriding") {
         p.bump();

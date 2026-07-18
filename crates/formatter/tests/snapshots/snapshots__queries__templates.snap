@@ -114,23 +114,25 @@ limit 1;
 select * from template_with_names as templates order by (name, id) asc;
 
 -- name: InsertTemplate :exec
-insert into templates (id,
-created_at,
-updated_at,
-organization_id,
-name,
-provisioner,
-active_version_id,
-description,
-created_by,
-icon,
-user_acl,
-group_acl,
-display_name,
-allow_user_cancel_workspace_jobs,
-max_port_sharing_level,
-use_classic_parameter_flow,
-cors_behavior)
+insert into templates (
+	id,
+	created_at,
+	updated_at,
+	organization_id,
+	"name",
+	provisioner,
+	active_version_id,
+	description,
+	created_by,
+	icon,
+	user_acl,
+	group_acl,
+	display_name,
+	allow_user_cancel_workspace_jobs,
+	max_port_sharing_level,
+	use_classic_parameter_flow,
+	cors_behavior
+)
 values
 	($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17);
 

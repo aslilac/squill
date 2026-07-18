@@ -7,16 +7,18 @@ expression: formatted
 -- populates the tasks and task_workspace_apps tables with their data.
 
 -- Step 1: Create tasks from workspaces with has_ai_task TRUE in their latest build.
-insert into tasks (id,
-organization_id,
-owner_id,
-name,
-workspace_id,
-template_version_id,
-template_parameters,
-prompt,
-created_at,
-deleted_at)
+insert into tasks (
+	id,
+	organization_id,
+	owner_id,
+	name,
+	workspace_id,
+	template_version_id,
+	template_parameters,
+	prompt,
+	created_at,
+	deleted_at
+)
 select
 	gen_random_uuid() as id,
 	w.organization_id,
@@ -83,10 +85,12 @@ where
 	and not exists (select 1 from tasks t where t.workspace_id = w.id);
 
 -- Step 2: Populate task_workspace_apps table with build/agent/app information.
-insert into task_workspace_apps (task_id,
-workspace_build_number,
-workspace_agent_id,
-workspace_app_id)
+insert into task_workspace_apps (
+	task_id,
+	workspace_build_number,
+	workspace_agent_id,
+	workspace_app_id
+)
 select
 	t.id as task_id,
 	latest_build.build_number as workspace_build_number,

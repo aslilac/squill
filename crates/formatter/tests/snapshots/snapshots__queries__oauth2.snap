@@ -9,59 +9,63 @@ select * from oauth2_provider_apps order by (name, id) asc;
 select * from oauth2_provider_apps where id = $1;
 
 -- name: InsertOAuth2ProviderApp :one
-insert into oauth2_provider_apps (id,
-created_at,
-updated_at,
-name,
-icon,
-callback_url,
-redirect_uris,
-client_type,
-dynamically_registered,
-client_id_issued_at,
-client_secret_expires_at,
-grant_types,
-response_types,
-token_endpoint_auth_method,
-scope,
-contacts,
-client_uri,
-logo_uri,
-tos_uri,
-policy_uri,
-jwks_uri,
-jwks,
-software_id,
-software_version,
-registration_access_token,
-registration_client_uri)
+insert into oauth2_provider_apps (
+	id,
+	created_at,
+	updated_at,
+	name,
+	icon,
+	callback_url,
+	redirect_uris,
+	client_type,
+	dynamically_registered,
+	client_id_issued_at,
+	client_secret_expires_at,
+	grant_types,
+	response_types,
+	token_endpoint_auth_method,
+	scope,
+	contacts,
+	client_uri,
+	logo_uri,
+	tos_uri,
+	policy_uri,
+	jwks_uri,
+	jwks,
+	software_id,
+	software_version,
+	registration_access_token,
+	registration_client_uri
+)
 values
-	($1,
-	$2,
-	$3,
-	$4,
-	$5,
-	$6,
-	$7,
-	$8,
-	$9,
-	$10,
-	$11,
-	$12,
-	$13,
-	$14,
-	$15,
-	$16,
-	$17,
-	$18,
-	$19,
-	$20,
-	$21,
-	$22,
-	$23,
-	$24,
-	$25,
-	$26)
+	(
+		$1,
+		$2,
+		$3,
+		$4,
+		$5,
+		$6,
+		$7,
+		$8,
+		$9,
+		$10,
+		$11,
+		$12,
+		$13,
+		$14,
+		$15,
+		$16,
+		$17,
+		$18,
+		$19,
+		$20,
+		$21,
+		$22,
+		$23,
+		$24,
+		$25,
+		$26
+	)
 returning *;
 
 -- name: UpdateOAuth2ProviderAppByID :one
@@ -107,12 +111,14 @@ order by (created_at, id) asc;
 select * from oauth2_provider_app_secrets where secret_prefix = $1;
 
 -- name: InsertOAuth2ProviderAppSecret :one
-insert into oauth2_provider_app_secrets (id,
-created_at,
-secret_prefix,
-hashed_secret,
-display_secret,
-app_id)
+insert into oauth2_provider_app_secrets (
+	id,
+	created_at,
+	secret_prefix,
+	hashed_secret,
+	display_secret,
+	app_id
+)
 values ($1, $2, $3, $4, $5, $6)
 returning *;
 
@@ -126,18 +132,20 @@ select * from oauth2_provider_app_codes where id = $1;
 select * from oauth2_provider_app_codes where secret_prefix = $1;
 
 -- name: InsertOAuth2ProviderAppCode :one
-insert into oauth2_provider_app_codes (id,
-created_at,
-expires_at,
-secret_prefix,
-hashed_secret,
-app_id,
-user_id,
-resource_uri,
-code_challenge,
-code_challenge_method,
-state_hash,
-redirect_uri)
+insert into oauth2_provider_app_codes (
+	id,
+	created_at,
+	expires_at,
+	secret_prefix,
+	hashed_secret,
+	app_id,
+	user_id,
+	resource_uri,
+	code_challenge,
+	code_challenge_method,
+	state_hash,
+	redirect_uri
+)
 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 returning *;
 
@@ -148,15 +156,17 @@ delete from oauth2_provider_app_codes where id = $1;
 delete from oauth2_provider_app_codes where app_id = $1 and user_id = $2;
 
 -- name: InsertOAuth2ProviderAppToken :one
-insert into oauth2_provider_app_tokens (id,
-created_at,
-expires_at,
-hash_prefix,
-refresh_hash,
-app_secret_id,
-api_key_id,
-user_id,
-audience)
+insert into oauth2_provider_app_tokens (
+	id,
+	created_at,
+	expires_at,
+	hash_prefix,
+	refresh_hash,
+	app_secret_id,
+	api_key_id,
+	user_id,
+	audience
+)
 values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 returning *;
 

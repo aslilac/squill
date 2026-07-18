@@ -22,16 +22,15 @@ as $$
 			raise exception 'Unhandled usage event type in aggregate_usage_event: %',
 			NEW.event_type;
 		end if;
-		insert into usage_events_daily (day,
-		event_type,
-		usage_data)
+		insert into usage_events_daily (day, event_type, usage_data)
 		values
 			(
-			-- Extract the date from the created_at timestamp, always using UTC for
-			-- consistency
-			date_trunc('day', NEW.created_at at time zone 'UTC')::date,
-			NEW.event_type,
-			NEW.event_data)
+				-- Extract the date from the created_at timestamp, always using UTC for
+				-- consistency
+				date_trunc('day', NEW.created_at at time zone 'UTC')::date,
+				NEW.event_type,
+				NEW.event_data
+			)
 		on conflict
 			(day,
 			event_type) do update set
@@ -56,9 +55,7 @@ for each row
 execute function aggregate_usage_event();
 
 -- Populate usage_events_daily with existing data
-insert into usage_events_daily (day,
-event_type,
-usage_data)
+insert into usage_events_daily (day, event_type, usage_data)
 select
 	date_trunc('day', created_at at time zone 'UTC')::date as day,
 	event_type,

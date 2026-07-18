@@ -9,18 +9,20 @@ select * from replicas where updated_at > $1 and stopped_at is null;
 select * from replicas where id = $1;
 
 -- name: InsertReplica :one
-insert into replicas (id,
-created_at,
-started_at,
-updated_at,
-hostname,
-region_id,
-relay_address,
-version,
-database_latency,
-"primary",
-cluster_host,
-nats_port)
+insert into replicas (
+	id,
+	created_at,
+	started_at,
+	updated_at,
+	hostname,
+	region_id,
+	relay_address,
+	version,
+	database_latency,
+	"primary",
+	cluster_host,
+	nats_port
+)
 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 returning *;
 

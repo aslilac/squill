@@ -4,12 +4,14 @@ expression: formatted
 ---
 -- name: UpsertAISeatState :one
 -- Returns true if a new rows was inserted, false otherwise.
-insert into ai_seat_state (user_id,
-first_used_at,
-last_used_at,
-last_event_type,
-last_event_description,
-updated_at)
+insert into ai_seat_state (
+	user_id,
+	first_used_at,
+	last_used_at,
+	last_event_type,
+	last_event_description,
+	updated_at
+)
 values ($1, $2, $2, $3, $4, $2)
 on conflict
 	(user_id) do update set

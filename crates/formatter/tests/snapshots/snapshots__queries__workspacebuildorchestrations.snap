@@ -3,33 +3,37 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertWorkspaceBuildOrchestration :one
-insert into workspace_build_orchestrations (id,
-created_at,
-updated_at,
-parent_build_id,
-workspace_id,
-child_transition,
-child_template_version_id,
-child_template_version_preset_id,
-child_rich_parameter_values,
-child_log_level,
-child_reason,
-status,
-error)
+insert into workspace_build_orchestrations (
+	id,
+	created_at,
+	updated_at,
+	parent_build_id,
+	workspace_id,
+	child_transition,
+	child_template_version_id,
+	child_template_version_preset_id,
+	child_rich_parameter_values,
+	child_log_level,
+	child_reason,
+	status,
+	error
+)
 values
-	(@id,
-	@created_at,
-	@updated_at,
-	@parent_build_id,
-	(select workspace_id from workspace_builds where id = @parent_build_id),
-	@child_transition,
-	@child_template_version_id,
-	@child_template_version_preset_id,
-	@child_rich_parameter_values,
-	@child_log_level,
-	@child_reason,
-	'pending',
-	null)
+	(
+		@id,
+		@created_at,
+		@updated_at,
+		@parent_build_id,
+		(select workspace_id from workspace_builds where id = @parent_build_id),
+		@child_transition,
+		@child_template_version_id,
+		@child_template_version_preset_id,
+		@child_rich_parameter_values,
+		@child_log_level,
+		@child_reason,
+		'pending',
+		null
+	)
 returning *;
 
 -- name: GetNextPendingWorkspaceBuildOrchestrationForUpdate :one

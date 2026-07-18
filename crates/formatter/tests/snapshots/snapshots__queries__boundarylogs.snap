@@ -3,19 +3,23 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertBoundarySession :one
-insert into boundary_sessions (id,
-workspace_agent_id,
-owner_id,
-confined_process_name,
-started_at,
-updated_at)
+insert into boundary_sessions (
+	id,
+	workspace_agent_id,
+	owner_id,
+	confined_process_name,
+	started_at,
+	updated_at
+)
 values
-	(@id,
-	@workspace_agent_id,
-	@owner_id,
-	@confined_process_name,
-	@started_at,
-	@updated_at)
+	(
+		@id,
+		@workspace_agent_id,
+		@owner_id,
+		@confined_process_name,
+		@started_at,
+		@updated_at
+	)
 returning *;
 
 -- name: GetBoundarySessionByID :one
@@ -29,16 +33,18 @@ from
 where bs.id = @id;
 
 -- name: InsertBoundaryLogs :many
-insert into boundary_logs (id,
-session_id,
-owner_id,
-sequence_number,
-captured_at,
-created_at,
-proto,
-method,
-detail,
-matched_rule)
+insert into boundary_logs (
+	id,
+	session_id,
+	owner_id,
+	sequence_number,
+	captured_at,
+	created_at,
+	proto,
+	method,
+	detail,
+	matched_rule
+)
 select
 	unnest(@id::uuid[]),
 	@session_id::uuid,

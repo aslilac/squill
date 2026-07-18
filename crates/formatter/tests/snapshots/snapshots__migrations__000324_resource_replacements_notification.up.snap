@@ -2,17 +2,20 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-insert into notification_templates (id,
-name,
-title_template,
-body_template,
-"group",
-actions)
+insert into notification_templates (
+	id,
+	name,
+	title_template,
+	body_template,
+	"group",
+	actions
+)
 values
-	('89d9745a-816e-4695-a17f-3d0a229e2b8d',
-	'Prebuilt Workspace Resource Replaced',
-	E'There might be a problem with a recently claimed prebuilt workspace',
-	$$
+	(
+		'89d9745a-816e-4695-a17f-3d0a229e2b8d',
+		'Prebuilt Workspace Resource Replaced',
+		E'There might be a problem with a recently claimed prebuilt workspace',
+		$$
 Workspace **{{.Labels.workspace}}** was claimed from a prebuilt workspace by **{{.Labels.claimant}}**.
 
 During the claim, Terraform destroyed and recreated the following resources
@@ -30,8 +33,8 @@ For tips on preventing replacements and improving claim performance, see [this g
 
 NOTE: this prebuilt workspace used the **{{.Labels.preset}}** preset.
 $$,
-	'Template Events',
-	'[
+		'Template Events',
+		'[
 		{
 			"label": "View workspace build",
 			"url": "{{base_url}}/@{{.Labels.claimant}}/{{.Labels.workspace}}/builds/{{.Labels.workspace_build_num}}"
@@ -40,4 +43,5 @@ $$,
 			"label": "View template version",
 			"url": "{{base_url}}/templates/{{.Labels.org}}/{{.Labels.template}}/versions/{{.Labels.template_version}}"
 		}
-	]'::jsonb);
+	]'::jsonb
+	);

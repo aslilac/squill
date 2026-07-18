@@ -24,21 +24,25 @@ order by user_id asc, ai_provider_id asc, created_at asc, id asc;
 -- user/provider pair already exists. On conflict, callers provide id and
 -- created_at for the insert path only.
 -- name: UpsertUserAIProviderKey :one
-insert into user_ai_provider_keys (id,
-user_id,
-ai_provider_id,
-api_key,
-api_key_key_id,
-created_at,
-updated_at)
+insert into user_ai_provider_keys (
+	id,
+	user_id,
+	ai_provider_id,
+	api_key,
+	api_key_key_id,
+	created_at,
+	updated_at
+)
 values
-	(@id::uuid,
-	@user_id::uuid,
-	@ai_provider_id::uuid,
-	@api_key::text,
-	sqlc.narg('api_key_key_id')::text,
-	@created_at::timestamptz,
-	@updated_at::timestamptz)
+	(
+		@id::uuid,
+		@user_id::uuid,
+		@ai_provider_id::uuid,
+		@api_key::text,
+		sqlc.narg('api_key_key_id')::text,
+		@created_at::timestamptz,
+		@updated_at::timestamptz
+	)
 on conflict
 	(user_id,
 	ai_provider_id) do update set

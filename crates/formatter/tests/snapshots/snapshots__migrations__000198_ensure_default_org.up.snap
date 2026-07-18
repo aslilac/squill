@@ -3,12 +3,14 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- This ensures a default organization always exists.
-insert into organizations (id,
-name,
-description,
-created_at,
-updated_at,
-is_default)
+insert into organizations (
+	id,
+	name,
+	description,
+	created_at,
+	updated_at,
+	is_default
+)
 select
 	-- Avoid calling it "default" as we are reserving that word as a keyword to fetch
 	-- the default org regardless of the name.

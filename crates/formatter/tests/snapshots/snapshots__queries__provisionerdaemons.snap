@@ -220,27 +220,31 @@ where
 	);
 
 -- name: UpsertProvisionerDaemon :one
-insert into provisioner_daemons (id,
-created_at,
-name,
-provisioners,
-tags,
-last_seen_at,
-version,
-organization_id,
-api_version,
-key_id)
+insert into provisioner_daemons (
+	id,
+	created_at,
+	"name",
+	provisioners,
+	tags,
+	last_seen_at,
+	"version",
+	organization_id,
+	api_version,
+	key_id
+)
 values
-	(gen_random_uuid(),
-	@created_at,
-	@name,
-	@provisioners,
-	@tags,
-	@last_seen_at,
-	@version,
-	@organization_id,
-	@api_version,
-	@key_id)
+	(
+		gen_random_uuid(),
+		@created_at,
+		@name,
+		@provisioners,
+		@tags,
+		@last_seen_at,
+		@version,
+		@organization_id,
+		@api_version,
+		@key_id
+	)
 on conflict
 	(organization_id,
 	name,

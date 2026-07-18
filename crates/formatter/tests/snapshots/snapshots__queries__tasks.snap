@@ -3,16 +3,18 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertTask :one
-insert into tasks (id,
-organization_id,
-owner_id,
-name,
-display_name,
-workspace_id,
-template_version_id,
-template_parameters,
-prompt,
-created_at)
+insert into tasks (
+	id,
+	organization_id,
+	owner_id,
+	name,
+	display_name,
+	workspace_id,
+	template_version_id,
+	template_parameters,
+	prompt,
+	created_at
+)
 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 returning *;
 
@@ -28,10 +30,12 @@ where
 returning tasks.*;
 
 -- name: UpsertTaskWorkspaceApp :one
-insert into task_workspace_apps (task_id,
-workspace_build_number,
-workspace_agent_id,
-workspace_app_id)
+insert into task_workspace_apps (
+	task_id,
+	workspace_build_number,
+	workspace_agent_id,
+	workspace_app_id
+)
 values ($1, $2, $3, $4)
 on conflict
 	(task_id,
@@ -94,9 +98,7 @@ where id = @id::uuid and deleted_at is null
 returning *;
 
 -- name: UpsertTaskSnapshot :exec
-insert into task_snapshots (task_id,
-log_snapshot,
-log_snapshot_created_at)
+insert into task_snapshots (task_id, log_snapshot, log_snapshot_created_at)
 values ($1, $2, $3)
 on conflict
 	(task_id) do update set

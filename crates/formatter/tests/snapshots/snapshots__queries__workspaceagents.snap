@@ -58,47 +58,51 @@ where
 	and deleted = false;
 
 -- name: InsertWorkspaceAgent :one
-insert into workspace_agents (id,
-parent_id,
-created_at,
-updated_at,
-name,
-resource_id,
-auth_token,
-auth_instance_id,
-architecture,
-environment_variables,
-operating_system,
-directory,
-instance_metadata,
-resource_metadata,
-connection_timeout_seconds,
-troubleshooting_url,
-motd_file,
-display_apps,
-display_order,
-api_key_scope)
+insert into workspace_agents (
+	id,
+	parent_id,
+	created_at,
+	updated_at,
+	name,
+	resource_id,
+	auth_token,
+	auth_instance_id,
+	architecture,
+	environment_variables,
+	operating_system,
+	directory,
+	instance_metadata,
+	resource_metadata,
+	connection_timeout_seconds,
+	troubleshooting_url,
+	motd_file,
+	display_apps,
+	display_order,
+	api_key_scope
+)
 values
-	($1,
-	$2,
-	$3,
-	$4,
-	$5,
-	$6,
-	$7,
-	$8,
-	$9,
-	$10,
-	$11,
-	$12,
-	$13,
-	$14,
-	$15,
-	$16,
-	$17,
-	$18,
-	$19,
-	$20)
+	(
+		$1,
+		$2,
+		$3,
+		$4,
+		$5,
+		$6,
+		$7,
+		$8,
+		$9,
+		$10,
+		$11,
+		$12,
+		$13,
+		$14,
+		$15,
+		$16,
+		$17,
+		$18,
+		$19,
+		$20
+	)
 returning *;
 
 -- name: UpdateWorkspaceAgentConnectionByID :exec
@@ -127,13 +131,15 @@ set lifecycle_state = $2, started_at = $3, ready_at = $4
 where id = $1;
 
 -- name: InsertWorkspaceAgentMetadata :exec
-insert into workspace_agent_metadata (workspace_agent_id,
-display_name,
-key,
-script,
-timeout,
-interval,
-display_order)
+insert into workspace_agent_metadata (
+	workspace_agent_id,
+	display_name,
+	key,
+	script,
+	timeout,
+	interval,
+	display_order
+)
 values ($1, $2, $3, $4, $5, $6, $7);
 
 -- name: UpdateWorkspaceAgentMetadata :exec
@@ -195,11 +201,13 @@ with
 		update workspace_agents
 		set logs_length = logs_length + @output_length
 		where workspace_agents.id = @agent_id
-	) insert into workspace_agent_logs (agent_id,
-created_at,
-output,
-level,
-log_source_id)
+	) insert into workspace_agent_logs (
+	agent_id,
+	created_at,
+	output,
+	level,
+	log_source_id
+)
 select
 	@agent_id::uuid as agent_id,
 	@created_at::timestamptz as created_at,
@@ -209,11 +217,13 @@ select
 returning workspace_agent_logs.*;
 
 -- name: InsertWorkspaceAgentLogSources :many
-insert into workspace_agent_log_sources (workspace_agent_id,
-created_at,
-id,
-display_name,
-icon)
+insert into workspace_agent_log_sources (
+	workspace_agent_id,
+	created_at,
+	id,
+	display_name,
+	icon
+)
 select
 	@workspace_agent_id::uuid as workspace_agent_id,
 	@created_at::timestamptz as created_at,
@@ -417,12 +427,14 @@ where
 	end;
 
 -- name: InsertWorkspaceAgentScriptTimings :one
-insert into workspace_agent_script_timings (script_id,
-started_at,
-ended_at,
-exit_code,
-stage,
-status)
+insert into workspace_agent_script_timings (
+	script_id,
+	started_at,
+	ended_at,
+	exit_code,
+	stage,
+	status
+)
 values ($1, $2, $3, $4, $5, $6)
 returning workspace_agent_script_timings.*;
 

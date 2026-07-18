@@ -3,9 +3,7 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertTemplateVersionWorkspaceTag :one
-insert into template_version_workspace_tags (template_version_id,
-key,
-value)
+insert into template_version_workspace_tags (template_version_id, key, value)
 values ($1, $2, $3)
 returning *;
 

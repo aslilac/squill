@@ -260,19 +260,21 @@ limit sqlc.narg('limit')::int;
 select * from provisioner_jobs where created_at > $1;
 
 -- name: InsertProvisionerJob :one
-insert into provisioner_jobs (id,
-created_at,
-updated_at,
-organization_id,
-initiator_id,
-provisioner,
-storage_method,
-file_id,
-type,
-input,
-tags,
-trace_metadata,
-logs_overflowed)
+insert into provisioner_jobs (
+	id,
+	created_at,
+	updated_at,
+	organization_id,
+	initiator_id,
+	provisioner,
+	storage_method,
+	file_id,
+	"type",
+	"input",
+	tags,
+	trace_metadata,
+	logs_overflowed
+)
 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 returning *;
 
@@ -321,13 +323,15 @@ order by
 limit @max_jobs;
 
 -- name: InsertProvisionerJobTimings :many
-insert into provisioner_job_timings (job_id,
-started_at,
-ended_at,
-stage,
-source,
-action,
-resource)
+insert into provisioner_job_timings (
+	job_id,
+	started_at,
+	ended_at,
+	stage,
+	source,
+	action,
+	resource
+)
 select
 	@job_id::uuid as provisioner_job_id,
 	unnest(@started_at::timestamptz[]),

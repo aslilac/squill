@@ -74,12 +74,14 @@ limit
 	NULLIF(@limit_opt::int, 0);
 
 -- name: InsertGroup :one
-insert into groups (id,
-name,
-display_name,
-organization_id,
-avatar_url,
-quota_allowance)
+insert into groups (
+	id,
+	name,
+	display_name,
+	organization_id,
+	avatar_url,
+	quota_allowance
+)
 values ($1, $2, $3, $4, $5, $6)
 returning *;
 
@@ -87,10 +89,7 @@ returning *;
 -- Inserts any group by name that does not exist. All new groups are given
 -- a random uuid, are inserted into the same organization. They have the default
 -- values for avatar, display name, and quota allowance (all zero values).
-insert into groups (id,
-name,
-organization_id,
-source)
+insert into groups (id, name, organization_id, source)
 select gen_random_uuid(), group_name, @organization_id, @source
 from UNNEST(@group_names::text[]) as group_name
 -- If the name conflicts, do nothing.
@@ -101,9 +100,7 @@ returning *;
 -- for simplicity since all users is
 -- every member of the org.
 -- name: InsertAllUsersGroup :one
-insert into groups (id,
-name,
-organization_id)
+insert into groups (id, name, organization_id)
 values (sqlc.arg(organization_id), 'Everyone', sqlc.arg(organization_id))
 returning *;
 

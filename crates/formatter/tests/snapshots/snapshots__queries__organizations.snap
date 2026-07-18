@@ -75,26 +75,30 @@ select
 	) as provisioner_key_count;
 
 -- name: InsertOrganization :one
-insert into organizations (id,
-name,
-display_name,
-description,
-icon,
-created_at,
-updated_at,
-is_default,
-default_org_member_roles)
+insert into organizations (
+	id,
+	"name",
+	display_name,
+	description,
+	icon,
+	created_at,
+	updated_at,
+	is_default,
+	default_org_member_roles
+)
 values
 	-- If no organizations exist, and this is the first, make it the default.
-	(@id,
-	@name,
-	@display_name,
-	@description,
-	@icon,
-	@created_at,
-	@updated_at,
-	(select true from organizations limit 1) is null,
-	@default_org_member_roles)
+	(
+		@id,
+		@name,
+		@display_name,
+		@description,
+		@icon,
+		@created_at,
+		@updated_at,
+		(select true from organizations limit 1) is null,
+		@default_org_member_roles
+	)
 returning *;
 
 -- name: UpdateOrganization :one

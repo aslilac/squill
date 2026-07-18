@@ -3,13 +3,15 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertWorkspaceAgentDevcontainers :many
-insert into workspace_agent_devcontainers (workspace_agent_id,
-created_at,
-id,
-name,
-workspace_folder,
-config_path,
-subagent_id)
+insert into workspace_agent_devcontainers (
+	workspace_agent_id,
+	created_at,
+	id,
+	name,
+	workspace_folder,
+	config_path,
+	subagent_id
+)
 select
 	@workspace_agent_id::uuid as workspace_agent_id,
 	@created_at::timestamptz as created_at,

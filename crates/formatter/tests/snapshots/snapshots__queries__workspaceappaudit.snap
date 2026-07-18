@@ -7,16 +7,18 @@ expression: formatted
 -- The returned boolean, new_or_stale, can be used to deduce if a new session
 -- was started. This means that a new row was inserted (no previous session) or
 -- the updated_at is older than stale interval.
-insert into workspace_app_audit_sessions (id,
-agent_id,
-app_id,
-user_id,
-ip,
-user_agent,
-slug_or_port,
-status_code,
-started_at,
-updated_at)
+insert into workspace_app_audit_sessions (
+	id,
+	agent_id,
+	app_id,
+	user_id,
+	ip,
+	user_agent,
+	slug_or_port,
+	status_code,
+	started_at,
+	updated_at
+)
 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 on conflict
 	(agent_id,

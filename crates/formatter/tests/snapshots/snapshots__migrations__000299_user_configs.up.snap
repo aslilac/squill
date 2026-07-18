@@ -11,9 +11,7 @@ create table if not exists user_configs (
 );
 
 -- Copy "theme_preference" from "users" table
-insert into user_configs (user_id,
-key,
-value)
+insert into user_configs (user_id, key, value)
 select id, 'theme_preference', theme_preference
 from users
 where users.theme_preference is not null;

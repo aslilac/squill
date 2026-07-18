@@ -3,8 +3,7 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: UpsertTailnetCoordinator :one
-insert into tailnet_coordinators (id,
-heartbeat_at)
+insert into tailnet_coordinators (id, heartbeat_at)
 values ($1, now() at time zone 'utc')
 on conflict (id) do update set id = $1, heartbeat_at = now() at time zone 'utc'
 returning *;
@@ -31,11 +30,7 @@ where
 	);
 
 -- name: UpsertTailnetPeer :one
-insert into tailnet_peers (id,
-coordinator_id,
-node,
-status,
-updated_at)
+insert into tailnet_peers (id, coordinator_id, node, status, updated_at)
 values ($1, $2, $3, $4, now() at time zone 'utc')
 on conflict
 	(id,
@@ -59,10 +54,7 @@ returning id, coordinator_id;
 select * from tailnet_peers where id = $1;
 
 -- name: UpsertTailnetTunnel :one
-insert into tailnet_tunnels (coordinator_id,
-src_id,
-dst_id,
-updated_at)
+insert into tailnet_tunnels (coordinator_id, src_id, dst_id, updated_at)
 values ($1, $2, $3, now() at time zone 'utc')
 on conflict
 	(coordinator_id,

@@ -3,9 +3,7 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertWorkspaceBuildParameters :exec
-insert into workspace_build_parameters (workspace_build_id,
-name,
-value)
+insert into workspace_build_parameters (workspace_build_id, name, value)
 select
 	@workspace_build_id::uuid as workspace_build_id,
 	unnest(@name::text[]) as name,

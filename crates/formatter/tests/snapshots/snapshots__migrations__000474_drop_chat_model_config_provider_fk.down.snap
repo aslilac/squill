@@ -21,8 +21,7 @@ do $$
 		-- stub row, including credential-policy flags such as
 		-- central_api_key_enabled, before enabling it, rather than insert a second
 		-- row with the same provider name.
-		insert into chat_providers (provider,
-		enabled)
+		insert into chat_providers (provider, enabled)
 		select distinct cmc.provider, false
 		from
 			chat_model_configs cmc

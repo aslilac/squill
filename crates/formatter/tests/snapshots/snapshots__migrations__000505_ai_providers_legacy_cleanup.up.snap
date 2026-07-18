@@ -16,14 +16,16 @@ do $$
 	end
 $$;
 
-insert into ai_providers (id,
-type,
-name,
-display_name,
-enabled,
-base_url,
-created_at,
-updated_at)
+insert into ai_providers (
+	id,
+	type,
+	name,
+	display_name,
+	enabled,
+	base_url,
+	created_at,
+	updated_at
+)
 select
 	cp.id,
 	cp.provider::ai_provider_type,
@@ -69,12 +71,14 @@ set
 from runtime_provider_keys rpk join chat_providers cp on cp.id = rpk.provider_id
 where apk.id = rpk.id and cp.updated_at > apk.updated_at;
 
-insert into ai_provider_keys (id,
-provider_id,
-api_key,
-api_key_key_id,
-created_at,
-updated_at)
+insert into ai_provider_keys (
+	id,
+	provider_id,
+	api_key,
+	api_key_key_id,
+	created_at,
+	updated_at
+)
 select
 	gen_random_uuid(),
 	cp.id,
@@ -91,13 +95,15 @@ where
 		where apk.provider_id = cp.id
 	);
 
-insert into user_ai_provider_keys (id,
-user_id,
-ai_provider_id,
-api_key,
-api_key_key_id,
-created_at,
-updated_at)
+insert into user_ai_provider_keys (
+	id,
+	user_id,
+	ai_provider_id,
+	api_key,
+	api_key_key_id,
+	created_at,
+	updated_at
+)
 select
 	ucpk.id,
 	ucpk.user_id,

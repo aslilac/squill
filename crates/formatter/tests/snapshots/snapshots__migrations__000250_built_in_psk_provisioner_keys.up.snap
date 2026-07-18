@@ -2,45 +2,57 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-insert into provisioner_keys (id,
-created_at,
-organization_id,
-name,
-hashed_secret,
-tags)
+insert into provisioner_keys (
+	id,
+	created_at,
+	organization_id,
+	name,
+	hashed_secret,
+	tags
+)
 values
-	('00000000-0000-0000-0000-000000000001'::uuid,
-	NOW(),
-	(select id from organizations where is_default = true),
-	'built-in',
-	''::bytea,
-	'{}');
-insert into provisioner_keys (id,
-created_at,
-organization_id,
-name,
-hashed_secret,
-tags)
+	(
+		'00000000-0000-0000-0000-000000000001'::uuid,
+		NOW(),
+		(select id from organizations where is_default = true),
+		'built-in',
+		''::bytea,
+		'{}'
+	);
+insert into provisioner_keys (
+	id,
+	created_at,
+	organization_id,
+	name,
+	hashed_secret,
+	tags
+)
 values
-	('00000000-0000-0000-0000-000000000002'::uuid,
-	NOW(),
-	(select id from organizations where is_default = true),
-	'user-auth',
-	''::bytea,
-	'{}');
-insert into provisioner_keys (id,
-created_at,
-organization_id,
-name,
-hashed_secret,
-tags)
+	(
+		'00000000-0000-0000-0000-000000000002'::uuid,
+		NOW(),
+		(select id from organizations where is_default = true),
+		'user-auth',
+		''::bytea,
+		'{}'
+	);
+insert into provisioner_keys (
+	id,
+	created_at,
+	organization_id,
+	name,
+	hashed_secret,
+	tags
+)
 values
-	('00000000-0000-0000-0000-000000000003'::uuid,
-	NOW(),
-	(select id from organizations where is_default = true),
-	'psk',
-	''::bytea,
-	'{}');
+	(
+		'00000000-0000-0000-0000-000000000003'::uuid,
+		NOW(),
+		(select id from organizations where is_default = true),
+		'psk',
+		''::bytea,
+		'{}'
+	);
 
 alter table provisioner_daemons
 	add column key_id uuid references provisioner_keys (

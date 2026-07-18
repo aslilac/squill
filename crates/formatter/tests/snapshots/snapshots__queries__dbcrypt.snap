@@ -15,8 +15,5 @@ where
 	active_key_digest = @active_key_digest::text and revoked_key_digest is null;
 
 -- name: InsertDBCryptKey :exec
-insert into dbcrypt_keys (number,
-active_key_digest,
-created_at,
-test)
+insert into dbcrypt_keys (number, active_key_digest, created_at, test)
 values (@number::int, @active_key_digest::text, CURRENT_TIMESTAMP, @test::text);

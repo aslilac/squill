@@ -47,11 +47,13 @@ where
 	end;
 
 -- name: InsertOrganizationMember :one
-insert into organization_members (organization_id,
-user_id,
-created_at,
-updated_at,
-roles)
+insert into organization_members (
+	organization_id,
+	user_id,
+	created_at,
+	updated_at,
+	roles
+)
 values ($1, $2, $3, $4, $5)
 returning *;
 

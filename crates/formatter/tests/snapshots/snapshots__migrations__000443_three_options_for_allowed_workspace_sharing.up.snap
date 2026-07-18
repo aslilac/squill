@@ -31,16 +31,18 @@ where
 -- Create skeleton organization-service-account system roles for all
 -- existing organizations, mirroring what migration 408 did for
 -- organization-member.
-insert into custom_roles (name,
-display_name,
-organization_id,
-site_permissions,
-org_permissions,
-user_permissions,
-member_permissions,
-is_system,
-created_at,
-updated_at)
+insert into custom_roles (
+	name,
+	display_name,
+	organization_id,
+	site_permissions,
+	org_permissions,
+	user_permissions,
+	member_permissions,
+	is_system,
+	created_at,
+	updated_at
+)
 select
 	'organization-service-account',
 	'',
@@ -63,37 +65,43 @@ create or replace function insert_organization_system_roles()
 returns trigger
 as $$
 	begin
-		insert into custom_roles (name,
-		display_name,
-		organization_id,
-		site_permissions,
-		org_permissions,
-		user_permissions,
-		member_permissions,
-		is_system,
-		created_at,
-		updated_at)
+		insert into custom_roles (
+			name,
+			display_name,
+			organization_id,
+			site_permissions,
+			org_permissions,
+			user_permissions,
+			member_permissions,
+			is_system,
+			created_at,
+			updated_at
+		)
 		values
-			('organization-member',
-			'',
-			NEW.id,
-			'[]'::jsonb,
-			'[]'::jsonb,
-			'[]'::jsonb,
-			'[]'::jsonb,
-			true,
-			NOW(),
-			NOW()),
-			('organization-service-account',
-			'',
-			NEW.id,
-			'[]'::jsonb,
-			'[]'::jsonb,
-			'[]'::jsonb,
-			'[]'::jsonb,
-			true,
-			NOW(),
-			NOW());
+			(
+				'organization-member',
+				'',
+				NEW.id,
+				'[]'::jsonb,
+				'[]'::jsonb,
+				'[]'::jsonb,
+				'[]'::jsonb,
+				true,
+				NOW(),
+				NOW()
+			),
+			(
+				'organization-service-account',
+				'',
+				NEW.id,
+				'[]'::jsonb,
+				'[]'::jsonb,
+				'[]'::jsonb,
+				'[]'::jsonb,
+				true,
+				NOW(),
+				NOW()
+			);
 		return NEW;
 	end;
 $$

@@ -3,43 +3,51 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertPreset :one
-insert into template_version_presets (id,
-template_version_id,
-name,
-created_at,
-desired_instances,
-invalidate_after_secs,
-scheduling_timezone,
-is_default,
-description,
-icon,
-last_invalidated_at)
+insert into template_version_presets (
+	id,
+	template_version_id,
+	name,
+	created_at,
+	desired_instances,
+	invalidate_after_secs,
+	scheduling_timezone,
+	is_default,
+	description,
+	icon,
+	last_invalidated_at
+)
 values
-	(@id,
-	@template_version_id,
-	@name,
-	@created_at,
-	@desired_instances,
-	@invalidate_after_secs,
-	@scheduling_timezone,
-	@is_default,
-	@description,
-	@icon,
-	@last_invalidated_at)
+	(
+		@id,
+		@template_version_id,
+		@name,
+		@created_at,
+		@desired_instances,
+		@invalidate_after_secs,
+		@scheduling_timezone,
+		@is_default,
+		@description,
+		@icon,
+		@last_invalidated_at
+	)
 returning *;
 
 -- name: InsertPresetParameters :many
-insert into template_version_preset_parameters (template_version_preset_id,
-name,
-value)
+insert into template_version_preset_parameters (
+	template_version_preset_id,
+	name,
+	value
+)
 select
 	@template_version_preset_id, unnest(@names::text[]), unnest(@values::text[])
 returning *;
 
 -- name: InsertPresetPrebuildSchedule :one
-insert into template_version_preset_prebuild_schedules (preset_id,
-cron_expression,
-desired_instances)
+insert into template_version_preset_prebuild_schedules (
+	preset_id,
+	cron_expression,
+	desired_instances
+)
 values (@preset_id, @cron_expression, @desired_instances)
 returning *;
 

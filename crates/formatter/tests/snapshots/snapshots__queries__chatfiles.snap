@@ -3,17 +3,15 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertChatFile :one
-insert into chat_files (owner_id,
-organization_id,
-name,
-mimetype,
-data)
+insert into chat_files (owner_id, organization_id, name, mimetype, data)
 values
-	(@owner_id::uuid,
-	@organization_id::uuid,
-	@name::text,
-	@mimetype::text,
-	@data::bytea)
+	(
+		@owner_id::uuid,
+		@organization_id::uuid,
+		@name::text,
+		@mimetype::text,
+		@data::bytea
+	)
 returning id, owner_id, organization_id, created_at, name, mimetype;
 
 -- name: GetChatFileByID :one

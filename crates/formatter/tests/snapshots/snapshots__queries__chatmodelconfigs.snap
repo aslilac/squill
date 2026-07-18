@@ -40,27 +40,31 @@ where
 	and ap.deleted = false;
 
 -- name: InsertChatModelConfig :one
-insert into chat_model_configs (model,
-display_name,
-created_by,
-updated_by,
-enabled,
-is_default,
-context_limit,
-compression_threshold,
-options,
-ai_provider_id)
+insert into chat_model_configs (
+	model,
+	display_name,
+	created_by,
+	updated_by,
+	enabled,
+	is_default,
+	context_limit,
+	compression_threshold,
+	options,
+	ai_provider_id
+)
 values
-	(@model::text,
-	@display_name::text,
-	sqlc.narg('created_by')::uuid,
-	sqlc.narg('updated_by')::uuid,
-	@enabled::boolean,
-	@is_default::boolean,
-	@context_limit::bigint,
-	@compression_threshold::integer,
-	@options::jsonb,
-	sqlc.narg('ai_provider_id')::uuid)
+	(
+		@model::text,
+		@display_name::text,
+		sqlc.narg('created_by')::uuid,
+		sqlc.narg('updated_by')::uuid,
+		@enabled::boolean,
+		@is_default::boolean,
+		@context_limit::bigint,
+		@compression_threshold::integer,
+		@options::jsonb,
+		sqlc.narg('ai_provider_id')::uuid
+	)
 returning *;
 
 -- name: UpdateChatModelConfig :one

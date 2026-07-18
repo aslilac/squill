@@ -26,11 +26,7 @@ where feature = $1 and sequence = $2
 returning *;
 
 -- name: InsertCryptoKey :one
-insert into crypto_keys (feature,
-sequence,
-secret,
-starts_at,
-secret_key_id)
+insert into crypto_keys (feature, sequence, secret, starts_at, secret_key_id)
 values ($1, $2, $3, $4, $5)
 returning *;
 

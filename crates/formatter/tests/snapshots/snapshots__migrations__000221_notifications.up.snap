@@ -54,19 +54,22 @@ create table notification_messages (
 create index idx_notification_messages_status on notification_messages (status);
 
 -- TODO: autogenerate constants which reference the UUIDs
-insert into notification_templates (id,
-name,
-title_template,
-body_template,
-"group",
-actions)
+insert into notification_templates (
+	id,
+	name,
+	title_template,
+	body_template,
+	"group",
+	actions
+)
 values
-	('f517da0b-cdc9-410f-ab89-a86107c420ed',
-	'Workspace Deleted',
-	E'Workspace "{{.Labels.name}}" deleted',
-	E'Hi {{.UserName}}\n\nYour workspace **{{.Labels.name}}** was deleted.\nThe specified reason was "**{{.Labels.reason}}{{ if .Labels.initiator }} ({{ .Labels.initiator }}){{end}}**".',
-	'Workspace Events',
-	'[
+	(
+		'f517da0b-cdc9-410f-ab89-a86107c420ed',
+		'Workspace Deleted',
+		E'Workspace "{{.Labels.name}}" deleted',
+		E'Hi {{.UserName}}\n\nYour workspace **{{.Labels.name}}** was deleted.\nThe specified reason was "**{{.Labels.reason}}{{ if .Labels.initiator }} ({{ .Labels.initiator }}){{end}}**".',
+		'Workspace Events',
+		'[
         {
             "label": "View workspaces",
             "url": "{{ base_url }}/workspaces"
@@ -75,4 +78,5 @@ values
             "label": "View templates",
             "url": "{{ base_url }}/templates"
         }
-    ]'::jsonb);
+    ]'::jsonb
+	);

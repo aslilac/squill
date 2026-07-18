@@ -64,22 +64,26 @@ from
 
 comment on view workspace_build_with_user is 'Joins in the username + avatar url of the initiated by user.';
 
-insert into notification_templates (id,
-name,
-title_template,
-body_template,
-actions,
-"group",
-method,
-kind,
-enabled_by_default)
+insert into notification_templates (
+	id,
+	name,
+	title_template,
+	body_template,
+	actions,
+	"group",
+	method,
+	kind,
+	enabled_by_default
+)
 values
-	('6f6cb984-c167-4fa5-bb87-1058dd642779',
-	'Workspace Autostop Reminder',
-	E'Your workspace "{{.Labels.workspace}}" will stop soon',
-	E'Your workspace **{{.Labels.workspace}}** is scheduled to automatically stop at {{.Labels.deadline}}.\n\nConnect to it or extend the deadline to keep it running.',
-	'[{"label": "View workspace", "url": "{{base_url}}/@{{.UserUsername}}/{{.Labels.workspace}}"}]'::jsonb,
-	'Workspace Events',
-	null,
-	'system'::notification_template_kind,
-	true);
+	(
+		'6f6cb984-c167-4fa5-bb87-1058dd642779',
+		'Workspace Autostop Reminder',
+		E'Your workspace "{{.Labels.workspace}}" will stop soon',
+		E'Your workspace **{{.Labels.workspace}}** is scheduled to automatically stop at {{.Labels.deadline}}.\n\nConnect to it or extend the deadline to keep it running.',
+		'[{"label": "View workspace", "url": "{{base_url}}/@{{.UserUsername}}/{{.Labels.workspace}}"}]'::jsonb,
+		'Workspace Events',
+		null,
+		'system'::notification_template_kind,
+		true
+	);

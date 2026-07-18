@@ -47,19 +47,23 @@ order by
 	ai_provider_keys.id asc;
 
 -- name: InsertAIProviderKey :one
-insert into ai_provider_keys (id,
-provider_id,
-api_key,
-api_key_key_id,
-created_at,
-updated_at)
+insert into ai_provider_keys (
+	id,
+	provider_id,
+	api_key,
+	api_key_key_id,
+	created_at,
+	updated_at
+)
 values
-	(@id::uuid,
-	@provider_id::uuid,
-	@api_key::text,
-	sqlc.narg('api_key_key_id')::text,
-	@created_at::timestamptz,
-	@updated_at::timestamptz)
+	(
+		@id::uuid,
+		@provider_id::uuid,
+		@api_key::text,
+		sqlc.narg('api_key_key_id')::text,
+		@created_at::timestamptz,
+		@updated_at::timestamptz
+	)
 returning *;
 
 -- name: DeleteAIProviderKey :exec

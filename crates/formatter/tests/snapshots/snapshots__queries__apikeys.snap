@@ -34,37 +34,41 @@ where
 	and (@include_expired::bool or expires_at > now());
 
 -- name: InsertAPIKey :one
-insert into api_keys (id,
-lifetime_seconds,
-hashed_secret,
-ip_address,
-user_id,
-last_used,
-expires_at,
-created_at,
-updated_at,
-login_type,
-scopes,
-allow_list,
-token_name)
+insert into api_keys (
+	id,
+	lifetime_seconds,
+	hashed_secret,
+	ip_address,
+	user_id,
+	last_used,
+	expires_at,
+	created_at,
+	updated_at,
+	login_type,
+	scopes,
+	allow_list,
+	token_name
+)
 values
-	(@id,
-	-- If the lifetime is set to 0, default to 24hrs
-	case @lifetime_seconds::bigint
-		when 0 then 86400
-		else @lifetime_seconds::bigint
-	end,
-	@hashed_secret,
-	@ip_address,
-	@user_id,
-	@last_used,
-	@expires_at,
-	@created_at,
-	@updated_at,
-	@login_type,
-	@scopes,
-	@allow_list,
-	@token_name)
+	(
+		@id,
+		-- If the lifetime is set to 0, default to 24hrs
+		case @lifetime_seconds::bigint
+			when 0 then 86400
+			else @lifetime_seconds::bigint
+		end,
+		@hashed_secret,
+		@ip_address,
+		@user_id,
+		@last_used,
+		@expires_at,
+		@created_at,
+		@updated_at,
+		@login_type,
+		@scopes,
+		@allow_list,
+		@token_name
+	)
 returning *;
 
 -- name: UpdateAPIKeyByID :exec

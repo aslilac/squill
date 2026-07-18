@@ -282,22 +282,24 @@ using old_logs
 where connection_logs.id = old_logs.id;
 
 -- name: BatchUpsertConnectionLogs :exec
-insert into connection_logs (id,
-connect_time,
-organization_id,
-workspace_owner_id,
-workspace_id,
-workspace_name,
-agent_name,
-type,
-code,
-ip,
-user_agent,
-user_id,
-slug_or_port,
-connection_id,
-disconnect_reason,
-disconnect_time)
+insert into connection_logs (
+	id,
+	connect_time,
+	organization_id,
+	workspace_owner_id,
+	workspace_id,
+	workspace_name,
+	agent_name,
+	type,
+	code,
+	ip,
+	user_agent,
+	user_id,
+	slug_or_port,
+	connection_id,
+	disconnect_reason,
+	disconnect_time
+)
 select
 	u.id,
 	u.connect_time,

@@ -3,11 +3,7 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertAIGatewayKey :one
-insert into ai_gateway_keys (id,
-name,
-secret_prefix,
-hashed_secret,
-created_at)
+insert into ai_gateway_keys (id, name, secret_prefix, hashed_secret, created_at)
 values ($1, @name, $2, $3, NOW())
 returning id, name, secret_prefix, created_at;
 

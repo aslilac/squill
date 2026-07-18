@@ -129,21 +129,23 @@ limit -- a limit of 0 means "no limit". The audit log table is unbounded
 offset @offset_opt;
 
 -- name: InsertAuditLog :one
-insert into audit_logs (id,
-time,
-user_id,
-organization_id,
-ip,
-user_agent,
-resource_type,
-resource_id,
-resource_target,
-action,
-diff,
-status_code,
-additional_fields,
-request_id,
-resource_icon)
+insert into audit_logs (
+	id,
+	"time",
+	user_id,
+	organization_id,
+	ip,
+	user_agent,
+	resource_type,
+	resource_id,
+	resource_target,
+	action,
+	diff,
+	status_code,
+	additional_fields,
+	request_id,
+	resource_icon
+)
 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 returning *;
 

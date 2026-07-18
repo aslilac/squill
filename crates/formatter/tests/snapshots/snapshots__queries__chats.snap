@@ -680,39 +680,43 @@ order by chats_expanded.created_at desc, chats_expanded.id desc;
 -- name: InsertChat :one
 with
 	inserted_chat as (
-		insert into chats (organization_id,
-		owner_id,
-		workspace_id,
-		build_id,
-		agent_id,
-		parent_chat_id,
-		root_chat_id,
-		last_model_config_id,
-		title,
-		mode,
-		plan_mode,
-		status,
-		mcp_server_ids,
-		labels,
-		dynamic_tools,
-		client_type)
+		insert into chats (
+			organization_id,
+			owner_id,
+			workspace_id,
+			build_id,
+			agent_id,
+			parent_chat_id,
+			root_chat_id,
+			last_model_config_id,
+			title,
+			mode,
+			plan_mode,
+			status,
+			mcp_server_ids,
+			labels,
+			dynamic_tools,
+			client_type
+		)
 		values
-			(@organization_id::uuid,
-			@owner_id::uuid,
-			sqlc.narg('workspace_id')::uuid,
-			sqlc.narg('build_id')::uuid,
-			sqlc.narg('agent_id')::uuid,
-			sqlc.narg('parent_chat_id')::uuid,
-			sqlc.narg('root_chat_id')::uuid,
-			@last_model_config_id::uuid,
-			@title::text,
-			sqlc.narg('mode')::chat_mode,
-			sqlc.narg('plan_mode')::chat_plan_mode,
-			@status::chat_status,
-			COALESCE(@mcp_server_ids::uuid[], '{}'::uuid[]),
-			COALESCE(sqlc.narg('labels')::jsonb, '{}'::jsonb),
-			sqlc.narg('dynamic_tools')::jsonb,
-			@client_type::chat_client_type)
+			(
+				@organization_id::uuid,
+				@owner_id::uuid,
+				sqlc.narg('workspace_id')::uuid,
+				sqlc.narg('build_id')::uuid,
+				sqlc.narg('agent_id')::uuid,
+				sqlc.narg('parent_chat_id')::uuid,
+				sqlc.narg('root_chat_id')::uuid,
+				@last_model_config_id::uuid,
+				@title::text,
+				sqlc.narg('mode')::chat_mode,
+				sqlc.narg('plan_mode')::chat_plan_mode,
+				@status::chat_status,
+				COALESCE(@mcp_server_ids::uuid[], '{}'::uuid[]),
+				COALESCE(sqlc.narg('labels')::jsonb, '{}'::jsonb),
+				sqlc.narg('dynamic_tools')::jsonb,
+				@client_type::chat_client_type
+			)
 		returning *
 	),
 	chats_expanded as (
@@ -815,25 +819,27 @@ with
 					chats.last_reasoning_effort
 				)
 			)
-	) insert into chat_messages (chat_id,
-created_by,
-api_key_id,
-model_config_id,
-reasoning_effort,
-role,
-content,
-content_version,
-visibility,
-input_tokens,
-output_tokens,
-total_tokens,
-reasoning_tokens,
-cache_creation_tokens,
-cache_read_tokens,
-context_limit,
-compressed,
-total_cost_micros,
-runtime_ms)
+	) insert into chat_messages (
+	chat_id,
+	created_by,
+	api_key_id,
+	model_config_id,
+	reasoning_effort,
+	role,
+	content,
+	content_version,
+	visibility,
+	input_tokens,
+	output_tokens,
+	total_tokens,
+	reasoning_tokens,
+	cache_creation_tokens,
+	cache_read_tokens,
+	context_limit,
+	compressed,
+	total_cost_micros,
+	runtime_ms
+)
 select
 	@chat_id::uuid,
 	NULLIF(
@@ -1434,15 +1440,17 @@ with
 			and archived = false
 			and context_aggregate_hash is null
 		returning id
-	) insert into chat_context_resources (chat_id,
-source,
-body_kind,
-body,
-content_hash,
-size_bytes,
-status,
-error,
-source_path)
+	) insert into chat_context_resources (
+	chat_id,
+	source,
+	body_kind,
+	body,
+	content_hash,
+	size_bytes,
+	status,
+	error,
+	source_path
+)
 select
 	hydrated.id,
 	r.source,
@@ -1489,15 +1497,17 @@ returning id, owner_id;
 -- with DeleteChatContextResourcesByChatID (clear-then-copy, in a
 -- transaction) to re-pin a chat to its agent's latest snapshot from the
 -- refresh endpoint and on agent rebinding.
-insert into chat_context_resources (chat_id,
-source,
-body_kind,
-body,
-content_hash,
-size_bytes,
-status,
-error,
-source_path)
+insert into chat_context_resources (
+	chat_id,
+	source,
+	body_kind,
+	body,
+	content_hash,
+	size_bytes,
+	status,
+	error,
+	source_path
+)
 select
 	@chat_id::uuid,
 	r.source,
@@ -1554,8 +1564,7 @@ with
 			)
 	),
 	inserted as (
-		insert into chat_file_links (chat_id,
-		file_id)
+		insert into chat_file_links (chat_id, file_id)
 		select gn.chat_id, gn.file_id
 		from genuinely_new gn, current c
 		where c.cnt + (select COUNT(*) from genuinely_new) <= @max_file_links::int
@@ -1684,17 +1693,21 @@ select * from chat_diff_statuses where chat_id = @chat_id::uuid;
 select * from chat_diff_statuses where chat_id = any(@chat_ids::uuid[]);
 
 -- name: UpsertChatDiffStatusReference :one
-insert into chat_diff_statuses (chat_id,
-url,
-git_branch,
-git_remote_origin,
-stale_at)
+insert into chat_diff_statuses (
+	chat_id,
+	url,
+	git_branch,
+	git_remote_origin,
+	stale_at
+)
 values
-	(@chat_id::uuid,
-	sqlc.narg('url')::text,
-	@git_branch::text,
-	@git_remote_origin::text,
-	@stale_at::timestamptz)
+	(
+		@chat_id::uuid,
+		sqlc.narg('url')::text,
+		@git_branch::text,
+		@git_remote_origin::text,
+		@stale_at::timestamptz
+	)
 on conflict
 	(chat_id) do update set
 		url = case
@@ -1714,45 +1727,49 @@ on conflict
 returning *;
 
 -- name: UpsertChatDiffStatus :one
-insert into chat_diff_statuses (chat_id,
-url,
-pull_request_state,
-pull_request_title,
-pull_request_draft,
-changes_requested,
-additions,
-deletions,
-changed_files,
-author_login,
-author_avatar_url,
-base_branch,
-head_branch,
-pr_number,
-commits,
-approved,
-reviewer_count,
-refreshed_at,
-stale_at)
+insert into chat_diff_statuses (
+	chat_id,
+	url,
+	pull_request_state,
+	pull_request_title,
+	pull_request_draft,
+	changes_requested,
+	additions,
+	deletions,
+	changed_files,
+	author_login,
+	author_avatar_url,
+	base_branch,
+	head_branch,
+	pr_number,
+	commits,
+	approved,
+	reviewer_count,
+	refreshed_at,
+	stale_at
+)
 values
-	(@chat_id::uuid,
-	sqlc.narg('url')::text,
-	sqlc.narg('pull_request_state')::text,
-	@pull_request_title::text,
-	@pull_request_draft::boolean,
-	@changes_requested::boolean,
-	@additions::integer,
-	@deletions::integer,
-	@changed_files::integer,
-	sqlc.narg('author_login')::text,
-	sqlc.narg('author_avatar_url')::text,
-	sqlc.narg('base_branch')::text,
-	sqlc.narg('head_branch')::text,
-	sqlc.narg('pr_number')::integer,
-	sqlc.narg('commits')::integer,
-	sqlc.narg('approved')::boolean,
-	sqlc.narg('reviewer_count')::integer,
-	@refreshed_at::timestamptz,
-	@stale_at::timestamptz)
+	(
+		@chat_id::uuid,
+		sqlc.narg('url')::text,
+		sqlc.narg('pull_request_state')::text,
+		@pull_request_title::text,
+		@pull_request_draft::boolean,
+		@changes_requested::boolean,
+		@additions::integer,
+		@deletions::integer,
+		@changed_files::integer,
+		sqlc.narg('author_login')::text,
+		sqlc.narg('author_avatar_url')::text,
+		sqlc.narg('base_branch')::text,
+		sqlc.narg('head_branch')::text,
+		sqlc.narg('pr_number')::integer,
+		sqlc.narg('commits')::integer,
+		sqlc.narg('approved')::boolean,
+		sqlc.narg('reviewer_count')::integer,
+		@refreshed_at::timestamptz,
+		@stale_at::timestamptz
+	)
 on conflict
 	(chat_id) do update set
 		url = EXCLUDED.url,
@@ -1780,12 +1797,14 @@ returning *;
 -- Legacy queue insertion path. When no caller-supplied creator exists,
 -- preserve the created_by invariant by attributing the queued row to the
 -- chat owner.
-insert into chat_queued_messages (chat_id,
-content,
-model_config_id,
-reasoning_effort,
-api_key_id,
-created_by)
+insert into chat_queued_messages (
+	chat_id,
+	content,
+	model_config_id,
+	reasoning_effort,
+	api_key_id,
+	created_by
+)
 select
 	@chat_id::uuid,
 	@content::jsonb,
@@ -2203,11 +2222,13 @@ offset sqlc.arg('page_offset')::int;
 select * from chat_usage_limit_config where singleton = true limit 1;
 
 -- name: UpsertChatUsageLimitConfig :one
-insert into chat_usage_limit_config (singleton,
-enabled,
-default_limit_micros,
-period,
-updated_at)
+insert into chat_usage_limit_config (
+	singleton,
+	enabled,
+	default_limit_micros,
+	period,
+	updated_at
+)
 values
 	(true, @enabled::boolean, @default_limit_micros::bigint, @period::text, NOW())
 on conflict
@@ -2539,9 +2560,7 @@ limit @limit_count::int;
 select * from chats_expanded where id = any(@ids::uuid[]) order by id asc;
 
 -- name: BatchUpsertChatHeartbeats :exec
-insert into chat_heartbeats (chat_id,
-runner_id,
-heartbeat_at)
+insert into chat_heartbeats (chat_id, runner_id, heartbeat_at)
 select chat_ids.chat_id, runner_ids.runner_id, NOW()
 from
 	unnest(@chat_ids::uuid[]) with ordinality as chat_ids(chat_id, ord)
@@ -2820,19 +2839,23 @@ select NOW()::timestamptz as now;
 -- Inserts a queued message that carries a position (from the default
 -- sequence) and an explicit created_by reference. Use this when the
 -- queued-message creator differs from the chat owner.
-insert into chat_queued_messages (chat_id,
-content,
-model_config_id,
-reasoning_effort,
-api_key_id,
-created_by)
+insert into chat_queued_messages (
+	chat_id,
+	content,
+	model_config_id,
+	reasoning_effort,
+	api_key_id,
+	created_by
+)
 values
-	(@chat_id::uuid,
-	@content::jsonb,
-	sqlc.narg('model_config_id')::uuid,
-	sqlc.narg('reasoning_effort')::chat_reasoning_effort,
-	sqlc.narg('api_key_id')::text,
-	@created_by::uuid)
+	(
+		@chat_id::uuid,
+		@content::jsonb,
+		sqlc.narg('model_config_id')::uuid,
+		sqlc.narg('reasoning_effort')::chat_reasoning_effort,
+		sqlc.narg('api_key_id')::text,
+		@created_by::uuid
+	)
 returning *;
 
 -- name: GetChatQueuedMessagesByPosition :many
@@ -2902,9 +2925,7 @@ where
 -- name: UpsertChatHeartbeat :exec
 -- Upserts a heartbeat row for the (chat_id, runner_id) lease. Uses
 -- database time so callers do not depend on a local clock.
-insert into chat_heartbeats (chat_id,
-runner_id,
-heartbeat_at)
+insert into chat_heartbeats (chat_id, runner_id, heartbeat_at)
 values (@chat_id::uuid, @runner_id::uuid, NOW())
 on conflict
 	(chat_id, runner_id) do update set heartbeat_at = EXCLUDED.heartbeat_at;

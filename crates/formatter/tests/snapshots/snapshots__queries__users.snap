@@ -71,31 +71,35 @@ where
 	and case when @include_system::bool then true else is_system = false end;
 
 -- name: InsertUser :one
-insert into users (id,
-email,
-username,
-name,
-hashed_password,
-created_at,
-updated_at,
-rbac_roles,
-login_type,
-status,
-is_service_account)
+insert into users (
+	id,
+	email,
+	username,
+	name,
+	hashed_password,
+	created_at,
+	updated_at,
+	rbac_roles,
+	login_type,
+	status,
+	is_service_account
+)
 values
-	($1,
-	$2,
-	$3,
-	$4,
-	$5,
-	$6,
-	$7,
-	$8,
-	$9,
-	-- if the status passed in is empty, fallback to dormant, which is what
-	-- we were doing before.
-	COALESCE(NULLIF(@status::text, '')::user_status, 'dormant'::user_status),
-	@is_service_account::bool)
+	(
+		$1,
+		$2,
+		$3,
+		$4,
+		$5,
+		$6,
+		$7,
+		$8,
+		$9,
+		-- if the status passed in is empty, fallback to dormant, which is what
+		-- we were doing before.
+		COALESCE(NULLIF(@status::text, '')::user_status, 'dormant'::user_status),
+		@is_service_account::bool
+	)
 returning *;
 
 -- name: UpdateUserProfile :one
@@ -141,9 +145,7 @@ where
 	);
 
 -- name: UpdateUserThemePreference :one
-insert into user_configs (user_id,
-key,
-value)
+insert into user_configs (user_id, key, value)
 values (@user_id, 'theme_preference', @theme_preference)
 on conflict on constraint user_configs_pkey do update
 	set value = @theme_preference where
@@ -151,9 +153,7 @@ on conflict on constraint user_configs_pkey do update
 returning *;
 
 -- name: UpdateUserTerminalFont :one
-insert into user_configs (user_id,
-key,
-value)
+insert into user_configs (user_id, key, value)
 values (@user_id, 'terminal_font', @terminal_font)
 on conflict on constraint user_configs_pkey do update
 	set value = @terminal_font where
@@ -161,9 +161,7 @@ on conflict on constraint user_configs_pkey do update
 returning *;
 
 -- name: UpdateUserThemeMode :one
-insert into user_configs (user_id,
-key,
-value)
+insert into user_configs (user_id, key, value)
 values (@user_id, 'theme_mode', @theme_mode)
 on conflict on constraint user_configs_pkey do update
 	set value = @theme_mode where
@@ -171,9 +169,7 @@ on conflict on constraint user_configs_pkey do update
 returning *;
 
 -- name: UpdateUserThemeLight :one
-insert into user_configs (user_id,
-key,
-value)
+insert into user_configs (user_id, key, value)
 values (@user_id, 'theme_light', @theme_light)
 on conflict on constraint user_configs_pkey do update
 	set value = @theme_light where
@@ -181,9 +177,7 @@ on conflict on constraint user_configs_pkey do update
 returning *;
 
 -- name: UpdateUserThemeDark :one
-insert into user_configs (user_id,
-key,
-value)
+insert into user_configs (user_id, key, value)
 values (@user_id, 'theme_dark', @theme_dark)
 on conflict on constraint user_configs_pkey do update
 	set value = @theme_dark where
@@ -196,9 +190,7 @@ from user_configs
 where user_id = @user_id and key = 'chat_custom_prompt';
 
 -- name: UpdateUserChatCustomPrompt :one
-insert into user_configs (user_id,
-key,
-value)
+insert into user_configs (user_id, key, value)
 values (@user_id, 'chat_custom_prompt', @chat_custom_prompt)
 on conflict on constraint user_configs_pkey do update
 	set value = @chat_custom_prompt where
@@ -217,9 +209,7 @@ from user_configs
 where user_id = @user_id and key = @key;
 
 -- name: UpdateUserChatCompactionThreshold :one
-insert into user_configs (user_id,
-key,
-value)
+insert into user_configs (user_id, key, value)
 values (@user_id, @key, (@threshold_percent::int)::text)
 on conflict on constraint user_configs_pkey do update
 	set value = (@threshold_percent::int)::text
@@ -240,13 +230,13 @@ select
 	)::boolean as debug_logging_enabled;
 
 -- name: UpsertUserChatDebugLoggingEnabled :exec
-insert into user_configs (user_id,
-key,
-value)
+insert into user_configs (user_id, key, value)
 values
-	(@user_id,
-	'chat_debug_logging_enabled',
-	case when sqlc.arg(debug_logging_enabled)::bool then 'true' else 'false' end)
+	(
+		@user_id,
+		'chat_debug_logging_enabled',
+		case when sqlc.arg(debug_logging_enabled)::bool then 'true' else 'false' end
+	)
 on conflict on constraint user_configs_pkey do update
 	set
 		value = case
@@ -268,9 +258,7 @@ from user_configs
 where user_id = @user_id and key = @key;
 
 -- name: UpsertUserChatPersonalModelOverride :exec
-insert into user_configs (user_id,
-key,
-value)
+insert into user_configs (user_id, key, value)
 values (@user_id::uuid, @key::text, @value::text)
 on conflict on constraint user_configs_pkey do update set value = @value::text;
 
@@ -281,13 +269,13 @@ where
 	user_id = @user_id and key = 'preference_task_notification_alert_dismissed';
 
 -- name: UpdateUserTaskNotificationAlertDismissed :one
-insert into user_configs (user_id,
-key,
-value)
+insert into user_configs (user_id, key, value)
 values
-	(@user_id,
-	'preference_task_notification_alert_dismissed',
-	(@task_notification_alert_dismissed::boolean)::text)
+	(
+		@user_id,
+		'preference_task_notification_alert_dismissed',
+		(@task_notification_alert_dismissed::boolean)::text
+	)
 on conflict on constraint user_configs_pkey do update
 	set value = @task_notification_alert_dismissed where
 		user_configs.user_id = @user_id
@@ -300,9 +288,7 @@ from user_configs
 where user_id = @user_id and key = 'preference_thinking_display_mode';
 
 -- name: UpdateUserThinkingDisplayMode :one
-insert into user_configs (user_id,
-key,
-value)
+insert into user_configs (user_id, key, value)
 values
 	(@user_id, 'preference_thinking_display_mode', @thinking_display_mode::text)
 on conflict on constraint user_configs_pkey do update
@@ -317,13 +303,13 @@ from user_configs
 where user_id = @user_id and key = 'preference_shell_tool_display_mode';
 
 -- name: UpdateUserShellToolDisplayMode :one
-insert into user_configs (user_id,
-key,
-value)
+insert into user_configs (user_id, key, value)
 values
-	(@user_id,
-	'preference_shell_tool_display_mode',
-	@shell_tool_display_mode::text)
+	(
+		@user_id,
+		'preference_shell_tool_display_mode',
+		@shell_tool_display_mode::text
+	)
 on conflict on constraint user_configs_pkey do update
 	set value = @shell_tool_display_mode where
 		user_configs.user_id = @user_id
@@ -336,9 +322,7 @@ from user_configs
 where user_id = @user_id and key = 'preference_code_diff_display_mode';
 
 -- name: UpdateUserCodeDiffDisplayMode :one
-insert into user_configs (user_id,
-key,
-value)
+insert into user_configs (user_id, key, value)
 values
 	(@user_id, 'preference_code_diff_display_mode', @code_diff_display_mode::text)
 on conflict on constraint user_configs_pkey do update
@@ -353,13 +337,13 @@ from user_configs
 where user_id = @user_id and key = 'preference_agent_chat_send_shortcut';
 
 -- name: UpdateUserAgentChatSendShortcut :one
-insert into user_configs (user_id,
-key,
-value)
+insert into user_configs (user_id, key, value)
 values
-	(@user_id,
-	'preference_agent_chat_send_shortcut',
-	@agent_chat_send_shortcut::text)
+	(
+		@user_id,
+		'preference_agent_chat_send_shortcut',
+		@agent_chat_send_shortcut::text
+	)
 on conflict on constraint user_configs_pkey do update
 	set value = @agent_chat_send_shortcut where
 		user_configs.user_id = @user_id

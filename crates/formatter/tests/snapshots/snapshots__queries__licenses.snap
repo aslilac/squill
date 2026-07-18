@@ -3,10 +3,7 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertLicense :one
-insert into licenses (uploaded_at,
-jwt,
-exp,
-uuid)
+insert into licenses (uploaded_at, jwt, exp, uuid)
 values ($1, $2, $3, $4)
 returning *;
 

@@ -3,8 +3,7 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: InsertTelemetryItemIfNotExists :exec
-insert into telemetry_items (key,
-value)
+insert into telemetry_items (key, value)
 values ($1, $2)
 on conflict (key) do nothing;
 
@@ -12,8 +11,7 @@ on conflict (key) do nothing;
 select * from telemetry_items where key = $1;
 
 -- name: UpsertTelemetryItem :exec
-insert into telemetry_items (key,
-value)
+insert into telemetry_items (key, value)
 values ($1, $2)
 on conflict
 	(key) do update set value = $2, updated_at = NOW() where

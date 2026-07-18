@@ -69,15 +69,17 @@ select * from inbox_notifications where id = $1;
 select COUNT(*) from inbox_notifications where user_id = $1 and read_at is null;
 
 -- name: InsertInboxNotification :one
-insert into inbox_notifications (id,
-user_id,
-template_id,
-targets,
-title,
-content,
-icon,
-actions,
-created_at)
+insert into inbox_notifications (
+	id,
+	user_id,
+	template_id,
+	targets,
+	title,
+	content,
+	icon,
+	actions,
+	created_at
+)
 values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 returning *;
 

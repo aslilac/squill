@@ -13,14 +13,16 @@ where
 	deleted = false
 	and name in (select 'agents-' || cp.provider from chat_providers cp);
 
-insert into ai_providers (id,
-type,
-name,
-display_name,
-enabled,
-base_url,
-created_at,
-updated_at)
+insert into ai_providers (
+	id,
+	type,
+	name,
+	display_name,
+	enabled,
+	base_url,
+	created_at,
+	updated_at
+)
 select
 	cp.id,
 	cp.provider::ai_provider_type,
@@ -32,12 +34,14 @@ select
 	cp.updated_at
 from chat_providers cp;
 
-insert into ai_provider_keys (id,
-provider_id,
-api_key,
-api_key_key_id,
-created_at,
-updated_at)
+insert into ai_provider_keys (
+	id,
+	provider_id,
+	api_key,
+	api_key_key_id,
+	created_at,
+	updated_at
+)
 select
 	gen_random_uuid(),
 	cp.id,
@@ -48,13 +52,15 @@ select
 from chat_providers cp
 where cp.api_key != '';
 
-insert into user_ai_provider_keys (id,
-user_id,
-ai_provider_id,
-api_key,
-api_key_key_id,
-created_at,
-updated_at)
+insert into user_ai_provider_keys (
+	id,
+	user_id,
+	ai_provider_id,
+	api_key,
+	api_key_key_id,
+	created_at,
+	updated_at
+)
 select
 	ucpk.id,
 	ucpk.user_id,

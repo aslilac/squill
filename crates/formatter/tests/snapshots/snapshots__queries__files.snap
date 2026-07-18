@@ -9,12 +9,7 @@ select * from files where id = $1 limit 1;
 select * from files where hash = $1 and created_by = $2 limit 1;
 
 -- name: InsertFile :one
-insert into files (id,
-hash,
-created_at,
-created_by,
-mimetype,
-data)
+insert into files (id, hash, created_at, created_by, mimetype, "data")
 values ($1, $2, $3, $4, $5, $6)
 returning *;
 

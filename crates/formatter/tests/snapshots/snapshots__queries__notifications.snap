@@ -17,23 +17,27 @@ from notification_templates nt, users u
 where nt.id = @notification_template_id and u.id = @user_id;
 
 -- name: EnqueueNotificationMessage :exec
-insert into notification_messages (id,
-notification_template_id,
-user_id,
-method,
-payload,
-targets,
-created_by,
-created_at)
+insert into notification_messages (
+	id,
+	notification_template_id,
+	user_id,
+	method,
+	payload,
+	targets,
+	created_by,
+	created_at
+)
 values
-	(@id,
-	@notification_template_id,
-	@user_id,
-	@method::notification_method,
-	@payload::jsonb,
-	@targets,
-	@created_by,
-	@created_at);
+	(
+		@id,
+		@notification_template_id,
+		@user_id,
+		@method::notification_method,
+		@payload::jsonb,
+		@targets,
+		@created_by,
+		@created_at
+	);
 
 -- Acquires the lease for a given count of notification messages, to enable concurrent dequeuing and subsequent sending.
 -- Only rows that aren't already leased (or ones which are leased but have exceeded their lease period) are returned.
@@ -186,9 +190,11 @@ limit sqlc.arg('limit')::int;
 select * from notification_preferences where user_id = @user_id::uuid;
 
 -- name: UpdateUserNotificationPreferences :execrows
-insert into notification_preferences (user_id,
-notification_template_id,
-disabled)
+insert into notification_preferences (
+	user_id,
+	notification_template_id,
+	disabled
+)
 select @user_id::uuid, new_values.notification_template_id, new_values.disabled
 from
 	(
@@ -224,8 +230,10 @@ where notification_template_id = @template_id::uuid;
 
 -- name: UpsertNotificationReportGeneratorLog :exec
 -- Insert or update notification report generator logs with recent activity.
-insert into notification_report_generator_logs (notification_template_id,
-last_generated_at)
+insert into notification_report_generator_logs (
+	notification_template_id,
+	last_generated_at
+)
 values (@notification_template_id, @last_generated_at)
 on conflict
 	(notification_template_id) do update set
@@ -241,11 +249,13 @@ select * from webpush_subscriptions where user_id = @user_id::uuid;
 -- is unique; re-subscribing the same endpoint replaces the keys instead of
 -- inserting a duplicate row. This is the recovery path after a PWA reinstall
 -- on iOS, where the browser may keep the same endpoint with rotated keys.
-insert into webpush_subscriptions (user_id,
-created_at,
-endpoint,
-endpoint_p256dh_key,
-endpoint_auth_key)
+insert into webpush_subscriptions (
+	user_id,
+	created_at,
+	endpoint,
+	endpoint_p256dh_key,
+	endpoint_auth_key
+)
 values ($1, $2, $3, $4, $5)
 on conflict
 	(user_id,

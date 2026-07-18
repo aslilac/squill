@@ -15,25 +15,29 @@ select * from workspace_agent_memory_resource_monitors where agent_id = $1;
 select * from workspace_agent_volume_resource_monitors where agent_id = $1;
 
 -- name: InsertMemoryResourceMonitor :one
-insert into workspace_agent_memory_resource_monitors (agent_id,
-enabled,
-state,
-threshold,
-created_at,
-updated_at,
-debounced_until)
+insert into workspace_agent_memory_resource_monitors (
+	agent_id,
+	enabled,
+	state,
+	threshold,
+	created_at,
+	updated_at,
+	debounced_until
+)
 values ($1, $2, $3, $4, $5, $6, $7)
 returning *;
 
 -- name: InsertVolumeResourceMonitor :one
-insert into workspace_agent_volume_resource_monitors (agent_id,
-path,
-enabled,
-state,
-threshold,
-created_at,
-updated_at,
-debounced_until)
+insert into workspace_agent_volume_resource_monitors (
+	agent_id,
+	path,
+	enabled,
+	state,
+	threshold,
+	created_at,
+	updated_at,
+	debounced_until
+)
 values ($1, $2, $3, $4, $5, $6, $7, $8)
 returning *;
 

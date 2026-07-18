@@ -5,13 +5,15 @@ expression: formatted
 -- name: InsertUsageEvent :exec
 -- Duplicate events are ignored intentionally to allow for multiple replicas to
 -- publish heartbeat events.
-insert into usage_events (id,
-event_type,
-event_data,
-created_at,
-publish_started_at,
-published_at,
-failure_message)
+insert into usage_events (
+	id,
+	event_type,
+	event_data,
+	created_at,
+	publish_started_at,
+	published_at,
+	failure_message
+)
 values (@id, @event_type, @event_data, @created_at, null, null, null)
 on conflict (id) do nothing;
 

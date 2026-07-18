@@ -6,29 +6,33 @@ alter table users add column is_system bool default false not null;
 
 comment on column users.is_system is 'Determines if a user is a system user, and therefore cannot login or perform normal actions';
 
-insert into users (id,
-email,
-username,
-name,
-created_at,
-updated_at,
-status,
-rbac_roles,
-hashed_password,
-is_system,
-login_type)
+insert into users (
+	id,
+	email,
+	username,
+	name,
+	created_at,
+	updated_at,
+	status,
+	rbac_roles,
+	hashed_password,
+	is_system,
+	login_type
+)
 values
-	('c42fdf75-3097-471c-8c33-fb52454d81c0',
-	'prebuilds@system',
-	'prebuilds',
-	'Prebuilds Owner',
-	now(),
-	now(),
-	'active',
-	'{}',
-	'none',
-	true,
-	'none'::login_type);
+	(
+		'c42fdf75-3097-471c-8c33-fb52454d81c0',
+		'prebuilds@system',
+		'prebuilds',
+		'Prebuilds Owner',
+		now(),
+		now(),
+		'active',
+		'{}',
+		'none',
+		true,
+		'none'::login_type
+	);
 
 drop view if exists group_members_expanded;
 create view group_members_expanded as
@@ -77,10 +81,12 @@ with
 		from organizations
 		where is_default = true
 		limit 1
-	) insert into organization_members (organization_id,
-user_id,
-created_at,
-updated_at)
+	) insert into organization_members (
+	organization_id,
+	user_id,
+	created_at,
+	updated_at
+)
 select
 	default_org.id,
 	'c42fdf75-3097-471c-8c33-fb52454d81c0', -- The system user responsible for prebuilds.

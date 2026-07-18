@@ -2,17 +2,20 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-insert into notification_templates (id,
-name,
-title_template,
-body_template,
-"group",
-actions)
+insert into notification_templates (
+	id,
+	name,
+	title_template,
+	body_template,
+	"group",
+	actions
+)
 values
-	('34a20db2-e9cc-4a93-b0e4-8569699d7a00',
-	'Report: Workspace Builds Failed For Template',
-	E'Workspace builds failed for template "{{.Labels.template_display_name}}"',
-	E'Hi {{.UserName}},
+	(
+		'34a20db2-e9cc-4a93-b0e4-8569699d7a00',
+		'Report: Workspace Builds Failed For Template',
+		E'Workspace builds failed for template "{{.Labels.template_display_name}}"',
+		E'Hi {{.UserName}},
 
 Template **{{.Labels.template_display_name}}** has failed to build {{.Data.failed_builds}}/{{.Data.total_builds}} times over the last {{.Data.report_frequency}}.
 
@@ -24,13 +27,14 @@ Template **{{.Labels.template_display_name}}** has failed to build {{.Data.faile
 {{- end}}
 {{end}}
 We recommend reviewing these issues to ensure future builds are successful.',
-	'Template Events',
-	'[
+		'Template Events',
+		'[
         {
             "label": "View workspaces",
             "url": "{{ base_url }}/workspaces?filter=template%3A{{.Labels.template_name}}"
         }
-    ]'::jsonb);
+    ]'::jsonb
+	);
 
 create table notification_report_generator_logs (
 	notification_template_id uuid not null,

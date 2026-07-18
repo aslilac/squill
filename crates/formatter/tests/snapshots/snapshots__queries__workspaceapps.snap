@@ -18,47 +18,51 @@ select * from workspace_apps where agent_id = $1 and slug = $2;
 select * from workspace_apps where created_at > $1 order by slug asc;
 
 -- name: UpsertWorkspaceApp :one
-insert into workspace_apps (id,
-created_at,
-agent_id,
-slug,
-display_name,
-icon,
-command,
-url,
-external,
-subdomain,
-sharing_level,
-healthcheck_url,
-healthcheck_interval,
-healthcheck_threshold,
-health,
-display_order,
-hidden,
-open_in,
-display_group,
-tooltip)
+insert into workspace_apps (
+	id,
+	created_at,
+	agent_id,
+	slug,
+	display_name,
+	icon,
+	command,
+	url,
+	external,
+	subdomain,
+	sharing_level,
+	healthcheck_url,
+	healthcheck_interval,
+	healthcheck_threshold,
+	health,
+	display_order,
+	hidden,
+	open_in,
+	display_group,
+	tooltip
+)
 values
-	($1,
-	$2,
-	$3,
-	$4,
-	$5,
-	$6,
-	$7,
-	$8,
-	$9,
-	$10,
-	$11,
-	$12,
-	$13,
-	$14,
-	$15,
-	$16,
-	$17,
-	$18,
-	$19,
-	$20)
+	(
+		$1,
+		$2,
+		$3,
+		$4,
+		$5,
+		$6,
+		$7,
+		$8,
+		$9,
+		$10,
+		$11,
+		$12,
+		$13,
+		$14,
+		$15,
+		$16,
+		$17,
+		$18,
+		$19,
+		$20
+	)
 on conflict
 	(id) do update set
 		display_name = EXCLUDED.display_name,
@@ -122,14 +126,16 @@ returning *;
 update workspace_apps set health = $2 where id = $1;
 
 -- name: InsertWorkspaceAppStatus :one
-insert into workspace_app_statuses (id,
-created_at,
-workspace_id,
-agent_id,
-app_id,
-state,
-message,
-uri)
+insert into workspace_app_statuses (
+	id,
+	created_at,
+	workspace_id,
+	agent_id,
+	app_id,
+	state,
+	message,
+	uri
+)
 values ($1, $2, $3, $4, $5, $6, $7, $8)
 returning *;
 
