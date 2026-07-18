@@ -212,3 +212,119 @@ fn sqlite_dialect_flag() {
     // Backtick/bracket idents normalize; :param survives.
     assert_eq!(stdout, "select \"a b\", c from t where x = :param;\n");
 }
+
+// ---- TREE-105: squill.toml config discovery ----
+
+#[test]
+fn config_discovery_nested_and_precedence() {
+    let dir = temp_dir("config");
+    std::fs::write(dir.join("squill.toml"), "keyword-case = \"upper\"\n").expect("write config");
+    std::fs::create_dir_all(dir.join("sub")).expect("mkdir");
+    std::fs::write(
+        dir.join("sub/squill.toml"),
+        "# nearest config wins\nkeyword-case = \"lower\"\nindent = \"spaces\" # with a comment\n",
+    )
+    .expect("write sub config");
+    std::fs::write(dir.join("a.sql"), "select 1;\n").expect("write");
+    std::fs::write(dir.join("sub/b.sql"), "select 1;\n").expect("write");
+
+    let status = squill().arg("fmt").arg(&dir).status().expect("run");
+    assert!(status.success());
+    assert_eq!(
+        std::fs::read_to_string(dir.join("a.sql")).expect("read"),
+        "SELECT 1;\n",
+        "root file must use the root config"
+    );
+    assert_eq!(
+        std::fs::read_to_string(dir.join("sub/b.sql")).expect("read"),
+        "select 1;\n",
+        "nested file must use the nearest config"
+    );
+
+    // Explicit flags override config.
+    std::fs::write(dir.join("a.sql"), "select 1;\n").expect("write");
+    let status = squill()
+        .args(["fmt", "--keyword-case", "lower"])
+        .arg(dir.join("a.sql"))
+        .status()
+        .expect("run");
+    assert!(status.success());
+    assert_eq!(
+        std::fs::read_to_string(dir.join("a.sql")).expect("read"),
+        "select 1;\n"
+    );
+
+    // --no-config ignores the config entirely.
+    let status = squill()
+        .args(["fmt", "--no-config"])
+        .arg(dir.join("a.sql"))
+        .status()
+        .expect("run");
+    assert!(status.success());
+    assert_eq!(
+        std::fs::read_to_string(dir.join("a.sql")).expect("read"),
+        "select 1;\n"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn config_errors_are_hard_errors_with_location() {
+    let dir = temp_dir("badconfig");
+    std::fs::write(dir.join("f.sql"), "select 1;\n").expect("write");
+
+    // Unknown key.
+    std::fs::write(dir.join("squill.toml"), "keyword_case = \"upper\"\n").expect("write");
+    let output = squill().arg("fmt").arg(&dir).output().expect("run");
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("squill.toml:1:") && stderr.contains("unknown key"),
+        "got: {stderr}"
+    );
+
+    // Syntax error with line number.
+    std::fs::write(dir.join("squill.toml"), "# fine\n[section]\n").expect("write");
+    let output = squill().arg("fmt").arg(&dir).output().expect("run");
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("squill.toml:2:") && stderr.contains("sections"),
+        "got: {stderr}"
+    );
+
+    // Wrong type.
+    std::fs::write(dir.join("squill.toml"), "at-params = \"yes\"\n").expect("write");
+    let output = squill().arg("fmt").arg(&dir).output().expect("run");
+    assert_eq!(output.status.code(), Some(2));
+
+    // The file was never touched.
+    assert_eq!(
+        std::fs::read_to_string(dir.join("f.sql")).expect("read"),
+        "select 1;\n"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn stdin_uses_cwd_config() {
+    let dir = temp_dir("stdinconfig");
+    std::fs::write(dir.join("squill.toml"), "keyword-case = \"upper\"\n").expect("write");
+    let mut child = squill()
+        .args(["fmt", "--stdin"])
+        .current_dir(&dir)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("spawn");
+    child
+        .stdin
+        .take()
+        .expect("stdin")
+        .write_all(b"select 1;")
+        .expect("write");
+    let output = child.wait_with_output().expect("wait");
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "SELECT 1;\n");
+    let _ = std::fs::remove_dir_all(&dir);
+}

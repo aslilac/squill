@@ -2,15 +2,18 @@
 //!
 //! Thin CLI over the formatter library, suitable for pre-commit and CI.
 //! `squill fmt <paths...>` writes in place; `--check` diffs and exits 1;
-//! `--stdin`/`--stdout` stream. Flags only — no config file yet.
+//! `--stdin`/`--stdout` stream. Options come from the nearest
+//! `squill.toml` (see `config`), overridden by explicit flags.
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use formatter::{IdentQuoting, IndentStyle, KeywordCase, Options};
-use parser::Dialect;
+use formatter::Options;
 use rayon::prelude::*;
+
+mod config;
+use config::PartialOptions;
 
 const USAGE: &str = "\
 squill — a SQL formatter
@@ -33,7 +36,12 @@ Options:
   --keyword-case <CASE>   lower (default) | upper
   --quote-idents <MODE>   unquote-safe (default) | always
   --at-params             Treat sqlc-style @name as parameters (Postgres)
+  --no-config             Ignore squill.toml files
   -h, --help              Show this help
+
+Configuration: the nearest squill.toml at or above each formatted file
+supplies defaults (keys: dialect, indent, indent-width, keyword-case,
+quote-idents, at-params). Explicit flags override the config.
 ";
 
 struct Args {
@@ -41,7 +49,8 @@ struct Args {
     stdout_mode: bool,
     stdin_mode: bool,
     strict: bool,
-    options: Options,
+    no_config: bool,
+    overrides: PartialOptions,
     paths: Vec<PathBuf>,
 }
 
@@ -57,7 +66,8 @@ fn parse_args() -> Result<Args, String> {
         stdout_mode: false,
         stdin_mode: false,
         strict: false,
-        options: Options::default(),
+        no_config: false,
+        overrides: PartialOptions::default(),
         paths: Vec::new(),
     };
     let value = |argv: &mut dyn Iterator<Item = String>, flag: &str| {
@@ -69,39 +79,32 @@ fn parse_args() -> Result<Args, String> {
             "--stdout" => args.stdout_mode = true,
             "--stdin" => args.stdin_mode = true,
             "--strict" => args.strict = true,
-            "--at-params" => args.options.at_params = true,
+            "--no-config" => args.no_config = true,
+            "--at-params" => args.overrides.at_params = Some(true),
             "--dialect" => {
-                args.options.dialect = match value(&mut argv, "--dialect")?.as_str() {
-                    "postgres" => Dialect::Postgres,
-                    "sqlite" => Dialect::Sqlite,
-                    other => return Err(format!("unknown dialect `{other}`")),
-                }
+                args.overrides.dialect =
+                    Some(config::parse_dialect(&value(&mut argv, "--dialect")?)?)
             }
             "--indent" => {
-                args.options.indent_style = match value(&mut argv, "--indent")?.as_str() {
-                    "tab" | "tabs" => IndentStyle::Tab,
-                    "spaces" => IndentStyle::Spaces,
-                    other => return Err(format!("unknown indent style `{other}`")),
-                }
+                args.overrides.indent_style =
+                    Some(config::parse_indent(&value(&mut argv, "--indent")?)?)
             }
             "--indent-width" => {
-                args.options.indent_width = value(&mut argv, "--indent-width")?
-                    .parse()
-                    .map_err(|_| "--indent-width needs a number".to_string())?
+                args.overrides.indent_width = Some(
+                    value(&mut argv, "--indent-width")?
+                        .parse()
+                        .map_err(|_| "--indent-width needs a number".to_string())?,
+                )
             }
             "--keyword-case" => {
-                args.options.keyword_case = match value(&mut argv, "--keyword-case")?.as_str() {
-                    "lower" => KeywordCase::Lower,
-                    "upper" => KeywordCase::Upper,
-                    other => return Err(format!("unknown keyword case `{other}`")),
-                }
+                args.overrides.keyword_case = Some(config::parse_keyword_case(&value(
+                    &mut argv,
+                    "--keyword-case",
+                )?)?)
             }
             "--quote-idents" => {
-                args.options.quoting = match value(&mut argv, "--quote-idents")?.as_str() {
-                    "unquote-safe" => IdentQuoting::UnquotedWhenSafe,
-                    "always" => IdentQuoting::AlwaysQuoted,
-                    other => return Err(format!("unknown quoting mode `{other}`")),
-                }
+                args.overrides.quoting =
+                    Some(config::parse_quoting(&value(&mut argv, "--quote-idents")?)?)
             }
             "-h" | "--help" => return Err(USAGE.to_string()),
             flag if flag.starts_with('-') => {
@@ -117,6 +120,33 @@ fn parse_args() -> Result<Args, String> {
         return Err(format!("no input files\n\n{USAGE}"));
     }
     Ok(args)
+}
+
+/// Resolve effective options for a file in `dir`: defaults, then the
+/// nearest squill.toml (unless --no-config), then explicit flags.
+fn resolve_options(
+    dir: &Path,
+    args: &Args,
+    cache: &mut std::collections::HashMap<PathBuf, PartialOptions>,
+) -> Result<Options, String> {
+    let mut options = Options::default();
+    if !args.no_config
+        && let Some(config_path) = config::discover(dir)
+    {
+        let partial = match cache.get(&config_path) {
+            Some(partial) => *partial,
+            None => {
+                let text = std::fs::read_to_string(&config_path)
+                    .map_err(|err| format!("{}: {err}", config_path.display()))?;
+                let partial = config::parse_config(&text, &config_path)?;
+                cache.insert(config_path.clone(), partial);
+                partial
+            }
+        };
+        partial.apply(&mut options);
+    }
+    args.overrides.apply(&mut options);
+    Ok(options)
 }
 
 /// One formatted source, with human-readable diagnostics.
@@ -206,7 +236,16 @@ fn main() -> ExitCode {
             eprintln!("squill: cannot read stdin: {err}");
             return ExitCode::from(2);
         }
-        let outcome = format_source(&source, &args.options);
+        let mut cache = std::collections::HashMap::new();
+        let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let options = match resolve_options(&cwd, &args, &mut cache) {
+            Ok(options) => options,
+            Err(message) => {
+                eprintln!("squill: {message}");
+                return ExitCode::from(2);
+            }
+        };
+        let outcome = format_source(&source, &options);
         for diagnostic in &outcome.diagnostics {
             eprintln!("<stdin>:{diagnostic}");
         }
@@ -240,12 +279,28 @@ fn main() -> ExitCode {
         outcome: Outcome,
     }
 
+    // Resolve options per file up front (sequential, cached per config
+    // path); a config error is a hard error before any file is touched.
+    let mut cache = std::collections::HashMap::new();
+    let mut per_file_options = Vec::with_capacity(files.len());
+    for path in &files {
+        let dir = path.parent().unwrap_or_else(|| Path::new("."));
+        match resolve_options(dir, &args, &mut cache) {
+            Ok(options) => per_file_options.push(options),
+            Err(message) => {
+                eprintln!("squill: {message}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+
     let results: Vec<Result<FileResult, String>> = files
         .par_iter()
-        .map(|path| {
+        .zip(per_file_options.par_iter())
+        .map(|(path, options)| {
             let source = std::fs::read_to_string(path)
                 .map_err(|err| format!("{}: {err}", path.display()))?;
-            let outcome = format_source(&source, &args.options);
+            let outcome = format_source(&source, options);
             Ok(FileResult {
                 path: path.clone(),
                 source,
