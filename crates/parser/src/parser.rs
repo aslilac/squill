@@ -59,6 +59,7 @@ pub fn parse(tokens: &[Token<'_>], dialect: Dialect) -> Parse {
         diagnostics: Vec::new(),
         dialect,
         eof,
+        depth: 0,
     };
     parser.events.push(Event::StartNode(SyntaxKind::Root));
     while !parser.at_eof() {
@@ -88,6 +89,10 @@ pub(crate) struct StmtError {
 
 pub(crate) type PResult = Result<(), StmtError>;
 
+/// Recursion bound: deeper nesting turns the statement into an
+/// `ErrorStatement` instead of risking stack overflow.
+const MAX_DEPTH: u32 = 200;
+
 pub(crate) struct Parser<'src> {
     toks: Vec<Tok<'src>>,
     pos: usize,
@@ -95,6 +100,7 @@ pub(crate) struct Parser<'src> {
     diagnostics: Vec<Diagnostic>,
     dialect: Dialect,
     eof: usize,
+    depth: u32,
 }
 
 impl Parser<'_> {
@@ -185,13 +191,16 @@ impl Parser<'_> {
     }
 
     /// Snapshot for speculative parsing; pair with `backtrack` on failure.
-    pub(crate) fn state(&self) -> (usize, usize) {
-        (self.events.len(), self.pos)
+    /// Restores the depth counter too, since an `Err` bail skips
+    /// `exit_depth` calls.
+    pub(crate) fn state(&self) -> (usize, usize, u32) {
+        (self.events.len(), self.pos, self.depth)
     }
 
-    pub(crate) fn backtrack(&mut self, state: (usize, usize)) {
+    pub(crate) fn backtrack(&mut self, state: (usize, usize, u32)) {
         self.events.truncate(state.0);
         self.pos = state.1;
+        self.depth = state.2;
     }
 
     // ---- eating ----
@@ -239,6 +248,21 @@ impl Parser<'_> {
         }
     }
 
+    /// Guard a recursive descent; pair with `exit_depth` on all Ok paths.
+    /// Unpaired exits after an `Err` are fine: `statement` resets depth.
+    pub(crate) fn enter_depth(&mut self) -> PResult {
+        self.depth += 1;
+        if self.depth > MAX_DEPTH {
+            Err(self.error("nesting too deep"))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub(crate) fn exit_depth(&mut self) {
+        self.depth = self.depth.saturating_sub(1);
+    }
+
     pub(crate) fn error(&self, message: &str) -> StmtError {
         let found = match self.toks.get(self.pos) {
             Some(t) => format!("`{}`", t.text),
@@ -261,7 +285,9 @@ impl Parser<'_> {
         }
         let events_checkpoint = self.events.len();
         let pos_checkpoint = self.pos;
-        if let Err(error) = self.statement_inner() {
+        let result = self.statement_inner();
+        self.depth = 0;
+        if let Err(error) = result {
             self.events.truncate(events_checkpoint);
             self.pos = pos_checkpoint;
             self.error_statement(error);

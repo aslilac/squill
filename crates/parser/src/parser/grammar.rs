@@ -174,6 +174,13 @@ fn query_expr(p: &mut Parser<'_>, min_bp: u8) -> PResult {
 }
 
 fn query_primary(p: &mut Parser<'_>) -> PResult {
+    p.enter_depth()?;
+    let result = query_primary_inner(p);
+    p.exit_depth();
+    result
+}
+
+fn query_primary_inner(p: &mut Parser<'_>) -> PResult {
     if p.at(SyntaxKind::LParen) {
         p.start(SyntaxKind::ParenSelect);
         p.bump();
@@ -338,6 +345,13 @@ fn join_keywords(p: &mut Parser<'_>) -> PResult {
 }
 
 fn table_primary(p: &mut Parser<'_>) -> PResult {
+    p.enter_depth()?;
+    let result = table_primary_inner(p);
+    p.exit_depth();
+    result
+}
+
+fn table_primary_inner(p: &mut Parser<'_>) -> PResult {
     p.start(SyntaxKind::TableRef);
     p.eat_kw("lateral");
     if p.at(SyntaxKind::LParen) {

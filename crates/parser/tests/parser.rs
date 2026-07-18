@@ -251,6 +251,19 @@ fn dollar_quoted_semicolons_are_not_boundaries() {
 }
 
 #[test]
+fn pathological_nesting_does_not_overflow() {
+    for sql in [
+        format!("SELECT {}1{};", "(".repeat(5000), ")".repeat(5000)),
+        format!("SELECT * FROM {}t{};", "(".repeat(5000), ")".repeat(5000)),
+        "(".repeat(20000),
+    ] {
+        let tokens = lex(&sql, Dialect::Postgres);
+        let parse = parse(&tokens, Dialect::Postgres);
+        assert_eq!(parse.cst.text(), sql, "lost tokens on deep nesting");
+    }
+}
+
+#[test]
 fn garbage_never_loses_tokens() {
     for sql in [
         "SELECT ((((;",

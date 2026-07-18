@@ -27,9 +27,12 @@ const BP_AND: u8 = 60;
 const BP_OR: u8 = 50;
 
 pub(crate) fn expr(p: &mut Parser<'_>, min_bp: u8) -> PResult {
+    p.enter_depth()?;
     let checkpoint = p.checkpoint();
     prefix(p)?;
-    infix_loop(p, checkpoint, min_bp)
+    let result = infix_loop(p, checkpoint, min_bp);
+    p.exit_depth();
+    result
 }
 
 fn infix_loop(p: &mut Parser<'_>, checkpoint: usize, min_bp: u8) -> PResult {
