@@ -69,6 +69,31 @@ node OnConflictClause
 node ReturningClause
 node UsingClause
 
+# ---- PL/pgSQL (function-body statements) ----
+
+node PlBlock
+node PlDeclare
+node PlIf
+node PlElsif
+node PlElse
+node PlCase
+node PlWhen
+node PlLoop
+node PlWhile
+node PlFor
+node PlForeach
+node PlExit
+node PlReturn
+node PlRaise
+node PlAssign
+node PlPerform
+node PlExecute
+node PlGetDiag
+node PlNull
+node PlException
+# `INTO [STRICT] targets` inside body SQL (SELECT/RETURNING/EXECUTE).
+node PlInto
+
 # ---- DDL and utility statements ----
 
 # Structured-but-tolerant DDL: leading keywords, top-level commas split

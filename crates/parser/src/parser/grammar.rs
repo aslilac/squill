@@ -26,6 +26,8 @@ const SELECT_ITEM_STOP: &[&str] = &[
     // INSERT ... SELECT tails.
     "on",
     "do",
+    // PL/pgSQL FOR ... IN SELECT ... LOOP.
+    "loop",
 ];
 
 /// Keywords that stop a bare table alias in FROM position.
@@ -54,6 +56,8 @@ const TABLE_ALIAS_STOP: &[&str] = &[
     "except",
     "with",
     "returning",
+    // PL/pgSQL FOR ... IN SELECT ... LOOP.
+    "loop",
 ];
 
 /// A full query statement: `[WITH ...] query [trailing clauses] [;]`.
@@ -219,6 +223,14 @@ fn query_primary_inner(p: &mut Parser<'_>) -> PResult {
 fn select_core(p: &mut Parser<'_>) -> PResult {
     p.start(SyntaxKind::SelectCore);
     p.expect_kw("select")?;
+    select_core_rest(p)?;
+    p.finish();
+    Ok(())
+}
+
+/// Everything after the `SELECT` keyword — also reused by PL/pgSQL
+/// `PERFORM`, which is SELECT syntax under another name.
+pub(crate) fn select_core_rest(p: &mut Parser<'_>) -> PResult {
     if p.at_kw("distinct") {
         p.bump();
         if p.at_kw("on") {
@@ -229,6 +241,9 @@ fn select_core(p: &mut Parser<'_>) -> PResult {
         p.eat_kw("all");
     }
     select_list(p)?;
+    if p.in_plpgsql() && p.at_kw("into") {
+        pl_into(p)?;
+    }
     if p.at_kw("from") {
         from_clause(p)?;
     }
@@ -246,6 +261,20 @@ fn select_core(p: &mut Parser<'_>) -> PResult {
     }
     if p.at_kw("window") {
         window_clause(p)?;
+    }
+    Ok(())
+}
+
+/// PL/pgSQL `INTO [STRICT] target [, ...]`.
+pub(crate) fn pl_into(p: &mut Parser<'_>) -> PResult {
+    p.start(SyntaxKind::PlInto);
+    p.expect_kw("into")?;
+    p.eat_kw("strict");
+    loop {
+        qualified_name(p)?;
+        if !p.eat(SyntaxKind::Comma) {
+            break;
+        }
     }
     p.finish();
     Ok(())
@@ -614,7 +643,7 @@ fn values_clause(p: &mut Parser<'_>) -> PResult {
     Ok(())
 }
 
-fn trailing_clauses(p: &mut Parser<'_>) -> PResult {
+pub(crate) fn trailing_clauses(p: &mut Parser<'_>) -> PResult {
     if p.at_kw("order") {
         order_by_clause(p)?;
     }

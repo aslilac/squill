@@ -14,6 +14,7 @@ mod ddl;
 mod dml;
 mod expr;
 mod grammar;
+mod plpgsql;
 
 use crate::dialect::Dialect;
 use crate::lexer::Token;
@@ -62,10 +63,51 @@ pub fn parse(tokens: &[Token<'_>], dialect: Dialect) -> Parse {
         dialect,
         eof,
         depth: 0,
+        in_plpgsql: false,
     };
     parser.events.push(Event::StartNode(SyntaxKind::Root));
     while !parser.at_eof() {
         parser.statement();
+    }
+    parser.events.push(Event::FinishNode);
+    Parse {
+        cst: build_tree(tokens, &parser.events),
+        diagnostics: parser.diagnostics,
+    }
+}
+
+/// Parse a PL/pgSQL function body (the content of a dollar-quoted
+/// `LANGUAGE plpgsql` string) into a CST of `Pl*` statement nodes.
+/// Same guarantees as [`parse`]: always lossless, never fails.
+pub fn parse_plpgsql_body(tokens: &[Token<'_>], dialect: Dialect) -> Parse {
+    let mut toks = Vec::new();
+    let mut offset = 0;
+    for token in tokens {
+        let end = offset + token.text.len();
+        if !token.kind.is_trivia() {
+            toks.push(Tok {
+                kind: token.kind,
+                text: token.text,
+                start: offset,
+                end,
+            });
+        }
+        offset = end;
+    }
+    let eof = offset;
+    let mut parser = Parser {
+        toks,
+        pos: 0,
+        events: Vec::new(),
+        diagnostics: Vec::new(),
+        dialect,
+        eof,
+        depth: 0,
+        in_plpgsql: true,
+    };
+    parser.events.push(Event::StartNode(SyntaxKind::Root));
+    while !parser.at_eof() {
+        plpgsql::body_statement(&mut parser);
     }
     parser.events.push(Event::FinishNode);
     Parse {
@@ -103,6 +145,9 @@ pub(crate) struct Parser<'src> {
     dialect: Dialect,
     eof: usize,
     depth: u32,
+    /// Parsing a PL/pgSQL body: enables `INTO [STRICT]` targets in
+    /// query positions.
+    in_plpgsql: bool,
 }
 
 impl Parser<'_> {
@@ -150,8 +195,12 @@ impl Parser<'_> {
 
     /// Is the current token an operator with exactly this text?
     pub(crate) fn at_op(&self, op: &str) -> bool {
+        self.nth_at_op(0, op)
+    }
+
+    pub(crate) fn nth_at_op(&self, n: usize, op: &str) -> bool {
         self.toks
-            .get(self.pos)
+            .get(self.pos + n)
             .is_some_and(|t| t.kind == SyntaxKind::Operator && t.text == op)
     }
 
@@ -278,7 +327,7 @@ impl Parser<'_> {
 
     // ---- statements & recovery ----
 
-    fn statement(&mut self) {
+    pub(crate) fn statement(&mut self) {
         if self.at(SyntaxKind::Semicolon) {
             self.start(SyntaxKind::EmptyStmt);
             self.bump();
@@ -323,7 +372,7 @@ impl Parser<'_> {
     /// next top-level `;`, and record the diagnostic. Top-level means:
     /// dollar-quoted bodies are already single tokens, and in SQLite a
     /// `BEGIN ... END` trigger body does not end the statement.
-    fn error_statement(&mut self, error: StmtError) {
+    pub(crate) fn error_statement(&mut self, error: StmtError) {
         let (start, end) = match self.toks.get(error.at) {
             Some(t) => (t.start, t.end),
             None => (self.eof, self.eof),
@@ -362,6 +411,10 @@ impl Parser<'_> {
             || self.nth_at_kw(1, "immediate")
             || self.nth_at_kw(1, "exclusive")
             || self.nth_kind(1).is_none()
+    }
+
+    pub(crate) fn in_plpgsql(&self) -> bool {
+        self.in_plpgsql
     }
 
     pub(crate) fn dialect(&self) -> Dialect {

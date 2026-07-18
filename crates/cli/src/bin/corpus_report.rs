@@ -28,6 +28,9 @@ struct StmtStats {
     ok: usize,
     select_total: usize,
     select_ok: usize,
+    /// PL/pgSQL (dollar-quoted) bodies, parsed with the body grammar.
+    bodies_total: usize,
+    bodies_ok: usize,
 }
 
 struct FileResult {
@@ -142,6 +145,28 @@ fn run_file(source: &str, show_diagnostics: bool) -> FileResult {
         };
     }
 
+    // PL/pgSQL body coverage: parse every plpgsql dollar-quoted body.
+    if source.to_ascii_lowercase().contains("plpgsql") {
+        for token in tokens.iter().filter(|t| t.kind == SyntaxKind::DollarString) {
+            let Some(open) = token.text[1..].find('$').map(|i| i + 2) else {
+                continue;
+            };
+            let tag = &token.text[..open];
+            let Some(body) = token.text[tag.len()..].strip_suffix(tag) else {
+                continue;
+            };
+            if body.trim().is_empty() {
+                continue;
+            }
+            stmts.bodies_total += 1;
+            let body_tokens = parser::lexer::lex_with(body, Dialect::Postgres, LEX_OPTIONS);
+            let body_parse = parser::parser::parse_plpgsql_body(&body_tokens, Dialect::Postgres);
+            if body_parse.diagnostics.is_empty() {
+                stmts.bodies_ok += 1;
+            }
+        }
+    }
+
     let format_options = formatter::Options {
         at_params: true,
         ..formatter::Options::default()
@@ -226,6 +251,8 @@ fn main() -> ExitCode {
         totals.ok += result.stmts.ok;
         totals.select_total += result.stmts.select_total;
         totals.select_ok += result.stmts.select_ok;
+        totals.bodies_total += result.stmts.bodies_total;
+        totals.bodies_ok += result.stmts.bodies_ok;
         if !summary_only {
             match result.error {
                 None => println!("ok          {}", path.display()),
@@ -248,6 +275,10 @@ fn main() -> ExitCode {
     println!(
         "select-ish  {:>5}/{} parsed",
         totals.select_ok, totals.select_total
+    );
+    println!(
+        "pl bodies   {:>5}/{} parsed",
+        totals.bodies_ok, totals.bodies_total
     );
     if unreadable > 0 {
         println!("unreadable: {unreadable}");

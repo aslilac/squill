@@ -253,6 +253,9 @@ pub(crate) fn returning_clause(p: &mut Parser<'_>) -> PResult {
     p.start(SyntaxKind::ReturningClause);
     p.expect_kw("returning")?;
     select_list(p)?;
+    if p.in_plpgsql() && p.at_kw("into") {
+        super::grammar::pl_into(p)?;
+    }
     p.finish();
     Ok(())
 }
