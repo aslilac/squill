@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 alter table users add column deleted boolean default false not null;
@@ -8,14 +9,14 @@ drop index idx_users_email;
 drop index idx_users_username;
 drop index users_username_lower_idx;
 create unique index idx_users_email
-on users
-using btree(email)
-where deleted = false;
+	on users
+	using btree(email)
+	where deleted = false;
 create unique index idx_users_username
-on users
-using btree(username)
-where deleted = false;
+	on users
+	using btree(username)
+	where deleted = false;
 create unique index users_username_lower_idx
-on users
-using btree(lower(username))
-where deleted = false;
+	on users
+	using btree(lower(username))
+	where deleted = false;

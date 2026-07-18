@@ -12,8 +12,8 @@ alter table usage_events
 -- Partial index for efficient lookups of AI seat heartbeat events by time.
 -- This will be used for the admin dashboard to see seat count over time.
 create index idx_usage_events_ai_seats
-on usage_events (event_type, created_at)
-where event_type = 'hb_ai_seats_v1';
+	on usage_events (event_type, created_at)
+	where event_type = 'hb_ai_seats_v1';
 
 -- Update the aggregate function to handle hb_ai_seats_v1 events.
 -- Heartbeat events replace the previous value for the same time period.

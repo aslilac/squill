@@ -14,8 +14,8 @@ update chat_model_configs set provider = '' where provider is null;
 alter table chat_model_configs alter column provider set not null;
 
 create index idx_chat_model_configs_provider
-on chat_model_configs
-using btree(provider);
+	on chat_model_configs
+	using btree(provider);
 create index idx_chat_model_configs_provider_model
-on chat_model_configs
-using btree(provider, model);
+	on chat_model_configs
+	using btree(provider, model);

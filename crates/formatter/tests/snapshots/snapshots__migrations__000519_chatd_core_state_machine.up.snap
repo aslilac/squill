@@ -114,7 +114,7 @@ create unlogged table if not exists chat_heartbeats (
 comment on table chat_heartbeats is 'Ephemeral runner ownership leases for runnable chats. The table is unlogged because losing heartbeat rows after a crash is safe: missing heartbeats are treated as stale ownership and cause workers to reacquire runnable chats.';
 
 create index if not exists chat_heartbeats_heartbeat_at_idx
-on chat_heartbeats (heartbeat_at);
+	on chat_heartbeats (heartbeat_at);
 
 -- 12. Message revision trigger.
 -- The BEFORE-trigger only assigns NEW.revision from chats.snapshot_version
@@ -212,24 +212,24 @@ $$
 language plpgsql;
 
 create trigger trigger_set_chat_message_revision_on_insert
-before insert on chat_messages
-for each row
-execute function set_chat_message_revision_before();
+	before insert on chat_messages
+	for each row
+	execute function set_chat_message_revision_before();
 
 create trigger trigger_set_chat_message_revision_on_update
-before update on chat_messages
-for each row
-execute function set_chat_message_revision_before();
+	before update on chat_messages
+	for each row
+	execute function set_chat_message_revision_before();
 
 create trigger trigger_update_chat_history_after_message_insert
-after insert on chat_messages referencing new table as chat_message_history_new_rows
-for each statement
-execute function update_chat_history_after_message_insert();
+	after insert on chat_messages referencing new table as chat_message_history_new_rows
+	for each statement
+	execute function update_chat_history_after_message_insert();
 
 create trigger trigger_update_chat_history_after_message_update
-after update on chat_messages referencing old table as chat_message_history_old_rows new table as chat_message_history_new_rows
-for each statement
-execute function update_chat_history_after_message_update();
+	after update on chat_messages referencing old table as chat_message_history_old_rows new table as chat_message_history_new_rows
+	for each statement
+	execute function update_chat_history_after_message_update();
 
 -- 13. Queue version trigger function.
 create function bump_chat_queue_version_on_queued_message_change()
@@ -253,22 +253,22 @@ $$
 language plpgsql;
 
 create trigger trigger_bump_chat_queue_version_on_queued_message_insert
-after insert on chat_queued_messages
-for each row
-execute function bump_chat_queue_version_on_queued_message_change();
+	after insert on chat_queued_messages
+	for each row
+	execute function bump_chat_queue_version_on_queued_message_change();
 
 create trigger trigger_bump_chat_queue_version_on_queued_message_update
-after update of content,
-model_config_id,
-position,
-created_by on chat_queued_messages
-for each row
-execute function bump_chat_queue_version_on_queued_message_change();
+	after update of content,
+	model_config_id,
+	position,
+	created_by on chat_queued_messages
+	for each row
+	execute function bump_chat_queue_version_on_queued_message_change();
 
 create trigger trigger_bump_chat_queue_version_on_queued_message_delete
-after delete on chat_queued_messages
-for each row
-execute function bump_chat_queue_version_on_queued_message_change();
+	after delete on chat_queued_messages
+	for each row
+	execute function bump_chat_queue_version_on_queued_message_change();
 
 -- 14. Retry state trigger function.
 create function sync_chat_retry_state()
@@ -290,11 +290,11 @@ $$
 language plpgsql;
 
 create trigger trigger_sync_chat_retry_state
-before update of retry_state,
-retry_state_version,
-generation_attempt on chats
-for each row
-execute function sync_chat_retry_state();
+	before update of retry_state,
+	retry_state_version,
+	generation_attempt on chats
+	for each row
+	execute function sync_chat_retry_state();
 
 -- 15. Index for the chat worker acquisition scan, which runs every 30
 -- seconds per replica plus on every worker wake. Leading on status lets
@@ -304,9 +304,9 @@ execute function sync_chat_retry_state();
 -- to chat_status above, and Postgres forbids using a new enum value in
 -- the same transaction, which all migrations share.
 create index idx_chats_worker_acquisition_candidates
-on chats
-using btree(status, updated_at, id)
-where archived = false;
+	on chats
+	using btree(status, updated_at, id)
+	where archived = false;
 
 -- 16. Refresh chats_expanded to include the new chat fields. Drop and
 -- recreate so column ordering is stable.

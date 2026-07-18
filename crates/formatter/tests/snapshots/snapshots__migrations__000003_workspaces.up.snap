@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 create table workspaces (
@@ -20,9 +21,9 @@ create table workspaces (
 
 -- Enforces no active workspaces have the same name.
 create unique index
-on workspaces
-using btree(owner_id, lower(name))
-where deleted = false;
+	on workspaces
+	using btree(owner_id, lower(name))
+	where deleted = false;
 
 create type workspace_transition as enum (
 	'start',

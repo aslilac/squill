@@ -5,5 +5,5 @@ expression: formatted
 -- Index on LOWER(url) supports case-insensitive lookups when filtering
 -- chats by their associated diff URL (e.g. a pull request URL).
 create index idx_chat_diff_statuses_url_lower
-on chat_diff_statuses (LOWER(url))
-where url is not null and url <> '';
+	on chat_diff_statuses (LOWER(url))
+	where url is not null and url <> '';

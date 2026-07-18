@@ -13,5 +13,5 @@ comment on column aibridge_interceptions.agent_firewall_session_id is 'The Agent
 comment on column aibridge_interceptions.agent_firewall_sequence_number is 'The Agent Firewall sequence number from the request header. Used to determine exact ordering of network requests relative to Agent Firewall audit events. NULL when the request did not pass through Agent Firewall.';
 
 create index idx_aibridge_interceptions_agent_firewall_session_id
-on aibridge_interceptions (agent_firewall_session_id)
-where agent_firewall_session_id is not null;
+	on aibridge_interceptions (agent_firewall_session_id)
+	where agent_firewall_session_id is not null;

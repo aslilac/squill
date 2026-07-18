@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 alter table only api_keys
@@ -10,6 +11,6 @@ set token_name = gen_random_uuid()::text
 where login_type = 'token';
 
 create unique index idx_api_key_name
-on api_keys
-using btree(user_id, token_name)
-where (login_type = 'token');
+	on api_keys
+	using btree(user_id, token_name)
+	where (login_type = 'token');

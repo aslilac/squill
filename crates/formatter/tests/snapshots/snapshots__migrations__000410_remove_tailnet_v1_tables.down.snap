@@ -40,11 +40,11 @@ create table tailnet_client_subscriptions (
 
 -- Create indexes.
 create index idx_tailnet_agents_coordinator
-on tailnet_agents
-using btree(coordinator_id);
+	on tailnet_agents
+	using btree(coordinator_id);
 create index idx_tailnet_clients_coordinator
-on tailnet_clients
-using btree(coordinator_id);
+	on tailnet_clients
+	using btree(coordinator_id);
 
 -- Create trigger functions.
 create function tailnet_notify_agent_change()
@@ -129,16 +129,16 @@ $$;
 
 -- Create triggers.
 create trigger tailnet_notify_agent_change
-after insert or delete or update on tailnet_agents
-for each row
-execute function tailnet_notify_agent_change();
+	after insert or delete or update on tailnet_agents
+	for each row
+	execute function tailnet_notify_agent_change();
 
 create trigger tailnet_notify_client_change
-after insert or delete or update on tailnet_clients
-for each row
-execute function tailnet_notify_client_change();
+	after insert or delete or update on tailnet_clients
+	for each row
+	execute function tailnet_notify_client_change();
 
 create trigger tailnet_notify_client_subscription_change
-after insert or delete or update on tailnet_client_subscriptions
-for each row
-execute function tailnet_notify_client_subscription_change();
+	after insert or delete or update on tailnet_client_subscriptions
+	for each row
+	execute function tailnet_notify_client_subscription_change();

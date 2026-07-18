@@ -1,18 +1,19 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 drop index workspace_agent_stats_template_id_created_at_user_id_idx;
 
 create index workspace_agent_stats_template_id_created_at_user_id_idx
-on workspace_agent_stats (template_id, created_at, user_id)
-include (
-	session_count_vscode,
-	session_count_jetbrains,
-	session_count_reconnecting_pty,
-	session_count_ssh,
-	connection_median_latency_ms
-)
-where connection_count > 0;
+	on workspace_agent_stats (template_id, created_at, user_id)
+	include (
+		session_count_vscode,
+		session_count_jetbrains,
+		session_count_reconnecting_pty,
+		session_count_ssh,
+		connection_median_latency_ms
+	)
+	where connection_count > 0;
 
 comment on index workspace_agent_stats_template_id_created_at_user_id_idx is 'Support index for template insights endpoint to build interval reports faster.';

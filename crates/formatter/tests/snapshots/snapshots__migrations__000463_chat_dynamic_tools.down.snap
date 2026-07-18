@@ -34,6 +34,6 @@ drop type chat_status_old;
 
 -- Recreate the partial index.
 create index idx_chats_pending
-on chats
-using btree(status)
-where (status = 'pending'::chat_status);
+	on chats
+	using btree(status)
+	where (status = 'pending'::chat_status);

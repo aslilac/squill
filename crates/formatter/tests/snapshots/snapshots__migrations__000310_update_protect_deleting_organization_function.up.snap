@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 drop trigger if exists protect_deleting_organizations on organizations;
@@ -96,7 +97,7 @@ language plpgsql;
 
 -- Trigger to protect organizations from being soft deleted with existing resources
 create trigger protect_deleting_organizations
-before update on organizations
-for each row
-when (NEW.deleted = true and OLD.deleted = false)
-execute function protect_deleting_organizations();
+	before update on organizations
+	for each row
+	when (NEW.deleted = true and OLD.deleted = false)
+	execute function protect_deleting_organizations();

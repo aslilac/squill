@@ -9,7 +9,8 @@ drop index idx_chat_messages_compressed_summary_boundary;
 alter table chat_messages alter column role type text using (role::text);
 
 create index idx_chat_messages_compressed_summary_boundary
-on chat_messages (chat_id, created_at desc, id desc)
-where compressed = true and role = 'system' and visibility in ('model', 'both');
+	on chat_messages (chat_id, created_at desc, id desc)
+	where
+		compressed = true and role = 'system' and visibility in ('model', 'both');
 
 drop type chat_message_role;

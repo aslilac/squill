@@ -56,6 +56,6 @@ $$
 language plpgsql;
 
 create trigger trigger_insert_org_member_system_role
-after insert on organizations
-for each row
-execute function insert_org_member_system_role();
+	after insert on organizations
+	for each row
+	execute function insert_org_member_system_role();

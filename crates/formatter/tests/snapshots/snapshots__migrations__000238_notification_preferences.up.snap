@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 create table notification_preferences (
@@ -49,9 +50,9 @@ language plpgsql;
 
 -- Trigger to execute above function on insertion.
 create trigger inhibit_enqueue_if_disabled
-before insert on notification_messages
-for each row
-execute function inhibit_enqueue_if_disabled();
+	before insert on notification_messages
+	for each row
+	execute function inhibit_enqueue_if_disabled();
 
 -- Allow modifications to notification templates to be audited.
 alter type resource_type add value if not exists 'notification_template';

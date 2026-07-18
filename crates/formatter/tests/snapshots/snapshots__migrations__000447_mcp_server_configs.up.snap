@@ -77,10 +77,10 @@ create table mcp_server_user_tokens (
 alter table chats add column mcp_server_ids uuid[] not null default '{}';
 
 create index idx_mcp_server_configs_enabled
-on mcp_server_configs (enabled)
-where enabled = true;
+	on mcp_server_configs (enabled)
+	where enabled = true;
 create index idx_mcp_server_configs_forced
-on mcp_server_configs (enabled, availability)
-where enabled = true and availability = 'force_on';
+	on mcp_server_configs (enabled, availability)
+	where enabled = true and availability = 'force_on';
 create index idx_mcp_server_user_tokens_user_id
-on mcp_server_user_tokens (user_id);
+	on mcp_server_user_tokens (user_id);

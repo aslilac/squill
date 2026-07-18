@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 drop trigger if exists trigger_update_users on users;
@@ -23,7 +24,7 @@ as $$
 $$;
 
 create trigger trigger_update_users
-after insert or update on users
-for each row
-when (NEW.deleted = true)
-execute procedure delete_deleted_user_api_keys();
+	after insert or update on users
+	for each row
+	when (NEW.deleted = true)
+	execute procedure delete_deleted_user_api_keys();

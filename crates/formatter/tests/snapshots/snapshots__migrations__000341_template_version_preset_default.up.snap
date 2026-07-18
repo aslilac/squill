@@ -7,5 +7,5 @@ alter table template_version_presets
 
 -- Add a unique constraint to ensure only one default preset per template version
 create unique index idx_template_version_presets_default
-on template_version_presets (template_version_id)
-where is_default = true;
+	on template_version_presets (template_version_id)
+	where is_default = true;

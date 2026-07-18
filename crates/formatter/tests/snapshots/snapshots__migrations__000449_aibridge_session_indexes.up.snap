@@ -11,8 +11,8 @@ alter table aibridge_interceptions
 
 -- Searching and grouping on the resolved session ID will be common.
 create index idx_aibridge_interceptions_session_id
-on aibridge_interceptions (session_id)
-where ended_at is not null;
+	on aibridge_interceptions (session_id)
+	where ended_at is not null;
 
 comment on column aibridge_interceptions.session_id is 'Groups related interceptions into a logical session. ' 'Determined by a priority chain: ' '(1) client_session_id — an explicit session identifier supplied by the ' 'calling client (e.g. Claude Code); ' '(2) thread_root_id — the root of an agentic thread detected by Bridge ' 'through tool-call correlation, used when the client does not supply its ' 'own session ID; ' '(3) id — the interception''s own ID, used as a last resort so every ' 'interception belongs to exactly one session even if it is standalone. ' 'This is a generated column stored on disk so it can be indexed and ' 'joined without recomputing the COALESCE on every query.';
 
@@ -20,9 +20,9 @@ comment on column aibridge_interceptions.session_id is 'Groups related intercept
 -- ListAIBridgeSessions: initiator_id equality + started_at range,
 -- with ended_at IS NOT NULL as a partial filter.
 create index idx_aibridge_interceptions_sessions_filter
-on aibridge_interceptions (initiator_id, started_at desc, id desc)
-where ended_at is not null;
+	on aibridge_interceptions (initiator_id, started_at desc, id desc)
+	where ended_at is not null;
 
 -- Supports lateral prompt lookup by interception + recency.
 create index idx_aibridge_user_prompts_interception_created
-on aibridge_user_prompts (interception_id, created_at desc, id desc);
+	on aibridge_user_prompts (interception_id, created_at desc, id desc);

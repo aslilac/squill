@@ -3,6 +3,6 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 create unique index if not exists tasks_owner_id_name_unique_idx
-on tasks (owner_id, LOWER(name))
-where deleted_at is null;
+	on tasks (owner_id, LOWER(name))
+	where deleted_at is null;
 comment on index tasks_owner_id_name_unique_idx is 'Index to ensure uniqueness for task owner/name';

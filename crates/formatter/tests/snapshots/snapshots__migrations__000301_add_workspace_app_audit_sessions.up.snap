@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 -- Keep all unique fields as non-null because `UNIQUE NULLS NOT DISTINCT`
@@ -33,14 +34,14 @@ comment on column workspace_app_audit_sessions.started_at is 'The time the user 
 comment on column workspace_app_audit_sessions.updated_at is 'The time the session was last updated.';
 
 create unique index workspace_app_audit_sessions_unique_index
-on workspace_app_audit_sessions (
-	agent_id,
-	app_id,
-	user_id,
-	ip,
-	user_agent,
-	slug_or_port,
-	status_code
-);
+	on workspace_app_audit_sessions (
+		agent_id,
+		app_id,
+		user_id,
+		ip,
+		user_agent,
+		slug_or_port,
+		status_code
+	);
 
 comment on index workspace_app_audit_sessions_unique_index is 'Unique index to ensure that we do not allow duplicate entries from multiple transactions.';

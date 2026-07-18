@@ -52,9 +52,9 @@ as $$
 $$;
 
 create trigger trigger_user_skills_per_user_limit
-before insert on user_skills
-for each row
-execute procedure enforce_user_skills_per_user_limit();
+	before insert on user_skills
+	for each row
+	execute procedure enforce_user_skills_per_user_limit();
 
 -- Extend the soft-delete cleanup trigger to also wipe user_skills.
 -- user_skills.user_id has ON DELETE CASCADE, but Coder soft-deletes
@@ -121,9 +121,9 @@ as $$
 $$;
 
 create trigger trigger_upsert_user_skills
-before insert or update on user_skills
-for each row
-execute procedure insert_user_skill_fail_if_user_deleted();
+	before insert or update on user_skills
+	for each row
+	execute procedure insert_user_skill_fail_if_user_deleted();
 
 -- Adds the user skill audit resource type.
 alter type resource_type add value if not exists 'user_skill';

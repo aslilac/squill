@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 create table user_status_changes (
@@ -12,7 +13,7 @@ create table user_status_changes (
 comment on table user_status_changes is 'Tracks the history of user status changes';
 
 create index idx_user_status_changes_changed_at
-on user_status_changes (changed_at);
+	on user_status_changes (changed_at);
 
 insert into user_status_changes (user_id, new_status, changed_at)
 select id, status, created_at
@@ -52,6 +53,6 @@ $$
 language plpgsql;
 
 create trigger user_status_change_trigger
-after insert or update on users
-for each row
-execute function record_user_status_change();
+	after insert or update on users
+	for each row
+	execute function record_user_status_change();

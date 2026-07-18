@@ -42,6 +42,6 @@ comment on column boundary_logs.matched_rule is 'The allow-list rule that matche
 
 -- Ordering query path: list events for a session, sorted by sequence number.
 create index idx_boundary_logs_session_seq
-on boundary_logs (session_id, sequence_number);
+	on boundary_logs (session_id, sequence_number);
 -- Retention purge path: delete old rows by capture time.
 create index idx_boundary_logs_captured_at on boundary_logs (captured_at);

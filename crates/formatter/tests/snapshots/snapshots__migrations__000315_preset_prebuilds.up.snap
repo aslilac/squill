@@ -28,4 +28,4 @@ where template_version_presets.id = ranked.id and row_num > 1;
 
 -- We should not be able to have presets with the same name for a particular template version.
 create unique index idx_unique_preset_name
-on template_version_presets (name, template_version_id);
+	on template_version_presets (name, template_version_id);

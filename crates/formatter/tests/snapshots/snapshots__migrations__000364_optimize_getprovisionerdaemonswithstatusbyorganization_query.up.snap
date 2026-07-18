@@ -3,6 +3,10 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 create index provisioner_jobs_worker_id_organization_id_completed_at_idx
-on provisioner_jobs (worker_id, organization_id, completed_at desc nulls first);
+	on provisioner_jobs (
+		worker_id,
+		organization_id,
+		completed_at desc nulls first
+	);
 
 comment on index provisioner_jobs_worker_id_organization_id_completed_at_idx is 'Support index for finding the latest completed jobs for a worker (and organization), nulls first so that active jobs have priority; targets: GetProvisionerDaemonsWithStatusByOrganization';

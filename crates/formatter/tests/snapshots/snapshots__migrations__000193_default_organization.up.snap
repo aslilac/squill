@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 -- This migration is intended to maintain the existing behavior of single org
@@ -9,8 +10,8 @@ alter table organizations add column is_default boolean not null default false;
 
 -- Only 1 org should ever be set to is_default.
 create unique index organizations_single_default_org
-on organizations (is_default)
-where is_default = true;
+	on organizations (is_default)
+	where is_default = true;
 
 update organizations
 set is_default = true

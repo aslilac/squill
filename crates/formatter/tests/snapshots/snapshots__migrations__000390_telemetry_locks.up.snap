@@ -15,4 +15,4 @@ comment on column telemetry_locks.event_type is 'The type of event that was sent
 comment on column telemetry_locks.period_ending_at is 'The heartbeat period end timestamp.';
 
 create index idx_telemetry_locks_period_ending_at
-on telemetry_locks (period_ending_at);
+	on telemetry_locks (period_ending_at);

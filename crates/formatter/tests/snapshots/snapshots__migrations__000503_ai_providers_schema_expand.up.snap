@@ -20,7 +20,7 @@ comment on column user_ai_provider_keys.api_key is 'User-owned API key used to a
 comment on column user_ai_provider_keys.api_key_key_id is 'The ID of the key used to encrypt the user-owned provider API key. If this is NULL, the API key is not encrypted.';
 
 create index idx_user_ai_provider_keys_ai_provider_id
-on user_ai_provider_keys (ai_provider_id);
+	on user_ai_provider_keys (ai_provider_id);
 
 -- user_ai_provider_keys.user_id has ON DELETE CASCADE, but user deletion
 -- normally soft-deletes the users row, so the FK cascade does not fire.
@@ -74,4 +74,4 @@ alter table chat_model_configs
 	add column ai_provider_id uuid references ai_providers (id);
 
 create index idx_chat_model_configs_ai_provider_id
-on chat_model_configs (ai_provider_id);
+	on chat_model_configs (ai_provider_id);

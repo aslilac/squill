@@ -22,4 +22,4 @@ comment on column ai_user_daily_spend.spend_micros is 'Accumulated spend in micr
 
 -- For queries filtering by effective_group_id alone.
 create index idx_ai_user_daily_spend_effective_group_id_day
-on ai_user_daily_spend (effective_group_id, day);
+	on ai_user_daily_spend (effective_group_id, day);

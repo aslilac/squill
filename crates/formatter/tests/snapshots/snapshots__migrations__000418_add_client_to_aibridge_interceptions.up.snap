@@ -6,4 +6,4 @@ alter table aibridge_interceptions
 	add column client varchar (64) default 'Unknown';
 
 create index idx_aibridge_interceptions_client
-on aibridge_interceptions (client);
+	on aibridge_interceptions (client);

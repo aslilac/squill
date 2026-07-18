@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 -- Store arbitrary data like template source code or avatars.
@@ -41,8 +42,8 @@ create table templates (
 -- Enforces no active templates have the same name.
 create unique index on templates (organization_id, name) where deleted = false;
 create unique index idx_templates_name_lower
-on templates
-using btree(lower(name));
+	on templates
+	using btree(lower(name));
 
 -- Template Versions store historical template data. When a Template Version is imported,
 -- an "import" job is queued to parse parameters. A Template Version

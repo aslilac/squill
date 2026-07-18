@@ -26,8 +26,8 @@ create table ai_providers (
 -- Provider names are unique among live rows only. Soft-deleted rows
 -- are retained for audit and FK history but do not reserve names.
 create unique index ai_providers_name_unique
-on ai_providers (name)
-where deleted = false;
+	on ai_providers (name)
+	where deleted = false;
 
 comment on table ai_providers is 'Runtime configuration for AI providers. Authoritative source for the provider set served by aibridged. Replaces deployment-time CODER_AIBRIDGE_* environment variables.';
 
@@ -40,8 +40,8 @@ comment on column ai_providers.deleted is 'Soft delete flag. Soft-deleted rows a
 comment on column ai_providers.display_name is 'Optional human-readable label. When NULL, callers should fall back to name.';
 
 create index idx_ai_providers_enabled
-on ai_providers (enabled)
-where deleted = false;
+	on ai_providers (enabled)
+	where deleted = false;
 
 create table ai_provider_keys (
 	id uuid primary key default gen_random_uuid(),

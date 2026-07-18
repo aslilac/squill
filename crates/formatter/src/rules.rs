@@ -466,13 +466,16 @@ impl Lowerer {
             .find(|w| !MODIFIERS.contains(&w.as_str()))
             .map(String::as_str);
         let mut break_before: &[&str] = &[];
+        let mut indent_continuations = false;
         if words.first().is_some_and(|w| w == "create") {
             match object {
                 Some("trigger") => {
                     break_before = &["before", "after", "instead", "for", "when", "execute"];
+                    indent_continuations = true;
                 }
                 Some("index") => {
                     break_before = &["on", "using", "include"];
+                    indent_continuations = true;
                 }
                 Some("function" | "procedure") => {
                     // Declarations always break: `returns`, `language`,
@@ -524,6 +527,14 @@ impl Lowerer {
                 }
             }
             self.dml_flow_elements(docs, &elements, break_before, true);
+        } else if indent_continuations {
+            // Width-driven wraps (`on`/`using` in CREATE INDEX, the
+            // trigger word soup) continue one level deep, like ALTER
+            // actions — unlike canonical clause-per-line layouts, which
+            // stay at the statement's own indent.
+            let mut flow = Vec::new();
+            self.dml_flow_with(&mut flow, node, break_before);
+            docs.push(indent(concat(flow)));
         } else {
             self.dml_flow_with(docs, node, break_before);
         }

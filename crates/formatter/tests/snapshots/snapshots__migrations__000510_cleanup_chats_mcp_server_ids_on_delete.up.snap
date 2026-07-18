@@ -45,8 +45,8 @@ $$
 language plpgsql;
 
 create trigger remove_chat_mcp_server_config_id
-before delete on mcp_server_configs
-for each row
-execute procedure remove_mcp_server_config_id_from_chats();
+	before delete on mcp_server_configs
+	for each row
+	execute procedure remove_mcp_server_config_id_from_chats();
 
 comment on trigger remove_chat_mcp_server_config_id on mcp_server_configs is 'When an MCP server config is deleted, this trigger removes its ID from all chats.';

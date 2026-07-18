@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 create type inbox_notification_read_status as enum (
@@ -24,6 +25,6 @@ create table inbox_notifications (
 );
 
 create index idx_inbox_notifications_user_id_read_at
-on inbox_notifications (user_id, read_at);
+	on inbox_notifications (user_id, read_at);
 create index idx_inbox_notifications_user_id_template_id_targets
-on inbox_notifications (user_id, template_id, targets);
+	on inbox_notifications (user_id, template_id, targets);

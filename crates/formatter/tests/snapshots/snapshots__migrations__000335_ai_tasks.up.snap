@@ -24,8 +24,8 @@ alter table template_versions
 -- The query to determine this will be run on every UI render, and this index speeds it up.
 -- SELECT EXISTS (SELECT 1 FROM template_versions WHERE has_ai_task = TRUE);
 create index idx_template_versions_has_ai_task
-on template_versions
-using btree(has_ai_task);
+	on template_versions
+	using btree(has_ai_task);
 
 drop view workspace_build_with_user;
 

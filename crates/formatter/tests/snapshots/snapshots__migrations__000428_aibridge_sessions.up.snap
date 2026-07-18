@@ -8,5 +8,5 @@ alter table aibridge_interceptions
 comment on column aibridge_interceptions.client_session_id is 'The session ID supplied by the client (optional and not universally supported).';
 
 create index idx_aibridge_interceptions_client_session_id
-on aibridge_interceptions (client_session_id)
-where client_session_id is not null;
+	on aibridge_interceptions (client_session_id)
+	where client_session_id is not null;

@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 create table tailnet_client_subscriptions (
@@ -42,9 +43,9 @@ as $$
 $$;
 
 create trigger tailnet_notify_client_subscription_change
-after insert or update or delete on tailnet_client_subscriptions
-for each row
-execute procedure tailnet_notify_client_subscription_change();
+	after insert or update or delete on tailnet_client_subscriptions
+	for each row
+	execute procedure tailnet_notify_client_subscription_change();
 
 create or replace function tailnet_notify_client_change()
 returns trigger

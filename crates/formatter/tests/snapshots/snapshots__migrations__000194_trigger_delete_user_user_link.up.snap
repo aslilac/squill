@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 -- We need to delete all existing user_links for soft-deleted users
@@ -36,10 +37,10 @@ $$;
 
 -- Update it to the new trigger
 create trigger trigger_update_users
-after insert or update on users
-for each row
-when (NEW.deleted = true)
-execute procedure delete_deleted_user_resources();
+	after insert or update on users
+	for each row
+	when (NEW.deleted = true)
+	execute procedure delete_deleted_user_resources();
 
 -- Prevent adding new user_links for soft-deleted users
 create function insert_user_links_fail_if_user_deleted()
@@ -58,6 +59,6 @@ as $$
 $$;
 
 create trigger trigger_upsert_user_links
-before insert or update on user_links
-for each row
-execute procedure insert_user_links_fail_if_user_deleted();
+	before insert or update on user_links
+	for each row
+	execute procedure insert_user_links_fail_if_user_deleted();

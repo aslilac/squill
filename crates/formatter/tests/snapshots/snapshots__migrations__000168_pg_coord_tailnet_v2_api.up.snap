@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 create type tailnet_status as enum (
@@ -40,9 +41,9 @@ as $$
 $$;
 
 create trigger tailnet_notify_peer_change
-after insert or update or delete on tailnet_peers
-for each row
-execute procedure tailnet_notify_peer_change();
+	after insert or update or delete on tailnet_peers
+	for each row
+	execute procedure tailnet_notify_peer_change();
 
 create table tailnet_tunnels (
 	coordinator_id uuid not null,
@@ -73,6 +74,6 @@ as $$
 $$;
 
 create trigger tailnet_notify_tunnel_change
-after insert or update or delete on tailnet_tunnels
-for each row
-execute procedure tailnet_notify_tunnel_change();
+	after insert or update or delete on tailnet_tunnels
+	for each row
+	execute procedure tailnet_notify_tunnel_change();

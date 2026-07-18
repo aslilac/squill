@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 create table custom_roles (
@@ -27,6 +28,6 @@ create table custom_roles (
 
 -- Ensure no case variants of the same roles
 create unique index idx_custom_roles_name_lower
-on custom_roles
-using btree(lower(name));
+	on custom_roles
+	using btree(lower(name));
 comment on table custom_roles is 'Custom roles allow dynamic roles expanded at runtime';

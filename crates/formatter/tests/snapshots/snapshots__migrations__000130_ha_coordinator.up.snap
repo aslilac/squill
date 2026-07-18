@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 create table tailnet_coordinators (
@@ -26,7 +27,7 @@ create index idx_tailnet_clients_agent on tailnet_clients (agent_id);
 
 -- For shutting down / GC a coordinator
 create index idx_tailnet_clients_coordinator
-on tailnet_clients (coordinator_id);
+	on tailnet_clients (coordinator_id);
 
 create table tailnet_agents (
 	id uuid not null,
@@ -60,9 +61,9 @@ as $$
 $$;
 
 create trigger tailnet_notify_client_change
-after insert or update or delete on tailnet_clients
-for each row
-execute procedure tailnet_notify_client_change();
+	after insert or update or delete on tailnet_clients
+	for each row
+	execute procedure tailnet_notify_client_change();
 
 -- Any time tailnet_agents table changes, send an update with the affected agent ID.
 create function tailnet_notify_agent_change()
@@ -82,9 +83,9 @@ as $$
 $$;
 
 create trigger tailnet_notify_agent_change
-after insert or update or delete on tailnet_agents
-for each row
-execute procedure tailnet_notify_agent_change();
+	after insert or update or delete on tailnet_agents
+	for each row
+	execute procedure tailnet_notify_agent_change();
 
 -- Send coordinator heartbeats
 create function tailnet_notify_coordinator_heartbeat()
@@ -98,6 +99,6 @@ as $$
 $$;
 
 create trigger tailnet_notify_coordinator_heartbeat
-after insert or update on tailnet_coordinators
-for each row
-execute procedure tailnet_notify_coordinator_heartbeat();
+	after insert or update on tailnet_coordinators
+	for each row
+	execute procedure tailnet_notify_coordinator_heartbeat();

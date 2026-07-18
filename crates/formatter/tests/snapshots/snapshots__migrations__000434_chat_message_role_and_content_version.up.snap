@@ -20,8 +20,9 @@ alter table chat_messages
 
 -- Recreate the partial index with enum-typed comparison.
 create index idx_chat_messages_compressed_summary_boundary
-on chat_messages (chat_id, created_at desc, id desc)
-where compressed = true and role = 'system' and visibility in ('model', 'both');
+	on chat_messages (chat_id, created_at desc, id desc)
+	where
+		compressed = true and role = 'system' and visibility in ('model', 'both');
 
 -- Add content_version column. Default 0 backfills existing rows.
 -- The default is then dropped so future inserts must specify the

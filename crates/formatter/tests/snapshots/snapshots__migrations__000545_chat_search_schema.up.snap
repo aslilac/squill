@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 create function chat_message_search_text(content jsonb)
@@ -28,56 +27,62 @@ alter table chat_messages add column search_tsv tsvector;
 comment on column chat_messages.search_tsv is 'Used for full text search. NULL initially, populated async via background job.';
 
 create index idx_chat_messages_search_tsv
-on chat_messages
-using GIN(search_tsv)
-where
-	(
-		(search_tsv is not null)
-		and (deleted = false)
-		and (
-			visibility
-			= any(
-				array ['user'::chat_message_visibility, 'both'::chat_message_visibility]
+	on chat_messages
+	using GIN(search_tsv)
+	where
+		(
+			(search_tsv is not null)
+			and (deleted = false)
+			and (
+				visibility
+				= any(
+					array [
+						'user'::chat_message_visibility,
+						'both'::chat_message_visibility
+					]
+				)
 			)
-		)
-		and (
-			role
-			= any(array ['user'::chat_message_role, 'assistant'::chat_message_role])
-		)
-	);
+			and (
+				role
+				= any(array ['user'::chat_message_role, 'assistant'::chat_message_role])
+			)
+		);
 
 comment on index idx_chat_messages_search_tsv is 'Partial index over chat_messages used for full text search. Only defined over ''searchable'' rows of chat_messages.';
 
 create index idx_chat_messages_search_tsv_pending
-on chat_messages
-using btree (id desc)
-where
-	(
-		(search_tsv is null)
-		and (deleted = false)
-		and (
-			visibility
-			= any(
-				array ['user'::chat_message_visibility, 'both'::chat_message_visibility]
+	on chat_messages
+	using btree (id desc)
+	where
+		(
+			(search_tsv is null)
+			and (deleted = false)
+			and (
+				visibility
+				= any(
+					array [
+						'user'::chat_message_visibility,
+						'both'::chat_message_visibility
+					]
+				)
 			)
-		)
-		and (
-			role
-			= any(array ['user'::chat_message_role, 'assistant'::chat_message_role])
-		)
-	);
+			and (
+				role
+				= any(array ['user'::chat_message_role, 'assistant'::chat_message_role])
+			)
+		);
 
 comment on index idx_chat_messages_search_tsv is 'Partial index over chat_messages used for populating search_tsv in the background. Only defined over ''searchable'' rows of chat_messages where search_tsv is NULL.';
 
 create index idx_chats_title_fts
-on chats
-using GIN(to_tsvector('simple', title));
+	on chats
+	using GIN(to_tsvector('simple', title));
 
 comment on index idx_chats_title_fts is 'Used for full text search. Defined over all rows of the chats table.';
 
 create index idx_chat_diff_statuses_pr_title_fts
-on chat_diff_statuses
-using GIN(to_tsvector('simple', pull_request_title));
+	on chat_diff_statuses
+	using GIN(to_tsvector('simple', pull_request_title));
 
 comment on index idx_chats_title_fts is 'Used for full text search. Defined over all rows of the chats table.';
 

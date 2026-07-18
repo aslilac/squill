@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 -- This migration creates tables and types for v1 if they do not exist.
@@ -24,11 +25,11 @@ create table if not exists users (
 
 create unique index if not exists idx_users_email on users using btree(email);
 create unique index if not exists idx_users_username
-on users
-using btree(username);
+	on users
+	using btree(username);
 create unique index if not exists users_username_lower_idx
-on users
-using btree(lower(username));
+	on users
+	using btree(lower(username));
 
 create table if not exists organizations (
 	id uuid not null,
@@ -40,11 +41,11 @@ create table if not exists organizations (
 );
 
 create unique index if not exists idx_organization_name
-on organizations
-using btree(name);
+	on organizations
+	using btree(name);
 create unique index if not exists idx_organization_name_lower
-on organizations
-using btree(lower(name));
+	on organizations
+	using btree(lower(name));
 
 create table if not exists organization_members (
 	user_id uuid not null,
@@ -56,11 +57,11 @@ create table if not exists organization_members (
 );
 
 create index idx_organization_member_organization_id_uuid
-on organization_members
-using btree(organization_id);
+	on organization_members
+	using btree(organization_id);
 create index idx_organization_member_user_id_uuid
-on organization_members
-using btree(user_id);
+	on organization_members
+	using btree(user_id);
 
 alter table only organization_members
 	add constraint organization_members_organization_id_uuid_fkey foreign key (

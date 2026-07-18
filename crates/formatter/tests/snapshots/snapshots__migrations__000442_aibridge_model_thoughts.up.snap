@@ -12,4 +12,4 @@ create table aibridge_model_thoughts (
 comment on table aibridge_model_thoughts is 'Audit log of model thinking in intercepted requests in AI Bridge';
 
 create index idx_aibridge_model_thoughts_interception_id
-on aibridge_model_thoughts (interception_id);
+	on aibridge_model_thoughts (interception_id);

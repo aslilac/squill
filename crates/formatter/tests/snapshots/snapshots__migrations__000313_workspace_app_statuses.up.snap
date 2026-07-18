@@ -34,4 +34,4 @@ create table workspace_app_statuses (
 );
 
 create index idx_workspace_app_statuses_workspace_id_created_at
-on workspace_app_statuses (workspace_id, created_at desc);
+	on workspace_app_statuses (workspace_id, created_at desc);

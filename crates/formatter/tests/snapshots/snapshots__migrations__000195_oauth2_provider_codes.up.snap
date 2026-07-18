@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 create table oauth2_provider_app_codes (
@@ -45,9 +46,9 @@ as $$
 $$;
 
 create trigger trigger_delete_oauth2_provider_app_token
-after delete on oauth2_provider_app_tokens
-for each row
-execute procedure delete_deleted_oauth2_provider_app_token_api_key();
+	after delete on oauth2_provider_app_tokens
+	for each row
+	execute procedure delete_deleted_oauth2_provider_app_token_api_key();
 
 -- This migration has been modified after its initial commit.
 -- The new implementation makes the same changes as the original, but
@@ -76,8 +77,8 @@ alter table api_keys
 		login_type::text::new_logintype
 	);
 create unique index idx_api_key_name
-on api_keys (user_id, token_name)
-where (login_type = 'token'::new_logintype);
+	on api_keys (user_id, token_name)
+	where (login_type = 'token'::new_logintype);
 
 alter table user_links
 	alter column login_type type new_logintype using (

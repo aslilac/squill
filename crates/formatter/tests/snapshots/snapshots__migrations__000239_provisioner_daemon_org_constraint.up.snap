@@ -1,14 +1,15 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 create unique index idx_provisioner_daemons_org_name_owner_key
-on provisioner_daemons
-using btree(
-	organization_id,
-	name,
-	lower(COALESCE((tags ->> 'owner'::text), ''::text))
-);
+	on provisioner_daemons
+	using btree(
+		organization_id,
+		name,
+		lower(COALESCE((tags ->> 'owner'::text), ''::text))
+	);
 
 comment on index idx_provisioner_daemons_org_name_owner_key is 'Allow unique provisioner daemon names by organization and user';
 

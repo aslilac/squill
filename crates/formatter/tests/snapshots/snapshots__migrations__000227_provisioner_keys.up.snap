@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 create table provisioner_keys (
@@ -11,5 +12,5 @@ create table provisioner_keys (
 );
 
 create unique index provisioner_keys_organization_id_name_idx
-on provisioner_keys
-using btree(organization_id, lower(name));
+	on provisioner_keys
+	using btree(organization_id, lower(name));

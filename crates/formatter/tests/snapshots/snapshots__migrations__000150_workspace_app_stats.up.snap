@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 create table workspace_app_stats (
@@ -34,4 +35,4 @@ comment on column workspace_app_stats.requests is 'The number of requests made d
 
 -- Create index on workspace_id for joining/filtering by templates.
 create index workspace_app_stats_workspace_id_idx
-on workspace_app_stats (workspace_id);
+	on workspace_app_stats (workspace_id);

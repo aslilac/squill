@@ -61,10 +61,11 @@ create table chat_messages (
 
 create index idx_chat_messages_chat on chat_messages (chat_id);
 create index idx_chat_messages_chat_created
-on chat_messages (chat_id, created_at);
+	on chat_messages (chat_id, created_at);
 create index idx_chat_messages_compressed_summary_boundary
-on chat_messages (chat_id, created_at desc, id desc)
-where compressed = true and role = 'system' and visibility in ('model', 'both');
+	on chat_messages (chat_id, created_at desc, id desc)
+	where
+		compressed = true and role = 'system' and visibility in ('model', 'both');
 
 create table chat_diff_statuses (
 	chat_id uuid primary key references chats (id) on delete cascade,
@@ -141,10 +142,10 @@ create table chat_model_configs (
 create index idx_chat_model_configs_enabled on chat_model_configs (enabled);
 create index idx_chat_model_configs_provider on chat_model_configs (provider);
 create index idx_chat_model_configs_provider_model
-on chat_model_configs (provider, model);
+	on chat_model_configs (provider, model);
 create unique index idx_chat_model_configs_single_default
-on chat_model_configs ((1))
-where is_default = true and deleted = false;
+	on chat_model_configs ((1))
+	where is_default = true and deleted = false;
 
 alter table chat_messages
 	add constraint chat_messages_model_config_id_fkey foreign key (

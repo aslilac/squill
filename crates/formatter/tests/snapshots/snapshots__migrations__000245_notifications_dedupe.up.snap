@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 -- Add a column to store the hash.
@@ -36,6 +37,6 @@ language plpgsql;
 
 comment on function compute_notification_message_dedupe_hash is 'Computes a unique hash which will be used to prevent duplicate messages from being enqueued on the same day';
 create trigger update_notification_message_dedupe_hash
-before insert or update on notification_messages
-for each row
-execute function compute_notification_message_dedupe_hash();
+	before insert or update on notification_messages
+	for each row
+	execute function compute_notification_message_dedupe_hash();

@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 -- Drop trigger that uses this function
@@ -73,6 +74,6 @@ language plpgsql;
 
 -- Re-create trigger that uses this function
 create trigger protect_deleting_organizations
-before delete on organizations
-for each row
-execute function protect_deleting_organizations();
+	before delete on organizations
+	for each row
+	execute function protect_deleting_organizations();

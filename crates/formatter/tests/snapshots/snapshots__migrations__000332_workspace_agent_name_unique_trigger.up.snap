@@ -51,10 +51,10 @@ $$
 language plpgsql;
 
 create trigger workspace_agent_name_unique_trigger
-before insert or update of name,
-resource_id on workspace_agents
-for each row
-execute function check_workspace_agent_name_unique();
+	before insert or update of name,
+	resource_id on workspace_agents
+	for each row
+	execute function check_workspace_agent_name_unique();
 
 comment on trigger workspace_agent_name_unique_trigger on workspace_agents is 'Use a trigger instead of a unique constraint because existing data may violate
 the uniqueness requirement. A trigger allows us to enforce uniqueness going

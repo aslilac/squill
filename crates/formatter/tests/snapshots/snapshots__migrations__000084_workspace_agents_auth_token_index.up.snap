@@ -1,7 +1,8 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 create index workspace_agents_auth_token_idx
-on workspace_agents
-using btree(auth_token);
+	on workspace_agents
+	using btree(auth_token);

@@ -50,9 +50,9 @@ language plpgsql;
 
 -- Create trigger to automatically aggregate usage events
 create trigger trigger_aggregate_usage_event
-after insert on usage_events
-for each row
-execute function aggregate_usage_event();
+	after insert on usage_events
+	for each row
+	execute function aggregate_usage_event();
 
 -- Populate usage_events_daily with existing data
 insert into usage_events_daily (day, event_type, usage_data)

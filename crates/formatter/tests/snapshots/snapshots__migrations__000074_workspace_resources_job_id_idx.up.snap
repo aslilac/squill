@@ -1,7 +1,8 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 create index workspace_resources_job_id_idx
-on workspace_resources
-using btree(job_id);
+	on workspace_resources
+	using btree(job_id);

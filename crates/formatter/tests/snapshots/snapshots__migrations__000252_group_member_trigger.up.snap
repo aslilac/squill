@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 create function delete_group_members_on_org_member_delete()
@@ -23,6 +24,6 @@ as $$
 $$;
 
 create trigger trigger_delete_group_members_on_org_member_delete
-before delete on organization_members
-for each row
-execute procedure delete_group_members_on_org_member_delete();
+	before delete on organization_members
+	for each row
+	execute procedure delete_group_members_on_org_member_delete();

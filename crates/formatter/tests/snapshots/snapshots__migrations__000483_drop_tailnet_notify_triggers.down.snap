@@ -44,16 +44,16 @@ as $$
 $$;
 
 create trigger tailnet_notify_coordinator_heartbeat
-after insert or update on tailnet_coordinators
-for each row
-execute function tailnet_notify_coordinator_heartbeat();
+	after insert or update on tailnet_coordinators
+	for each row
+	execute function tailnet_notify_coordinator_heartbeat();
 
 create trigger tailnet_notify_peer_change
-after insert or delete or update on tailnet_peers
-for each row
-execute function tailnet_notify_peer_change();
+	after insert or delete or update on tailnet_peers
+	for each row
+	execute function tailnet_notify_peer_change();
 
 create trigger tailnet_notify_tunnel_change
-after insert or delete or update on tailnet_tunnels
-for each row
-execute function tailnet_notify_tunnel_change();
+	after insert or delete or update on tailnet_tunnels
+	for each row
+	execute function tailnet_notify_tunnel_change();

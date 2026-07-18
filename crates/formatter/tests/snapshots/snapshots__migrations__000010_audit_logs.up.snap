@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 create type resource_type as enum (
@@ -38,6 +39,6 @@ create table audit_logs (
 create index idx_audit_logs_time_desc on audit_logs using btree (time desc);
 create index idx_audit_log_user_id on audit_logs using btree(user_id);
 create index idx_audit_log_organization_id
-on audit_logs
-using btree(organization_id);
+	on audit_logs
+	using btree(organization_id);
 create index idx_audit_log_resource_id on audit_logs using btree(resource_id);

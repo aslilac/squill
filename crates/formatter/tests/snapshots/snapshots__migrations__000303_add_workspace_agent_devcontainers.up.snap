@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 create table workspace_agent_devcontainers (
@@ -21,6 +22,6 @@ comment on column workspace_agent_devcontainers.workspace_folder is 'Workspace f
 comment on column workspace_agent_devcontainers.config_path is 'Path to devcontainer.json.';
 
 create index workspace_agent_devcontainers_workspace_agent_id
-on workspace_agent_devcontainers (workspace_agent_id);
+	on workspace_agent_devcontainers (workspace_agent_id);
 
 comment on index workspace_agent_devcontainers_workspace_agent_id is 'Workspace agent foreign key and query index';

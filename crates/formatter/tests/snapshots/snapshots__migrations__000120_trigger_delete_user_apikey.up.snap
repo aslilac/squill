@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 -- We need to delete all existing API keys for soft-deleted users.
@@ -20,10 +21,10 @@ as $$
 $$;
 
 create trigger trigger_update_users
-after insert or update on users
-for each row
-when (NEW.deleted = true)
-execute procedure delete_deleted_user_api_keys();
+	after insert or update on users
+	for each row
+	when (NEW.deleted = true)
+	execute procedure delete_deleted_user_api_keys();
 
 -- When we insert a new api key, we want to fail if the user is soft-deleted.
 create function insert_apikey_fail_if_user_deleted()
@@ -42,6 +43,6 @@ as $$
 $$;
 
 create trigger trigger_insert_apikeys
-before insert on api_keys
-for each row
-execute procedure insert_apikey_fail_if_user_deleted();
+	before insert on api_keys
+	for each row
+	execute procedure insert_apikey_fail_if_user_deleted();

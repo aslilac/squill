@@ -1,18 +1,19 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 alter table only workspaces
 	add column if not exists next_start_at timestamptz default null;
 
 create index workspace_next_start_at_idx
-on workspaces
-using btree(next_start_at)
-where (deleted = false);
+	on workspaces
+	using btree(next_start_at)
+	where (deleted = false);
 create index workspace_template_id_idx
-on workspaces
-using btree(template_id)
-where (deleted = false);
+	on workspaces
+	using btree(template_id)
+	where (deleted = false);
 
 create function nullify_next_start_at_on_workspace_autostart_modification()
 returns trigger
@@ -35,9 +36,9 @@ as $$
 $$;
 
 create trigger trigger_nullify_next_start_at_on_workspace_autostart_modification
-after update on workspaces
-for each row
-execute procedure nullify_next_start_at_on_workspace_autostart_modification();
+	after update on workspaces
+	for each row
+	execute procedure nullify_next_start_at_on_workspace_autostart_modification();
 
 -- Recreate view
 drop view workspaces_expanded;

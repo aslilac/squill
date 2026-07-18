@@ -1,5 +1,6 @@
 ---
 source: crates/formatter/tests/snapshots.rs
+assertion_line: 30
 expression: formatted
 ---
 -- No one is using this feature yet as of writing this migration, so this is
@@ -9,6 +10,6 @@ delete from workspace_proxies;
 
 drop index if exists workspace_proxies_name_idx;
 create unique index workspace_proxies_lower_name_idx
-on workspace_proxies
-using btree(lower(name))
-where deleted = false;
+	on workspace_proxies
+	using btree(lower(name))
+	where deleted = false;
