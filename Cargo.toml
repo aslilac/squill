@@ -1,7 +1,7 @@
 [workspace]
 resolver = "3"
-members = ["crates/parser", "crates/formatter", "crates/cli"]
-exclude = ["crates/parser/fuzz"]
+members = ["crates/parser", "crates/formatter", "crates/cli", "crates/embed"]
+exclude = ["crates/parser/fuzz", "crates/embed/tests/fixtures/sqlx_app"]
 
 [workspace.package]
 version = "0.1.0"

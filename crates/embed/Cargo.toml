@@ -1,0 +1,12 @@
+[package]
+name = "embed"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+formatter = { version = "0.1.0", path = "../formatter" }
+parser = { version = "0.1.0", path = "../parser" }
+streaming-iterator = "0.1.9"
+tree-sitter = "0.26.11"
+tree-sitter-go = "0.25.0"
+tree-sitter-rust = "0.24.2"
