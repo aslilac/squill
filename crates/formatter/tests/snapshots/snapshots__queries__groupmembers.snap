@@ -16,7 +16,7 @@ where
 	and case when @include_system::bool then true else user_is_system = false end;
 
 -- name: GetGroupMembersByGroupIDPaginated :many
-select *, COUNT(*) over () as count
+select *, count(*) over () as count
 from group_members_expanded
 where
 	group_members_expanded.group_id = @group_id
@@ -30,10 +30,10 @@ where
 				-- The query is ordered by the username field, so select all
 				-- rows after the cursor.
 				(
-					LOWER(user_username)
+					lower(user_username)
 				)
 				> (
-					select LOWER(user_username)
+					select lower(user_username)
 					from group_members_expanded
 					where group_id = @group_id and user_id = @after_id
 				)
@@ -117,17 +117,17 @@ where
 -- End of filters
 order by
 	-- Deterministic and consistent ordering of all users. This is to ensure consistent pagination.
-	LOWER(user_username) asc
+	lower(user_username) asc
 offset @offset_opt
 limit
 	-- A null limit means "no limit", so 0 means return all
-	NULLIF(@limit_opt::int, 0);
+	nullif(@limit_opt::int, 0);
 
 -- name: GetGroupMembersCountByGroupID :one
 -- Returns the total count of members in a group. Shows the total
 -- count even if the caller does not have read access to ResourceGroupMember.
 -- They only need ResourceGroup read access.
-select COUNT(*)
+select count(*)
 from group_members_expanded
 where
 	group_id = @group_id
@@ -139,7 +139,7 @@ where
 -- single query. Used to avoid N+1 lookups when listing many groups. Like
 -- GetGroupMembersCountByGroupID, the count is returned even when the
 -- caller does not have read access to individual group members.
-select group_id, COUNT(*) as member_count
+select group_id, count(*) as member_count
 from group_members_expanded
 where
 	group_id = any(@group_ids::uuid[])

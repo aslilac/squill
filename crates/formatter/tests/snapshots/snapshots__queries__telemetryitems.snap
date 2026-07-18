@@ -14,7 +14,7 @@ select * from telemetry_items where key = $1;
 insert into telemetry_items (key, value)
 values ($1, $2)
 on conflict
-	(key) do update set value = $2, updated_at = NOW() where
+	(key) do update set value = $2, updated_at = now() where
 		telemetry_items.key = $1;
 
 -- name: GetTelemetryItems :many

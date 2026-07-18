@@ -27,8 +27,8 @@ create table chats (
 	worker_id uuid,
 	started_at timestamptz,
 	heartbeat_at timestamptz,
-	created_at timestamptz not null default NOW(),
-	updated_at timestamptz not null default NOW(),
+	created_at timestamptz not null default now(),
+	updated_at timestamptz not null default now(),
 	parent_chat_id uuid references chats (id) on delete set null,
 	root_chat_id uuid references chats (id) on delete set null,
 	last_model_config_id uuid not null
@@ -45,7 +45,7 @@ create table chat_messages (
 	id bigserial primary key,
 	chat_id uuid not null references chats (id) on delete cascade,
 	model_config_id uuid,
-	created_at timestamptz not null default NOW(),
+	created_at timestamptz not null default now(),
 	role text not null,
 	content jsonb,
 	visibility chat_message_visibility not null default 'both',
@@ -76,9 +76,9 @@ create table chat_diff_statuses (
 	deletions integer not null default 0,
 	changed_files integer not null default 0,
 	refreshed_at timestamptz,
-	stale_at timestamptz not null default NOW(),
-	created_at timestamptz not null default NOW(),
-	updated_at timestamptz not null default NOW(),
+	stale_at timestamptz not null default now(),
+	created_at timestamptz not null default now(),
+	updated_at timestamptz not null default now(),
 	git_branch text not null default '',
 	git_remote_origin text not null default ''
 );
@@ -93,8 +93,8 @@ create table chat_providers (
 	api_key_key_id text references dbcrypt_keys (active_key_digest),
 	created_by uuid references users (id),
 	enabled boolean not null default true,
-	created_at timestamptz not null default NOW(),
-	updated_at timestamptz not null default NOW(),
+	created_at timestamptz not null default now(),
+	updated_at timestamptz not null default now(),
 	base_url text not null default '',
 	constraint chat_providers_provider_check
 		check (
@@ -129,8 +129,8 @@ create table chat_model_configs (
 	is_default boolean not null default false,
 	deleted boolean not null default false,
 	deleted_at timestamptz,
-	created_at timestamptz not null default NOW(),
-	updated_at timestamptz not null default NOW(),
+	created_at timestamptz not null default now(),
+	updated_at timestamptz not null default now(),
 	context_limit bigint not null,
 	compression_threshold integer not null,
 	options jsonb not null default '{}'::jsonb,
@@ -161,7 +161,7 @@ create table chat_queued_messages (
 	id bigserial primary key,
 	chat_id uuid not null references chats (id) on delete cascade,
 	content jsonb not null,
-	created_at timestamptz not null default NOW()
+	created_at timestamptz not null default now()
 );
 
 create index idx_chat_queued_messages_chat_id on chat_queued_messages (chat_id);

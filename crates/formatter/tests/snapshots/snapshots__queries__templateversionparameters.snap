@@ -50,4 +50,4 @@ returning *;
 select *
 from template_version_parameters
 where template_version_id = $1
-order by display_order asc, LOWER(name) asc;
+order by display_order asc, lower(name) asc;

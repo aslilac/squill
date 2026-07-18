@@ -117,7 +117,7 @@ set
 	allow_in_plan_mode = @allow_in_plan_mode::boolean,
 	forward_coder_headers = @forward_coder_headers::boolean,
 	updated_by = @updated_by::uuid,
-	updated_at = NOW()
+	updated_at = now()
 where id = @id::uuid
 returning *;
 
@@ -168,7 +168,7 @@ on conflict
 		-- New token material means the user re-authenticated, so any
 		-- cached permanent refresh failure no longer applies.
 		oauth_refresh_failure_reason = '',
-		updated_at = NOW()
+		updated_at = now()
 returning *;
 
 -- name: MarkMCPServerUserTokenRefreshFailure :one
@@ -185,7 +185,7 @@ set
 	refresh_token_key_id = null,
 	expiry = null,
 	oauth_refresh_failure_reason = @oauth_refresh_failure_reason::text,
-	updated_at = NOW()
+	updated_at = now()
 where id = @id::uuid and updated_at = @updated_at::timestamptz
 returning *;
 
@@ -199,7 +199,7 @@ where
 update chats
 set
 	mcp_server_ids = (
-		select COALESCE(array_agg(sid), '{}')
+		select coalesce(array_agg(sid), '{}')
 		from unnest(chats.mcp_server_ids) as sid
 		where sid in (select id from mcp_server_configs)
 	)
@@ -207,5 +207,5 @@ where
 	mcp_server_ids != '{}'
 	and not (
 		mcp_server_ids
-		<@ COALESCE((select array_agg(id) from mcp_server_configs), '{}')
+		<@ coalesce((select array_agg(id) from mcp_server_configs), '{}')
 	);

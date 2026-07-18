@@ -56,7 +56,7 @@ update user_ai_provider_keys
 set
 	api_key = @api_key::text,
 	api_key_key_id = sqlc.narg('api_key_key_id')::text,
-	updated_at = NOW()
+	updated_at = now()
 where user_id = @user_id::uuid and ai_provider_id = @ai_provider_id::uuid
 returning *;
 
@@ -72,6 +72,6 @@ update user_ai_provider_keys
 set
 	api_key = @api_key::text,
 	api_key_key_id = sqlc.narg('api_key_key_id')::text,
-	updated_at = NOW()
+	updated_at = now()
 where id = @id::uuid
 returning *;

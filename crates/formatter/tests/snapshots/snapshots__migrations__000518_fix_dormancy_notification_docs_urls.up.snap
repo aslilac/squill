@@ -14,8 +14,8 @@ expression: formatted
 -- (000232, 000262, 000305, 000311) have left on disk.
 update notification_templates
 set
-	body_template = REPLACE(
-		REPLACE(
+	body_template = replace(
+		replace(
 			body_template,
 			'/docs/templates/schedule#dormancy-threshold-enterprise',
 			'/docs/admin/templates/managing-templates/schedule#dormancy-threshold'

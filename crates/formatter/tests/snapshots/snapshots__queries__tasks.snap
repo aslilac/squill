@@ -56,7 +56,7 @@ from tasks_with_status
 where
 	owner_id = @owner_id::uuid
 	and deleted_at is null
-	and LOWER(name) = LOWER(@name::text);
+	and lower(name) = lower(@name::text);
 
 -- name: ListTasks :many
 select *
@@ -222,17 +222,17 @@ with
 			-- still running).
 			left join LATERAL (
 				select
-					COALESCE(
-						SUM(
-							EXTRACT(EPOCH from (interval_end - interval_start)) * 1000
+					coalesce(
+						sum(
+							extract(EPOCH from (interval_end - interval_start)) * 1000
 						)::bigint,
 						0
 					)::bigint as total_working_ms
 				from (
 					select
 						tst.created_at as interval_start,
-						COALESCE(
-							LEAD(tst.created_at) over (
+						coalesce(
+							lead(tst.created_at) over (
 								order by
 									tst.created_at asc,
 									case when tst.state = '_boundary' then 1 else 0 end asc

@@ -19,7 +19,7 @@ create table inbox_notifications (
 	icon text not null,
 	actions jsonb not null,
 	read_at timestamp with time zone,
-	created_at timestamp with time zone not null default NOW()
+	created_at timestamp with time zone not null default now()
 );
 
 create index idx_inbox_notifications_user_id_read_at

@@ -11,7 +11,7 @@ select
 	nt.method as custom_method,
 	u.id as user_id,
 	u.email as user_email,
-	COALESCE(NULLIF(u.name, ''), NULLIF(u.username, ''))::text as user_name,
+	coalesce(nullif(u.name, ''), nullif(u.username, ''))::text as user_name,
 	u.username as user_username
 from notification_templates nt, users u
 where nt.id = @notification_template_id and u.id = @user_id;
@@ -55,15 +55,15 @@ with
 	acquired as (
 		update notification_messages
 		set
-			queued_seconds = GREATEST(
+			queued_seconds = greatest(
 				0,
-				EXTRACT(EPOCH from (NOW() - updated_at))
+				extract(EPOCH from (now() - updated_at))
 			)::float,
-			updated_at = NOW(),
+			updated_at = now(),
 			status = 'leased'::notification_message_status,
 			status_reason = 'Leased by notifier ' || sqlc.arg('notifier_id')::uuid,
-			leased_until = NOW()
-			+ CONCAT(sqlc.arg('lease_seconds')::int, ' seconds')::interval
+			leased_until = now()
+			+ concat(sqlc.arg('lease_seconds')::int, ' seconds')::interval
 		where
 			id in (
 				select nm.id
@@ -80,7 +80,7 @@ with
 						-- or somehow the message was left in leased for longer than its lease period
 						or (
 							nm.status = 'leased'::notification_message_status
-							and nm.leased_until < NOW()
+							and nm.leased_until < now()
 						)
 					)
 					and (
@@ -93,7 +93,7 @@ with
 					and (
 						case
 							when nm.next_retry_after is not null
-								then nm.next_retry_after < NOW()
+								then nm.next_retry_after < now()
 							else true
 						end
 					)
@@ -140,14 +140,14 @@ set
 	leased_until = null,
 	next_retry_after = case
 		when (attempt_count + 1 < @max_attempts::int)
-			then NOW() + CONCAT(@retry_interval::int, ' seconds')::interval
+			then now() + concat(@retry_interval::int, ' seconds')::interval
 	end
 from (
 	select
-		UNNEST(@ids::uuid[]) as id,
-		UNNEST(@failed_ats::timestamptz[]) as failed_at,
-		UNNEST(@statuses::notification_message_status[]) as status,
-		UNNEST(@status_reasons::text[]) as status_reason
+		unnest(@ids::uuid[]) as id,
+		unnest(@failed_ats::timestamptz[]) as failed_at,
+		unnest(@statuses::notification_message_status[]) as status,
+		unnest(@status_reasons::text[]) as status_reason
 ) as subquery
 where notification_messages.id = subquery.id;
 
@@ -162,7 +162,7 @@ set
 	leased_until = null,
 	next_retry_after = null
 from (
-	select UNNEST(@ids::uuid[]) as id, UNNEST(@sent_ats::timestamptz[]) as sent_at
+	select unnest(@ids::uuid[]) as id, unnest(@sent_ats::timestamptz[]) as sent_at
 ) as new_values
 where notification_messages.id = new_values.id;
 
@@ -173,7 +173,7 @@ where
 	id in (
 		select id
 		from notification_messages as nested
-		where nested.updated_at < NOW() - interval '7 days'
+		where nested.updated_at < now() - interval '7 days'
 	);
 
 -- name: GetNotificationMessagesByStatus :many
@@ -194,8 +194,8 @@ insert into notification_preferences (
 select @user_id::uuid, new_values.notification_template_id, new_values.disabled
 from (
 	select
-		UNNEST(@notification_template_ids::uuid[]) as notification_template_id,
-		UNNEST(@disableds::bool[]) as disabled
+		unnest(@notification_template_ids::uuid[]) as notification_template_id,
+		unnest(@disableds::bool[]) as disabled
 ) as new_values
 on conflict
 	(user_id,

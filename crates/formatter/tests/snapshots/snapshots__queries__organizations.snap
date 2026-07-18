@@ -17,7 +17,7 @@ where
 		when array_length(@ids::uuid[], 1) > 0 then id = any(@ids)
 		else true
 	end
-	and case when @name::text != '' then LOWER(name) = LOWER(@name) else true end;
+	and case when @name::text != '' then lower(name) = lower(@name) else true end;
 
 -- name: GetOrganizationByID :one
 select * from organizations where id = $1;
@@ -29,7 +29,7 @@ where
 	-- Optionally include deleted organizations
 	deleted
 	= @deleted
-	and LOWER(name) = LOWER(@name)
+	and lower(name) = lower(@name)
 limit 1;
 
 -- name: GetOrganizationsByUserID :many

@@ -11,9 +11,9 @@ comment on column tasks.display_name is 'Display name is a custom, human-friendl
 update tasks
 set
 	display_name = case
-		when LENGTH(REGEXP_REPLACE(prompt, E'[\\n\\r\\t]+', ' ', 'g')) > 64
-			then LEFT(REGEXP_REPLACE(prompt, E'[\\n\\r\\t]+', ' ', 'g'), 63) || '…'
-		else REGEXP_REPLACE(prompt, E'[\\n\\r\\t]+', ' ', 'g')
+		when length(regexp_replace(prompt, E'[\\n\\r\\t]+', ' ', 'g')) > 64
+			then left(regexp_replace(prompt, E'[\\n\\r\\t]+', ' ', 'g'), 63) || '…'
+		else regexp_replace(prompt, E'[\\n\\r\\t]+', ' ', 'g')
 	end
 where display_name = '';
 

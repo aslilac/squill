@@ -6,7 +6,7 @@ create table chat_files (
 	id uuid primary key default gen_random_uuid(),
 	owner_id uuid not null references users (id) on delete cascade,
 	organization_id uuid not null references organizations (id) on delete cascade,
-	created_at timestamptz not null default NOW(),
+	created_at timestamptz not null default now(),
 	name text not null default '',
 	mimetype text not null,
 	data bytea not null

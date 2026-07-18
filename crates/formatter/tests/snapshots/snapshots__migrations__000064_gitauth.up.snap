@@ -10,5 +10,5 @@ create table if not exists git_auth_links (
 	oauth_access_token text not null,
 	oauth_refresh_token text not null,
 	oauth_expiry timestamptz not null,
-	UNIQUE(provider_id, user_id)
+	unique(provider_id, user_id)
 );

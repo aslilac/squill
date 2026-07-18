@@ -13,9 +13,9 @@ insert into ai_seat_state (
 values
 	(
 		'30095c71-380b-457a-8995-97b8ee6e5307',
-		NOW(),
-		NOW(),
+		now(),
+		now(),
 		'task'::ai_seat_usage_reason,
 		'Used for AI task',
-		NOW()
+		now()
 	);

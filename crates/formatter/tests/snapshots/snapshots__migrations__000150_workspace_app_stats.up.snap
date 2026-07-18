@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 create table workspace_app_stats (
@@ -17,7 +16,7 @@ create table workspace_app_stats (
 
 	-- Set a unique constraint to allow upserting the session_ended_at
 	-- and requests fields without risk of collisions.
-	UNIQUE(user_id, agent_id, session_id)
+	unique(user_id, agent_id, session_id)
 );
 
 comment on table workspace_app_stats is 'A record of workspace app usage statistics';

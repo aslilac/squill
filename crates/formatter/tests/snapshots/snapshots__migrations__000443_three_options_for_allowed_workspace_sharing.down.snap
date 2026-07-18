@@ -47,8 +47,8 @@ as $$
 				'[]'::jsonb,
 				'[]'::jsonb,
 				true,
-				NOW(),
-				NOW()
+				now(),
+				now()
 			);
 		return NEW;
 	end;

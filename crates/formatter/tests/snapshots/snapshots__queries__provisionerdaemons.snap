@@ -40,14 +40,14 @@ select
 	case
 		when current_job.id is not null then 'busy'::provisioner_daemon_status
 		when (
-			COALESCE(sqlc.narg('offline')::bool, false) = true
+			coalesce(sqlc.narg('offline')::bool, false) = true
 			or 'offline'::provisioner_daemon_status
 			= any(@statuses::provisioner_daemon_status[])
 		)
 		and (
 			pd.last_seen_at is null
 			or pd.last_seen_at
-			< (NOW() - (@stale_interval_ms::bigint || ' ms')::interval)
+			< (now() - (@stale_interval_ms::bigint || ' ms')::interval)
 		)
 			then 'offline'::provisioner_daemon_status
 		else 'idle'::provisioner_daemon_status
@@ -58,18 +58,18 @@ select
 	current_job.job_status as current_job_status,
 	previous_job.id as previous_job_id,
 	previous_job.job_status as previous_job_status,
-	COALESCE(current_template.name, ''::text) as current_job_template_name,
-	COALESCE(
+	coalesce(current_template.name, ''::text) as current_job_template_name,
+	coalesce(
 		current_template.display_name,
 		''::text
 	) as current_job_template_display_name,
-	COALESCE(current_template.icon, ''::text) as current_job_template_icon,
-	COALESCE(previous_template.name, ''::text) as previous_job_template_name,
-	COALESCE(
+	coalesce(current_template.icon, ''::text) as current_job_template_icon,
+	coalesce(previous_template.name, ''::text) as previous_job_template_name,
+	coalesce(
 		previous_template.display_name,
 		''::text
 	) as previous_job_template_display_name,
-	COALESCE(previous_template.icon, ''::text) as previous_job_template_icon
+	coalesce(previous_template.icon, ''::text) as previous_job_template_icon
 from provisioner_daemons pd
 	join provisioner_keys pk on pk.id = pd.key_id
 	left join provisioner_jobs current_job on (
@@ -136,7 +136,7 @@ from provisioner_daemons pd
 where
 	pd.organization_id = @organization_id::uuid
 	and (
-		COALESCE(array_length(@ids::uuid[], 1), 0) = 0 or pd.id = any(@ids::uuid[])
+		coalesce(array_length(@ids::uuid[], 1), 0) = 0 or pd.id = any(@ids::uuid[])
 	)
 	and (
 		@tags::tagset = 'null'::tagset
@@ -147,24 +147,24 @@ where
 		sqlc.narg('max_age_ms')::bigint is null
 		or pd.last_seen_at is null
 		or pd.last_seen_at
-		>= (NOW() - (sqlc.narg('max_age_ms')::bigint || ' ms')::interval)
+		>= (now() - (sqlc.narg('max_age_ms')::bigint || ' ms')::interval)
 	)
 	and (
 		-- Always include online daemons
 		(
 			pd.last_seen_at is not null
 			and pd.last_seen_at
-			>= (NOW() - (@stale_interval_ms::bigint || ' ms')::interval)
+			>= (now() - (@stale_interval_ms::bigint || ' ms')::interval)
 		)
 		-- Include offline daemons if offline param is true or 'offline' status is requested
 		or (
 			(
 				pd.last_seen_at is null
 				or pd.last_seen_at
-				< (NOW() - (@stale_interval_ms::bigint || ' ms')::interval)
+				< (now() - (@stale_interval_ms::bigint || ' ms')::interval)
 			)
 			and (
-				COALESCE(sqlc.narg('offline')::bool, false) = true
+				coalesce(sqlc.narg('offline')::bool, false) = true
 				or 'offline'::provisioner_daemon_status
 				= any(@statuses::provisioner_daemon_status[])
 			)
@@ -172,7 +172,7 @@ where
 	)
 	and (
 		-- Filter daemons by any statuses if provided
-		COALESCE(array_length(@statuses::provisioner_daemon_status[], 1), 0)
+		coalesce(array_length(@statuses::provisioner_daemon_status[], 1), 0)
 		= 0
 		or (
 			current_job.id is not null
@@ -190,15 +190,15 @@ where
 			and (
 				pd.last_seen_at is null
 				or pd.last_seen_at
-				< (NOW() - (@stale_interval_ms::bigint || ' ms')::interval)
+				< (now() - (@stale_interval_ms::bigint || ' ms')::interval)
 			)
 		)
 		or (
-			COALESCE(sqlc.narg('offline')::bool, false) = true
+			coalesce(sqlc.narg('offline')::bool, false) = true
 			and (
 				pd.last_seen_at is null
 				or pd.last_seen_at
-				< (NOW() - (@stale_interval_ms::bigint || ' ms')::interval)
+				< (now() - (@stale_interval_ms::bigint || ' ms')::interval)
 			)
 		)
 	)
@@ -213,8 +213,8 @@ limit sqlc.narg('limit')::int;
 delete from provisioner_daemons
 where
 	(
-		(created_at < (NOW() - interval '7 days') and last_seen_at is null)
-		or (last_seen_at is not null and last_seen_at < (NOW() - interval '7 days'))
+		(created_at < (now() - interval '7 days') and last_seen_at is null)
+		or (last_seen_at is not null and last_seen_at < (now() - interval '7 days'))
 	);
 
 -- name: UpsertProvisionerDaemon :one
@@ -246,7 +246,7 @@ values
 on conflict
 	(organization_id,
 	name,
-	LOWER(COALESCE(tags ->> 'owner'::text, ''::text))) do update set
+	lower(coalesce(tags ->> 'owner'::text, ''::text))) do update set
 		provisioners = @provisioners,
 		tags = @tags,
 		last_seen_at = @last_seen_at,

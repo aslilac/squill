@@ -14,7 +14,7 @@ insert into workspace_agent_stats (
 values
 	(
 		gen_random_uuid(),
-		NOW(),
+		now(),
 		gen_random_uuid(),
 		gen_random_uuid(),
 		gen_random_uuid(),

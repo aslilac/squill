@@ -4,7 +4,7 @@ expression: formatted
 ---
 update notification_templates
 set
-	actions = REPLACE(
+	actions = replace(
 		actions::text,
 		'@{{.UserUsername}}',
 		'@{{.UserName}}'

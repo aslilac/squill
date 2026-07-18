@@ -6,7 +6,7 @@ expression: formatted
 with
 	updated_chats as (
 		update chats
-		set archived = true, pin_order = 0, updated_at = NOW()
+		set archived = true, pin_order = 0, updated_at = now()
 		where id = @id::uuid or root_chat_id = @id::uuid
 		returning *
 	),
@@ -48,8 +48,8 @@ with
 			updated_chats.retry_state_version,
 			updated_chats.runner_id,
 			updated_chats.requires_action_deadline_at,
-			COALESCE(root.user_acl, updated_chats.user_acl) as user_acl,
-			COALESCE(root.group_acl, updated_chats.group_acl) as group_acl,
+			coalesce(root.user_acl, updated_chats.user_acl) as user_acl,
+			coalesce(root.group_acl, updated_chats.group_acl) as group_acl,
 			owner.username as owner_username,
 			owner.name as owner_name,
 			updated_chats.context_aggregate_hash,
@@ -58,7 +58,7 @@ with
 			updated_chats.context_error
 		from updated_chats
 			left join chats root on root.id
-			= COALESCE(updated_chats.root_chat_id, updated_chats.parent_chat_id)
+			= coalesce(updated_chats.root_chat_id, updated_chats.parent_chat_id)
 			join visible_users owner on owner.id = updated_chats.owner_id
 	)
 select *
@@ -76,7 +76,7 @@ order by
 with
 	updated_chats as (
 		update chats
-		set archived = false, updated_at = NOW()
+		set archived = false, updated_at = now()
 		where id = @id::uuid or root_chat_id = @id::uuid
 		returning *
 	),
@@ -118,8 +118,8 @@ with
 			updated_chats.retry_state_version,
 			updated_chats.runner_id,
 			updated_chats.requires_action_deadline_at,
-			COALESCE(root.user_acl, updated_chats.user_acl) as user_acl,
-			COALESCE(root.group_acl, updated_chats.group_acl) as group_acl,
+			coalesce(root.user_acl, updated_chats.user_acl) as user_acl,
+			coalesce(root.group_acl, updated_chats.group_acl) as group_acl,
 			owner.username as owner_username,
 			owner.name as owner_name,
 			updated_chats.context_aggregate_hash,
@@ -128,7 +128,7 @@ with
 			updated_chats.context_error
 		from updated_chats
 			left join chats root on root.id
-			= COALESCE(updated_chats.root_chat_id, updated_chats.parent_chat_id)
+			= coalesce(updated_chats.root_chat_id, updated_chats.parent_chat_id)
 			join visible_users owner on owner.id = updated_chats.owner_id
 	)
 select *
@@ -149,7 +149,7 @@ with
 	ranked as (
 		select
 			c.id,
-			ROW_NUMBER() over (
+			row_number() over (
 				order by c.pin_order asc, c.id asc
 			)::integer as next_pin_order
 		from chats c join target_chat on c.owner_id = target_chat.owner_id
@@ -162,7 +162,7 @@ with
 		all
 		select
 			target_chat.id,
-			COALESCE((select MAX(ranked.next_pin_order) from ranked), 0)
+			coalesce((select max(ranked.next_pin_order) from ranked), 0)
 			+ 1 as pin_order
 		from target_chat
 	) update chats c
@@ -176,7 +176,7 @@ with
 	ranked as (
 		select
 			c.id,
-			ROW_NUMBER() over (
+			row_number() over (
 				order by c.pin_order asc, c.id asc
 			)::integer as current_position
 		from chats c join target_chat on c.owner_id = target_chat.owner_id
@@ -208,10 +208,10 @@ with
 	ranked as (
 		select
 			c.id,
-			ROW_NUMBER() over (
+			row_number() over (
 				order by c.pin_order asc, c.id asc
 			)::integer as current_position,
-			COUNT(*) over ()::integer as pinned_count
+			count(*) over ()::integer as pinned_count
 		from chats c join target_chat on c.owner_id = target_chat.owner_id
 		where c.pin_order > 0 and c.archived = false
 	),
@@ -219,8 +219,8 @@ with
 		select
 			ranked.id,
 			ranked.current_position,
-			LEAST(
-				GREATEST(@pin_order::integer, 1),
+			least(
+				greatest(@pin_order::integer, 1),
 				ranked.pinned_count
 			) as desired_position
 		from ranked
@@ -274,7 +274,7 @@ with
 	) update chat_messages cm
 -- NULL means "pending", empty tsvector means "backfilled, no text".
 set
-	search_tsv = COALESCE(
+	search_tsv = coalesce(
 		to_tsvector('simple', chat_message_search_text(cm.content)),
 		''::tsvector
 	)
@@ -337,7 +337,7 @@ where
 	and visibility in ('user', 'both')
 	and deleted = false
 order by id asc
-limit COALESCE(NULLIF(@limit_val::int, 0), 50);
+limit coalesce(nullif(@limit_val::int, 0), 50);
 
 -- name: GetChatMessagesByChatIDDescPaginated :many
 select *
@@ -352,7 +352,7 @@ where
 	and visibility in ('user', 'both')
 	and deleted = false
 order by id desc
-limit COALESCE(NULLIF(@limit_val::int, 0), 50);
+limit coalesce(nullif(@limit_val::int, 0), 50);
 
 -- name: GetChatUserPromptsByChatID :many
 -- Returns the concatenated text of each user-visible user prompt in a
@@ -377,7 +377,7 @@ where
 group by cm.id
 having string_agg(part ->> 'text', '') ~ '\S'
 order by cm.id desc
-limit COALESCE(NULLIF(@limit_val::int, 0), 500);
+limit coalesce(nullif(@limit_val::int, 0), 500);
 
 -- name: GetChatMessagesForPromptByChatID :many
 with
@@ -427,7 +427,7 @@ select
 			cm.chat_id = chats_expanded.id
 			and cm.role = 'assistant'
 			and cm.deleted = false
-			and cm.id > COALESCE(chats_expanded.last_read_message_id, 0)
+			and cm.id > coalesce(chats_expanded.last_read_message_id, 0)
 	) as has_unread
 from chats_expanded
 where
@@ -488,7 +488,7 @@ where
 				where
 					cds.url is not null
 					and cds.url <> ''
-					and LOWER(cds.url) = LOWER(sqlc.narg('diff_url')::text)
+					and lower(cds.url) = lower(sqlc.narg('diff_url')::text)
 					and (c2.id = chats_expanded.id or c2.root_chat_id = chats_expanded.id)
 			)
 		else true
@@ -510,7 +510,7 @@ where
 						cm.chat_id = chats_expanded.id
 						and cm.role = 'assistant'
 						and cm.deleted = false
-						and cm.id > COALESCE(chats_expanded.last_read_message_id, 0)
+						and cm.id > coalesce(chats_expanded.last_read_message_id, 0)
 				)
 			)
 			= sqlc.narg('has_unread')::boolean
@@ -522,7 +522,7 @@ where
 	-- parent, so gitsync populates identical PR state on both; traversing
 	-- descendants would be redundant.
 	and case
-		when COALESCE(array_length(@pull_request_statuses::text[], 1), 0) > 0
+		when coalesce(array_length(@pull_request_statuses::text[], 1), 0) > 0
 			then exists (
 				select 1
 				from chat_diff_statuses cds
@@ -647,7 +647,7 @@ offset @offset_opt
 limit
 	-- The chat list is unbounded and expected to grow large.
 	-- Default to 50 to prevent accidental excessively large queries.
-	COALESCE(NULLIF(@limit_opt::int, 0), 50);
+	coalesce(nullif(@limit_opt::int, 0), 50);
 
 -- name: GetChildChatsByParentIDs :many
 -- Fetches child chats of the given parents, optionally filtered by
@@ -663,7 +663,7 @@ select
 			cm.chat_id = chats_expanded.id
 			and cm.role = 'assistant'
 			and cm.deleted = false
-			and cm.id > COALESCE(chats_expanded.last_read_message_id, 0)
+			and cm.id > coalesce(chats_expanded.last_read_message_id, 0)
 	) as has_unread
 from chats_expanded
 where
@@ -709,8 +709,8 @@ with
 				sqlc.narg('mode')::chat_mode,
 				sqlc.narg('plan_mode')::chat_plan_mode,
 				@status::chat_status,
-				COALESCE(@mcp_server_ids::uuid[], '{}'::uuid[]),
-				COALESCE(sqlc.narg('labels')::jsonb, '{}'::jsonb),
+				coalesce(@mcp_server_ids::uuid[], '{}'::uuid[]),
+				coalesce(sqlc.narg('labels')::jsonb, '{}'::jsonb),
 				sqlc.narg('dynamic_tools')::jsonb,
 				@client_type::chat_client_type
 			)
@@ -754,8 +754,8 @@ with
 			inserted_chat.retry_state_version,
 			inserted_chat.runner_id,
 			inserted_chat.requires_action_deadline_at,
-			COALESCE(root.user_acl, inserted_chat.user_acl) as user_acl,
-			COALESCE(root.group_acl, inserted_chat.group_acl) as group_acl,
+			coalesce(root.user_acl, inserted_chat.user_acl) as user_acl,
+			coalesce(root.group_acl, inserted_chat.group_acl) as group_acl,
 			owner.username as owner_username,
 			owner.name as owner_name,
 			inserted_chat.context_aggregate_hash,
@@ -764,7 +764,7 @@ with
 			inserted_chat.context_error
 		from inserted_chat
 			left join chats root on root.id
-			= COALESCE(inserted_chat.root_chat_id, inserted_chat.parent_chat_id)
+			= coalesce(inserted_chat.root_chat_id, inserted_chat.parent_chat_id)
 			join visible_users owner on owner.id = inserted_chat.owner_id
 	)
 select *
@@ -776,14 +776,14 @@ with
 		select
 			(
 				select val
-				from UNNEST(@model_config_id::uuid[]) with ordinality as t(val, ord)
+				from unnest(@model_config_id::uuid[]) with ordinality as t(val, ord)
 				where val != '00000000-0000-0000-0000-000000000000'::uuid
 				order by ord desc
 				limit 1
 			) as last_model_config_id,
 			(
-				select NULLIF(val, '')::chat_reasoning_effort
-				from UNNEST(@reasoning_effort::text[]) with ordinality as t(val, ord)
+				select nullif(val, '')::chat_reasoning_effort
+				from unnest(@reasoning_effort::text[]) with ordinality as t(val, ord)
 				where val != ''
 				order by ord desc
 				limit 1
@@ -792,11 +792,11 @@ with
 	updated_chat as (
 		update chats
 		set
-			last_model_config_id = COALESCE(
+			last_model_config_id = coalesce(
 				batch.last_model_config_id,
 				chats.last_model_config_id
 			),
-			last_reasoning_effort = COALESCE(
+			last_reasoning_effort = coalesce(
 				batch.last_reasoning_effort,
 				chats.last_reasoning_effort
 			)
@@ -805,12 +805,12 @@ with
 			chats.id = @chat_id::uuid
 			and (
 				chats.last_model_config_id
-				is distinct from COALESCE(
+				is distinct from coalesce(
 					batch.last_model_config_id,
 					chats.last_model_config_id
 				)
 				or chats.last_reasoning_effort
-				is distinct from COALESCE(
+				is distinct from coalesce(
 					batch.last_reasoning_effort,
 					chats.last_reasoning_effort
 				)
@@ -838,37 +838,37 @@ with
 )
 select
 	@chat_id::uuid,
-	NULLIF(
-		UNNEST(@created_by::uuid[]),
+	nullif(
+		unnest(@created_by::uuid[]),
 		'00000000-0000-0000-0000-000000000000'::uuid
 	),
-	NULLIF(UNNEST(@api_key_id::text[]), ''),
-	NULLIF(
-		UNNEST(@model_config_id::uuid[]),
+	nullif(unnest(@api_key_id::text[]), ''),
+	nullif(
+		unnest(@model_config_id::uuid[]),
 		'00000000-0000-0000-0000-000000000000'::uuid
 	),
-	NULLIF(UNNEST(@reasoning_effort::text[]), '')::chat_reasoning_effort,
-	UNNEST(@role::chat_message_role[]),
-	UNNEST(@content::text[])::jsonb,
-	UNNEST(@content_version::smallint[]),
-	UNNEST(@visibility::chat_message_visibility[]),
-	NULLIF(UNNEST(@input_tokens::bigint[]), 0),
-	NULLIF(UNNEST(@output_tokens::bigint[]), 0),
-	NULLIF(UNNEST(@total_tokens::bigint[]), 0),
-	NULLIF(UNNEST(@reasoning_tokens::bigint[]), 0),
-	NULLIF(UNNEST(@cache_creation_tokens::bigint[]), 0),
-	NULLIF(UNNEST(@cache_read_tokens::bigint[]), 0),
-	NULLIF(UNNEST(@context_limit::bigint[]), 0),
-	UNNEST(@compressed::boolean[]),
-	NULLIF(UNNEST(@total_cost_micros::bigint[]), 0),
-	NULLIF(UNNEST(@runtime_ms::bigint[]), 0)
+	nullif(unnest(@reasoning_effort::text[]), '')::chat_reasoning_effort,
+	unnest(@role::chat_message_role[]),
+	unnest(@content::text[])::jsonb,
+	unnest(@content_version::smallint[]),
+	unnest(@visibility::chat_message_visibility[]),
+	nullif(unnest(@input_tokens::bigint[]), 0),
+	nullif(unnest(@output_tokens::bigint[]), 0),
+	nullif(unnest(@total_tokens::bigint[]), 0),
+	nullif(unnest(@reasoning_tokens::bigint[]), 0),
+	nullif(unnest(@cache_creation_tokens::bigint[]), 0),
+	nullif(unnest(@cache_read_tokens::bigint[]), 0),
+	nullif(unnest(@context_limit::bigint[]), 0),
+	unnest(@compressed::boolean[]),
+	nullif(unnest(@total_cost_micros::bigint[]), 0),
+	nullif(unnest(@runtime_ms::bigint[]), 0)
 returning *;
 
 -- name: UpdateChatByID :one
 with
 	updated_chat as (
 		update chats
-		set title = @title::text, updated_at = NOW()
+		set title = @title::text, updated_at = now()
 		where id = @id::uuid
 		returning *
 	),
@@ -910,8 +910,8 @@ with
 			updated_chat.retry_state_version,
 			updated_chat.runner_id,
 			updated_chat.requires_action_deadline_at,
-			COALESCE(root.user_acl, updated_chat.user_acl) as user_acl,
-			COALESCE(root.group_acl, updated_chat.group_acl) as group_acl,
+			coalesce(root.user_acl, updated_chat.user_acl) as user_acl,
+			coalesce(root.group_acl, updated_chat.group_acl) as group_acl,
 			owner.username as owner_username,
 			owner.name as owner_name,
 			updated_chat.context_aggregate_hash,
@@ -920,7 +920,7 @@ with
 			updated_chat.context_error
 		from updated_chat
 			left join chats root on root.id
-			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -976,8 +976,8 @@ with
 			updated_chat.retry_state_version,
 			updated_chat.runner_id,
 			updated_chat.requires_action_deadline_at,
-			COALESCE(root.user_acl, updated_chat.user_acl) as user_acl,
-			COALESCE(root.group_acl, updated_chat.group_acl) as group_acl,
+			coalesce(root.user_acl, updated_chat.user_acl) as user_acl,
+			coalesce(root.group_acl, updated_chat.group_acl) as group_acl,
 			owner.username as owner_username,
 			owner.name as owner_name,
 			updated_chat.context_aggregate_hash,
@@ -986,7 +986,7 @@ with
 			updated_chat.context_error
 		from updated_chat
 			left join chats root on root.id
-			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1040,8 +1040,8 @@ with
 			updated_chat.retry_state_version,
 			updated_chat.runner_id,
 			updated_chat.requires_action_deadline_at,
-			COALESCE(root.user_acl, updated_chat.user_acl) as user_acl,
-			COALESCE(root.group_acl, updated_chat.group_acl) as group_acl,
+			coalesce(root.user_acl, updated_chat.user_acl) as user_acl,
+			coalesce(root.group_acl, updated_chat.group_acl) as group_acl,
 			owner.username as owner_username,
 			owner.name as owner_name,
 			updated_chat.context_aggregate_hash,
@@ -1050,7 +1050,7 @@ with
 			updated_chat.context_error
 		from updated_chat
 			left join chats root on root.id
-			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1104,8 +1104,8 @@ with
 			updated_chat.retry_state_version,
 			updated_chat.runner_id,
 			updated_chat.requires_action_deadline_at,
-			COALESCE(root.user_acl, updated_chat.user_acl) as user_acl,
-			COALESCE(root.group_acl, updated_chat.group_acl) as group_acl,
+			coalesce(root.user_acl, updated_chat.user_acl) as user_acl,
+			coalesce(root.group_acl, updated_chat.group_acl) as group_acl,
 			owner.username as owner_username,
 			owner.name as owner_name,
 			updated_chat.context_aggregate_hash,
@@ -1114,7 +1114,7 @@ with
 			updated_chat.context_error
 		from updated_chat
 			left join chats root on root.id
-			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1124,7 +1124,7 @@ from chats_expanded;
 with
 	updated_chat as (
 		update chats
-		set labels = @labels::jsonb, updated_at = NOW()
+		set labels = @labels::jsonb, updated_at = now()
 		where id = @id::uuid
 		returning *
 	),
@@ -1166,8 +1166,8 @@ with
 			updated_chat.retry_state_version,
 			updated_chat.runner_id,
 			updated_chat.requires_action_deadline_at,
-			COALESCE(root.user_acl, updated_chat.user_acl) as user_acl,
-			COALESCE(root.group_acl, updated_chat.group_acl) as group_acl,
+			coalesce(root.user_acl, updated_chat.user_acl) as user_acl,
+			coalesce(root.group_acl, updated_chat.group_acl) as group_acl,
 			owner.username as owner_username,
 			owner.name as owner_name,
 			updated_chat.context_aggregate_hash,
@@ -1176,7 +1176,7 @@ with
 			updated_chat.context_error
 		from updated_chat
 			left join chats root on root.id
-			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1190,7 +1190,7 @@ with
 			workspace_id = sqlc.narg('workspace_id')::uuid,
 			build_id = sqlc.narg('build_id')::uuid,
 			agent_id = sqlc.narg('agent_id')::uuid,
-			updated_at = NOW()
+			updated_at = now()
 		where id = @id::uuid
 		returning *
 	),
@@ -1232,8 +1232,8 @@ with
 			updated_chat.retry_state_version,
 			updated_chat.runner_id,
 			updated_chat.requires_action_deadline_at,
-			COALESCE(root.user_acl, updated_chat.user_acl) as user_acl,
-			COALESCE(root.group_acl, updated_chat.group_acl) as group_acl,
+			coalesce(root.user_acl, updated_chat.user_acl) as user_acl,
+			coalesce(root.group_acl, updated_chat.group_acl) as group_acl,
 			owner.username as owner_username,
 			owner.name as owner_name,
 			updated_chat.context_aggregate_hash,
@@ -1242,7 +1242,7 @@ with
 			updated_chat.context_error
 		from updated_chat
 			left join chats root on root.id
-			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1255,7 +1255,7 @@ with
 		set
 			build_id = sqlc.narg('build_id')::uuid,
 			agent_id = sqlc.narg('agent_id')::uuid,
-			updated_at = NOW()
+			updated_at = now()
 		where id = @id::uuid
 		returning *
 	),
@@ -1297,8 +1297,8 @@ with
 			updated_chat.retry_state_version,
 			updated_chat.runner_id,
 			updated_chat.requires_action_deadline_at,
-			COALESCE(root.user_acl, updated_chat.user_acl) as user_acl,
-			COALESCE(root.group_acl, updated_chat.group_acl) as group_acl,
+			coalesce(root.user_acl, updated_chat.user_acl) as user_acl,
+			coalesce(root.group_acl, updated_chat.group_acl) as group_acl,
 			owner.username as owner_username,
 			owner.name as owner_name,
 			updated_chat.context_aggregate_hash,
@@ -1307,7 +1307,7 @@ with
 			updated_chat.context_error
 		from updated_chat
 			left join chats root on root.id
-			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1323,8 +1323,8 @@ from chats_expanded;
 -- Two summary workers using the same freshness marker are last-write-wins.
 update chats
 set
-	last_turn_summary = NULLIF(
-		REGEXP_REPLACE(
+	last_turn_summary = nullif(
+		regexp_replace(
 			sqlc.narg('last_turn_summary')::text,
 			'^[[:space:]]+|[[:space:]]+$',
 			'',
@@ -1338,7 +1338,7 @@ where id = @id::uuid and history_version = @expected_history_version::bigint;
 with
 	updated_chat as (
 		update chats
-		set mcp_server_ids = @mcp_server_ids::uuid[], updated_at = NOW()
+		set mcp_server_ids = @mcp_server_ids::uuid[], updated_at = now()
 		where id = @id::uuid
 		returning *
 	),
@@ -1380,8 +1380,8 @@ with
 			updated_chat.retry_state_version,
 			updated_chat.runner_id,
 			updated_chat.requires_action_deadline_at,
-			COALESCE(root.user_acl, updated_chat.user_acl) as user_acl,
-			COALESCE(root.group_acl, updated_chat.group_acl) as group_acl,
+			coalesce(root.user_acl, updated_chat.user_acl) as user_acl,
+			coalesce(root.group_acl, updated_chat.group_acl) as group_acl,
 			owner.username as owner_username,
 			owner.name as owner_name,
 			updated_chat.context_aggregate_hash,
@@ -1390,7 +1390,7 @@ with
 			updated_chat.context_error
 		from updated_chat
 			left join chats root on root.id
-			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1534,7 +1534,7 @@ order by source asc;
 -- new links.
 with
 	current as (
-		select COUNT(*) as cnt
+		select count(*) as cnt
 		from chat_file_links
 		where chat_id = @chat_id::uuid
 	),
@@ -1555,13 +1555,13 @@ with
 		insert into chat_file_links (chat_id, file_id)
 		select gn.chat_id, gn.file_id
 		from genuinely_new gn, current c
-		where c.cnt + (select COUNT(*) from genuinely_new) <= @max_file_links::int
+		where c.cnt + (select count(*) from genuinely_new) <= @max_file_links::int
 		on conflict (chat_id, file_id) do nothing
 		returning file_id
 	)
 select
-	(select COUNT(*)::int from genuinely_new)
-	- (select COUNT(*)::int from inserted) as rejected_new_files;
+	(select count(*)::int from genuinely_new)
+	- (select count(*)::int from inserted) as rejected_new_files;
 
 -- name: UpdateChatStatus :one
 with
@@ -1573,7 +1573,7 @@ with
 			started_at = sqlc.narg('started_at')::timestamptz,
 			heartbeat_at = sqlc.narg('heartbeat_at')::timestamptz,
 			last_error = sqlc.narg('last_error')::jsonb,
-			updated_at = NOW()
+			updated_at = now()
 		where id = @id::uuid
 		returning *
 	),
@@ -1615,8 +1615,8 @@ with
 			updated_chat.retry_state_version,
 			updated_chat.runner_id,
 			updated_chat.requires_action_deadline_at,
-			COALESCE(root.user_acl, updated_chat.user_acl) as user_acl,
-			COALESCE(root.group_acl, updated_chat.group_acl) as group_acl,
+			coalesce(root.user_acl, updated_chat.user_acl) as user_acl,
+			coalesce(root.group_acl, updated_chat.group_acl) as group_acl,
 			owner.username as owner_username,
 			owner.name as owner_name,
 			updated_chat.context_aggregate_hash,
@@ -1625,7 +1625,7 @@ with
 			updated_chat.context_error
 		from updated_chat
 			left join chats root on root.id
-			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1710,7 +1710,7 @@ on conflict
 			else chat_diff_statuses.git_remote_origin
 		end,
 		stale_at = EXCLUDED.stale_at,
-		updated_at = NOW()
+		updated_at = now()
 returning *;
 
 -- name: UpsertChatDiffStatus :one
@@ -1777,7 +1777,7 @@ on conflict
 		reviewer_count = EXCLUDED.reviewer_count,
 		refreshed_at = EXCLUDED.refreshed_at,
 		stale_at = EXCLUDED.stale_at,
-		updated_at = NOW()
+		updated_at = now()
 returning *;
 
 -- name: InsertChatQueuedMessage :one
@@ -1834,7 +1834,7 @@ returning *;
 update chat_queued_messages as target
 set
 	created_at = (
-		select MIN(inner_cqm.created_at) - interval '1 microsecond'
+		select min(inner_cqm.created_at) - interval '1 microsecond'
 		from chat_queued_messages as inner_cqm
 		where inner_cqm.chat_id = @chat_id
 	)
@@ -1891,8 +1891,8 @@ with
 			locked_chat.retry_state_version,
 			locked_chat.runner_id,
 			locked_chat.requires_action_deadline_at,
-			COALESCE(root.user_acl, locked_chat.user_acl) as user_acl,
-			COALESCE(root.group_acl, locked_chat.group_acl) as group_acl,
+			coalesce(root.user_acl, locked_chat.user_acl) as user_acl,
+			coalesce(root.group_acl, locked_chat.group_acl) as group_acl,
 			owner.username as owner_username,
 			owner.name as owner_name,
 			locked_chat.context_aggregate_hash,
@@ -1901,7 +1901,7 @@ with
 			locked_chat.context_error
 		from locked_chat
 			left join chats root on root.id
-			= COALESCE(locked_chat.root_chat_id, locked_chat.parent_chat_id)
+			= coalesce(locked_chat.root_chat_id, locked_chat.parent_chat_id)
 			join visible_users owner on owner.id = locked_chat.owner_id
 	)
 select *
@@ -1948,8 +1948,8 @@ with
 			shared_chat.retry_state_version,
 			shared_chat.runner_id,
 			shared_chat.requires_action_deadline_at,
-			COALESCE(root.user_acl, shared_chat.user_acl) as user_acl,
-			COALESCE(root.group_acl, shared_chat.group_acl) as group_acl,
+			coalesce(root.user_acl, shared_chat.user_acl) as user_acl,
+			coalesce(root.group_acl, shared_chat.group_acl) as group_acl,
 			owner.username as owner_username,
 			owner.name as owner_name,
 			shared_chat.context_aggregate_hash,
@@ -1958,7 +1958,7 @@ with
 			shared_chat.context_error
 		from shared_chat
 			left join chats root on root.id
-			= COALESCE(shared_chat.root_chat_id, shared_chat.parent_chat_id)
+			= coalesce(shared_chat.root_chat_id, shared_chat.parent_chat_id)
 			join visible_users owner on owner.id = shared_chat.owner_id
 	)
 select *
@@ -1984,13 +1984,13 @@ with
 			-- the worker can read it as "when was this row last
 			-- externally changed" (by MarkStale or a successful
 			-- refresh).
-			stale_at = NOW() + interval '5 minutes'
+			stale_at = now() + interval '5 minutes'
 		where
 			chat_id in (
 				select cds.chat_id
 				from chat_diff_statuses cds inner join chats c on c.id = cds.chat_id
 				where
-					cds.stale_at <= NOW()
+					cds.stale_at <= now()
 					and cds.git_remote_origin != ''
 					and cds.git_branch != ''
 					and c.archived = false
@@ -2022,28 +2022,28 @@ where chat_id = @chat_id::uuid;
 -- intentionally excluded from these aggregates.
 with
 	deduped as (
-		select distinct on (COALESCE(NULLIF(cds.url, ''), c.id::text))
+		select distinct on (coalesce(nullif(cds.url, ''), c.id::text))
 			cds.pull_request_state
 		from chat_diff_statuses cds join chats c on c.id = cds.chat_id
 		where cds.pull_request_state in ('open', 'merged', 'closed')
 		order by
-			COALESCE(NULLIF(cds.url, ''), c.id::text), cds.updated_at desc, c.id desc
+			coalesce(nullif(cds.url, ''), c.id::text), cds.updated_at desc, c.id desc
 	)
 select
-	COUNT(*)::bigint as total,
-	COUNT(*) filter (where pull_request_state = 'open')::bigint as open,
-	COUNT(*) filter (where pull_request_state = 'merged')::bigint as merged,
-	COUNT(*) filter (where pull_request_state = 'closed')::bigint as closed
+	count(*)::bigint as total,
+	count(*) filter (where pull_request_state = 'open')::bigint as open,
+	count(*) filter (where pull_request_state = 'merged')::bigint as merged,
+	count(*) filter (where pull_request_state = 'closed')::bigint as closed
 from deduped;
 
 -- name: GetChatCostSummary :one
 -- Aggregate cost summary for a single user within a date range.
 -- Only counts assistant-role messages.
 select
-	COALESCE(SUM(cm.total_cost_micros), 0)::bigint as total_cost_micros,
-	COUNT(*) filter (where cm.total_cost_micros
+	coalesce(sum(cm.total_cost_micros), 0)::bigint as total_cost_micros,
+	count(*) filter (where cm.total_cost_micros
 	is not null)::bigint as priced_message_count,
-	COUNT(*) filter (where cm.total_cost_micros is null
+	count(*) filter (where cm.total_cost_micros is null
 	and (
 		cm.input_tokens is not null
 		or cm.output_tokens is not null
@@ -2051,14 +2051,14 @@ select
 		or cm.cache_creation_tokens is not null
 		or cm.cache_read_tokens is not null
 	))::bigint as unpriced_message_count,
-	COALESCE(SUM(cm.input_tokens), 0)::bigint as total_input_tokens,
-	COALESCE(SUM(cm.output_tokens), 0)::bigint as total_output_tokens,
-	COALESCE(SUM(cm.cache_read_tokens), 0)::bigint as total_cache_read_tokens,
-	COALESCE(
-		SUM(cm.cache_creation_tokens),
+	coalesce(sum(cm.input_tokens), 0)::bigint as total_input_tokens,
+	coalesce(sum(cm.output_tokens), 0)::bigint as total_output_tokens,
+	coalesce(sum(cm.cache_read_tokens), 0)::bigint as total_cache_read_tokens,
+	coalesce(
+		sum(cm.cache_creation_tokens),
 		0
 	)::bigint as total_cache_creation_tokens,
-	COALESCE(SUM(cm.runtime_ms), 0)::bigint as total_runtime_ms
+	coalesce(sum(cm.runtime_ms), 0)::bigint as total_runtime_ms
 from chat_messages cm join chats c on c.id = cm.chat_id
 where
 	c.owner_id = @owner_id::uuid
@@ -2072,22 +2072,22 @@ where
 select
 	cmc.id as model_config_id,
 	cmc.display_name,
-	COALESCE(ap.type::text, '')::text as provider,
+	coalesce(ap.type::text, '')::text as provider,
 	cmc.model,
-	COALESCE(SUM(cm.total_cost_micros), 0)::bigint as total_cost_micros,
-	COUNT(*) filter (where cm.input_tokens is not null
+	coalesce(sum(cm.total_cost_micros), 0)::bigint as total_cost_micros,
+	count(*) filter (where cm.input_tokens is not null
 	or cm.output_tokens is not null
 	or cm.reasoning_tokens is not null
 	or cm.cache_creation_tokens is not null
 	or cm.cache_read_tokens is not null)::bigint as message_count,
-	COALESCE(SUM(cm.input_tokens), 0)::bigint as total_input_tokens,
-	COALESCE(SUM(cm.output_tokens), 0)::bigint as total_output_tokens,
-	COALESCE(SUM(cm.cache_read_tokens), 0)::bigint as total_cache_read_tokens,
-	COALESCE(
-		SUM(cm.cache_creation_tokens),
+	coalesce(sum(cm.input_tokens), 0)::bigint as total_input_tokens,
+	coalesce(sum(cm.output_tokens), 0)::bigint as total_output_tokens,
+	coalesce(sum(cm.cache_read_tokens), 0)::bigint as total_cache_read_tokens,
+	coalesce(
+		sum(cm.cache_creation_tokens),
 		0
 	)::bigint as total_cache_creation_tokens,
-	COALESCE(SUM(cm.runtime_ms), 0)::bigint as total_runtime_ms
+	coalesce(sum(cm.runtime_ms), 0)::bigint as total_runtime_ms
 from chat_messages cm
 	join chats c on c.id = cm.chat_id
 	join chat_model_configs cmc on cmc.id = cm.model_config_id
@@ -2107,32 +2107,32 @@ order by total_cost_micros desc;
 with
 	chat_costs as (
 		select
-			COALESCE(c.root_chat_id, c.id) as root_chat_id,
-			COALESCE(SUM(cm.total_cost_micros), 0)::bigint as total_cost_micros,
-			COUNT(*) filter (where cm.input_tokens is not null
+			coalesce(c.root_chat_id, c.id) as root_chat_id,
+			coalesce(sum(cm.total_cost_micros), 0)::bigint as total_cost_micros,
+			count(*) filter (where cm.input_tokens is not null
 			or cm.output_tokens is not null
 			or cm.reasoning_tokens is not null
 			or cm.cache_creation_tokens is not null
 			or cm.cache_read_tokens is not null)::bigint as message_count,
-			COALESCE(SUM(cm.input_tokens), 0)::bigint as total_input_tokens,
-			COALESCE(SUM(cm.output_tokens), 0)::bigint as total_output_tokens,
-			COALESCE(SUM(cm.cache_read_tokens), 0)::bigint as total_cache_read_tokens,
-			COALESCE(
-				SUM(cm.cache_creation_tokens),
+			coalesce(sum(cm.input_tokens), 0)::bigint as total_input_tokens,
+			coalesce(sum(cm.output_tokens), 0)::bigint as total_output_tokens,
+			coalesce(sum(cm.cache_read_tokens), 0)::bigint as total_cache_read_tokens,
+			coalesce(
+				sum(cm.cache_creation_tokens),
 				0
 			)::bigint as total_cache_creation_tokens,
-			COALESCE(SUM(cm.runtime_ms), 0)::bigint as total_runtime_ms
+			coalesce(sum(cm.runtime_ms), 0)::bigint as total_runtime_ms
 		from chat_messages cm join chats c on c.id = cm.chat_id
 		where
 			c.owner_id = @owner_id::uuid
 			and cm.role = 'assistant'
 			and cm.created_at >= @start_date::timestamptz
 			and cm.created_at < @end_date::timestamptz
-		group by COALESCE(c.root_chat_id, c.id)
+		group by coalesce(c.root_chat_id, c.id)
 	)
 select
 	cc.root_chat_id,
-	COALESCE(rc.title, '') as chat_title,
+	coalesce(rc.title, '') as chat_title,
 	cc.total_cost_micros,
 	cc.message_count,
 	cc.total_input_tokens,
@@ -2153,21 +2153,21 @@ with
 			u.username,
 			u.name,
 			u.avatar_url,
-			COALESCE(SUM(cm.total_cost_micros), 0)::bigint as total_cost_micros,
-			COUNT(*) filter (where cm.input_tokens is not null
+			coalesce(sum(cm.total_cost_micros), 0)::bigint as total_cost_micros,
+			count(*) filter (where cm.input_tokens is not null
 			or cm.output_tokens is not null
 			or cm.reasoning_tokens is not null
 			or cm.cache_creation_tokens is not null
 			or cm.cache_read_tokens is not null)::bigint as message_count,
-			COUNT(distinct COALESCE(c.root_chat_id, c.id))::bigint as chat_count,
-			COALESCE(SUM(cm.input_tokens), 0)::bigint as total_input_tokens,
-			COALESCE(SUM(cm.output_tokens), 0)::bigint as total_output_tokens,
-			COALESCE(SUM(cm.cache_read_tokens), 0)::bigint as total_cache_read_tokens,
-			COALESCE(
-				SUM(cm.cache_creation_tokens),
+			count(distinct coalesce(c.root_chat_id, c.id))::bigint as chat_count,
+			coalesce(sum(cm.input_tokens), 0)::bigint as total_input_tokens,
+			coalesce(sum(cm.output_tokens), 0)::bigint as total_output_tokens,
+			coalesce(sum(cm.cache_read_tokens), 0)::bigint as total_cache_read_tokens,
+			coalesce(
+				sum(cm.cache_creation_tokens),
 				0
 			)::bigint as total_cache_creation_tokens,
-			COALESCE(SUM(cm.runtime_ms), 0)::bigint as total_runtime_ms
+			coalesce(sum(cm.runtime_ms), 0)::bigint as total_runtime_ms
 		from chat_messages cm
 			join chats c on c.id = cm.chat_id
 			join users u on u.id = c.owner_id
@@ -2195,7 +2195,7 @@ select
 	total_cache_read_tokens,
 	total_cache_creation_tokens,
 	total_runtime_ms,
-	COUNT(*) over ()::bigint as total_count
+	count(*) over ()::bigint as total_count
 from chat_cost_users
 order by total_cost_micros desc, username asc
 limit sqlc.arg('page_limit')::int
@@ -2213,13 +2213,13 @@ insert into chat_usage_limit_config (
 	updated_at
 )
 values
-	(true, @enabled::boolean, @default_limit_micros::bigint, @period::text, NOW())
+	(true, @enabled::boolean, @default_limit_micros::bigint, @period::text, now())
 on conflict
 	(singleton) do update set
 		enabled = EXCLUDED.enabled,
 		default_limit_micros = EXCLUDED.default_limit_micros,
 		period = EXCLUDED.period,
-		updated_at = NOW()
+		updated_at = now()
 returning *;
 
 -- name: ListChatUsageLimitOverrides :many
@@ -2257,7 +2257,7 @@ where id = @user_id::uuid and chat_spend_limit_micros is not null;
 -- When organization_id is NULL, spend across all organizations is
 -- returned (global behavior). Otherwise only spend within the
 -- specified organization is included.
-select COALESCE(SUM(cm.total_cost_micros), 0)::bigint as total_spend_micros
+select coalesce(sum(cm.total_cost_micros), 0)::bigint as total_spend_micros
 from chat_messages cm join chats c on c.id = cm.chat_id
 where
 	c.owner_id = @user_id::uuid
@@ -2272,7 +2272,7 @@ where
 -- name: CountEnabledModelsWithoutPricing :one
 -- Counts enabled, non-deleted model configs that lack both input and
 -- output pricing in their JSONB options.cost configuration.
-select COUNT(*)::bigint as count
+select count(*)::bigint as count
 from chat_model_configs
 where
 	enabled = true
@@ -2294,7 +2294,7 @@ select
 	g.avatar_url as group_avatar_url,
 	g.chat_spend_limit_micros as spend_limit_micros,
 	(
-		select COUNT(*)
+		select count(*)
 		from group_members_expanded gme
 		where gme.group_id = g.id and gme.user_is_system = false
 	) as member_count
@@ -2327,7 +2327,7 @@ where id = @group_id::uuid and chat_spend_limit_micros is not null;
 -- When organization_id is NULL, groups across all organizations are
 -- considered (global behavior). Otherwise only groups within the
 -- specified organization are considered.
-select COALESCE(MIN(g.chat_spend_limit_micros), -1)::bigint as limit_micros
+select coalesce(min(g.chat_spend_limit_micros), -1)::bigint as limit_micros
 from groups g join group_members_expanded gme on gme.group_id = g.id
 where
 	gme.user_id = @user_id::uuid
@@ -2371,7 +2371,7 @@ select
 from chat_usage_limit_config cfg
 	cross join users u
 	left join LATERAL (
-		select MIN(g.chat_spend_limit_micros) as limit_micros
+		select min(g.chat_spend_limit_micros) as limit_micros
 		from groups g join group_members_expanded gme on gme.group_id = g.id
 		where
 			gme.user_id = @user_id::uuid
@@ -2434,24 +2434,24 @@ where c.updated_at > @updated_after;
 -- ongoing activity in long-running chats is captured each window.
 select
 	cm.chat_id,
-	COUNT(*)::bigint as message_count,
-	COUNT(*) filter (where cm.role = 'user')::bigint as user_message_count,
-	COUNT(*) filter (where cm.role
+	count(*)::bigint as message_count,
+	count(*) filter (where cm.role = 'user')::bigint as user_message_count,
+	count(*) filter (where cm.role
 	= 'assistant')::bigint as assistant_message_count,
-	COUNT(*) filter (where cm.role = 'tool')::bigint as tool_message_count,
-	COUNT(*) filter (where cm.role = 'system')::bigint as system_message_count,
-	COALESCE(SUM(cm.input_tokens), 0)::bigint as total_input_tokens,
-	COALESCE(SUM(cm.output_tokens), 0)::bigint as total_output_tokens,
-	COALESCE(SUM(cm.reasoning_tokens), 0)::bigint as total_reasoning_tokens,
-	COALESCE(
-		SUM(cm.cache_creation_tokens),
+	count(*) filter (where cm.role = 'tool')::bigint as tool_message_count,
+	count(*) filter (where cm.role = 'system')::bigint as system_message_count,
+	coalesce(sum(cm.input_tokens), 0)::bigint as total_input_tokens,
+	coalesce(sum(cm.output_tokens), 0)::bigint as total_output_tokens,
+	coalesce(sum(cm.reasoning_tokens), 0)::bigint as total_reasoning_tokens,
+	coalesce(
+		sum(cm.cache_creation_tokens),
 		0
 	)::bigint as total_cache_creation_tokens,
-	COALESCE(SUM(cm.cache_read_tokens), 0)::bigint as total_cache_read_tokens,
-	COALESCE(SUM(cm.total_cost_micros), 0)::bigint as total_cost_micros,
-	COALESCE(SUM(cm.runtime_ms), 0)::bigint as total_runtime_ms,
-	COUNT(distinct cm.model_config_id)::bigint as distinct_model_count,
-	COUNT(*) filter (where cm.compressed)::bigint as compressed_message_count
+	coalesce(sum(cm.cache_read_tokens), 0)::bigint as total_cache_read_tokens,
+	coalesce(sum(cm.total_cost_micros), 0)::bigint as total_cost_micros,
+	coalesce(sum(cm.runtime_ms), 0)::bigint as total_runtime_ms,
+	count(distinct cm.model_config_id)::bigint as distinct_model_count,
+	count(*) filter (where cm.compressed)::bigint as compressed_message_count
 from chat_messages cm
 where cm.created_at > @created_after and cm.deleted = false
 group by cm.chat_id;
@@ -2509,7 +2509,7 @@ select
 			current_lease.chat_id = chats_expanded.id
 			and current_lease.runner_id = chats_expanded.runner_id
 			and current_lease.heartbeat_at
-			> NOW() - (interval '1 second' * @stale_seconds::int)
+			> now() - (interval '1 second' * @stale_seconds::int)
 	) as heartbeat_stale
 from chats_expanded
 	left join chat_heartbeats on chat_heartbeats.chat_id = chats_expanded.id
@@ -2531,7 +2531,7 @@ where
 				current_lease.chat_id = chats_expanded.id
 				and current_lease.runner_id = chats_expanded.runner_id
 				and current_lease.heartbeat_at
-				> NOW() - (interval '1 second' * @stale_seconds::int)
+				> now() - (interval '1 second' * @stale_seconds::int)
 		)
 	)
 order by chats_expanded.updated_at asc, chats_expanded.id asc
@@ -2542,7 +2542,7 @@ select * from chats_expanded where id = any(@ids::uuid[]) order by id asc;
 
 -- name: BatchUpsertChatHeartbeats :exec
 insert into chat_heartbeats (chat_id, runner_id, heartbeat_at)
-select chat_ids.chat_id, runner_ids.runner_id, NOW()
+select chat_ids.chat_id, runner_ids.runner_id, now()
 from unnest(@chat_ids::uuid[]) with ordinality as chat_ids(chat_id, ord)
 	join unnest(
 		@runner_ids::uuid[]
@@ -2552,7 +2552,7 @@ on conflict
 
 -- name: DeleteStaleChatHeartbeats :execrows
 delete from chat_heartbeats
-where heartbeat_at < NOW() - (interval '1 second' * @stale_seconds::int);
+where heartbeat_at < now() - (interval '1 second' * @stale_seconds::int);
 
 -- name: GetAutoArchiveInactiveChatCandidates :many
 -- Returns read-only root chat candidates for state-machine-backed
@@ -2560,13 +2560,13 @@ where heartbeat_at < NOW() - (interval '1 second' * @stale_seconds::int);
 -- limits roots, not total family members.
 select
 	chats_expanded.*,
-	COALESCE(
+	coalesce(
 		activity.last_activity_at,
 		chats_expanded.created_at
 	)::timestamptz as last_activity_at
 from chats_expanded
 	left join LATERAL (
-		select MAX(chat_messages.created_at) as last_activity_at
+		select max(chat_messages.created_at) as last_activity_at
 		from chat_messages
 			join chats family_chat on family_chat.id = chat_messages.chat_id
 		where
@@ -2586,7 +2586,7 @@ where
 		'interrupting'::chat_status,
 		'requires_action'::chat_status
 	)
-	and COALESCE(activity.last_activity_at, chats_expanded.created_at)
+	and coalesce(activity.last_activity_at, chats_expanded.created_at)
 	< @archive_cutoff::timestamptz
 order by chats_expanded.created_at asc
 limit @limit_count::int;
@@ -2641,8 +2641,8 @@ with
 			bumped_chat.retry_state_version,
 			bumped_chat.runner_id,
 			bumped_chat.requires_action_deadline_at,
-			COALESCE(root.user_acl, bumped_chat.user_acl) as user_acl,
-			COALESCE(root.group_acl, bumped_chat.group_acl) as group_acl,
+			coalesce(root.user_acl, bumped_chat.user_acl) as user_acl,
+			coalesce(root.group_acl, bumped_chat.group_acl) as group_acl,
 			owner.username as owner_username,
 			owner.name as owner_name,
 			bumped_chat.context_aggregate_hash,
@@ -2651,7 +2651,7 @@ with
 			bumped_chat.context_error
 		from bumped_chat
 			left join chats root on root.id
-			= COALESCE(bumped_chat.root_chat_id, bumped_chat.parent_chat_id)
+			= coalesce(bumped_chat.root_chat_id, bumped_chat.parent_chat_id)
 			join visible_users owner on owner.id = bumped_chat.owner_id
 	)
 select *
@@ -2675,7 +2675,7 @@ with
 				'requires_action_deadline_at'
 			)::timestamptz,
 			pin_order = case when @archived::boolean then 0 else pin_order end,
-			updated_at = NOW()
+			updated_at = now()
 		where id = @id::uuid
 		returning *
 	),
@@ -2717,8 +2717,8 @@ with
 			updated_chat.retry_state_version,
 			updated_chat.runner_id,
 			updated_chat.requires_action_deadline_at,
-			COALESCE(root.user_acl, updated_chat.user_acl) as user_acl,
-			COALESCE(root.group_acl, updated_chat.group_acl) as group_acl,
+			coalesce(root.user_acl, updated_chat.user_acl) as user_acl,
+			coalesce(root.group_acl, updated_chat.group_acl) as group_acl,
 			owner.username as owner_username,
 			owner.name as owner_name,
 			updated_chat.context_aggregate_hash,
@@ -2727,7 +2727,7 @@ with
 			updated_chat.context_error
 		from updated_chat
 			left join chats root on root.id
-			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -2739,7 +2739,7 @@ from chats_expanded;
 with
 	updated_chat as (
 		update chats
-		set retry_state = @retry_state::jsonb, updated_at = NOW()
+		set retry_state = @retry_state::jsonb, updated_at = now()
 		where id = @id::uuid
 		returning *
 	),
@@ -2781,8 +2781,8 @@ with
 			updated_chat.retry_state_version,
 			updated_chat.runner_id,
 			updated_chat.requires_action_deadline_at,
-			COALESCE(root.user_acl, updated_chat.user_acl) as user_acl,
-			COALESCE(root.group_acl, updated_chat.group_acl) as group_acl,
+			coalesce(root.user_acl, updated_chat.user_acl) as user_acl,
+			coalesce(root.group_acl, updated_chat.group_acl) as group_acl,
 			owner.username as owner_username,
 			owner.name as owner_name,
 			updated_chat.context_aggregate_hash,
@@ -2791,7 +2791,7 @@ with
 			updated_chat.context_error
 		from updated_chat
 			left join chats root on root.id
-			= COALESCE(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -2800,7 +2800,7 @@ from chats_expanded;
 -- name: IncrementChatGenerationAttempt :one
 -- Increments generation_attempt and returns the resulting value.
 update chats
-set generation_attempt = generation_attempt + 1, updated_at = NOW()
+set generation_attempt = generation_attempt + 1, updated_at = now()
 where id = @id::uuid
 returning generation_attempt;
 
@@ -2808,7 +2808,7 @@ returning generation_attempt;
 -- Returns the current database timestamp. Used so transitions that
 -- record deadlines or heartbeats rely on a clock that is consistent
 -- with the database rather than the caller's local clock.
-select NOW()::timestamptz as now;
+select now()::timestamptz as now;
 
 -- name: InsertChatQueuedMessageWithCreator :one
 -- Inserts a queued message that carries a position (from the default
@@ -2843,7 +2843,7 @@ order by position asc, id asc;
 -- name: CountChatQueuedMessages :one
 -- Cheap queue-length check used by ChatMachine.Update when deciding
 -- whether the chat is in a "1" sub-state.
-select COUNT(*)::bigint as count
+select count(*)::bigint as count
 from chat_queued_messages
 where chat_id = @chat_id::uuid;
 
@@ -2875,9 +2875,9 @@ delete from chat_queued_messages where chat_id = @chat_id::uuid;
 -- current minimum position for that chat, moving it to the head.
 update chat_queued_messages as target
 set
-	position = COALESCE(
+	position = coalesce(
 		(
-			select MIN(position)
+			select min(position)
 			from chat_queued_messages
 			where chat_id = @chat_id::uuid
 		),
@@ -2888,9 +2888,9 @@ where
 	target.id = @id::bigint
 	and target.chat_id = @chat_id::uuid
 	and target.position
-	> COALESCE(
+	> coalesce(
 		(
-			select MIN(position)
+			select min(position)
 			from chat_queued_messages
 			where chat_id = @chat_id::uuid
 		),
@@ -2901,7 +2901,7 @@ where
 -- Upserts a heartbeat row for the (chat_id, runner_id) lease. Uses
 -- database time so callers do not depend on a local clock.
 insert into chat_heartbeats (chat_id, runner_id, heartbeat_at)
-values (@chat_id::uuid, @runner_id::uuid, NOW())
+values (@chat_id::uuid, @runner_id::uuid, now())
 on conflict
 	(chat_id, runner_id) do update set heartbeat_at = EXCLUDED.heartbeat_at;
 
@@ -2922,7 +2922,7 @@ select
 		where
 			chat_id = @chat_id::uuid
 			and runner_id = @runner_id::uuid
-			and heartbeat_at > NOW() - (interval '1 second' * @stale_seconds::int)
+			and heartbeat_at > now() - (interval '1 second' * @stale_seconds::int)
 	) as stale;
 
 -- name: BatchDeleteChatHeartbeats :execrows
@@ -2968,10 +2968,10 @@ with
 			c.id,
 			-- Activity = MAX(cm.created_at) across the family, or c.created_at
 			-- when the family has no non-deleted messages.
-			COALESCE(activity.last_activity_at, c.created_at) as last_activity_at
+			coalesce(activity.last_activity_at, c.created_at) as last_activity_at
 		from chats c
 			left join LATERAL (
-				select MAX(cm.created_at) as last_activity_at
+				select max(cm.created_at) as last_activity_at
 				from chat_messages cm join chats fc on fc.id = cm.chat_id
 				where (fc.id = c.id or fc.root_chat_id = c.id) and cm.deleted = false
 			) activity on true
@@ -2984,7 +2984,7 @@ with
 			and c.created_at < @archive_cutoff::timestamptz
 			-- New active statuses must be added here to prevent archiving.
 			and c.status not in ('running', 'requires_action')
-			and COALESCE(activity.last_activity_at, c.created_at)
+			and coalesce(activity.last_activity_at, c.created_at)
 			< @archive_cutoff::timestamptz
 		-- Sorting by created_at lets Postgres drive the scan from the
 		-- partial index instead of evaluating every LATERAL subquery
@@ -2996,7 +2996,7 @@ with
 	),
 	archived as (
 		update chats c
-		set archived = true, pin_order = 0, updated_at = NOW()
+		set archived = true, pin_order = 0, updated_at = now()
 		from to_archive t
 		where
 			(
@@ -3008,7 +3008,7 @@ with
 select
 	a.*,
 	-- Children inherit their root's activity so last_activity_at is never null.
-	COALESCE(
+	coalesce(
 		t.last_activity_at,
 		(
 			select tr.last_activity_at

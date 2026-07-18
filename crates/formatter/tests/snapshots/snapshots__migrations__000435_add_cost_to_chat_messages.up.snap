@@ -8,39 +8,39 @@ with
 	message_costs as (
 		select
 			msg.id,
-			ROUND(
-				COALESCE(msg.input_tokens, 0)::numeric
-				* COALESCE(pricing.input_price, 0)
-				+ COALESCE(msg.output_tokens, 0)::numeric
-				* COALESCE(pricing.output_price, 0)
-				+ COALESCE(msg.cache_read_tokens, 0)::numeric
-				* COALESCE(pricing.cache_read_price, 0)
-				+ COALESCE(msg.cache_creation_tokens, 0)::numeric
-				* COALESCE(pricing.cache_write_price, 0)
+			round(
+				coalesce(msg.input_tokens, 0)::numeric
+				* coalesce(pricing.input_price, 0)
+				+ coalesce(msg.output_tokens, 0)::numeric
+				* coalesce(pricing.output_price, 0)
+				+ coalesce(msg.cache_read_tokens, 0)::numeric
+				* coalesce(pricing.cache_read_price, 0)
+				+ coalesce(msg.cache_creation_tokens, 0)::numeric
+				* coalesce(pricing.cache_write_price, 0)
 			)::bigint as total_cost_micros
 		from chat_messages as msg
 			join chat_model_configs as cfg on cfg.id = msg.model_config_id
 			cross join LATERAL (
 				select
-					COALESCE(
+					coalesce(
 						(
 							cfg.options -> 'cost' ->> 'input_price_per_million_tokens'
 						)::numeric,
 						(cfg.options ->> 'input_price_per_million_tokens')::numeric
 					) as input_price,
-					COALESCE(
+					coalesce(
 						(
 							cfg.options -> 'cost' ->> 'output_price_per_million_tokens'
 						)::numeric,
 						(cfg.options ->> 'output_price_per_million_tokens')::numeric
 					) as output_price,
-					COALESCE(
+					coalesce(
 						(
 							cfg.options -> 'cost' ->> 'cache_read_price_per_million_tokens'
 						)::numeric,
 						(cfg.options ->> 'cache_read_price_per_million_tokens')::numeric
 					) as cache_read_price,
-					COALESCE(
+					coalesce(
 						(
 							cfg.options -> 'cost' ->> 'cache_write_price_per_million_tokens'
 						)::numeric,

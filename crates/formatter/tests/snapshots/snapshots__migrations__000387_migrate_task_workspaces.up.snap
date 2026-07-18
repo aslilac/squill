@@ -26,8 +26,8 @@ select
 	w.name,
 	w.id as workspace_id,
 	latest_task_build.template_version_id,
-	COALESCE(params.template_parameters, '{}'::jsonb) as template_parameters,
-	COALESCE(ai_prompt.value, '') as prompt,
+	coalesce(params.template_parameters, '{}'::jsonb) as template_parameters,
+	coalesce(ai_prompt.value, '') as prompt,
 	w.created_at,
 	case when w.deleted = true then w.deleting_at else null end as deleted_at
 from workspaces w

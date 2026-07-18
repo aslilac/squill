@@ -13,7 +13,7 @@ alter table chats
 -- workspace_id was NULLed out by ON DELETE SET NULL or never set.
 update chats c
 set
-	organization_id = COALESCE(
+	organization_id = coalesce(
 		(select w.organization_id from workspaces w where w.id = c.workspace_id),
 		(
 			select om.organization_id

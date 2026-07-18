@@ -6,8 +6,8 @@ expression: formatted
 -- REPLACE so any other downstream edits to body_template are preserved.
 update notification_templates
 set
-	body_template = REPLACE(
-		REPLACE(
+	body_template = replace(
+		replace(
 			body_template,
 			'/docs/admin/templates/managing-templates/schedule#dormancy-threshold',
 			'/docs/templates/schedule#dormancy-threshold-enterprise'

@@ -39,8 +39,8 @@ as $$
 					when NEW.event_type in ('dc_managed_agents_v1')
 						then jsonb_build_object(
 							'count',
-							COALESCE((usage_events_daily.usage_data ->> 'count')::bigint, 0)
-							+ COALESCE((NEW.event_data ->> 'count')::bigint, 0)
+							coalesce((usage_events_daily.usage_data ->> 'count')::bigint, 0)
+							+ coalesce((NEW.event_data ->> 'count')::bigint, 0)
 						)
 				end;
 		return NEW;
@@ -61,7 +61,7 @@ select
 	event_type,
 	jsonb_build_object(
 		'count',
-		SUM((event_data ->> 'count')::bigint)
+		sum((event_data ->> 'count')::bigint)
 	) as usage_data
 from usage_events
 where

@@ -12,5 +12,5 @@ create table workspace_apps (
 	url varchar (65534),
 	relative_path boolean not null default false,
 	primary key (id),
-	UNIQUE(agent_id, name)
+	unique(agent_id, name)
 );

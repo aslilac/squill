@@ -7,7 +7,7 @@ alter table chats add column file_ids uuid[] default '{}'::uuid[] not null;
 update chats
 set
 	file_ids = (
-		select COALESCE(array_agg(cfl.file_id), '{}')
+		select coalesce(array_agg(cfl.file_id), '{}')
 		from chat_file_links cfl
 		where cfl.chat_id = chats.id
 	);

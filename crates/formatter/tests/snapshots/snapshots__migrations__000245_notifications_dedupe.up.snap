@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 -- Add a column to store the hash.
@@ -19,15 +18,15 @@ create or replace function compute_notification_message_dedupe_hash()
 returns trigger
 as $$
 	begin
-		new.dedupe_hash := MD5(
-			CONCAT_WS(
+		new.dedupe_hash := md5(
+			concat_ws(
 				':',
 				NEW.notification_template_id,
 				NEW.user_id,
 				NEW.method,
 				NEW.payload::text,
-				ARRAY_TO_STRING(NEW.targets, ','),
-				DATE_TRUNC('day', NEW.created_at at time zone 'UTC')::text
+				array_to_string(NEW.targets, ','),
+				date_trunc('day', NEW.created_at at time zone 'UTC')::text
 			)
 		);
 		return NEW;

@@ -28,13 +28,13 @@ set
 	derp_enabled = @derp_enabled::boolean,
 	derp_only = @derp_only::boolean,
 	version = @version::text,
-	updated_at = Now()
+	updated_at = now()
 where id = @id
 returning *;
 
 -- name: UpdateWorkspaceProxyDeleted :exec
 update workspace_proxies
-set updated_at = Now(), deleted = @deleted
+set updated_at = now(), deleted = @deleted
 where id = @id;
 
 -- name: UpdateWorkspaceProxy :one
@@ -53,7 +53,7 @@ set
 		else workspace_proxies.token_hashed_secret
 	end,
 	-- Always update this timestamp.
-	updated_at = Now()
+	updated_at = now()
 where id = @id
 returning *;
 

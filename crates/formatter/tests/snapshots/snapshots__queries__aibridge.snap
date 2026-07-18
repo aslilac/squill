@@ -29,7 +29,7 @@ values
 		@provider,
 		@provider_name,
 		@model,
-		COALESCE(@metadata::jsonb, '{}'::jsonb),
+		coalesce(@metadata::jsonb, '{}'::jsonb),
 		@started_at,
 		@client,
 		sqlc.narg('client_session_id'),
@@ -67,7 +67,7 @@ returning *;
 -- the root), we return its own ID as the root.
 select
 	aibridge_interceptions.id as thread_parent_id,
-	COALESCE(
+	coalesce(
 		aibridge_interceptions.thread_root_id,
 		aibridge_interceptions.id
 	) as thread_root_id
@@ -109,7 +109,7 @@ values
 		@output_tokens,
 		@cache_read_input_tokens,
 		@cache_write_input_tokens,
-		COALESCE(@metadata::jsonb, '{}'::jsonb),
+		coalesce(@metadata::jsonb, '{}'::jsonb),
 		@created_at,
 		@effective_group_id,
 		@input_price_micros,
@@ -135,7 +135,7 @@ values
 		@interception_id,
 		@provider_response_id,
 		@prompt,
-		COALESCE(@metadata::jsonb, '{}'::jsonb),
+		coalesce(@metadata::jsonb, '{}'::jsonb),
 		@created_at
 	)
 returning *;
@@ -167,7 +167,7 @@ values
 		@input,
 		@injected,
 		@invocation_error,
-		COALESCE(@metadata::jsonb, '{}'::jsonb),
+		coalesce(@metadata::jsonb, '{}'::jsonb),
 		@created_at
 	)
 returning *;
@@ -183,7 +183,7 @@ values
 	(
 		@interception_id,
 		@content,
-		COALESCE(@metadata::jsonb, '{}'::jsonb),
+		coalesce(@metadata::jsonb, '{}'::jsonb),
 		@created_at
 	)
 returning *;
@@ -236,7 +236,7 @@ order by created_at asc, id asc;
 select distinct on (provider,
 model,
 client)
-	provider, model, COALESCE(client, 'Unknown') as client
+	provider, model, coalesce(client, 'Unknown') as client
 from aibridge_interceptions
 where
 	ended_at
@@ -256,7 +256,7 @@ with
 		where
 			provider = @provider::text
 			and model = @model::text
-			and COALESCE(client, 'Unknown') = @client::text
+			and coalesce(client, 'Unknown') = @client::text
 			and ended_at
 			is not null -- incomplete interceptions are not included in summaries
 			and ended_at >= @ended_at_after::timestamptz
@@ -264,40 +264,40 @@ with
 	),
 	interception_counts as (
 		select
-			COUNT(id) as interception_count,
-			COUNT(distinct initiator_id) as unique_initiator_count
+			count(id) as interception_count,
+			count(distinct initiator_id) as unique_initiator_count
 		from interceptions_in_range
 	),
 	duration_percentiles as (
 		select
 			(
-				COALESCE(
-					PERCENTILE_CONT(0.50) within group (order by
-						EXTRACT(EPOCH from duration)),
+				coalesce(
+					percentile_cont(0.50) within group (order by
+						extract(EPOCH from duration)),
 					0
 				)
 				* 1000
 			)::bigint as interception_duration_p50_millis,
 			(
-				COALESCE(
-					PERCENTILE_CONT(0.90) within group (order by
-						EXTRACT(EPOCH from duration)),
+				coalesce(
+					percentile_cont(0.90) within group (order by
+						extract(EPOCH from duration)),
 					0
 				)
 				* 1000
 			)::bigint as interception_duration_p90_millis,
 			(
-				COALESCE(
-					PERCENTILE_CONT(0.95) within group (order by
-						EXTRACT(EPOCH from duration)),
+				coalesce(
+					percentile_cont(0.95) within group (order by
+						extract(EPOCH from duration)),
 					0
 				)
 				* 1000
 			)::bigint as interception_duration_p95_millis,
 			(
-				COALESCE(
-					PERCENTILE_CONT(0.99) within group (order by
-						EXTRACT(EPOCH from duration)),
+				coalesce(
+					percentile_cont(0.99) within group (order by
+						extract(EPOCH from duration)),
 					0
 				)
 				* 1000
@@ -306,29 +306,29 @@ with
 	),
 	token_aggregates as (
 		select
-			COALESCE(SUM(tu.input_tokens), 0) as token_count_input,
-			COALESCE(SUM(tu.output_tokens), 0) as token_count_output,
-			COALESCE(SUM(tu.cache_read_input_tokens), 0) as token_count_cached_read,
-			COALESCE(
-				SUM(tu.cache_write_input_tokens),
+			coalesce(sum(tu.input_tokens), 0) as token_count_input,
+			coalesce(sum(tu.output_tokens), 0) as token_count_output,
+			coalesce(sum(tu.cache_read_input_tokens), 0) as token_count_cached_read,
+			coalesce(
+				sum(tu.cache_write_input_tokens),
 				0
 			) as token_count_cached_written,
-			COUNT(tu.id) as token_usages_count
+			count(tu.id) as token_usages_count
 		from interceptions_in_range i
 			left join aibridge_token_usages tu on i.id = tu.interception_id
 	),
 	prompt_aggregates as (
-		select COUNT(up.id) as user_prompts_count
+		select count(up.id) as user_prompts_count
 		from interceptions_in_range i
 			left join aibridge_user_prompts up on i.id = up.interception_id
 	),
 	tool_aggregates as (
 		select
-			COUNT(tu.id) filter (where tu.injected
+			count(tu.id) filter (where tu.injected
 			= true) as tool_calls_count_injected,
-			COUNT(tu.id) filter (where tu.injected
+			count(tu.id) filter (where tu.injected
 			= false) as tool_calls_count_non_injected,
-			COUNT(tu.id) filter (where tu.injected = true
+			count(tu.id) filter (where tu.injected = true
 			and tu.invocation_error is not null) as injected_tool_call_error_count
 		from interceptions_in_range i
 			left join aibridge_tool_usages tu on i.id = tu.interception_id
@@ -392,15 +392,15 @@ with
 -- Cumulative count.
 select
 	(
-		(select COUNT(*) from model_thoughts) + (select COUNT(*) from tool_usages)
-		+ (select COUNT(*) from token_usages)
-		+ (select COUNT(*) from user_prompts)
-		+ (select COUNT(*) from interceptions)
+		(select count(*) from model_thoughts) + (select count(*) from tool_usages)
+		+ (select count(*) from token_usages)
+		+ (select count(*) from user_prompts)
+		+ (select count(*) from interceptions)
 	)::bigint as total_deleted;
 
 -- name: CountAIBridgeSessions :one
 select
-	COUNT(
+	count(
 		distinct (
 			aibridge_interceptions.session_id,
 			aibridge_interceptions.initiator_id
@@ -448,7 +448,7 @@ where
 	-- Filter client
 	and case
 		when @client::text != ''
-			then COALESCE(aibridge_interceptions.client, 'Unknown') = @client::text
+			then coalesce(aibridge_interceptions.client, 'Unknown') = @client::text
 		else true
 	end
 	-- Filter session_id
@@ -478,7 +478,7 @@ with
 		-- COALESCE falls back to MIN(ai.started_at) so the cursor value is
 		-- never NULL, which would silently drop rows from the HAVING comparison.
 		select
-			COALESCE(MAX(up.created_at), MIN(ai.started_at)) as last_active_at
+			coalesce(max(up.created_at), min(ai.started_at)) as last_active_at
 		from aibridge_interceptions ai
 			left join aibridge_user_prompts up on up.interception_id = ai.id
 		where ai.session_id = @after_session_id and ai.ended_at is not null
@@ -496,12 +496,12 @@ with
 		select
 			ai.session_id,
 			ai.initiator_id,
-			MIN(ai.started_at) as started_at,
-			MAX(ai.ended_at) as ended_at,
-			COUNT(*) filter (where ai.thread_root_id is null) as threads,
-			COALESCE(
-				MAX(latest_prompt.latest_prompt_at),
-				MIN(ai.started_at)
+			min(ai.started_at) as started_at,
+			max(ai.ended_at) as ended_at,
+			count(*) filter (where ai.thread_root_id is null) as threads,
+			coalesce(
+				max(latest_prompt.latest_prompt_at),
+				min(ai.started_at)
 			)::timestamptz as last_active_at
 		from aibridge_interceptions ai
 			left join LATERAL (
@@ -553,7 +553,7 @@ with
 			-- Filter client
 			and case
 				when @client::text != ''
-					then COALESCE(ai.client, 'Unknown') = @client::text
+					then coalesce(ai.client, 'Unknown') = @client::text
 				else true
 			end
 			-- Filter session_id
@@ -574,7 +574,7 @@ with
 				when @after_session_id::text != ''
 					then (
 						(
-							COALESCE(MAX(latest_prompt.latest_prompt_at), MIN(ai.started_at)),
+							coalesce(max(latest_prompt.latest_prompt_at), min(ai.started_at)),
 							ai.session_id
 						)
 						< ((select last_active_at from cursor_pos), @after_session_id::text)
@@ -582,7 +582,7 @@ with
 				else true
 			end
 		order by last_active_at desc, ai.session_id desc
-		limit COALESCE(NULLIF(@limit_::integer, 0), 100)
+		limit coalesce(nullif(@limit_::integer, 0), 100)
 		offset @offset_
 	)
 select
@@ -593,26 +593,26 @@ select
 	visible_users.avatar_url as user_avatar_url,
 	sr.providers::text[] as providers,
 	sr.models::text[] as models,
-	COALESCE(sr.client, '')::varchar(64) as client,
+	coalesce(sr.client, '')::varchar(64) as client,
 	sr.metadata::jsonb as metadata,
 	sp.started_at::timestamptz as started_at,
 	sp.ended_at::timestamptz as ended_at,
 	sp.threads,
-	COALESCE(st.input_tokens, 0)::bigint as input_tokens,
-	COALESCE(st.output_tokens, 0)::bigint as output_tokens,
-	COALESCE(st.cache_read_input_tokens, 0)::bigint as cache_read_input_tokens,
-	COALESCE(st.cache_write_input_tokens, 0)::bigint as cache_write_input_tokens,
-	COALESCE(slp.prompt, '') as last_prompt,
+	coalesce(st.input_tokens, 0)::bigint as input_tokens,
+	coalesce(st.output_tokens, 0)::bigint as output_tokens,
+	coalesce(st.cache_read_input_tokens, 0)::bigint as cache_read_input_tokens,
+	coalesce(st.cache_write_input_tokens, 0)::bigint as cache_write_input_tokens,
+	coalesce(slp.prompt, '') as last_prompt,
 	sp.last_active_at as last_active_at
 from session_page sp
 	join visible_users on visible_users.id = sp.initiator_id
 	left join LATERAL (
 		select
-			(ARRAY_AGG(ai.client order by ai.started_at, ai.id))[1] as client,
-			(ARRAY_AGG(ai.metadata order by ai.started_at, ai.id))[1] as metadata,
-			ARRAY_AGG(distinct ai.provider order by ai.provider) as providers,
-			ARRAY_AGG(distinct ai.model order by ai.model) as models,
-			ARRAY_AGG(ai.id) as interception_ids
+			(array_agg(ai.client order by ai.started_at, ai.id))[1] as client,
+			(array_agg(ai.metadata order by ai.started_at, ai.id))[1] as metadata,
+			array_agg(distinct ai.provider order by ai.provider) as providers,
+			array_agg(distinct ai.model order by ai.model) as models,
+			array_agg(ai.id) as interception_ids
 		from aibridge_interceptions ai
 		where
 			ai.session_id = sp.session_id
@@ -622,14 +622,14 @@ from session_page sp
 	left join LATERAL (
 		-- Aggregate tokens only for this session's interceptions.
 		select
-			COALESCE(SUM(tu.input_tokens), 0)::bigint as input_tokens,
-			COALESCE(SUM(tu.output_tokens), 0)::bigint as output_tokens,
-			COALESCE(
-				SUM(tu.cache_read_input_tokens),
+			coalesce(sum(tu.input_tokens), 0)::bigint as input_tokens,
+			coalesce(sum(tu.output_tokens), 0)::bigint as output_tokens,
+			coalesce(
+				sum(tu.cache_read_input_tokens),
 				0
 			)::bigint as cache_read_input_tokens,
-			COALESCE(
-				SUM(tu.cache_write_input_tokens),
+			coalesce(
+				sum(tu.cache_write_input_tokens),
 				0
 			)::bigint as cache_write_input_tokens
 		from aibridge_token_usages tu
@@ -690,17 +690,17 @@ with
 		-- @authorize_filter
 		order by
 			aibridge_interceptions.started_at asc, aibridge_interceptions.id asc
-		limit COALESCE(NULLIF(@limit_::integer, 0), 50)
+		limit coalesce(nullif(@limit_::integer, 0), 50)
 	)
 select
-	COALESCE(
+	coalesce(
 		aibridge_interceptions.thread_root_id,
 		aibridge_interceptions.id
 	) as thread_id,
 	sqlc.embed(aibridge_interceptions)
 from aibridge_interceptions
 	join paginated_threads pt on pt.thread_id
-	= COALESCE(aibridge_interceptions.thread_root_id, aibridge_interceptions.id)
+	= coalesce(aibridge_interceptions.thread_root_id, aibridge_interceptions.id)
 where
 	aibridge_interceptions.session_id = @session_id::text
 	and aibridge_interceptions.ended_at is not null
@@ -738,18 +738,18 @@ where
 group by
 	model
 order by model asc
-limit COALESCE(NULLIF(@limit_::integer, 0), 100)
+limit coalesce(nullif(@limit_::integer, 0), 100)
 offset @offset_;
 
 -- name: ListAIBridgeClients :many
-select COALESCE(client, 'Unknown') as client
+select coalesce(client, 'Unknown') as client
 from aibridge_interceptions
 where
 	ended_at is not null
 	-- Filter client (prefix match to allow B-tree index usage).
 	and case
 		when @client::text != ''
-			then COALESCE(aibridge_interceptions.client, 'Unknown')
+			then coalesce(aibridge_interceptions.client, 'Unknown')
 			like @client::text || '%'
 		else true
 	end
@@ -760,5 +760,5 @@ where
 -- @authorize_filter
 group by
 	client
-limit COALESCE(NULLIF(@limit_::integer, 0), 100)
+limit coalesce(nullif(@limit_::integer, 0), 100)
 offset @offset_;

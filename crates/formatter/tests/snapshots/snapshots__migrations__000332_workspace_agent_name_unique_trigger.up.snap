@@ -25,7 +25,7 @@ as $$
 
 		-- Count how many agents in this workspace build already have the given agent name.
 		select
-			COUNT(*)
+			count(*)
 		into agents_with_name
 		from workspace_agents
 			join workspace_resources on workspace_resources.id

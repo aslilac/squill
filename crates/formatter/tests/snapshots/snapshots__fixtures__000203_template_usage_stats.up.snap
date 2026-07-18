@@ -18,8 +18,8 @@ insert into template_usage_stats (
 )
 values
 	(
-		date_trunc('hour', NOW()),
-		date_trunc('hour', NOW()) + '30 minute'::interval,
+		date_trunc('hour', now()),
+		date_trunc('hour', now()) + '30 minute'::interval,
 		gen_random_uuid(),
 		gen_random_uuid(),
 		45.342::real,

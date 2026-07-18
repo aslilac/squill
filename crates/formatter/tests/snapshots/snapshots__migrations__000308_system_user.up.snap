@@ -89,6 +89,6 @@ with
 select
 	default_org.id,
 	'c42fdf75-3097-471c-8c33-fb52454d81c0', -- The system user responsible for prebuilds.
-	NOW(),
-	NOW()
+	now(),
+	now()
 from default_org;

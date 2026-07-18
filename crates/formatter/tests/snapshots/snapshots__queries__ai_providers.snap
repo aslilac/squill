@@ -63,13 +63,13 @@ set
 	base_url = @base_url::text,
 	settings = sqlc.narg('settings')::text,
 	settings_key_id = sqlc.narg('settings_key_id')::text,
-	updated_at = NOW()
+	updated_at = now()
 where id = @id::uuid and deleted = false
 returning *;
 
 -- name: DeleteAIProviderByID :exec
 update ai_providers
-set deleted = true, enabled = false, updated_at = NOW()
+set deleted = true, enabled = false, updated_at = now()
 where id = @id::uuid and deleted = false;
 
 -- name: UpdateEncryptedAIProviderSettings :one
@@ -81,6 +81,6 @@ update ai_providers
 set
 	settings = sqlc.narg('settings')::text,
 	settings_key_id = sqlc.narg('settings_key_id')::text,
-	updated_at = NOW()
+	updated_at = now()
 where id = @id::uuid
 returning *;

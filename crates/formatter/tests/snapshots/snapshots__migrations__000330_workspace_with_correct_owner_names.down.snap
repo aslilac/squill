@@ -37,8 +37,8 @@ select
 	workspace_builds.daily_cost,
 	workspace_builds.max_deadline,
 	workspace_builds.template_version_preset_id,
-	COALESCE(visible_users.avatar_url, ''::text) as initiator_by_avatar_url,
-	COALESCE(visible_users.username, ''::text) as initiator_by_username
+	coalesce(visible_users.avatar_url, ''::text) as initiator_by_avatar_url,
+	coalesce(visible_users.username, ''::text) as initiator_by_username
 from (
 	workspace_builds
 		left join visible_users on (
@@ -80,11 +80,11 @@ select
 	templates.activity_bump,
 	templates.max_port_sharing_level,
 	templates.use_classic_parameter_flow,
-	COALESCE(visible_users.avatar_url, ''::text) as created_by_avatar_url,
-	COALESCE(visible_users.username, ''::text) as created_by_username,
-	COALESCE(organizations.name, ''::text) as organization_name,
-	COALESCE(organizations.display_name, ''::text) as organization_display_name,
-	COALESCE(organizations.icon, ''::text) as organization_icon
+	coalesce(visible_users.avatar_url, ''::text) as created_by_avatar_url,
+	coalesce(visible_users.username, ''::text) as created_by_username,
+	coalesce(organizations.name, ''::text) as organization_name,
+	coalesce(organizations.display_name, ''::text) as organization_display_name,
+	coalesce(organizations.icon, ''::text) as organization_icon
 from (
 	(
 		templates
@@ -111,8 +111,8 @@ select
 	template_versions.message,
 	template_versions.archived,
 	template_versions.source_example_id,
-	COALESCE(visible_users.avatar_url, ''::text) as created_by_avatar_url,
-	COALESCE(visible_users.username, ''::text) as created_by_username
+	coalesce(visible_users.avatar_url, ''::text) as created_by_avatar_url,
+	coalesce(visible_users.username, ''::text) as created_by_username
 from (
 	template_versions
 		left join visible_users on (template_versions.created_by = visible_users.id)

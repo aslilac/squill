@@ -13,7 +13,7 @@ insert into provisioner_keys (
 values
 	(
 		'00000000-0000-0000-0000-000000000001'::uuid,
-		NOW(),
+		now(),
 		(select id from organizations where is_default = true),
 		'built-in',
 		''::bytea,
@@ -30,7 +30,7 @@ insert into provisioner_keys (
 values
 	(
 		'00000000-0000-0000-0000-000000000002'::uuid,
-		NOW(),
+		now(),
 		(select id from organizations where is_default = true),
 		'user-auth',
 		''::bytea,
@@ -47,7 +47,7 @@ insert into provisioner_keys (
 values
 	(
 		'00000000-0000-0000-0000-000000000003'::uuid,
-		NOW(),
+		now(),
 		(select id from organizations where is_default = true),
 		'psk',
 		''::bytea,

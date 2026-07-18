@@ -11,7 +11,7 @@ create table oauth2_provider_app_codes (
 	user_id uuid not null references users (id) on delete cascade,
 	app_id uuid not null references oauth2_provider_apps (id) on delete cascade,
 	primary key (id),
-	UNIQUE(secret_prefix)
+	unique(secret_prefix)
 );
 
 comment on table oauth2_provider_app_codes is 'Codes are meant to be exchanged for access tokens.';
@@ -26,7 +26,7 @@ create table oauth2_provider_app_tokens (
 		on delete cascade,
 	api_key_id text not null references api_keys (id) on delete cascade,
 	primary key (id),
-	UNIQUE(hash_prefix)
+	unique(hash_prefix)
 );
 
 comment on column oauth2_provider_app_tokens.refresh_hash is 'Refresh tokens provide a way to refresh an access token (API key). An expired API key can be refreshed if this token is not yet expired, meaning this expiry can outlive an API key.';

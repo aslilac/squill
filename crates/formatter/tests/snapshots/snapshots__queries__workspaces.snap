@@ -82,8 +82,8 @@ with
 	-- be used in a WHERE clause.
 	build_params as (
 		select
-			LOWER(unnest(@param_names::text[])) as name,
-			LOWER(unnest(@param_values::text[])) as value
+			lower(unnest(@param_names::text[])) as name,
+			lower(unnest(@param_values::text[])) as value
 	),
 	filtered_workspaces as (
 		select
@@ -211,9 +211,9 @@ with
 					then exists (
 						select 1
 						from workspace_build_parameters
-							inner join build_params on LOWER(workspace_build_parameters.name)
+							inner join build_params on lower(workspace_build_parameters.name)
 							= build_params.name
-							and LOWER(workspace_build_parameters.value) = build_params.value
+							and lower(workspace_build_parameters.value) = build_params.value
 							and workspace_build_parameters.workspace_build_id
 							= latest_build.id
 					)
@@ -267,7 +267,7 @@ with
 			and case
 				when array_length(@has_agent_statuses::text[], 1) > 0
 					then (
-						select COUNT(*)
+						select count(*)
 						from workspace_resources
 							join workspace_agents on workspace_agents.resource_id
 							= workspace_resources.id
@@ -283,7 +283,7 @@ with
 									when workspace_agents.first_connected_at is null
 										then case
 											when workspace_agents.connection_timeout_seconds > 0
-											and NOW() - workspace_agents.created_at
+											and now() - workspace_agents.created_at
 											> workspace_agents.connection_timeout_seconds
 											* interval '1 second'
 												then 'timeout'
@@ -292,7 +292,7 @@ with
 									when workspace_agents.disconnected_at
 									> workspace_agents.last_connected_at
 										then 'disconnected'
-									when NOW() - workspace_agents.last_connected_at
+									when now() - workspace_agents.last_connected_at
 									> interval '1 second'
 									* @agent_inactive_disconnect_timeout_seconds::bigint
 										then 'disconnected'
@@ -397,8 +397,8 @@ with
 				and latest_build_error is null
 				and latest_build_transition = 'start'::workspace_transition
 			) desc,
-			LOWER(owner_username) asc,
-			LOWER(name) asc
+			lower(owner_username) asc,
+			lower(name) asc
 		limit case when @limit_::integer > 0 then @limit_ end
 		offset @offset_
 	),
@@ -460,13 +460,13 @@ from filtered_workspaces_order_with_summary fwos cross join total_count tc;
 -- name: GetWorkspaceByOwnerIDAndName :one
 select *
 from workspaces_expanded as workspaces
-where owner_id = @owner_id and deleted = @deleted and LOWER(name) = LOWER(@name)
+where owner_id = @owner_id and deleted = @deleted and lower(name) = lower(@name)
 order by created_at desc;
 
 -- name: GetWorkspaceUniqueOwnerCountByTemplateIDs :many
 select
 	templates.id as template_id,
-	COUNT(distinct workspaces.owner_id) as unique_owners_sum
+	count(distinct workspaces.owner_id) as unique_owners_sum
 from templates
 	left join workspaces on workspaces.template_id = templates.id
 	and workspaces.deleted = false
@@ -484,7 +484,7 @@ with
 		-- Distinct developers with a non-deleted workspace; the prebuilds system
 		-- user is excluded so unclaimed prebuilds do not inflate popularity.
 		select
-			w.template_id, COUNT(distinct w.owner_id) as org_devs
+			w.template_id, count(distinct w.owner_id) as org_devs
 		from workspaces w
 		where
 			w.template_id = any(@template_ids::uuid[])
@@ -503,9 +503,9 @@ with
 		-- active and recently-deleted counts.
 		select
 			w.template_id,
-			COUNT(*) filter (where not w.deleted) as active_count,
-			COUNT(*) filter (where w.deleted) as deleted_recent_count,
-			MAX(w.last_used_at)::timestamptz as last_used_at
+			count(*) filter (where not w.deleted) as active_count,
+			count(*) filter (where w.deleted) as deleted_recent_count,
+			max(w.last_used_at)::timestamptz as last_used_at
 		from workspaces w
 		where
 			w.owner_id = @owner_id
@@ -521,10 +521,10 @@ with
 	)
 select
 	t.template_id::uuid as template_id,
-	COALESCE(u.active_count, 0)::bigint as active_count,
-	COALESCE(u.deleted_recent_count, 0)::bigint as deleted_recent_count,
+	coalesce(u.active_count, 0)::bigint as active_count,
+	coalesce(u.deleted_recent_count, 0)::bigint as deleted_recent_count,
 	u.last_used_at,
-	COALESCE(o.org_devs, 0)::bigint as org_devs
+	coalesce(o.org_devs, 0)::bigint as org_devs
 from unnest(@template_ids::uuid[]) as t(template_id)
 	left join user_usage u on u.template_id = t.template_id
 	left join org_usage o on o.template_id = t.template_id;
@@ -644,21 +644,21 @@ with
 		where deleted = false
 	),
 	pending_workspaces as (
-		select COUNT(*) as count
+		select count(*) as count
 		from workspaces_with_jobs
 		where started_at is null
 	),
 	building_workspaces as (
-		select COUNT(*) as count
+		select count(*) as count
 		from workspaces_with_jobs
 		where
 			started_at is not null
 			and canceled_at is null
 			and completed_at is null
-			and updated_at - interval '30 seconds' < NOW()
+			and updated_at - interval '30 seconds' < now()
 	),
 	running_workspaces as (
-		select COUNT(*) as count
+		select count(*) as count
 		from workspaces_with_jobs
 		where
 			completed_at is not null
@@ -667,14 +667,14 @@ with
 			and transition = 'start'::workspace_transition
 	),
 	failed_workspaces as (
-		select COUNT(*) as count
+		select count(*) as count
 		from workspaces_with_jobs
 		where
 			(canceled_at is not null and error is not null)
 			or (completed_at is not null and error is not null)
 	),
 	stopped_workspaces as (
-		select COUNT(*) as count
+		select count(*) as count
 		from workspaces_with_jobs
 		where
 			completed_at is not null
@@ -711,7 +711,7 @@ from workspaces
 where
 	workspace_builds.build_number
 	= (
-		select MAX(build_number)
+		select max(build_number)
 		from workspace_builds
 		where workspace_builds.workspace_id = workspaces.id
 	)
@@ -1066,9 +1066,9 @@ with
 	)
 select
 	t.name as template_name,
-	COALESCE(tvp.name, '') as preset_name,
+	coalesce(tvp.name, '') as preset_name,
 	o.name as organization_name,
-	COUNT(*) as created_count
+	count(*) as created_count
 from first_success_build fsb
 	join workspaces w on w.id = fsb.workspace_id
 	join templates t on t.id = w.template_id
@@ -1079,7 +1079,7 @@ where
 	not t.deleted
 	-- Exclude workspaces whose first successful start was the prebuilds system user
 	and fsb.initiator_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid
-group by t.name, COALESCE(tvp.name, ''), o.name
+group by t.name, coalesce(tvp.name, ''), o.name
 order by t.name, preset_name, o.name;
 
 -- name: GetWorkspacesForWorkspaceMetrics :many
@@ -1099,7 +1099,7 @@ where
 	w.deleted = false
 	and wb.build_number
 	= (
-		select MAX(wb2.build_number)
+		select max(wb2.build_number)
 		from workspace_builds wb2
 		where wb2.workspace_id = w.id
 	);

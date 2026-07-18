@@ -10,7 +10,7 @@ alter table chats add column last_read_message_id bigint;
 update chats
 set
 	last_read_message_id = (
-		select MAX(cm.id)
+		select max(cm.id)
 		from chat_messages cm
 		where cm.chat_id = chats.id and cm.role = 'assistant' and cm.deleted = false
 	);

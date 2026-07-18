@@ -31,13 +31,13 @@ on conflict
 		-- ID is used to know if session was reset on upsert.
 		id = case
 			when workspace_app_audit_sessions.updated_at
-			> NOW() - (@stale_interval_ms::bigint || ' ms')::interval
+			> now() - (@stale_interval_ms::bigint || ' ms')::interval
 				then workspace_app_audit_sessions.id
 			else EXCLUDED.id
 		end,
 		started_at = case
 			when workspace_app_audit_sessions.updated_at
-			> NOW() - (@stale_interval_ms::bigint || ' ms')::interval
+			> now() - (@stale_interval_ms::bigint || ' ms')::interval
 				then workspace_app_audit_sessions.started_at
 			else EXCLUDED.started_at
 		end,

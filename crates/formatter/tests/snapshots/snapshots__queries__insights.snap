@@ -12,12 +12,12 @@ select
 	u.username,
 	u.avatar_url,
 	array_agg(distinct tus.template_id)::uuid[] as template_ids,
-	COALESCE(
-		(PERCENTILE_CONT(0.5) within group (order by tus.median_latency_ms)),
+	coalesce(
+		(percentile_cont(0.5) within group (order by tus.median_latency_ms)),
 		-1
 	)::float as workspace_connection_latency_50,
-	COALESCE(
-		(PERCENTILE_CONT(0.95) within group (order by tus.median_latency_ms)),
+	coalesce(
+		(percentile_cont(0.95) within group (order by tus.median_latency_ms)),
 		-1
 	)::float as workspace_connection_latency_95
 from template_usage_stats tus join users u on u.id = tus.user_id
@@ -25,7 +25,7 @@ where
 	tus.start_time >= @start_time::timestamptz
 	and tus.end_time <= @end_time::timestamptz
 	and case
-		when COALESCE(array_length(@template_ids::uuid[], 1), 0) > 0
+		when coalesce(array_length(@template_ids::uuid[], 1), 0) > 0
 			then tus.template_id = any(@template_ids::uuid[])
 		else true
 	end
@@ -47,13 +47,13 @@ with
 			user_id,
 			array_agg(template_id) as template_ids,
 			-- See motivation in GetTemplateInsights for LEAST(SUM(n), 30).
-			LEAST(SUM(usage_mins), 30) as usage_mins
+			least(sum(usage_mins), 30) as usage_mins
 		from template_usage_stats
 		where
 			start_time >= @start_time::timestamptz
 			and end_time <= @end_time::timestamptz
 			and case
-				when COALESCE(array_length(@template_ids::uuid[], 1), 0) > 0
+				when coalesce(array_length(@template_ids::uuid[], 1), 0) > 0
 					then template_id = any(@template_ids::uuid[])
 				else true
 			end
@@ -69,7 +69,7 @@ select
 	u.username,
 	u.avatar_url,
 	t.ids::uuid[] as template_ids,
-	(SUM(ds.usage_mins) * 60)::bigint as usage_seconds
+	(sum(ds.usage_mins) * 60)::bigint as usage_seconds
 from deployment_stats ds
 	join users u on u.id = ds.user_id
 	join template_ids t on ds.user_id = t.user_id
@@ -91,18 +91,18 @@ with
 		select
 			user_id,
 			-- See motivation in GetTemplateInsights for LEAST(SUM(n), 30).
-			LEAST(SUM(usage_mins), 30) as usage_mins,
-			LEAST(SUM(ssh_mins), 30) as ssh_mins,
-			LEAST(SUM(sftp_mins), 30) as sftp_mins,
-			LEAST(SUM(reconnecting_pty_mins), 30) as reconnecting_pty_mins,
-			LEAST(SUM(vscode_mins), 30) as vscode_mins,
-			LEAST(SUM(jetbrains_mins), 30) as jetbrains_mins
+			least(sum(usage_mins), 30) as usage_mins,
+			least(sum(ssh_mins), 30) as ssh_mins,
+			least(sum(sftp_mins), 30) as sftp_mins,
+			least(sum(reconnecting_pty_mins), 30) as reconnecting_pty_mins,
+			least(sum(vscode_mins), 30) as vscode_mins,
+			least(sum(jetbrains_mins), 30) as jetbrains_mins
 		from template_usage_stats
 		where
 			start_time >= @start_time::timestamptz
 			and end_time <= @end_time::timestamptz
 			and case
-				when COALESCE(array_length(@template_ids::uuid[], 1), 0) > 0
+				when coalesce(array_length(@template_ids::uuid[], 1), 0) > 0
 					then template_id = any(@template_ids::uuid[])
 				else true
 			end
@@ -126,52 +126,52 @@ with
 			start_time >= @start_time::timestamptz
 			and end_time <= @end_time::timestamptz
 			and case
-				when COALESCE(array_length(@template_ids::uuid[], 1), 0) > 0
+				when coalesce(array_length(@template_ids::uuid[], 1), 0) > 0
 					then template_id = any(@template_ids::uuid[])
 				else true
 			end
 	)
 select
-	COALESCE(
+	coalesce(
 		(select template_ids from templates),
 		'{}'
 	)::uuid[] as template_ids, -- Includes app usage.
-	COALESCE(
+	coalesce(
 		(select ssh_template_ids from templates),
 		'{}'
 	)::uuid[] as ssh_template_ids,
-	COALESCE(
+	coalesce(
 		(select sftp_template_ids from templates),
 		'{}'
 	)::uuid[] as sftp_template_ids,
-	COALESCE(
+	coalesce(
 		(select reconnecting_pty_template_ids from templates),
 		'{}'
 	)::uuid[] as reconnecting_pty_template_ids,
-	COALESCE(
+	coalesce(
 		(select vscode_template_ids from templates),
 		'{}'
 	)::uuid[] as vscode_template_ids,
-	COALESCE(
+	coalesce(
 		(select jetbrains_template_ids from templates),
 		'{}'
 	)::uuid[] as jetbrains_template_ids,
-	COALESCE(
-		COUNT(distinct user_id),
+	coalesce(
+		count(distinct user_id),
 		0
 	)::bigint as active_users, -- Includes app usage.
-	COALESCE(
-		SUM(usage_mins) * 60,
+	coalesce(
+		sum(usage_mins) * 60,
 		0
 	)::bigint as usage_total_seconds, -- Includes app usage.
-	COALESCE(SUM(ssh_mins) * 60, 0)::bigint as usage_ssh_seconds,
-	COALESCE(SUM(sftp_mins) * 60, 0)::bigint as usage_sftp_seconds,
-	COALESCE(
-		SUM(reconnecting_pty_mins) * 60,
+	coalesce(sum(ssh_mins) * 60, 0)::bigint as usage_ssh_seconds,
+	coalesce(sum(sftp_mins) * 60, 0)::bigint as usage_sftp_seconds,
+	coalesce(
+		sum(reconnecting_pty_mins) * 60,
 		0
 	)::bigint as usage_reconnecting_pty_seconds,
-	COALESCE(SUM(vscode_mins) * 60, 0)::bigint as usage_vscode_seconds,
-	COALESCE(SUM(jetbrains_mins) * 60, 0)::bigint as usage_jetbrains_seconds
+	coalesce(sum(vscode_mins) * 60, 0)::bigint as usage_vscode_seconds,
+	coalesce(sum(jetbrains_mins) * 60, 0)::bigint as usage_jetbrains_seconds
 from insights;
 
 -- name: GetTemplateInsightsByTemplate :many
@@ -186,7 +186,7 @@ with
 		select
 			template_id,
 			user_id,
-			COUNT(
+			count(
 				distinct case
 					when session_count_ssh > 0 then date_trunc('minute', created_at)
 					else null
@@ -194,20 +194,20 @@ with
 			) as ssh_mins,
 			-- TODO(mafredri): Enable when we have the column.
 			-- COUNT(DISTINCT CASE WHEN session_count_sftp > 0 THEN date_trunc('minute', created_at) ELSE NULL END) AS sftp_mins,
-			COUNT(
+			count(
 				distinct case
 					when session_count_reconnecting_pty > 0
 						then date_trunc('minute', created_at)
 					else null
 				end
 			) as reconnecting_pty_mins,
-			COUNT(
+			count(
 				distinct case
 					when session_count_vscode > 0 then date_trunc('minute', created_at)
 					else null
 				end
 			) as vscode_mins,
-			COUNT(
+			count(
 				distinct case
 					when session_count_jetbrains > 0 then date_trunc('minute', created_at)
 					else null
@@ -217,7 +217,7 @@ with
 			-- sometimes the connections are missing, even during active sessions.
 			-- Since we can't fully rely on this, we check for "any connection
 			-- within this bucket". A better solution here would be preferable.
-			MAX(connection_count)
+			max(connection_count)
 			> 0 as has_connection
 		from workspace_agent_stats
 		where
@@ -236,11 +236,11 @@ with
 	)
 select
 	template_id,
-	COUNT(distinct user_id)::bigint as active_users,
-	(SUM(vscode_mins) * 60)::bigint as usage_vscode_seconds,
-	(SUM(jetbrains_mins) * 60)::bigint as usage_jetbrains_seconds,
-	(SUM(reconnecting_pty_mins) * 60)::bigint as usage_reconnecting_pty_seconds,
-	(SUM(ssh_mins) * 60)::bigint as usage_ssh_seconds
+	count(distinct user_id)::bigint as active_users,
+	(sum(vscode_mins) * 60)::bigint as usage_vscode_seconds,
+	(sum(jetbrains_mins) * 60)::bigint as usage_jetbrains_seconds,
+	(sum(reconnecting_pty_mins) * 60)::bigint as usage_reconnecting_pty_seconds,
+	(sum(ssh_mins) * 60)::bigint as usage_ssh_seconds
 from insights
 where has_connection
 group by template_id;
@@ -264,7 +264,7 @@ with
 		where
 			-- Partial query parameter filter.
 			case
-				when COALESCE(array_length(@template_ids::uuid[], 1), 0) > 0
+				when coalesce(array_length(@template_ids::uuid[], 1), 0) > 0
 					then ws.template_id = any(@template_ids::uuid[])
 				else true
 			end
@@ -291,7 +291,7 @@ with
 			>= @start_time::timestamptz
 			and tus.end_time <= @end_time::timestamptz
 			and case
-				when COALESCE(array_length(@template_ids::uuid[], 1), 0) > 0
+				when coalesce(array_length(@template_ids::uuid[], 1), 0) > 0
 					then tus.template_id = any(@template_ids::uuid[])
 				else true
 			end
@@ -310,7 +310,7 @@ with
 			display_name,
 			icon,
 			-- See motivation in GetTemplateInsights for LEAST(SUM(n), 30).
-			LEAST(SUM(usage_mins), 30) as usage_mins
+			least(sum(usage_mins), 30) as usage_mins
 		from template_usage_stats_with_apps
 		group by start_time, user_id, slug, display_name, icon
 	),
@@ -358,14 +358,14 @@ with
 	)
 select
 	t.template_ids,
-	COUNT(distinct ai.user_id) as active_users,
+	count(distinct ai.user_id) as active_users,
 	ai.slug,
 	ai.display_name,
 	ai.icon,
-	(SUM(ai.usage_mins) * 60)::bigint as usage_seconds,
-	COALESCE(
+	(sum(ai.usage_mins) * 60)::bigint as usage_seconds,
+	coalesce(
 		(
-			select COUNT(*)
+			select count(*)
 			from times_used
 			where
 				times_used.slug = ai.slug
@@ -414,9 +414,9 @@ with
 					then '[terminal]' -- Unique name, app names can't contain brackets.
 				else fs.slug_or_port
 			end::text as app_name,
-			COALESCE(wa.display_name, '') as display_name,
+			coalesce(wa.display_name, '') as display_name,
 			(wa.slug is not null)::boolean as is_app,
-			COUNT(distinct s.minute_bucket) as app_minutes
+			count(distinct s.minute_bucket) as app_minutes
 		from filtered_stats as fs
 			join workspaces as w on w.id = fs.workspace_id
 			-- We do a left join here because we want to include user IDs that have used
@@ -446,8 +446,8 @@ select
 	template_id,
 	app_name as slug_or_port,
 	display_name as display_name,
-	COUNT(distinct user_id)::bigint as active_users,
-	(SUM(app_minutes) * 60)::bigint as usage_seconds
+	count(distinct user_id)::bigint as active_users,
+	(sum(app_minutes) * 60)::bigint as usage_seconds
 from app_insights
 where is_app is true
 group by template_id, slug_or_port, display_name;
@@ -461,7 +461,7 @@ with
 	ts as (
 		select
 			d::timestamptz as from_,
-			LEAST(
+			least(
 				(
 					d::timestamptz + (@interval_days::int || ' day')::interval
 				)::timestamptz,
@@ -484,14 +484,14 @@ select
 		array_agg(distinct tus.template_id),
 		null
 	)::uuid[] as template_ids,
-	COUNT(distinct tus.user_id) as active_users
+	count(distinct tus.user_id) as active_users
 from ts
 	left join template_usage_stats as tus on tus.start_time >= ts.from_
 	and tus.start_time
 	< ts.to_ -- End time exclusion criteria optimization for index.
 	and tus.end_time <= ts.to_
 	and case
-		when COALESCE(array_length(@template_ids::uuid[], 1), 0) > 0
+		when coalesce(array_length(@template_ids::uuid[], 1), 0) > 0
 			then tus.template_id = any(@template_ids::uuid[])
 		else true
 	end
@@ -504,7 +504,7 @@ where
 	start_time >= @start_time::timestamptz
 	and end_time <= @end_time::timestamptz
 	and case
-		when COALESCE(array_length(@template_ids::uuid[], 1), 0) > 0
+		when coalesce(array_length(@template_ids::uuid[], 1), 0) > 0
 			then template_id = any(@template_ids::uuid[])
 		else true
 	end;
@@ -520,13 +520,13 @@ with
 			-- Truncate to hour so that we always look at even ranges of data.
 			date_trunc(
 				'hour',
-				COALESCE(
-					MAX(start_time) - '1 hour'::interval,
+				coalesce(
+					max(start_time) - '1 hour'::interval,
 					-- Fallback when there are no template usage stats yet.
 					-- App stats can exist before this, but not agent stats,
 					-- limit the lookback to avoid inconsistency.
 					(
-						select MIN(created_at)
+						select min(created_at)
 						from workspace_agent_stats
 					)
 				)
@@ -545,7 +545,7 @@ with
 		from workspace_app_stats as was
 		where
 			was.session_ended_at >= (select t from latest_start)
-			and was.session_started_at < NOW()
+			and was.session_started_at < now()
 	),
 	workspace_app_stat_buckets as (
 		select
@@ -564,7 +564,7 @@ with
 					then '[terminal]' -- Unique name, app names can't contain brackets.
 				else fas.slug_or_port
 			end as app_name,
-			COUNT(distinct s.minute_bucket) as app_minutes,
+			count(distinct s.minute_bucket) as app_minutes,
 			-- Store each unique minute bucket for later merge between datasets.
 			array_agg(distinct s.minute_bucket) as minute_buckets
 		from filtered_app_stats as fas
@@ -582,7 +582,7 @@ with
 			-- AND s.minute_bucket < @end_time::timestamptz
 			s.minute_bucket
 			>= (select t from latest_start)
-			and s.minute_bucket < NOW()
+			and s.minute_bucket < now()
 		group by
 			time_bucket,
 			w.template_id,
@@ -612,7 +612,7 @@ with
 					else null
 				end
 			) as minute_buckets,
-			COUNT(
+			count(
 				distinct case
 					when session_count_ssh > 0 then date_trunc('minute', created_at)
 					else null
@@ -620,20 +620,20 @@ with
 			) as ssh_mins,
 			-- TODO(mafredri): Enable when we have the column.
 			-- COUNT(DISTINCT CASE WHEN session_count_sftp > 0 THEN date_trunc('minute', created_at) ELSE NULL END) AS sftp_mins,
-			COUNT(
+			count(
 				distinct case
 					when session_count_reconnecting_pty > 0
 						then date_trunc('minute', created_at)
 					else null
 				end
 			) as reconnecting_pty_mins,
-			COUNT(
+			count(
 				distinct case
 					when session_count_vscode > 0 then date_trunc('minute', created_at)
 					else null
 				end
 			) as vscode_mins,
-			COUNT(
+			count(
 				distinct case
 					when session_count_jetbrains > 0 then date_trunc('minute', created_at)
 					else null
@@ -643,7 +643,7 @@ with
 			-- sometimes the connections are missing, even during active sessions.
 			-- Since we can't fully rely on this, we check for "any connection
 			-- during this half-hour". A better solution here would be preferable.
-			MAX(connection_count)
+			max(connection_count)
 			> 0 as has_connection
 		from workspace_agent_stats
 		where
@@ -651,7 +651,7 @@ with
 			-- AND created_at < @end_time::timestamptz
 			created_at
 			>= (select t from latest_start)
-			and created_at < NOW()
+			and created_at < now()
 			-- Inclusion criteria to filter out empty results.
 			and (
 				session_count_ssh > 0
@@ -670,13 +670,13 @@ with
 			stats.template_id,
 			stats.user_id,
 			-- Sum/distinct to handle zero/duplicate values due union and to unnest.
-			COUNT(distinct minute_bucket) as usage_mins,
+			count(distinct minute_bucket) as usage_mins,
 			array_agg(distinct minute_bucket) as minute_buckets,
-			SUM(distinct stats.ssh_mins) as ssh_mins,
-			SUM(distinct stats.sftp_mins) as sftp_mins,
-			SUM(distinct stats.reconnecting_pty_mins) as reconnecting_pty_mins,
-			SUM(distinct stats.vscode_mins) as vscode_mins,
-			SUM(distinct stats.jetbrains_mins) as jetbrains_mins,
+			sum(distinct stats.ssh_mins) as ssh_mins,
+			sum(distinct stats.sftp_mins) as sftp_mins,
+			sum(distinct stats.reconnecting_pty_mins) as reconnecting_pty_mins,
+			sum(distinct stats.vscode_mins) as vscode_mins,
+			sum(distinct stats.jetbrains_mins) as jetbrains_mins,
 			-- This is what we unnested, re-nest as json.
 			jsonb_object_agg(
 				stats.app_name,
@@ -738,12 +738,12 @@ with
 			mb.user_id,
 			-- TODO(mafredri): We're doing medians on medians here, we may want to
 			-- improve upon this at some point.
-			PERCENTILE_CONT(0.5) within group (order by
+			percentile_cont(0.5) within group (order by
 				was.connection_median_latency_ms)::real as median_latency_ms
 		from minute_buckets as mb
 			join workspace_agent_stats as was on was.created_at
 			>= (select t from latest_start)
-			and was.created_at < NOW()
+			and was.created_at < now()
 			and date_trunc('minute', was.created_at) = mb.minute_bucket
 			and was.template_id = mb.template_id
 			and was.user_id = mb.user_id
@@ -810,14 +810,14 @@ with
 			select
 				tv.template_id,
 				wbmax.workspace_id,
-				MAX(wbmax.build_number) as max_build_number
+				max(wbmax.build_number) as max_build_number
 			from workspace_builds wbmax
 				join template_versions tv on (tv.id = wbmax.template_version_id)
 			where
 				wbmax.created_at >= @start_time::timestamptz
 				and wbmax.created_at < @end_time::timestamptz
 				and case
-					when COALESCE(array_length(@template_ids::uuid[], 1), 0) > 0
+					when coalesce(array_length(@template_ids::uuid[], 1), 0) > 0
 						then tv.template_id = any(@template_ids::uuid[])
 					else true
 				end
@@ -830,7 +830,7 @@ with
 	),
 	unique_template_params as (
 		select
-			ROW_NUMBER() over () as num,
+			row_number() over () as num,
 			array_agg(distinct wb.template_id)::uuid[] as template_ids,
 			array_agg(wb.id)::uuid[] as workspace_build_ids,
 			tvp.name,
@@ -853,7 +853,7 @@ select
 	utp.description,
 	utp.options,
 	wbp.value,
-	COUNT(wbp.value) as count
+	count(wbp.value) as count
 from unique_template_params utp
 	join workspace_build_parameters wbp on (
 		utp.workspace_build_ids @> array [wbp.workspace_build_id]
@@ -889,7 +889,7 @@ with
 		select distinct usc.user_id, usc.new_status, usc.changed_at
 		from user_status_changes usc
 			left join LATERAL (
-				select COUNT(*) > 0 as deleted
+				select count(*) > 0 as deleted
 				from user_deleted ud
 				where
 					ud.user_id = usc.user_id
@@ -906,7 +906,7 @@ with
 		select usc.user_id, usc.new_status, usc.changed_at
 		from user_status_changes usc
 			left join LATERAL (
-				select COUNT(*) > 0 as deleted
+				select count(*) > 0 as deleted
 				from user_deleted ud
 				where ud.user_id = usc.user_id and ud.deleted_at < usc.changed_at
 			) as ud on true
@@ -933,7 +933,7 @@ with
 		select
 			d.date,
 			rsc1.user_id,
-			ROW_NUMBER() over (
+			row_number() over (
 				partition by d.date,
 				rsc1.user_id
 				order by rsc1.changed_at desc
@@ -945,7 +945,7 @@ with
 select
 	rscpupd.date::timestamptz as date,
 	statuses.new_status as status,
-	COUNT(rscpupd.user_id) filter (where rscpupd.rn = 1
+	count(rscpupd.user_id) filter (where rscpupd.rn = 1
 	and (
 		rscpupd.new_status = statuses.new_status
 		and (

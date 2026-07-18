@@ -104,7 +104,7 @@ where api_keys.id = expired_keys.id;
 -- to workspaces no longer owned by the prebuilds user.
 with
 	unexpired_prebuilds_workspace_session_tokens as (
-		select id, SUBSTRING(token_name from 38 for 36)::uuid as workspace_id
+		select id, substring(token_name from 38 for 36)::uuid as workspace_id
 		from api_keys
 		where
 			user_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid

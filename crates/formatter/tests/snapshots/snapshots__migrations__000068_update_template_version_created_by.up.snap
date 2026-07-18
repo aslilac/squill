@@ -4,7 +4,7 @@ expression: formatted
 ---
 update template_versions
 set
-	created_by = COALESCE(
+	created_by = coalesce(
 		-- Best effort to convert all unowned template versions to the first owner.
 		(
 			select id

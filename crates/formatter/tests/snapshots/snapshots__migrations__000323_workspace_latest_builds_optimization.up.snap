@@ -87,7 +87,7 @@ select
 	p.name,
 	p.template_id,
 	p.created_at,
-	COALESCE(a.ready, false) as ready,
+	coalesce(a.ready, false) as ready,
 	cp.template_version_preset_id as current_preset_id
 from (
 	(

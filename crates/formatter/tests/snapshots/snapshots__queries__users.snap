@@ -21,7 +21,7 @@ select * from users where id = $1 limit 1;
 
 -- name: ValidateUserIDs :one
 with input as (select unnest(@user_ids::uuid[]) as id)
-select array_agg(input.id)::uuid[] as invalid_user_ids, COUNT(*) = 0 as ok
+select array_agg(input.id)::uuid[] as invalid_user_ids, count(*) = 0 as ok
 from
 -- Preserve rows where there is not a matching left (users) row for each
 -- right (input) row...
@@ -48,21 +48,21 @@ select *
 from users
 where
 	(
-		LOWER(username) = LOWER(@username)
-		or (@email != '' and LOWER(email) = LOWER(@email))
+		lower(username) = lower(@username)
+		or (@email != '' and lower(email) = lower(@email))
 	)
 	and deleted = false
 limit 1;
 
 -- name: GetUserCount :one
-select COUNT(*)
+select count(*)
 from users
 where
 	deleted = false
 	and case when @include_system::bool then true else is_system = false end;
 
 -- name: GetActiveUserCount :one
-select COUNT(*)
+select count(*)
 from users
 where
 	status = 'active'::user_status
@@ -97,7 +97,7 @@ values
 		$9,
 		-- if the status passed in is empty, fallback to dormant, which is what
 		-- we were doing before.
-		COALESCE(NULLIF(@status::text, '')::user_status, 'dormant'::user_status),
+		coalesce(nullif(@status::text, '')::user_status, 'dormant'::user_status),
 		@is_service_account::bool
 	)
 returning *;
@@ -113,24 +113,24 @@ update users set github_com_user_id = $2 where id = $1;
 
 -- name: GetUserAppearanceSettings :one
 select
-	COALESCE(
-		MAX(value) filter (where key = 'theme_preference'),
+	coalesce(
+		max(value) filter (where key = 'theme_preference'),
 		''
 	)::text as theme_preference,
-	COALESCE(
-		MAX(value) filter (where key = 'theme_mode'),
+	coalesce(
+		max(value) filter (where key = 'theme_mode'),
 		''
 	)::text as theme_mode,
-	COALESCE(
-		MAX(value) filter (where key = 'theme_light'),
+	coalesce(
+		max(value) filter (where key = 'theme_light'),
 		''
 	)::text as theme_light,
-	COALESCE(
-		MAX(value) filter (where key = 'theme_dark'),
+	coalesce(
+		max(value) filter (where key = 'theme_dark'),
 		''
 	)::text as theme_dark,
-	COALESCE(
-		MAX(value) filter (where key = 'terminal_font'),
+	coalesce(
+		max(value) filter (where key = 'terminal_font'),
 		''
 	)::text as terminal_font
 from user_configs
@@ -220,7 +220,7 @@ delete from user_configs where user_id = @user_id and key = @key;
 
 -- name: GetUserChatDebugLoggingEnabled :one
 select
-	COALESCE(
+	coalesce(
 		(
 			select value = 'true'
 			from user_configs
@@ -354,7 +354,7 @@ returning value as agent_chat_send_shortcut;
 update users
 set
 	-- Remove all duplicates from the roles.
-	rbac_roles = array (select distinct UNNEST(@granted_roles::text[]))
+	rbac_roles = array (select distinct unnest(@granted_roles::text[]))
 where id = @id
 returning *;
 
@@ -371,7 +371,7 @@ update users set deleted = true where id = $1;
 
 -- name: GetUsers :many
 -- This will never return deleted users.
-select *, COUNT(*) over () as count
+select *, count(*) over () as count
 from users
 where
 	users.deleted = false
@@ -385,9 +385,9 @@ where
 				-- The query is ordered by the username field, so select all
 				-- rows after the cursor.
 				(
-					LOWER(username)
+					lower(username)
 				)
-				> (select LOWER(username) from users where id = @after_id)
+				> (select lower(username) from users where id = @after_id)
 			)
 		else true
 	end
@@ -482,11 +482,11 @@ where
 -- @authorize_filter
 order by
 	-- Deterministic and consistent ordering of all users. This is to ensure consistent pagination.
-	LOWER(username) asc
+	lower(username) asc
 offset @offset_opt
 limit
 	-- A null limit means "no limit", so 0 means return all
-	NULLIF(@limit_opt::int, 0);
+	nullif(@limit_opt::int, 0);
 
 -- name: UpdateUserStatus :one
 update users

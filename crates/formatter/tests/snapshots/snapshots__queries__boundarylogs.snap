@@ -54,7 +54,7 @@ select
 	unnest(@proto::text[]),
 	unnest(@method::text[]),
 	unnest(@detail::text[]),
-	NULLIF(unnest(@matched_rule::text[]), '')
+	nullif(unnest(@matched_rule::text[]), '')
 returning *;
 
 -- name: GetBoundaryLogByID :one
@@ -79,7 +79,7 @@ where
 		else true
 	end
 order by sequence_number asc
-limit COALESCE(NULLIF(@limit_opt::int, 0), 100);
+limit coalesce(nullif(@limit_opt::int, 0), 100);
 
 -- name: DeleteOldBoundaryLogs :execrows
 -- Deletes boundary logs older than the given time, bounded by a row limit

@@ -18,6 +18,6 @@ values
 		'[{"negate":false,"resource_type":"deployment_config","action":"update"},{"negate":false,"resource_type":"workspace","action":"read"}]',
 		'{}',
 		'[{"negate":false,"resource_type":"workspace","action":"read"}]',
-		date_trunc('hour', NOW()),
-		date_trunc('hour', NOW()) + '30 minute'::interval
+		date_trunc('hour', now()),
+		date_trunc('hour', now()) + '30 minute'::interval
 	);

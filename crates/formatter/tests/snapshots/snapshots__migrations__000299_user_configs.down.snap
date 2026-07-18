@@ -11,7 +11,7 @@ update users
 -- Use COALESCE(SELECT, <default>) to avoid forcing an insert of user_configs
 -- for every users insert in order for this down migration to succeed.
 set
-	theme_preference = COALESCE(
+	theme_preference = coalesce(
 		(
 			select value
 			from user_configs

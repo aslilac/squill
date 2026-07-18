@@ -3,7 +3,7 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- name: GetQuotaAllowanceForUser :one
-select coalesce(SUM(groups.quota_allowance), 0)::bigint
+select coalesce(sum(groups.quota_allowance), 0)::bigint
 from (
 	-- Select all groups this user is a member of. This will also include
 	-- the "Everyone" group for organizations the user is a member of.
@@ -33,5 +33,5 @@ with
 			and workspaces.organization_id = @organization_id
 		order by wb.workspace_id, wb.build_number desc
 	)
-select coalesce(SUM(daily_cost), 0)::bigint
+select coalesce(sum(daily_cost), 0)::bigint
 from latest_builds;

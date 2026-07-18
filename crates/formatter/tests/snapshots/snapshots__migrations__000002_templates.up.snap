@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 -- Store arbitrary data like template source code or avatars.
@@ -36,7 +35,7 @@ create table templates (
 	primary key (id),
 	-- Disallow templates to have the same name under
 	-- the same organization.
-	UNIQUE(organization_id, name)
+	unique(organization_id, name)
 );
 
 -- Enforces no active templates have the same name.
@@ -66,5 +65,5 @@ create table template_versions (
 	primary key (id),
 	-- Disallow templates to have the same build name
 	-- multiple times.
-	UNIQUE(template_id, name)
+	unique(template_id, name)
 );

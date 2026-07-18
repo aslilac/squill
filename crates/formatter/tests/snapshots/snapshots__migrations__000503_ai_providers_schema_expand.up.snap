@@ -8,9 +8,9 @@ create table user_ai_provider_keys (
 	ai_provider_id uuid not null references ai_providers (id) on delete cascade,
 	api_key text not null check (api_key != ''),
 	api_key_key_id text references dbcrypt_keys (active_key_digest),
-	created_at timestamp with time zone not null default NOW(),
-	updated_at timestamp with time zone not null default NOW(),
-	UNIQUE(user_id, ai_provider_id)
+	created_at timestamp with time zone not null default now(),
+	updated_at timestamp with time zone not null default now(),
+	unique(user_id, ai_provider_id)
 );
 
 comment on table user_ai_provider_keys is 'User-owned API keys associated with AI providers. These keys are used only when BYOK is enabled.';

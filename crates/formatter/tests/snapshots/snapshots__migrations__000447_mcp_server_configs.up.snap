@@ -66,7 +66,7 @@ create table mcp_server_user_tokens (
 	expiry timestamptz,
 	created_at timestamptz not null default now(),
 	updated_at timestamptz not null default now(),
-	UNIQUE(mcp_server_config_id, user_id)
+	unique(mcp_server_config_id, user_id)
 );
 
 -- Add MCP server selection to chats (per-chat, like model_config_id)

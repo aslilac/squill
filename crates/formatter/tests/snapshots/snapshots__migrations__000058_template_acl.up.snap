@@ -10,7 +10,7 @@ create table groups (
 	name text not null,
 	organization_id uuid not null references organizations (id) on delete cascade,
 	primary key (id),
-	UNIQUE(name, organization_id)
+	unique(name, organization_id)
 );
 
 create table group_members (
@@ -18,7 +18,7 @@ create table group_members (
 	group_id uuid not null,
 	foreign key (user_id) references users (id) on delete cascade,
 	foreign key (group_id) references groups (id) on delete cascade,
-	UNIQUE(user_id, group_id)
+	unique(user_id, group_id)
 );
 
 -- Insert a group for every organization (which should just be 1).

@@ -31,9 +31,9 @@ alter table oauth2_provider_apps
 -- Backfill existing records with default values
 update oauth2_provider_apps
 set
-	redirect_uris = COALESCE(redirect_uris, '{}'),
-	client_type = COALESCE(client_type, 'confidential'),
-	dynamically_registered = COALESCE(dynamically_registered, false)
+	redirect_uris = coalesce(redirect_uris, '{}'),
+	client_type = coalesce(client_type, 'confidential'),
+	dynamically_registered = coalesce(dynamically_registered, false)
 where
 	redirect_uris is null
 	or client_type is null

@@ -140,11 +140,11 @@ limit
 	-- a limit of 0 means "no limit". The connection log table is unbounded
 	-- in size, and is expected to be quite large. Implement a default
 	-- limit of 100 to prevent accidental excessively large queries.
-	COALESCE(NULLIF(@limit_opt::int, 0), 100)
+	coalesce(nullif(@limit_opt::int, 0), 100)
 offset @offset_opt;
 
 -- name: CountConnectionLogs :one
-select COUNT(*) as count
+select count(*) as count
 from (
 	select 1
 	from connection_logs
@@ -260,7 +260,7 @@ from (
 	-- @authorize_filter
 	-- NOTE: See the CountAuditLogs LIMIT note.
 	limit
-		NULLIF(@count_cap::int, 0) + 1
+		nullif(@count_cap::int, 0) + 1
 ) as limited_count;
 
 -- name: DeleteOldConnectionLogs :execrows
@@ -310,12 +310,12 @@ select
 		else null
 	end,
 	u.ip,
-	NULLIF(u.user_agent, ''),
-	NULLIF(u.user_id, '00000000-0000-0000-0000-000000000000'::uuid),
-	NULLIF(u.slug_or_port, ''),
-	NULLIF(u.connection_id, '00000000-0000-0000-0000-000000000000'::uuid),
-	NULLIF(u.disconnect_reason, ''),
-	NULLIF(u.disconnect_time, '0001-01-01 00:00:00Z'::timestamptz)
+	nullif(u.user_agent, ''),
+	nullif(u.user_id, '00000000-0000-0000-0000-000000000000'::uuid),
+	nullif(u.slug_or_port, ''),
+	nullif(u.connection_id, '00000000-0000-0000-0000-000000000000'::uuid),
+	nullif(u.disconnect_reason, ''),
+	nullif(u.disconnect_time, '0001-01-01 00:00:00Z'::timestamptz)
 from (
 	select
 		unnest(sqlc.arg('id')::uuid[]) as id,
@@ -348,7 +348,7 @@ on conflict
 				then connection_logs.connect_time
 			when connection_logs.connect_time = '0001-01-01 00:00:00Z'::timestamptz
 				then EXCLUDED.connect_time
-			else LEAST(connection_logs.connect_time, EXCLUDED.connect_time)
+			else least(connection_logs.connect_time, EXCLUDED.connect_time)
 		end,
 		disconnect_time = case
 			when connection_logs.disconnect_time is null then EXCLUDED.disconnect_time

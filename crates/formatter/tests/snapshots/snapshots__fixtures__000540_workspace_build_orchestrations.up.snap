@@ -12,8 +12,8 @@ insert into workspace_build_orchestrations (
 )
 select
 	'4e983a68-9b8a-4d4e-a4d6-5f2dd73551c2'::uuid,
-	NOW(),
-	NOW(),
+	now(),
+	now(),
 	workspace_id,
 	id,
 	'start'::workspace_transition

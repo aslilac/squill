@@ -24,7 +24,7 @@ create table notification_templates (
 	actions jsonb,
 	"group" text,
 	primary key (id),
-	UNIQUE(name)
+	unique(name)
 );
 
 comment on table notification_templates is 'Templates from which to create notification messages.';

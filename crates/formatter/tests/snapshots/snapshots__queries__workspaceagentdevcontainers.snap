@@ -19,7 +19,7 @@ select
 	unnest(@name::text[]) as name,
 	unnest(@workspace_folder::text[]) as workspace_folder,
 	unnest(@config_path::text[]) as config_path,
-	NULLIF(
+	nullif(
 		unnest(@subagent_id::uuid[]),
 		'00000000-0000-0000-0000-000000000000'
 	)::uuid as subagent_id

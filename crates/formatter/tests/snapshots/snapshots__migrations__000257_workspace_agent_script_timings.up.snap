@@ -30,7 +30,7 @@ create table workspace_agent_script_timings (
 	exit_code int not null,
 	stage workspace_agent_script_timing_stage not null,
 	status workspace_agent_script_timing_status not null,
-	UNIQUE(script_id, started_at)
+	unique(script_id, started_at)
 );
 
 comment on type workspace_agent_script_timings is 'Timing and execution information about a script run.';

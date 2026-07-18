@@ -11,4 +11,4 @@ insert into boundary_usage_stats (
 	window_start,
 	updated_at
 )
-values ('00000000-0000-0000-0000-000000000001', 10, 5, 100, 20, NOW(), NOW());
+values ('00000000-0000-0000-0000-000000000001', 10, 5, 100, 20, now(), now());

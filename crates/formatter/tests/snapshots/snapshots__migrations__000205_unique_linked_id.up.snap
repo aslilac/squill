@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 -- Remove the linked_id if two user_links share the same value.
@@ -15,7 +14,7 @@ set
 		when (
 			-- When the count of linked_id is greater than 1, set the linked_id to empty
 			select
-				COUNT(*)
+				count(*)
 			from user_links inn
 			where out.linked_id = inn.linked_id and out.login_type = inn.login_type
 		)

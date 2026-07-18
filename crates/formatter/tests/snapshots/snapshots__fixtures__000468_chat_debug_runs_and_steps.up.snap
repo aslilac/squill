@@ -22,7 +22,7 @@ values
 		'72c0438a-18eb-4688-ab80-e4c6a126ef96',
 		'9af5f8d5-6a57-4505-8a69-3d6c787b95fd',
 		(
-			select MAX(id)
+			select max(id)
 			from chat_messages
 			where chat_id = '72c0438a-18eb-4688-ab80-e4c6a126ef96'
 		),
@@ -64,12 +64,12 @@ values
 		'stream',
 		'completed',
 		(
-			select MAX(id)
+			select max(id)
 			from chat_messages
 			where chat_id = '72c0438a-18eb-4688-ab80-e4c6a126ef96'
 		),
 		(
-			select MAX(id)
+			select max(id)
 			from chat_messages
 			where chat_id = '72c0438a-18eb-4688-ab80-e4c6a126ef96'
 		),

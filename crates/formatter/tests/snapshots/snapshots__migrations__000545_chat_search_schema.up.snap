@@ -29,7 +29,7 @@ comment on column chat_messages.search_tsv is 'Used for full text search. NULL i
 
 create index idx_chat_messages_search_tsv
 	on chat_messages
-	using GIN(search_tsv)
+	using gin(search_tsv)
 	where
 		(
 			(search_tsv is not null)
@@ -77,13 +77,13 @@ comment on index idx_chat_messages_search_tsv is 'Partial index over chat_messag
 
 create index idx_chats_title_fts
 	on chats
-	using GIN(to_tsvector('simple', title));
+	using gin(to_tsvector('simple', title));
 
 comment on index idx_chats_title_fts is 'Used for full text search. Defined over all rows of the chats table.';
 
 create index idx_chat_diff_statuses_pr_title_fts
 	on chat_diff_statuses
-	using GIN(to_tsvector('simple', pull_request_title));
+	using gin(to_tsvector('simple', pull_request_title));
 
 comment on index idx_chats_title_fts is 'Used for full text search. Defined over all rows of the chats table.';
 

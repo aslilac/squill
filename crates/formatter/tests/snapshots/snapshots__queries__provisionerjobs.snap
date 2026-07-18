@@ -77,7 +77,7 @@ with
 		where
 			pd.last_seen_at is not null
 			and pd.last_seen_at
-			>= (NOW() - (@stale_interval_ms::bigint || ' ms')::interval)
+			>= (now() - (@stale_interval_ms::bigint || ' ms')::interval)
 	),
 	relevant_daemon_tags as (
 		select udt.tags
@@ -94,13 +94,13 @@ with
 		select
 			pj.id,
 			pj.created_at,
-			ROW_NUMBER() over (
+			row_number() over (
 				partition by rdt.tags
 				order by
 					pj.initiator_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid asc,
 					pj.created_at asc
 			) as queue_position,
-			COUNT(*) over (partition by rdt.tags) as queue_size
+			count(*) over (partition by rdt.tags) as queue_size
 		from pending_jobs pj
 			inner join relevant_daemon_tags rdt on provisioner_tagset_contains(
 				rdt.tags,
@@ -112,12 +112,12 @@ with
 		select
 			fpj.id,
 			fpj.created_at,
-			COALESCE(
-				MIN(rj.queue_position),
+			coalesce(
+				min(rj.queue_position),
 				0
 			)::bigint as queue_position, -- Best queue position across provisioners
-			COALESCE(
-				MAX(rj.queue_size),
+			coalesce(
+				max(rj.queue_size),
 				0
 			)::bigint as queue_size -- Max queue size across provisioners
 		from filtered_provisioner_jobs fpj -- Use the pre-filtered dataset instead of full provisioner_jobs
@@ -153,18 +153,18 @@ with
 	queue_position as (
 		select
 			id,
-			ROW_NUMBER() over (
+			row_number() over (
 				order by
 					initiator_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid asc,
 					created_at asc
 			) as queue_position
 		from pending_jobs
 	),
-	queue_size as (select COUNT(*) as count from pending_jobs)
+	queue_size as (select count(*) as count from pending_jobs)
 select
 	sqlc.embed(pj),
-	COALESCE(qp.queue_position, 0) as queue_position,
-	COALESCE(qs.count, 0) as queue_size,
+	coalesce(qp.queue_position, 0) as queue_position,
+	coalesce(qs.count, 0) as queue_size,
 	-- Use subquery to utilize ORDER BY in array_agg since it cannot be
 	-- combined with FILTER.
 	(
@@ -181,15 +181,15 @@ select
 			and provisioner_tagset_contains(pd.tags, pj.tags)
 	) as available_workers,
 	-- Include template and workspace information.
-	COALESCE(tv.name, '') as template_version_name,
+	coalesce(tv.name, '') as template_version_name,
 	t.id as template_id,
-	COALESCE(t.name, '') as template_name,
-	COALESCE(t.display_name, '') as template_display_name,
-	COALESCE(t.icon, '') as template_icon,
+	coalesce(t.name, '') as template_name,
+	coalesce(t.display_name, '') as template_display_name,
+	coalesce(t.icon, '') as template_icon,
 	w.id as workspace_id,
-	COALESCE(w.name, '') as workspace_name,
+	coalesce(w.name, '') as workspace_name,
 	-- Include the name of the provisioner_daemon associated to the job
-	COALESCE(pd.name, '') as worker_name,
+	coalesce(pd.name, '') as worker_name,
 	wb.transition as workspace_build_transition
 from provisioner_jobs pj
 	left join queue_position qp on qp.id = pj.id
@@ -222,10 +222,10 @@ from provisioner_jobs pj
 where
 	pj.organization_id = @organization_id::uuid
 	and (
-		COALESCE(array_length(@ids::uuid[], 1), 0) = 0 or pj.id = any(@ids::uuid[])
+		coalesce(array_length(@ids::uuid[], 1), 0) = 0 or pj.id = any(@ids::uuid[])
 	)
 	and (
-		COALESCE(array_length(@status::provisioner_job_status[], 1), 0) = 0
+		coalesce(array_length(@status::provisioner_job_status[], 1), 0) = 0
 		or pj.job_status = any(@status::provisioner_job_status[])
 	)
 	and (

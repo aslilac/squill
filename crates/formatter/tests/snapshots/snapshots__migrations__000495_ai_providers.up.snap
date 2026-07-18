@@ -18,8 +18,8 @@ create table ai_providers (
 	base_url text not null,
 	settings text,
 	settings_key_id text references dbcrypt_keys (active_key_digest),
-	created_at timestamp with time zone not null default NOW(),
-	updated_at timestamp with time zone not null default NOW()
+	created_at timestamp with time zone not null default now(),
+	updated_at timestamp with time zone not null default now()
 );
 
 -- Provider names are unique among live rows only. Soft-deleted rows
@@ -47,8 +47,8 @@ create table ai_provider_keys (
 	provider_id uuid not null references ai_providers (id) on delete cascade,
 	api_key text not null,
 	api_key_key_id text references dbcrypt_keys (active_key_digest),
-	created_at timestamp with time zone not null default NOW(),
-	updated_at timestamp with time zone not null default NOW()
+	created_at timestamp with time zone not null default now(),
+	updated_at timestamp with time zone not null default now()
 );
 
 comment on table ai_provider_keys is 'API keys associated with AI providers. Bedrock providers have zero keys (they authenticate via settings). OpenAI and Anthropic providers have one or more keys for failover.';

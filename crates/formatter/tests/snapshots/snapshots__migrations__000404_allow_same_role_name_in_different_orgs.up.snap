@@ -32,6 +32,6 @@ alter table custom_roles
 create unique index idx_custom_roles_name_lower_organization_id
 	on custom_roles
 	using btree(
-		LOWER(name),
-		COALESCE(organization_id, '00000000-0000-0000-0000-000000000000'::uuid)
+		lower(name),
+		coalesce(organization_id, '00000000-0000-0000-0000-000000000000'::uuid)
 	);

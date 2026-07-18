@@ -7,7 +7,7 @@ select * from groups where id = $1 limit 1;
 
 -- name: ValidateGroupIDs :one
 with input as (select unnest(@group_ids::uuid[]) as id)
-select array_agg(input.id)::uuid[] as invalid_group_ids, COUNT(*) = 0 as ok
+select array_agg(input.id)::uuid[] as invalid_group_ids, count(*) = 0 as ok
 from
 -- Preserve rows where there is not a matching left (groups) row for each
 -- right (input) row...
@@ -71,7 +71,7 @@ where
 	end
 -- A limit of 0 means "no limit".
 limit
-	NULLIF(@limit_opt::int, 0);
+	nullif(@limit_opt::int, 0);
 
 -- name: InsertGroup :one
 insert into groups (
@@ -91,7 +91,7 @@ returning *;
 -- values for avatar, display name, and quota allowance (all zero values).
 insert into groups (id, name, organization_id, source)
 select gen_random_uuid(), group_name, @organization_id, @source
-from UNNEST(@group_names::text[]) as group_name
+from unnest(@group_names::text[]) as group_name
 -- If the name conflicts, do nothing.
 on conflict do nothing
 returning *;

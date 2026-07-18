@@ -93,12 +93,12 @@ select
 	c.plan_mode,
 	c.client_type,
 	c.last_turn_summary,
-	COALESCE(root.user_acl, c.user_acl) as user_acl,
-	COALESCE(root.group_acl, c.group_acl) as group_acl,
+	coalesce(root.user_acl, c.user_acl) as user_acl,
+	coalesce(root.group_acl, c.group_acl) as group_acl,
 	owner.username as owner_username,
 	owner.name as owner_name
 from chats c
-	left join chats root on root.id = COALESCE(c.root_chat_id, c.parent_chat_id)
+	left join chats root on root.id = coalesce(c.root_chat_id, c.parent_chat_id)
 	join visible_users owner on owner.id = c.owner_id;
 
 -- 11. The `interrupting` chat_status enum value is intentionally left

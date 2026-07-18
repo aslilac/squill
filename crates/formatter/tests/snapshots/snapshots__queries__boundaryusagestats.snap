@@ -23,8 +23,8 @@ values
 		@unique_users_delta,
 		@allowed_requests,
 		@denied_requests,
-		NOW(),
-		NOW()
+		now(),
+		now()
 	)
 on conflict
 	(replica_id) do update set
@@ -34,7 +34,7 @@ on conflict
 		+ EXCLUDED.allowed_requests,
 		denied_requests = boundary_usage_stats.denied_requests
 		+ EXCLUDED.denied_requests,
-		updated_at = NOW()
+		updated_at = now()
 returning (xmax = 0) as new_period;
 
 -- name: GetAndResetBoundaryUsageSummary :one
@@ -44,24 +44,24 @@ returning (xmax = 0) as new_period;
 -- rows we delete. Stale rows are excluded from the sum but still deleted.
 with deleted as (delete from boundary_usage_stats returning *)
 select
-	COALESCE(
-		SUM(unique_workspaces_count) filter (where window_start
-		>= NOW() - (@max_staleness_ms::bigint || ' ms')::interval),
+	coalesce(
+		sum(unique_workspaces_count) filter (where window_start
+		>= now() - (@max_staleness_ms::bigint || ' ms')::interval),
 		0
 	)::bigint as unique_workspaces,
-	COALESCE(
-		SUM(unique_users_count) filter (where window_start
-		>= NOW() - (@max_staleness_ms::bigint || ' ms')::interval),
+	coalesce(
+		sum(unique_users_count) filter (where window_start
+		>= now() - (@max_staleness_ms::bigint || ' ms')::interval),
 		0
 	)::bigint as unique_users,
-	COALESCE(
-		SUM(allowed_requests) filter (where window_start
-		>= NOW() - (@max_staleness_ms::bigint || ' ms')::interval),
+	coalesce(
+		sum(allowed_requests) filter (where window_start
+		>= now() - (@max_staleness_ms::bigint || ' ms')::interval),
 		0
 	)::bigint as allowed_requests,
-	COALESCE(
-		SUM(denied_requests) filter (where window_start
-		>= NOW() - (@max_staleness_ms::bigint || ' ms')::interval),
+	coalesce(
+		sum(denied_requests) filter (where window_start
+		>= now() - (@max_staleness_ms::bigint || ' ms')::interval),
 		0
 	)::bigint as denied_requests
 from deleted;

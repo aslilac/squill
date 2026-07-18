@@ -30,7 +30,7 @@ with
 					-- Sadly we can't define 'activity_bump_interval' above since
 					-- it won't be available for this CASE statement, so we have to
 					-- copy the cast twice.
-					when NOW()
+					when now()
 					+ (
 						templates.activity_bump / 1000 / 1000 / 1000 || ' seconds'
 					)::interval
@@ -40,11 +40,11 @@ with
 					-- or it was the autostart in the past, which is no longer
 					-- relevant. If autostart is > 0 and in the past, then
 					-- that is a mistake by the caller.
-					and @next_autostart > NOW()
+					and @next_autostart > now()
 						then
 						-- Extend to the autostart, then add the activity bump
 						(
-							(@next_autostart::timestamptz) - NOW()
+							(@next_autostart::timestamptz) - now()
 						)
 						+ case
 							when templates.allow_user_autostop
@@ -75,13 +75,13 @@ with
 		limit 1
 	) update workspace_builds wb
 set
-	updated_at = NOW(),
+	updated_at = now(),
 	deadline = case
 		when l.build_max_deadline = '0001-01-01 00:00:00+00'
 			-- Never reduce the deadline from activity.
-			then GREATEST(wb.deadline, NOW() + l.ttl_interval)
-		else LEAST(
-			GREATEST(wb.deadline, NOW() + l.ttl_interval),
+			then greatest(wb.deadline, now() + l.ttl_interval)
+		else least(
+			greatest(wb.deadline, now() + l.ttl_interval),
 			l.build_max_deadline
 		)
 	end
@@ -97,4 +97,4 @@ where
 	-- We only bump if workspace shutdown is manual.
 	and l.build_deadline != '0001-01-01 00:00:00+00'
 	-- We only bump when 5% of the deadline has elapsed.
-	and l.build_deadline - (l.ttl_interval * 0.95) < NOW();
+	and l.build_deadline - (l.ttl_interval * 0.95) < now();

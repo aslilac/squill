@@ -39,8 +39,8 @@ select
 	'[]'::jsonb,
 	'[]'::jsonb,
 	true,
-	NOW(),
-	NOW()
+	now(),
+	now()
 from organizations
 where
 	not exists (
@@ -79,8 +79,8 @@ as $$
 				'[]'::jsonb,
 				'[]'::jsonb,
 				true,
-				NOW(),
-				NOW()
+				now(),
+				now()
 			);
 		return NEW;
 	end;

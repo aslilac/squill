@@ -42,6 +42,11 @@ pub(crate) fn render_ident(text: &str, pos: IdentPos, options: &Options) -> Stri
             },
         },
         IdentQuoting::UnquotedWhenSafe => match form {
+            // A bare name in call position denotes its folded name in
+            // both dialects; write it folded so COALESCE / NOW / MAX
+            // normalize like keywords do. Other positions (columns,
+            // tables) keep the author's case.
+            Form::Bare if pos == IdentPos::TypeOrFunction => text.to_ascii_lowercase(),
             Form::Bare => text.to_string(),
             Form::DoubleQuoted | Form::Backtick | Form::Bracket => {
                 if can_strip(&inner, pos, options.dialect) {

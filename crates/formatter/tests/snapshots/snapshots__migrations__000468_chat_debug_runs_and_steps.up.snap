@@ -25,8 +25,8 @@ create table chat_debug_runs (
 	provider text,
 	model text,
 	summary jsonb not null default '{}'::jsonb,
-	started_at timestamptz not null default NOW(),
-	updated_at timestamptz not null default NOW(),
+	started_at timestamptz not null default now(),
+	updated_at timestamptz not null default now(),
 	finished_at timestamptz
 );
 
@@ -50,8 +50,8 @@ create table chat_debug_steps (
 	attempts jsonb not null default '[]'::jsonb,
 	error jsonb,
 	metadata jsonb not null default '{}'::jsonb,
-	started_at timestamptz not null default NOW(),
-	updated_at timestamptz not null default NOW(),
+	started_at timestamptz not null default now(),
+	updated_at timestamptz not null default now(),
 	finished_at timestamptz,
 	constraint fk_chat_debug_steps_run_chat foreign key (run_id, chat_id)
 		references chat_debug_runs (id, chat_id) on delete cascade

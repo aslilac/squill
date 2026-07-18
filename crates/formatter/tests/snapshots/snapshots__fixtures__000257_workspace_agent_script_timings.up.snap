@@ -13,8 +13,8 @@ insert into workspace_agent_script_timings (
 values
 	(
 		(select id from workspace_agent_scripts limit 1),
-		NOW() - interval '1 hour 55 minutes',
-		NOW() - interval '1 hour 50 minutes',
+		now() - interval '1 hour 55 minutes',
+		now() - interval '1 hour 50 minutes',
 		0,
 		'start',
 		'ok'

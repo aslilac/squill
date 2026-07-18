@@ -174,7 +174,7 @@ from workspace_agent_metadata
 where
 	workspace_agent_id = $1
 	and case
-		when COALESCE(array_length(sqlc.arg('keys')::text[], 1), 0) > 0
+		when coalesce(array_length(sqlc.arg('keys')::text[], 1), 0) > 0
 			then key = any(sqlc.arg('keys')::text[])
 		else true
 	end;
@@ -277,7 +277,7 @@ where
 	workspace_builds.workspace_id = @workspace_id::uuid
 	and workspace_builds.build_number
 	= (
-		select MAX(build_number)
+		select max(build_number)
 		from workspace_builds as wb
 		where wb.workspace_id = @workspace_id::uuid
 	)
@@ -291,7 +291,7 @@ from workspace_agents
 	= workspace_resources.id
 	join workspace_builds on workspace_resources.job_id = workspace_builds.job_id
 	join (
-		select workspace_id, MAX(build_number) as build_number
+		select workspace_id, max(build_number) as build_number
 		from workspace_builds
 		where workspace_id = any(@workspace_ids::uuid[])
 		group by workspace_id
@@ -382,7 +382,7 @@ where
 		-- Normal case: Agent's build is the latest build.
 		when workspace_build_with_user.build_number
 		= (
-			select MAX(build_number)
+			select max(build_number)
 			from workspace_builds
 			where workspace_id = workspace_build_with_user.workspace_id
 		)
@@ -407,7 +407,7 @@ where
 				and latest.build_number = workspace_build_with_user.build_number + 1
 				and latest.build_number
 				= (
-					select MAX(build_number)
+					select max(build_number)
 					from workspace_builds l2
 					where l2.workspace_id = latest.workspace_id
 				)
@@ -497,7 +497,7 @@ where
 	w.deleted = false
 	and wb.build_number
 	= (
-		select MAX(wb2.build_number)
+		select max(wb2.build_number)
 		from workspace_builds wb2
 		where wb2.workspace_id = w.id
 	)

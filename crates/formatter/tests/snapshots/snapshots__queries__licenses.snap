@@ -14,7 +14,7 @@ select * from licenses order by (id);
 select * from licenses where id = $1 limit 1;
 
 -- name: GetUnexpiredLicenses :many
-select * from licenses where exp > NOW() order by (id);
+select * from licenses where exp > now() order by (id);
 
 -- name: DeleteLicense :one
 delete from licenses where id = $1 returning id;

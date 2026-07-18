@@ -21,9 +21,9 @@ select
 	users.avatar_url as user_avatar_url,
 	users.deleted as user_deleted,
 	users.quiet_hours_schedule as user_quiet_hours_schedule,
-	COALESCE(organizations.name, '') as organization_name,
-	COALESCE(organizations.display_name, '') as organization_display_name,
-	COALESCE(organizations.icon, '') as organization_icon
+	coalesce(organizations.name, '') as organization_name,
+	coalesce(organizations.display_name, '') as organization_display_name,
+	coalesce(organizations.icon, '') as organization_icon
 from audit_logs
 	left join users on audit_logs.user_id = users.id
 	left join organizations on audit_logs.organization_id = organizations.id
@@ -107,7 +107,7 @@ where
 	-- Filter by build_reason
 	and case
 		when @build_reason::text != ''
-			then COALESCE(wb_build.reason::text, wb_workspace.reason::text)
+			then coalesce(wb_build.reason::text, wb_workspace.reason::text)
 			= @build_reason
 		else true
 	end
@@ -124,7 +124,7 @@ order by
 limit -- a limit of 0 means "no limit". The audit log table is unbounded
 	-- in size, and is expected to be quite large. Implement a default
 	-- limit of 100 to prevent accidental excessively large queries.
-	COALESCE(NULLIF(@limit_opt::int, 0), 100)
+	coalesce(nullif(@limit_opt::int, 0), 100)
 offset @offset_opt;
 
 -- name: InsertAuditLog :one
@@ -149,7 +149,7 @@ values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 returning *;
 
 -- name: CountAuditLogs :one
-select COUNT(*)
+select count(*)
 from (
 	select 1
 	from audit_logs
@@ -236,7 +236,7 @@ from (
 		-- Filter by build_reason
 		and case
 			when @build_reason::text != ''
-				then COALESCE(wb_build.reason::text, wb_workspace.reason::text)
+				then coalesce(wb_build.reason::text, wb_workspace.reason::text)
 				= @build_reason
 			else true
 		end
@@ -258,7 +258,7 @@ from (
 	-- This way the PG planner can plan parallel execution for
 	-- potential large wins.
 	limit
-		NULLIF(@count_cap::int, 0) + 1
+		nullif(@count_cap::int, 0) + 1
 ) as limited_count;
 
 -- name: DeleteOldAuditLogConnectionEvents :exec

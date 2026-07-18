@@ -15,7 +15,7 @@ with
 			id,
 			name,
 			template_version_id,
-			ROW_NUMBER() over (
+			row_number() over (
 				partition by name,
 				template_version_id
 				order by id

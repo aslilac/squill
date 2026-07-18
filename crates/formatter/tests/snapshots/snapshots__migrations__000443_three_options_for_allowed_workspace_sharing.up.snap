@@ -52,8 +52,8 @@ select
 	'[]'::jsonb,
 	'[]'::jsonb,
 	true,
-	NOW(),
-	NOW()
+	now(),
+	now()
 from organizations;
 
 -- Replace the single-role trigger with one that creates both system
@@ -87,8 +87,8 @@ as $$
 				'[]'::jsonb,
 				'[]'::jsonb,
 				true,
-				NOW(),
-				NOW()
+				now(),
+				now()
 			),
 			(
 				'organization-service-account',
@@ -99,8 +99,8 @@ as $$
 				'[]'::jsonb,
 				'[]'::jsonb,
 				true,
-				NOW(),
-				NOW()
+				now(),
+				now()
 			);
 		return NEW;
 	end;

@@ -130,7 +130,7 @@ fn dml_and_ddl_format() {
     // Short DML collapses; CREATE TABLE column lists always break.
     assert_eq!(
         out,
-        "update users set name = 'x', updated_at = NOW() where id = @id returning *;\n\
+        "update users set name = 'x', updated_at = now() where id = @id returning *;\n\
          insert into t (a, b) values (1, 2) on conflict (a) do nothing;\n\
          create table t (\n\tid uuid not null,\n\tprimary key (id)\n);\n"
     );

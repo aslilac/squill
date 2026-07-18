@@ -5,7 +5,7 @@ expression: formatted
 create table chat_file_links (
 	chat_id uuid not null,
 	file_id uuid not null,
-	UNIQUE(chat_id, file_id)
+	unique(chat_id, file_id)
 );
 
 create index idx_chat_file_links_chat_id on chat_file_links (chat_id);

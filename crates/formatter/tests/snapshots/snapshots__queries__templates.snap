@@ -21,13 +21,13 @@ where
 	end
 	-- Filter by exact name
 	and case
-		when @exact_name::text != '' then LOWER(t.name) = LOWER(@exact_name)
+		when @exact_name::text != '' then lower(t.name) = lower(@exact_name)
 		else true
 	end
 	-- Filter by exact display name
 	and case
 		when @exact_display_name::text != ''
-			then LOWER(t.display_name) = LOWER(@exact_display_name)
+			then lower(t.display_name) = lower(@exact_display_name)
 		else true
 	end
 	-- Filter by name, matching on substring
@@ -46,7 +46,7 @@ where
 				else
 				-- Remove spaces if present since 't.name' cannot have any spaces
 				lower(t.name)
-				ilike '%' || REPLACE(lower(@fuzzy_display_name), ' ', '') || '%'
+				ilike '%' || replace(lower(@fuzzy_display_name), ' ', '') || '%'
 			end
 		else true
 	end
@@ -106,7 +106,7 @@ from template_with_names as templates
 where
 	organization_id = @organization_id
 	and deleted = @deleted
-	and LOWER(name) = LOWER(@name)
+	and lower(name) = lower(@name)
 limit 1;
 
 -- name: GetTemplates :many
@@ -181,7 +181,7 @@ update templates set group_acl = $1, user_acl = $2 where id = $3;
 with
 	build_times as (
 		select
-			EXTRACT(
+			extract(
 				EPOCH from (pj.completed_at - pj.started_at)
 			)::float as exec_time_sec,
 			workspace_builds.transition
@@ -203,42 +203,42 @@ select
 	-- complexities.
 	coalesce(
 		(
-			PERCENTILE_DISC(0.5) within group (order by
+			percentile_disc(0.5) within group (order by
 				exec_time_sec) filter (where transition = 'start')
 		),
 		-1
 	)::float as start_50,
 	coalesce(
 		(
-			PERCENTILE_DISC(0.5) within group (order by
+			percentile_disc(0.5) within group (order by
 				exec_time_sec) filter (where transition = 'stop')
 		),
 		-1
 	)::float as stop_50,
 	coalesce(
 		(
-			PERCENTILE_DISC(0.5) within group (order by
+			percentile_disc(0.5) within group (order by
 				exec_time_sec) filter (where transition = 'delete')
 		),
 		-1
 	)::float as delete_50,
 	coalesce(
 		(
-			PERCENTILE_DISC(0.95) within group (order by
+			percentile_disc(0.95) within group (order by
 				exec_time_sec) filter (where transition = 'start')
 		),
 		-1
 	)::float as start_95,
 	coalesce(
 		(
-			PERCENTILE_DISC(0.95) within group (order by
+			percentile_disc(0.95) within group (order by
 				exec_time_sec) filter (where transition = 'stop')
 		),
 		-1
 	)::float as stop_95,
 	coalesce(
 		(
-			PERCENTILE_DISC(0.95) within group (order by
+			percentile_disc(0.95) within group (order by
 				exec_time_sec) filter (where transition = 'delete')
 		),
 		-1

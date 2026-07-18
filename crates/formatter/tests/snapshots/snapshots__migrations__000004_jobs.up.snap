@@ -156,7 +156,7 @@ create table parameter_schemas (
 	validation_type_system parameter_type_system not null,
 	validation_value_type varchar (64) not null,
 	primary key (id),
-	UNIQUE(job_id, name)
+	unique(job_id, name)
 );
 
 -- Parameters are provided to jobs for provisioning and to workspaces.
@@ -172,7 +172,7 @@ create table parameter_values (
 	destination_scheme parameter_destination_scheme not null,
 	primary key (id),
 	-- Prevents duplicates for parameters in the same scope.
-	UNIQUE(scope_id, name)
+	unique(scope_id, name)
 );
 
 create table workspace_builds (
@@ -191,6 +191,6 @@ create table workspace_builds (
 	-- Job ID of the action
 	job_id uuid not null unique references provisioner_jobs (id) on delete cascade,
 	primary key (id),
-	UNIQUE(workspace_id, name),
-	UNIQUE(workspace_id, build_number)
+	unique(workspace_id, name),
+	unique(workspace_id, build_number)
 );

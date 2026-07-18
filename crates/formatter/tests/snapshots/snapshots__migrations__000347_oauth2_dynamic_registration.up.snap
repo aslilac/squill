@@ -6,7 +6,7 @@ expression: formatted
 
 -- RFC 7591 Core Fields
 alter table oauth2_provider_apps
-	add column client_id_issued_at timestamptz default NOW(),
+	add column client_id_issued_at timestamptz default now(),
 	add column client_secret_expires_at timestamptz,
 	add column grant_types text[] default '{"authorization_code", "refresh_token"}',
 	add column response_types text[] default '{"code"}',
@@ -36,18 +36,18 @@ alter table oauth2_provider_apps
 -- Backfill existing records with proper defaults
 update oauth2_provider_apps
 set
-	client_id_issued_at = COALESCE(client_id_issued_at, created_at),
-	grant_types = COALESCE(
+	client_id_issued_at = coalesce(client_id_issued_at, created_at),
+	grant_types = coalesce(
 		grant_types,
 		'{"authorization_code", "refresh_token"}'
 	),
-	response_types = COALESCE(response_types, '{"code"}'),
-	token_endpoint_auth_method = COALESCE(
+	response_types = coalesce(response_types, '{"code"}'),
+	token_endpoint_auth_method = coalesce(
 		token_endpoint_auth_method,
 		'client_secret_basic'
 	),
-	scope = COALESCE(scope, ''),
-	contacts = COALESCE(contacts, '{}')
+	scope = coalesce(scope, ''),
+	contacts = coalesce(contacts, '{}')
 where
 	client_id_issued_at is null
 	or grant_types is null

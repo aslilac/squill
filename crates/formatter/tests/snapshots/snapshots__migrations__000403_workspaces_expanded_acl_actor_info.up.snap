@@ -39,16 +39,16 @@ select
 	templates.description as template_description,
 	tasks.id as task_id,
 	-- Workspace ACL actors' display info
-	COALESCE(
+	coalesce(
 		(
 			select
 				jsonb_object_agg(
 					acl.key,
 					jsonb_build_object(
 						'name',
-						COALESCE(g.name, ''),
+						coalesce(g.name, ''),
 						'avatar_url',
-						COALESCE(g.avatar_url, '')
+						coalesce(g.avatar_url, '')
 					)
 				)
 			from jsonb_each(workspaces.group_acl) as acl
@@ -56,16 +56,16 @@ select
 		),
 		'{}'::jsonb
 	) as group_acl_display_info,
-	COALESCE(
+	coalesce(
 		(
 			select
 				jsonb_object_agg(
 					acl.key,
 					jsonb_build_object(
 						'name',
-						COALESCE(vu.name, ''),
+						coalesce(vu.name, ''),
 						'avatar_url',
-						COALESCE(vu.avatar_url, '')
+						coalesce(vu.avatar_url, '')
 					)
 				)
 			from jsonb_each(workspaces.user_acl) as acl

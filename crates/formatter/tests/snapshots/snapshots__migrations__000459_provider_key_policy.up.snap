@@ -23,7 +23,7 @@ create table user_chat_provider_keys (
 		on delete cascade,
 	api_key text not null check (api_key != ''),
 	api_key_key_id text references dbcrypt_keys (active_key_digest),
-	created_at timestamptz not null default NOW(),
-	updated_at timestamptz not null default NOW(),
-	UNIQUE(user_id, chat_provider_id)
+	created_at timestamptz not null default now(),
+	updated_at timestamptz not null default now(),
+	unique(user_id, chat_provider_id)
 );

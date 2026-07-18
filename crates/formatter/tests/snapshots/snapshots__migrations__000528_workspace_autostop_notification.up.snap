@@ -12,12 +12,12 @@ drop view template_with_names;
 create view template_with_names as
 select
 	templates.*,
-	COALESCE(visible_users.avatar_url, ''::text) as created_by_avatar_url,
-	COALESCE(visible_users.username, ''::text) as created_by_username,
-	COALESCE(visible_users.name, ''::text) as created_by_name,
-	COALESCE(organizations.name, ''::text) as organization_name,
-	COALESCE(organizations.display_name, ''::text) as organization_display_name,
-	COALESCE(organizations.icon, ''::text) as organization_icon
+	coalesce(visible_users.avatar_url, ''::text) as created_by_avatar_url,
+	coalesce(visible_users.username, ''::text) as created_by_username,
+	coalesce(visible_users.name, ''::text) as created_by_name,
+	coalesce(organizations.name, ''::text) as organization_name,
+	coalesce(organizations.display_name, ''::text) as organization_display_name,
+	coalesce(organizations.icon, ''::text) as organization_icon
 from (
 	(
 		templates
@@ -54,9 +54,9 @@ select
 	workspace_builds.has_ai_task,
 	workspace_builds.has_external_agent,
 	workspace_builds.notified_autostop_deadline,
-	COALESCE(visible_users.avatar_url, ''::text) as initiator_by_avatar_url,
-	COALESCE(visible_users.username, ''::text) as initiator_by_username,
-	COALESCE(visible_users.name, ''::text) as initiator_by_name
+	coalesce(visible_users.avatar_url, ''::text) as initiator_by_avatar_url,
+	coalesce(visible_users.username, ''::text) as initiator_by_username,
+	coalesce(visible_users.name, ''::text) as initiator_by_name
 from workspace_builds
 	left join visible_users on workspace_builds.initiator_id = visible_users.id;
 

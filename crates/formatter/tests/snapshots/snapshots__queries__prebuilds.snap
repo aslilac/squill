@@ -118,7 +118,7 @@ with
 		-- For each of the above workspaces, check if all agents are ready.
 		select
 			latest_prebuilds.job_id,
-			BOOL_AND(
+			bool_and(
 				workspace_agents.lifecycle_state
 				= 'ready'::workspace_agent_lifecycle_state
 			)::boolean as ready
@@ -137,7 +137,7 @@ select
 	latest_prebuilds.template_id,
 	latest_prebuilds.template_version_id,
 	workspace_latest_presets.current_preset_id,
-	COALESCE(ready_agents.ready, false)::boolean as ready,
+	coalesce(ready_agents.ready, false)::boolean as ready,
 	latest_prebuilds.created_at
 from latest_prebuilds
 	left join ready_agents on ready_agents.job_id = latest_prebuilds.job_id
@@ -152,7 +152,7 @@ select
 	t.id as template_id,
 	wpb.template_version_id,
 	wpb.transition,
-	COUNT(wpb.transition)::int as count,
+	count(wpb.transition)::int as count,
 	wlb.template_version_preset_id as preset_id
 from workspace_latest_builds wlb
 	inner join workspace_prebuild_builds wpb on wpb.id = wlb.id
@@ -218,7 +218,7 @@ with
 			fb.preset_id,
 			fb.job_status,
 			fb.desired_instances,
-			ROW_NUMBER() over (
+			row_number() over (
 				partition by fb.preset_id
 				order by fb.created_at desc
 			) as rn
@@ -227,7 +227,7 @@ with
 	failed_count as (
 		-- Count failed builds per preset in the given period
 		select
-			preset_id, COUNT(*) as num_failed
+			preset_id, count(*) as num_failed
 		from filtered_builds
 		where
 			job_status = 'failed'::provisioner_job_status
@@ -237,8 +237,8 @@ with
 select
 	tsb.template_version_id,
 	tsb.preset_id,
-	COALESCE(fc.num_failed, 0)::int as num_failed,
-	MAX(tsb.created_at)::timestamptz as last_build_at
+	coalesce(fc.num_failed, 0)::int as num_failed,
+	max(tsb.created_at)::timestamptz as last_build_at
 from time_sorted_builds tsb
 	left join failed_count fc on fc.preset_id = tsb.preset_id
 where
@@ -285,7 +285,7 @@ with
 			fb.preset_id,
 			fb.job_status,
 			fb.desired_instances,
-			ROW_NUMBER() over (
+			row_number() over (
 				partition by fb.preset_id
 				order by fb.created_at desc
 			) as rn
@@ -299,17 +299,17 @@ where
 	tsb.rn <= @hard_limit::bigint
 	and tsb.job_status = 'failed'::provisioner_job_status
 group by tsb.template_version_id, tsb.preset_id
-having COUNT(*) = @hard_limit::bigint;
+having count(*) = @hard_limit::bigint;
 
 -- name: GetPrebuildMetrics :many
 select
 	t.name as template_name,
 	tvp.name as preset_name,
 	o.name as organization_name,
-	COUNT(*) as created_count,
-	COUNT(*) filter (where pj.job_status
+	count(*) as created_count,
+	count(*) filter (where pj.job_status
 	= 'failed'::provisioner_job_status) as failed_count,
-	COUNT(*) filter (where w.owner_id
+	count(*) filter (where w.owner_id
 	!= 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid -- The system user responsible for prebuilds.
 	) as claimed_count
 from workspaces w
@@ -337,8 +337,8 @@ with
 	preset_matches as (
 		select
 			tvp.id as template_version_preset_id,
-			COALESCE(COUNT(tvpp.name), 0) as total_preset_params,
-			COALESCE(COUNT(pp.name), 0) as matching_params
+			coalesce(count(tvpp.name), 0) as total_preset_params,
+			coalesce(count(pp.name), 0) as matching_params
 		from template_version_presets tvp
 			left join template_version_preset_parameters tvpp on tvpp.template_version_preset_id
 			= tvp.id
@@ -358,7 +358,7 @@ limit 1;
 
 -- name: CountPendingNonActivePrebuilds :many
 -- CountPendingNonActivePrebuilds returns the number of pending prebuilds for non-active template versions
-select wpb.template_version_preset_id as preset_id, COUNT(*)::int as count
+select wpb.template_version_preset_id as preset_id, count(*)::int as count
 from workspace_prebuild_builds wpb
 	inner join provisioner_jobs pj on pj.id = wpb.job_id
 	inner join workspaces w on w.id = wpb.workspace_id

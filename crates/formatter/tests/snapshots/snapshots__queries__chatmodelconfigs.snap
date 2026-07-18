@@ -78,21 +78,21 @@ set
 	compression_threshold = @compression_threshold::integer,
 	options = @options::jsonb,
 	ai_provider_id = sqlc.narg('ai_provider_id')::uuid,
-	updated_at = NOW()
+	updated_at = now()
 where id = @id::uuid and deleted = false
 returning *;
 
 -- name: UnsetDefaultChatModelConfigs :exec
 update chat_model_configs
-set is_default = false, updated_at = NOW()
+set is_default = false, updated_at = now()
 where is_default = true and deleted = false;
 
 -- name: DeleteChatModelConfigByID :exec
 update chat_model_configs
-set deleted = true, deleted_at = NOW(), updated_at = NOW()
+set deleted = true, deleted_at = now(), updated_at = now()
 where id = @id::uuid;
 
 -- name: DeleteChatModelConfigsByAIProviderID :exec
 update chat_model_configs
-set deleted = true, deleted_at = NOW(), updated_at = NOW()
+set deleted = true, deleted_at = now(), updated_at = now()
 where ai_provider_id = @ai_provider_id::uuid and deleted = false;

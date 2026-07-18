@@ -29,7 +29,7 @@ select
 	cp.id,
 	cp.provider::ai_provider_type,
 	'agents-' || cp.provider,
-	NULLIF(cp.display_name, ''),
+	nullif(cp.display_name, ''),
 	cp.enabled,
 	cp.base_url,
 	cp.created_at,
@@ -41,11 +41,11 @@ update ai_providers ap
 set
 	type = cp.provider::ai_provider_type,
 	name = 'agents-' || cp.provider,
-	display_name = NULLIF(cp.display_name, ''),
+	display_name = nullif(cp.display_name, ''),
 	enabled = cp.enabled,
 	deleted = false,
 	base_url = cp.base_url,
-	updated_at = GREATEST(cp.updated_at, ap.updated_at)
+	updated_at = greatest(cp.updated_at, ap.updated_at)
 from chat_providers cp
 where ap.id = cp.id and (cp.updated_at > ap.updated_at or ap.deleted);
 

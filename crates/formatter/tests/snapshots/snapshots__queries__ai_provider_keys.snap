@@ -76,6 +76,6 @@ update ai_provider_keys
 set
 	api_key = @api_key::text,
 	api_key_key_id = sqlc.narg('api_key_key_id')::text,
-	updated_at = NOW()
+	updated_at = now()
 where id = @id::uuid
 returning *;

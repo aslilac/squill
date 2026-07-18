@@ -46,7 +46,7 @@ order by build_number desc
 offset @offset_opt
 limit
 	-- A null limit means "no limit", so 0 means return all
-	NULLIF(@limit_opt::int, 0);
+	nullif(@limit_opt::int, 0);
 
 -- name: GetLatestWorkspaceBuildByWorkspaceID :one
 select *
@@ -123,7 +123,7 @@ where id = @id::uuid;
 -- name: GetActiveWorkspaceBuildsByTemplateID :many
 select wb.*
 from (
-	select workspace_id, MAX(build_number) as max_build_number
+	select workspace_id, max(build_number) as max_build_number
 	from workspace_build_with_user as workspace_builds
 	where workspace_id in (select id from workspaces where template_id = $1)
 	group by workspace_id
@@ -140,8 +140,8 @@ select
 	t.name as template_name,
 	t.display_name as template_display_name,
 	t.organization_id as template_organization_id,
-	COUNT(*) as total_builds,
-	COUNT(case when pj.job_status = 'failed' then 1 end) as failed_builds
+	count(*) as total_builds,
+	count(case when pj.job_status = 'failed' then 1 end) as failed_builds
 from workspace_build_with_user as wb
 	join workspaces as w on wb.workspace_id = w.id
 	join provisioner_jobs as pj on wb.job_id = pj.id
@@ -189,10 +189,10 @@ select
 	o.name as organization_name,
 	(w.owner_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0') as is_prebuild,
 	-- All agents must have ready_at set (terminal startup state)
-	COUNT(*) filter (where wa.ready_at is null)
+	count(*) filter (where wa.ready_at is null)
 	= 0 as all_agents_ready,
 	-- Latest ready_at across all agents (for duration calculation)
-	MAX(wa.ready_at)::timestamptz as last_agent_ready_at,
+	max(wa.ready_at)::timestamptz as last_agent_ready_at,
 	-- Worst status: error > timeout > ready
 	case
 		when bool_or(wa.lifecycle_state = 'start_error') then 'error'

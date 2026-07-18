@@ -77,12 +77,12 @@ set
 		when input.set_published_at then @now::timestamptz
 		else null
 	end,
-	failure_message = NULLIF(input.failure_message, '')
+	failure_message = nullif(input.failure_message, '')
 from (
 	select
-		UNNEST(@ids::text[]) as id,
-		UNNEST(@failure_messages::text[]) as failure_message,
-		UNNEST(@set_published_ats::boolean[]) as set_published_at
+		unnest(@ids::text[]) as id,
+		unnest(@failure_messages::text[]) as failure_message,
+		unnest(@set_published_ats::boolean[]) as set_published_at
 ) input
 where
 	input.id = usage_events.id
@@ -105,7 +105,7 @@ where
 select
 	-- The first cast is necessary since you can't sum strings, and the second
 	-- cast is necessary to make sqlc happy.
-	COALESCE(SUM((usage_data ->> 'count')::bigint), 0)::bigint as total_count
+	coalesce(sum((usage_data ->> 'count')::bigint), 0)::bigint as total_count
 from usage_events_daily
 where
 	event_type = 'dc_managed_agents_v1'

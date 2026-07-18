@@ -16,11 +16,11 @@ on conflict
 
 -- name: GetDefaultProxyConfig :one
 select
-	COALESCE(
+	coalesce(
 		(select value from site_configs where key = 'default_proxy_display_name'),
 		'Default'
 	)::text as display_name,
-	COALESCE(
+	coalesce(
 		(select value from site_configs where key = 'default_proxy_icon_url'),
 		'/emojis/1f3e1.png'
 	)::text as icon_url;
@@ -75,7 +75,7 @@ select value from site_configs where key = 'application_name';
 
 -- name: GetHealthSettings :one
 select
-	COALESCE(
+	coalesce(
 		(select value from site_configs where key = 'health_settings'),
 		'{}'
 	)::text as health_settings;
@@ -88,7 +88,7 @@ on conflict
 
 -- name: GetNotificationsSettings :one
 select
-	COALESCE(
+	coalesce(
 		(select value from site_configs where key = 'notifications_settings'),
 		'{}'
 	)::text as notifications_settings;
@@ -102,7 +102,7 @@ on conflict
 
 -- name: GetPrebuildsSettings :one
 select
-	COALESCE(
+	coalesce(
 		(select value from site_configs where key = 'prebuilds_settings'),
 		'{}'
 	)::text as prebuilds_settings;
@@ -154,18 +154,18 @@ on conflict
 
 -- name: GetWebpushVAPIDKeys :one
 select
-	COALESCE(
+	coalesce(
 		(select value from site_configs where key = 'webpush_vapid_public_key'),
 		''
 	)::text as vapid_public_key,
-	COALESCE(
+	coalesce(
 		(select value from site_configs where key = 'webpush_vapid_private_key'),
 		''
 	)::text as vapid_private_key;
 
 -- name: GetChatSystemPrompt :one
 select
-	COALESCE(
+	coalesce(
 		(select value from site_configs where key = 'agents_chat_system_prompt'),
 		''
 	)::text as chat_system_prompt;
@@ -177,11 +177,11 @@ select
 -- existed.
 -- name: GetChatSystemPromptConfig :one
 select
-	COALESCE(
+	coalesce(
 		(select value from site_configs where key = 'agents_chat_system_prompt'),
 		''
 	)::text as chat_system_prompt,
-	COALESCE(
+	coalesce(
 		(
 			select value = 'true'
 			from site_configs
@@ -203,7 +203,7 @@ on conflict
 
 -- name: GetChatPlanModeInstructions :one
 select
-	COALESCE(
+	coalesce(
 		(
 			select value
 			from site_configs
@@ -221,7 +221,7 @@ on conflict
 
 -- name: GetChatExploreModelOverride :one
 select
-	COALESCE(
+	coalesce(
 		(
 			select value
 			from site_configs
@@ -239,7 +239,7 @@ on conflict
 
 -- name: GetChatGeneralModelOverride :one
 select
-	COALESCE(
+	coalesce(
 		(
 			select value
 			from site_configs
@@ -257,7 +257,7 @@ on conflict
 
 -- name: GetChatTitleGenerationModelOverride :one
 select
-	COALESCE(
+	coalesce(
 		(
 			select value
 			from site_configs
@@ -275,7 +275,7 @@ on conflict
 
 -- name: GetChatCompactionModelOverride :one
 select
-	COALESCE(
+	coalesce(
 		(
 			select value
 			from site_configs
@@ -293,7 +293,7 @@ on conflict
 
 -- name: GetChatDesktopEnabled :one
 select
-	COALESCE(
+	coalesce(
 		(
 			select value = 'true'
 			from site_configs
@@ -322,7 +322,7 @@ on conflict
 -- values apply by default.
 -- name: GetChatAdvisorConfig :one
 select
-	COALESCE(
+	coalesce(
 		(select value from site_configs where key = 'agents_advisor_config'),
 		'{}'
 	)::text as advisor_config;
@@ -339,7 +339,7 @@ on conflict
 
 -- name: GetChatComputerUseProvider :one
 select
-	COALESCE(
+	coalesce(
 		(select value from site_configs where key = 'agents_computer_use_provider'),
 		''
 	)::text as provider;
@@ -356,7 +356,7 @@ on conflict
 -- not already force debug logging on globally.
 -- name: GetChatDebugLoggingAllowUsers :one
 select
-	COALESCE(
+	coalesce(
 		(
 			select value = 'true'
 			from site_configs
@@ -385,7 +385,7 @@ on conflict
 -- personal chat model overrides. It defaults to false when unset.
 -- name: GetChatPersonalModelOverridesEnabled :one
 select
-	COALESCE(
+	coalesce(
 		(
 			select value = 'true'
 			from site_configs
@@ -412,7 +412,7 @@ on conflict
 -- Returns an empty string when no allowlist has been configured (all templates allowed).
 -- name: GetChatTemplateAllowlist :one
 select
-	COALESCE(
+	coalesce(
 		(select value from site_configs where key = 'agents_template_allowlist'),
 		''
 	)::text as template_allowlist;
@@ -423,7 +423,7 @@ select
 -- otherwise the setting defaults to true.
 -- name: GetChatIncludeDefaultSystemPrompt :one
 select
-	COALESCE(
+	coalesce(
 		(
 			select value = 'true'
 			from site_configs
@@ -457,7 +457,7 @@ on conflict
 -- Returns the global TTL for chat workspaces as a Go duration string.
 -- Returns "0s" (disabled) when no value has been configured.
 select
-	COALESCE(
+	coalesce(
 		(select value from site_configs where key = 'agents_workspace_ttl'),
 		'0s'
 	)::text as workspace_ttl;
@@ -482,7 +482,7 @@ on conflict
 -- dbpurge. Returns 30 (days) when no value has been configured.
 -- A value of 0 disables chat purging entirely.
 select
-	COALESCE(
+	coalesce(
 		(
 			select value::integer
 			from site_configs
@@ -501,7 +501,7 @@ on conflict
 -- name: GetChatDebugRetentionDays :one
 -- Chat debug run retention window in days. 0 disables.
 select
-	COALESCE(
+	coalesce(
 		(
 			select value::integer
 			from site_configs
@@ -525,7 +525,7 @@ on conflict
 -- name: GetChatAutoArchiveDays :one
 -- Auto-archive window in days. 0 disables.
 select
-	COALESCE(
+	coalesce(
 		(
 			select value::integer
 			from site_configs

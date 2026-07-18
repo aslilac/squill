@@ -33,9 +33,9 @@ values
 		@status::text,
 		sqlc.narg('provider')::text,
 		sqlc.narg('model')::text,
-		COALESCE(sqlc.narg('summary')::jsonb, '{}'::jsonb),
-		COALESCE(sqlc.narg('started_at')::timestamptz, NOW()),
-		COALESCE(sqlc.narg('updated_at')::timestamptz, NOW()),
+		coalesce(sqlc.narg('summary')::jsonb, '{}'::jsonb),
+		coalesce(sqlc.narg('started_at')::timestamptz, now()),
+		coalesce(sqlc.narg('updated_at')::timestamptz, now()),
 		sqlc.narg('finished_at')::timestamptz
 	)
 returning *;
@@ -57,25 +57,25 @@ returning *;
 -- updated.
 update chat_debug_runs
 set
-	root_chat_id = COALESCE(sqlc.narg('root_chat_id')::uuid, root_chat_id),
-	parent_chat_id = COALESCE(sqlc.narg('parent_chat_id')::uuid, parent_chat_id),
-	model_config_id = COALESCE(
+	root_chat_id = coalesce(sqlc.narg('root_chat_id')::uuid, root_chat_id),
+	parent_chat_id = coalesce(sqlc.narg('parent_chat_id')::uuid, parent_chat_id),
+	model_config_id = coalesce(
 		sqlc.narg('model_config_id')::uuid,
 		model_config_id
 	),
-	trigger_message_id = COALESCE(
+	trigger_message_id = coalesce(
 		sqlc.narg('trigger_message_id')::bigint,
 		trigger_message_id
 	),
-	history_tip_message_id = COALESCE(
+	history_tip_message_id = coalesce(
 		sqlc.narg('history_tip_message_id')::bigint,
 		history_tip_message_id
 	),
-	status = COALESCE(sqlc.narg('status')::text, status),
-	provider = COALESCE(sqlc.narg('provider')::text, provider),
-	model = COALESCE(sqlc.narg('model')::text, model),
-	summary = COALESCE(sqlc.narg('summary')::jsonb, summary),
-	finished_at = COALESCE(finished_at, sqlc.narg('finished_at')::timestamptz),
+	status = coalesce(sqlc.narg('status')::text, status),
+	provider = coalesce(sqlc.narg('provider')::text, provider),
+	model = coalesce(sqlc.narg('model')::text, model),
+	summary = coalesce(sqlc.narg('summary')::jsonb, summary),
+	finished_at = coalesce(finished_at, sqlc.narg('finished_at')::timestamptz),
 	updated_at = @now::timestamptz
 where id = @id::uuid and chat_id = @chat_id::uuid
 returning *;
@@ -90,7 +90,7 @@ returning *;
 with
 	locked_run as (
 		update chat_debug_runs
-		set updated_at = COALESCE(sqlc.narg('updated_at')::timestamptz, NOW())
+		set updated_at = coalesce(sqlc.narg('updated_at')::timestamptz, now())
 		where
 			id = @run_id::uuid and chat_id = @chat_id::uuid and finished_at is null
 		returning chat_id
@@ -120,14 +120,14 @@ select
 	@status::text,
 	sqlc.narg('history_tip_message_id')::bigint,
 	sqlc.narg('assistant_message_id')::bigint,
-	COALESCE(sqlc.narg('normalized_request')::jsonb, '{}'::jsonb),
+	coalesce(sqlc.narg('normalized_request')::jsonb, '{}'::jsonb),
 	sqlc.narg('normalized_response')::jsonb,
 	sqlc.narg('usage')::jsonb,
-	COALESCE(sqlc.narg('attempts')::jsonb, '[]'::jsonb),
+	coalesce(sqlc.narg('attempts')::jsonb, '[]'::jsonb),
 	sqlc.narg('error')::jsonb,
-	COALESCE(sqlc.narg('metadata')::jsonb, '{}'::jsonb),
-	COALESCE(sqlc.narg('started_at')::timestamptz, NOW()),
-	COALESCE(sqlc.narg('updated_at')::timestamptz, NOW()),
+	coalesce(sqlc.narg('metadata')::jsonb, '{}'::jsonb),
+	coalesce(sqlc.narg('started_at')::timestamptz, now()),
+	coalesce(sqlc.narg('updated_at')::timestamptz, now()),
 	sqlc.narg('finished_at')::timestamptz
 from locked_run
 returning *;
@@ -141,28 +141,28 @@ returning *;
 -- the injectable quartz.Clock used by FinalizeStale sweeps.
 update chat_debug_steps
 set
-	status = COALESCE(sqlc.narg('status')::text, status),
-	history_tip_message_id = COALESCE(
+	status = coalesce(sqlc.narg('status')::text, status),
+	history_tip_message_id = coalesce(
 		sqlc.narg('history_tip_message_id')::bigint,
 		history_tip_message_id
 	),
-	assistant_message_id = COALESCE(
+	assistant_message_id = coalesce(
 		sqlc.narg('assistant_message_id')::bigint,
 		assistant_message_id
 	),
-	normalized_request = COALESCE(
+	normalized_request = coalesce(
 		sqlc.narg('normalized_request')::jsonb,
 		normalized_request
 	),
-	normalized_response = COALESCE(
+	normalized_response = coalesce(
 		sqlc.narg('normalized_response')::jsonb,
 		normalized_response
 	),
-	usage = COALESCE(sqlc.narg('usage')::jsonb, usage),
-	attempts = COALESCE(sqlc.narg('attempts')::jsonb, attempts),
-	error = COALESCE(sqlc.narg('error')::jsonb, error),
-	metadata = COALESCE(sqlc.narg('metadata')::jsonb, metadata),
-	finished_at = COALESCE(sqlc.narg('finished_at')::timestamptz, finished_at),
+	usage = coalesce(sqlc.narg('usage')::jsonb, usage),
+	attempts = coalesce(sqlc.narg('attempts')::jsonb, attempts),
+	error = coalesce(sqlc.narg('error')::jsonb, error),
+	metadata = coalesce(sqlc.narg('metadata')::jsonb, metadata),
+	finished_at = coalesce(sqlc.narg('finished_at')::timestamptz, finished_at),
 	updated_at = @now::timestamptz
 where id = @id::uuid and chat_id = @chat_id::uuid
 returning *;
@@ -327,5 +327,5 @@ with
 		returning 1
 	)
 select
-	(select COUNT(*) from finalized_runs)::bigint as runs_finalized,
-	(select COUNT(*) from finalized_steps)::bigint as steps_finalized;
+	(select count(*) from finalized_runs)::bigint as runs_finalized,
+	(select count(*) from finalized_steps)::bigint as steps_finalized;

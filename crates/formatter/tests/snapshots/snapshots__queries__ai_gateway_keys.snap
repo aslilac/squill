@@ -4,7 +4,7 @@ expression: formatted
 ---
 -- name: InsertAIGatewayKey :one
 insert into ai_gateway_keys (id, name, secret_prefix, hashed_secret, created_at)
-values ($1, @name, $2, $3, NOW())
+values ($1, @name, $2, $3, now())
 returning id, name, secret_prefix, created_at;
 
 -- name: ListAIGatewayKeys :many
@@ -27,4 +27,4 @@ select * from ai_gateway_keys where hashed_secret = $1;
 -- Records heartbeat liveness for an active Gateway DRPC session. The database sets the
 -- timestamp so it stays consistent regardless of clock drift between API
 -- replicas.
-update ai_gateway_keys set last_heartbeat_at = NOW() where id = $1;
+update ai_gateway_keys set last_heartbeat_at = now() where id = $1;

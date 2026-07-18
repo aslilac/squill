@@ -4,7 +4,7 @@ expression: formatted
 ---
 update notification_templates
 set
-	body_template = REPLACE(
+	body_template = replace(
 		body_template::text,
 		'{{if gt $version.failed_count 1}}',
 		'{{if gt $version.failed_count 1.0}}'

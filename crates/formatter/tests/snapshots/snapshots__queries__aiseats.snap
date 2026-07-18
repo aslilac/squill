@@ -26,7 +26,7 @@ returning
 	)::boolean as is_new;
 
 -- name: GetActiveAISeatCount :one
-select COUNT(*)
+select count(*)
 from ai_seat_state ais join users u on ais.user_id = u.id
 where
 	u.status = 'active'::user_status

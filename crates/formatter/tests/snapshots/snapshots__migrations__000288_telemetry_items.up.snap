@@ -5,6 +5,6 @@ expression: formatted
 create table telemetry_items (
 	key text not null primary key,
 	value text not null,
-	created_at timestamp with time zone not null default NOW(),
-	updated_at timestamp with time zone not null default NOW()
+	created_at timestamp with time zone not null default now(),
+	updated_at timestamp with time zone not null default now()
 );

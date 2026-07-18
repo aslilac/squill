@@ -82,8 +82,8 @@ select
 	c.retry_state_version,
 	c.runner_id,
 	c.requires_action_deadline_at,
-	COALESCE(root.user_acl, c.user_acl) as user_acl,
-	COALESCE(root.group_acl, c.group_acl) as group_acl,
+	coalesce(root.user_acl, c.user_acl) as user_acl,
+	coalesce(root.group_acl, c.group_acl) as group_acl,
 	owner.username as owner_username,
 	owner.name as owner_name,
 	c.context_aggregate_hash,
@@ -94,7 +94,7 @@ from (
 	(
 		chats c
 			left join chats root on (
-				(root.id = COALESCE(c.root_chat_id, c.parent_chat_id))
+				(root.id = coalesce(c.root_chat_id, c.parent_chat_id))
 			)
 	)
 		join visible_users owner on ((owner.id = c.owner_id))

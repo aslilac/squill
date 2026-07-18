@@ -28,7 +28,7 @@ where
 		or created_at < @created_at_opt::timestamptz
 	)
 order by created_at desc
-limit (COALESCE(NULLIF(@limit_opt::int, 0), 25));
+limit (coalesce(nullif(@limit_opt::int, 0), 25));
 
 -- name: GetFilteredInboxNotificationsByUserID :many
 -- Fetches inbox notifications for a user filtered by templates and targets
@@ -60,13 +60,13 @@ where
 		or created_at < @created_at_opt::timestamptz
 	)
 order by created_at desc
-limit (COALESCE(NULLIF(@limit_opt::int, 0), 25));
+limit (coalesce(nullif(@limit_opt::int, 0), 25));
 
 -- name: GetInboxNotificationByID :one
 select * from inbox_notifications where id = $1;
 
 -- name: CountUnreadInboxNotificationsByUserID :one
-select COUNT(*) from inbox_notifications where user_id = $1 and read_at is null;
+select count(*) from inbox_notifications where user_id = $1 and read_at is null;
 
 -- name: InsertInboxNotification :one
 insert into inbox_notifications (

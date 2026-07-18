@@ -29,7 +29,7 @@ on conflict
 		output_price = EXCLUDED.output_price,
 		cache_read_price = EXCLUDED.cache_read_price,
 		cache_write_price = EXCLUDED.cache_write_price,
-		updated_at = NOW();
+		updated_at = now();
 
 -- name: GetAIModelPriceByProviderModel :one
 select * from ai_model_prices where provider = @provider and model = @model;
@@ -42,7 +42,7 @@ insert into group_ai_budgets (group_id, spend_limit_micros)
 values (@group_id, @spend_limit_micros)
 on conflict
 	(group_id) do update set
-		spend_limit_micros = EXCLUDED.spend_limit_micros, updated_at = NOW()
+		spend_limit_micros = EXCLUDED.spend_limit_micros, updated_at = now()
 returning *;
 
 -- name: DeleteGroupAIBudget :one
@@ -58,7 +58,7 @@ on conflict
 	(user_id) do update set
 		group_id = EXCLUDED.group_id,
 		spend_limit_micros = EXCLUDED.spend_limit_micros,
-		updated_at = NOW()
+		updated_at = now()
 returning *;
 
 -- name: DeleteUserAIBudgetOverride :one
@@ -109,7 +109,7 @@ select
 	@user_id::uuid as user_id,
 	@effective_group_id::uuid as effective_group_id,
 	((@period_start::timestamptz) at time zone 'UTC')::date as period_start,
-	COALESCE(SUM(spend_micros), 0)::bigint as spend_micros
+	coalesce(sum(spend_micros), 0)::bigint as spend_micros
 from ai_user_daily_spend
 where
 	user_id = @user_id

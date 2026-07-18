@@ -45,7 +45,7 @@ from workspace_build_orchestrations wbo
 	join provisioner_jobs pj on wb.job_id = pj.id
 where
 	wbo.status = 'pending'
-	and (wbo.next_retry_after is null or wbo.next_retry_after <= NOW())
+	and (wbo.next_retry_after is null or wbo.next_retry_after <= now())
 	-- Include all terminal parent states so pending orchestration
 	-- rows are processed and resolved even when no child build should
 	-- be created.

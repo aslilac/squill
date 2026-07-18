@@ -157,7 +157,7 @@ alter type api_key_scope add value if not exists 'workspace_proxy:update';
 -- Purge old API keys to speed up the migration for large deployments.
 -- Note: that problem should be solved in coderd once PR 20863 is released:
 -- https://github.com/coder/coder/blob/main/coderd/database/dbpurge/dbpurge.go#L85
-delete from api_keys where expires_at < NOW() - interval '7 days';
+delete from api_keys where expires_at < now() - interval '7 days';
 
 -- Add new columns without defaults; backfill; then enforce NOT NULL
 alter table api_keys add column scopes api_key_scope[];

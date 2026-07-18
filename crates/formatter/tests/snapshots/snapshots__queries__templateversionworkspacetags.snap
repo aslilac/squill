@@ -11,4 +11,4 @@ returning *;
 select *
 from template_version_workspace_tags
 where template_version_id = $1
-order by LOWER(key) asc;
+order by lower(key) asc;

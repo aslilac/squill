@@ -56,7 +56,7 @@ from tasks
 	) latest_build on true
 	cross join LATERAL (
 		select
-			COUNT(*) = 0 as none,
+			count(*) = 0 as none,
 			bool_or(
 				workspace_agent.lifecycle_state in ('created', 'starting')
 			) as connecting,
