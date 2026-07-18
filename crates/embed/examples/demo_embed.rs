@@ -3,7 +3,9 @@ fn main() {
 async fn list_workspaces(pool: &PgPool, org: Uuid) -> sqlx::Result<Vec<Workspace>> {
     sqlx::query_as!(
         Workspace,
-        r#"SELECT w.id, w.name, u.username AS owner FROM workspaces w JOIN users u ON u.id = w.owner_id WHERE w.organization_id = $1 AND NOT w.deleted ORDER BY w.name"#,
+        r#"SELECT w.id, w.name, u.username AS owner FROM workspaces w
+        JOIN users u ON u.id = w.owner_id
+        WHERE w.organization_id = $1 AND NOT w.deleted ORDER BY w.name"#,
         org
     )
     .fetch_all(pool)
