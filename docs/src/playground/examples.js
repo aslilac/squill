@@ -74,7 +74,7 @@ pub async fn delete_rule(pool: &PgPool, team: Uuid, id: Uuid) -> sqlx::Result<()
 	{
 		label: "Gleam · sqlight",
 		host: "gleam",
-		monacoLang: "plaintext",
+		monacoLang: "gleam",
 		shikiLang: "gleam",
 		source: `pub fn list_users(db: sqlight.Connection, org: Int) {
   sqlight.query("select id,name from users where org = ? order by name", on: db, with: [sqlight.int(org)])

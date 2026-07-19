@@ -1,4 +1,6 @@
 ---
+import settingsIcon from "lucide-static/icons/settings.svg?raw";
+
 const baseHref = import.meta.env.BASE_URL;
 ---
 
@@ -93,8 +95,16 @@ const baseHref = import.meta.env.BASE_URL;
 			import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 			import { createHighlighter } from "shiki";
 			import { examples } from "../playground/examples.js";
+			import {
+				gleamConfiguration,
+				gleamLanguage,
+			} from "../playground/gleam-monarch.js";
 
 			self.MonacoEnvironment = { getWorker: () => new EditorWorker() };
+
+			monaco.languages.register({ id: "gleam" });
+			monaco.languages.setMonarchTokensProvider("gleam", gleamLanguage);
+			monaco.languages.setLanguageConfiguration("gleam", gleamConfiguration);
 
 			// ---- brand colors, shared by the editor and the output ----
 			const colors = {
@@ -119,6 +129,7 @@ const baseHref = import.meta.env.BASE_URL;
 					{ token: "number", foreground: colors.number.slice(1) },
 					{ token: "comment", foreground: colors.comment.slice(1) },
 					{ token: "predefined", foreground: colors.func.slice(1) },
+					{ token: "type.identifier", foreground: colors.func.slice(1) },
 				],
 				colors: {
 					"editor.background": colors.bg,
@@ -365,8 +376,11 @@ const baseHref = import.meta.env.BASE_URL;
 			}
 			.button { cursor: pointer; }
 			.button:hover { border-color: var(--violet-solid); }
+			.button.icon { display: flex; align-items: center; padding: 0.3rem 0.45rem; }
+			.button.icon svg { width: 15px; height: 15px; stroke: currentColor; }
 
 			.settings-wrap { position: relative; }
+			.popover[hidden] { display: none; }
 			.popover {
 				position: absolute;
 				right: 0;
