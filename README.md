@@ -19,6 +19,12 @@ at 80 columns.
 ## Quickstart
 
 ```console
+cargo install --git https://tree.ht/birds/squill.git cli
+```
+
+Or from a checkout:
+
+```console
 cargo run -p cli --bin squill -- fmt path/to/queries/   # format in place
 cargo run -p cli --bin squill -- fmt --check .          # CI mode: diff + exit 1
 squill fmt --help                                       # the full flag surface
@@ -76,3 +82,7 @@ parsed and formatted):
 
 `cargo run -p cli --bin corpus-report -- --summary` prints the current
 coverage numbers.
+
+## License
+
+[MPL-2.0](LICENSE).
