@@ -473,3 +473,31 @@ fn custom_embed_query_file() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn check_large_diff_prints_replacement_hunk() {
+    // Past the fine-diff limit, --check prints a deterministic
+    // whole-file replacement instead of running Myers.
+    let dir = temp_dir("bigdiff");
+    let file = dir.join("big.sql");
+    let mut source = String::new();
+    for i in 0..1500 {
+        source.push_str(&format!("SELECT   {i};\n"));
+    }
+    std::fs::write(&file, &source).expect("write");
+    let output = squill()
+        .args(["fmt", "--check"])
+        .arg(&file)
+        .output()
+        .expect("run squill");
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("@@ -1,1500 +1,1500 @@"),
+        "replacement hunk header missing: {}",
+        &stdout[..stdout.len().min(200)]
+    );
+    assert!(stdout.contains("-SELECT   7;"), "old lines missing");
+    assert!(stdout.contains("+select 7;"), "new lines missing");
+    let _ = std::fs::remove_dir_all(&dir);
+}

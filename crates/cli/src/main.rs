@@ -258,18 +258,47 @@ fn collect_files(path: &Path, embed: bool, out: &mut Vec<PathBuf>) -> std::io::R
     Ok(())
 }
 
+/// Above this many (estimated) changed lines, a fine-grained diff is
+/// neither readable nor cheap — Myers is O(lines × edits) and goes
+/// quadratic on a first format of a large file.
+const FINE_DIFF_EDIT_LIMIT: usize = 1000;
+
 fn print_diff(path: &str, before: &str, after: &str) {
     println!("--- {path}");
     println!("+++ {path} (formatted)");
-    // Myers goes quadratic when nearly every line changed (a first
-    // format of a large file); degrade to a coarser diff instead of
-    // stalling.
-    let diff = similar::TextDiff::configure()
-        .timeout(std::time::Duration::from_millis(200))
-        .diff_lines(before, after);
+    // The guard must be deterministic (a wall-clock deadline would make
+    // --check output machine-dependent): estimate the edit volume from
+    // line multisets in O(lines), and print a whole-file replacement
+    // hunk when a fine diff is not worth computing.
+    if estimated_edits(before, after) > FINE_DIFF_EDIT_LIMIT {
+        let before_lines: Vec<&str> = before.lines().collect();
+        let after_lines: Vec<&str> = after.lines().collect();
+        println!("@@ -1,{} +1,{} @@", before_lines.len(), after_lines.len());
+        for line in before_lines {
+            println!("-{line}");
+        }
+        for line in after_lines {
+            println!("+{line}");
+        }
+        return;
+    }
+    let diff = similar::TextDiff::from_lines(before, after);
     for hunk in diff.unified_diff().context_radius(2).iter_hunks() {
         print!("{hunk}");
     }
+}
+
+/// Lower bound on the diff's edit count: lines whose occurrence counts
+/// differ between the two texts (order-insensitive, so cheap).
+fn estimated_edits(before: &str, after: &str) -> usize {
+    let mut counts: std::collections::HashMap<&str, isize> = std::collections::HashMap::new();
+    for line in before.lines() {
+        *counts.entry(line).or_default() += 1;
+    }
+    for line in after.lines() {
+        *counts.entry(line).or_default() -= 1;
+    }
+    counts.values().map(|count| count.unsigned_abs()).sum()
 }
 
 fn main() -> ExitCode {
