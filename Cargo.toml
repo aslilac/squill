@@ -7,6 +7,11 @@ exclude = ["crates/parser/fuzz", "crates/embed/tests/fixtures/sqlx_app"]
 version = "0.1.0"
 edition = "2024"
 
+[workspace.lints.rust]
+# No hand-written unsafe anywhere; the one exemption is the generated
+# SyntaxKind enum, whose cstree derive expands to an unsafe impl.
+unsafe_code = "deny"
+
 [workspace.dependencies]
 parser = { path = "crates/parser" }
 formatter = { path = "crates/formatter" }

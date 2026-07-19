@@ -3,6 +3,8 @@ name = "parser"
 version.workspace = true
 edition.workspace = true
 
+[lints]
+workspace = true
 [dependencies]
 cstree.workspace = true
 

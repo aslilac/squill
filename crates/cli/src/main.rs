@@ -261,7 +261,12 @@ fn collect_files(path: &Path, embed: bool, out: &mut Vec<PathBuf>) -> std::io::R
 fn print_diff(path: &str, before: &str, after: &str) {
     println!("--- {path}");
     println!("+++ {path} (formatted)");
-    let diff = similar::TextDiff::from_lines(before, after);
+    // Myers goes quadratic when nearly every line changed (a first
+    // format of a large file); degrade to a coarser diff instead of
+    // stalling.
+    let diff = similar::TextDiff::configure()
+        .timeout(std::time::Duration::from_millis(200))
+        .diff_lines(before, after);
     for hunk in diff.unified_diff().context_radius(2).iter_hunks() {
         print!("{hunk}");
     }

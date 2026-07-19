@@ -135,3 +135,13 @@ fn dml_and_ddl_format() {
          create table t (\n\tid uuid not null,\n\tprimary key (id)\n);\n"
     );
 }
+
+#[test]
+fn crlf_input_normalizes_to_lf() {
+    // Windows line endings are trivia; output is always LF (and a second
+    // pass over the LF output is a no-op).
+    let out = format("SELECT   1;\r\nSELECT 2\r\nFROM t;\r\n");
+    assert_eq!(out, "select 1;\nselect 2 from t;\n");
+    assert!(!out.contains('\r'));
+    assert_eq!(format(&out), out);
+}

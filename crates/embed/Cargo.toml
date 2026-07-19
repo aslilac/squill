@@ -3,6 +3,8 @@ name = "embed"
 version.workspace = true
 edition.workspace = true
 
+[lints]
+workspace = true
 [dependencies]
 formatter = { version = "0.1.0", path = "../formatter" }
 parser = { version = "0.1.0", path = "../parser" }
