@@ -5,126 +5,118 @@
 use std::fmt::Write as _;
 
 enum AccessorKind {
-    One,
-    Many,
-    Token,
+	One,
+	Many,
+	Token,
 }
 
 struct Accessor {
-    kind: AccessorKind,
-    name: String,
-    target: String,
+	kind: AccessorKind,
+	name: String,
+	target: String,
 }
 
 struct Node {
-    name: String,
-    accessors: Vec<Accessor>,
+	name: String,
+	accessors: Vec<Accessor>,
 }
 
 fn main() {
-    println!("cargo:rerun-if-changed=syntax.def");
-    let def = std::fs::read_to_string("syntax.def").expect("read syntax.def");
+	println!("cargo:rerun-if-changed=syntax.def");
+	let def = std::fs::read_to_string("syntax.def").expect("read syntax.def");
 
-    let mut tokens: Vec<(String, bool)> = Vec::new();
-    let mut nodes: Vec<Node> = Vec::new();
+	let mut tokens: Vec<(String, bool)> = Vec::new();
+	let mut nodes: Vec<Node> = Vec::new();
 
-    for (index, raw) in def.lines().enumerate() {
-        let lineno = index + 1;
-        let bail = |msg: &str| -> ! { panic!("syntax.def:{lineno}: {msg}") };
-        let trimmed = raw.trim();
-        if trimmed.is_empty() || trimmed.starts_with('#') {
-            continue;
-        }
-        let indented = raw.starts_with([' ', '\t']);
-        let mut words = trimmed.split_whitespace();
-        let head = words.next().expect("non-empty");
-        if indented {
-            let kind = match head {
-                "one" => AccessorKind::One,
-                "many" => AccessorKind::Many,
-                "token" => AccessorKind::Token,
-                _ => bail("expected `one`, `many`, or `token`"),
-            };
-            let name = words
-                .next()
-                .unwrap_or_else(|| bail("missing accessor name"));
-            let target = words
-                .next()
-                .unwrap_or_else(|| bail("missing accessor target kind"));
-            let node = nodes
-                .last_mut()
-                .unwrap_or_else(|| bail("accessor line before any `node`"));
-            node.accessors.push(Accessor {
-                kind,
-                name: name.to_string(),
-                target: target.to_string(),
-            });
-        } else {
-            match head {
-                "token" => {
-                    let name = words.next().unwrap_or_else(|| bail("missing token name"));
-                    let trivia = match words.next() {
-                        None => false,
-                        Some("trivia") => true,
-                        Some(_) => bail("expected `trivia` or end of line"),
-                    };
-                    tokens.push((name.to_string(), trivia));
-                }
-                "node" => {
-                    let name = words.next().unwrap_or_else(|| bail("missing node name"));
-                    nodes.push(Node {
-                        name: name.to_string(),
-                        accessors: Vec::new(),
-                    });
-                }
-                _ => bail("expected `token` or `node`"),
-            }
-        }
-        if words.next().is_some() {
-            bail("trailing words");
-        }
-    }
+	for (index, raw) in def.lines().enumerate() {
+		let lineno = index + 1;
+		let bail = |msg: &str| -> ! { panic!("syntax.def:{lineno}: {msg}") };
+		let trimmed = raw.trim();
+		if trimmed.is_empty() || trimmed.starts_with('#') {
+			continue;
+		}
+		let indented = raw.starts_with([' ', '\t']);
+		let mut words = trimmed.split_whitespace();
+		let head = words.next().expect("non-empty");
+		if indented {
+			let kind = match head {
+				"one" => AccessorKind::One,
+				"many" => AccessorKind::Many,
+				"token" => AccessorKind::Token,
+				_ => bail("expected `one`, `many`, or `token`"),
+			};
+			let name = words.next().unwrap_or_else(|| bail("missing accessor name"));
+			let target =
+				words.next().unwrap_or_else(|| bail("missing accessor target kind"));
+			let node = nodes
+				.last_mut()
+				.unwrap_or_else(|| bail("accessor line before any `node`"));
+			node.accessors.push(Accessor {
+				kind,
+				name: name.to_string(),
+				target: target.to_string(),
+			});
+		} else {
+			match head {
+				"token" => {
+					let name = words.next().unwrap_or_else(|| bail("missing token name"));
+					let trivia = match words.next() {
+						None => false,
+						Some("trivia") => true,
+						Some(_) => bail("expected `trivia` or end of line"),
+					};
+					tokens.push((name.to_string(), trivia));
+				}
+				"node" => {
+					let name = words.next().unwrap_or_else(|| bail("missing node name"));
+					nodes.push(Node { name: name.to_string(), accessors: Vec::new() });
+				}
+				_ => bail("expected `token` or `node`"),
+			}
+		}
+		if words.next().is_some() {
+			bail("trailing words");
+		}
+	}
 
-    // Validate: unique kind names, accessor targets of the right category.
-    let mut seen = std::collections::HashSet::new();
-    for name in tokens
-        .iter()
-        .map(|(n, _)| n)
-        .chain(nodes.iter().map(|n| &n.name))
-    {
-        assert!(seen.insert(name.clone()), "duplicate kind name {name:?}");
-    }
-    for node in &nodes {
-        for accessor in &node.accessors {
-            let target_is_node = nodes.iter().any(|n| n.name == accessor.target);
-            let target_is_token = tokens.iter().any(|(n, _)| *n == accessor.target);
-            match accessor.kind {
-                AccessorKind::One | AccessorKind::Many => assert!(
-                    target_is_node,
-                    "{}.{}: target {:?} is not a node kind",
-                    node.name, accessor.name, accessor.target
-                ),
-                AccessorKind::Token => assert!(
-                    target_is_token,
-                    "{}.{}: target {:?} is not a token kind",
-                    node.name, accessor.name, accessor.target
-                ),
-            }
-        }
-    }
+	// Validate: unique kind names, accessor targets of the right category.
+	let mut seen = std::collections::HashSet::new();
+	for name in tokens.iter().map(|(n, _)| n).chain(nodes.iter().map(|n| &n.name))
+	{
+		assert!(seen.insert(name.clone()), "duplicate kind name {name:?}");
+	}
+	for node in &nodes {
+		for accessor in &node.accessors {
+			let target_is_node = nodes.iter().any(|n| n.name == accessor.target);
+			let target_is_token = tokens.iter().any(|(n, _)| *n == accessor.target);
+			match accessor.kind {
+				AccessorKind::One | AccessorKind::Many => assert!(
+					target_is_node,
+					"{}.{}: target {:?} is not a node kind",
+					node.name, accessor.name, accessor.target
+				),
+				AccessorKind::Token => assert!(
+					target_is_token,
+					"{}.{}: target {:?} is not a token kind",
+					node.name, accessor.name, accessor.target
+				),
+			}
+		}
+	}
 
-    let out_dir = std::env::var("OUT_DIR").expect("OUT_DIR");
-    std::fs::write(
-        format!("{out_dir}/syntax_kinds.rs"),
-        generate_kinds(&tokens, &nodes),
-    )
-    .expect("write syntax_kinds.rs");
-    std::fs::write(format!("{out_dir}/ast.rs"), generate_ast(&nodes)).expect("write ast.rs");
+	let out_dir = std::env::var("OUT_DIR").expect("OUT_DIR");
+	std::fs::write(
+		format!("{out_dir}/syntax_kinds.rs"),
+		generate_kinds(&tokens, &nodes),
+	)
+	.expect("write syntax_kinds.rs");
+	std::fs::write(format!("{out_dir}/ast.rs"), generate_ast(&nodes))
+		.expect("write ast.rs");
 }
 
 fn generate_kinds(tokens: &[(String, bool)], nodes: &[Node]) -> String {
-    let mut out = String::new();
-    out.push_str(
+	let mut out = String::new();
+	out.push_str(
         "/// Every kind of token and node that can appear in the CST.\n\
          ///\n\
          /// Generated by build.rs from `syntax.def` — edit that file, not this enum.\n\
@@ -133,28 +125,28 @@ fn generate_kinds(tokens: &[(String, bool)], nodes: &[Node]) -> String {
          #[non_exhaustive]\n\
          pub enum SyntaxKind {\n",
     );
-    for (name, _) in tokens {
-        writeln!(out, "    {name},").unwrap();
-    }
-    for node in nodes {
-        writeln!(out, "    {},", node.name).unwrap();
-    }
-    out.push_str("}\n\nimpl SyntaxKind {\n    /// Trivia tokens: whitespace and comments.\n    pub fn is_trivia(self) -> bool {\n        matches!(\n            self,\n");
-    let trivia: Vec<_> = tokens
-        .iter()
-        .filter(|(_, trivia)| *trivia)
-        .map(|(name, _)| format!("SyntaxKind::{name}"))
-        .collect();
-    writeln!(out, "            {}", trivia.join(" | ")).unwrap();
-    out.push_str("        )\n    }\n}\n");
-    out
+	for (name, _) in tokens {
+		writeln!(out, "    {name},").unwrap();
+	}
+	for node in nodes {
+		writeln!(out, "    {},", node.name).unwrap();
+	}
+	out.push_str("}\n\nimpl SyntaxKind {\n    /// Trivia tokens: whitespace and comments.\n    pub fn is_trivia(self) -> bool {\n        matches!(\n            self,\n");
+	let trivia: Vec<_> = tokens
+		.iter()
+		.filter(|(_, trivia)| *trivia)
+		.map(|(name, _)| format!("SyntaxKind::{name}"))
+		.collect();
+	writeln!(out, "            {}", trivia.join(" | ")).unwrap();
+	out.push_str("        )\n    }\n}\n");
+	out
 }
 
 fn generate_ast(nodes: &[Node]) -> String {
-    let mut out = String::new();
-    for node in nodes {
-        let name = &node.name;
-        write!(
+	let mut out = String::new();
+	for node in nodes {
+		let name = &node.name;
+		write!(
             out,
             "/// Typed wrapper for a `SyntaxKind::{name}` node.\n\
              #[derive(Debug, Clone, Copy)]\n\
@@ -167,14 +159,14 @@ fn generate_ast(nodes: &[Node]) -> String {
              }}\n\n"
         )
         .unwrap();
-        if node.accessors.is_empty() {
-            continue;
-        }
-        writeln!(out, "impl<'a> {name}<'a> {{").unwrap();
-        for accessor in &node.accessors {
-            let acc_name = &accessor.name;
-            let target = &accessor.target;
-            match accessor.kind {
+		if node.accessors.is_empty() {
+			continue;
+		}
+		writeln!(out, "impl<'a> {name}<'a> {{").unwrap();
+		for accessor in &node.accessors {
+			let acc_name = &accessor.name;
+			let target = &accessor.target;
+			match accessor.kind {
                 AccessorKind::One => write!(
                     out,
                     "    pub fn {acc_name}(&self) -> Option<{target}<'a>> {{\n\
@@ -203,8 +195,8 @@ fn generate_ast(nodes: &[Node]) -> String {
                 )
                 .unwrap(),
             }
-        }
-        out.push_str("}\n\n");
-    }
-    out
+		}
+		out.push_str("}\n\n");
+	}
+	out
 }

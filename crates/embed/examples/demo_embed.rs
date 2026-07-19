@@ -1,5 +1,5 @@
 fn main() {
-    let src = r##"
+	let src = r##"
 async fn list_workspaces(pool: &PgPool, org: Uuid) -> sqlx::Result<Vec<Workspace>> {
     sqlx::query_as!(
         Workspace,
@@ -19,12 +19,12 @@ async fn touch(pool: &PgPool, id: Uuid) -> sqlx::Result<()> {
     Ok(())
 }
 "##;
-    let out = embed::format_embedded(
-        src,
-        embed::Host::Rust,
-        embed::RUST_SQLX_QUERY,
-        &Default::default(),
-    )
-    .unwrap();
-    print!("{out}");
+	let out = embed::format_embedded(
+		src,
+		embed::Host::Rust,
+		embed::RUST_SQLX_QUERY,
+		&Default::default(),
+	)
+	.unwrap();
+	print!("{out}");
 }

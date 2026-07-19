@@ -1,19 +1,23 @@
 [workspace]
 resolver = "3"
-members = ["crates/parser", "crates/formatter", "crates/cli", "crates/embed"]
-exclude = ["crates/parser/fuzz", "crates/embed/tests/fixtures/sqlx_app"]
+members = [
+	"crates/cli/",
+	"crates/embed/",
+	"crates/formatter/",
+	"crates/parser/",
+]
+exclude = ["crates/parser/fuzz/", "crates/embed/tests/fixtures/sqlx_app/"]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
 
 [workspace.lints.rust]
-# No hand-written unsafe anywhere; the one exemption is the generated
-# SyntaxKind enum, whose cstree derive expands to an unsafe impl.
 unsafe_code = "deny"
 
 [workspace.dependencies]
-parser = { path = "crates/parser" }
-formatter = { path = "crates/formatter" }
+embed = { path = "crates/embed/" }
+formatter = { path = "crates/formatter/" }
+parser = { path = "crates/parser/" }
 cstree = { version = "0.12", features = ["derive"] }
 insta = "1"

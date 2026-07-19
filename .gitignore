@@ -1,6 +1,5 @@
-/target
-crates/parser/fuzz/target
+target/
 crates/parser/fuzz/corpus
 crates/parser/fuzz/artifacts
 crates/parser/fuzz/Cargo.lock
-crates/embed/tests/fixtures/sqlx_app/target
+.DS_Store

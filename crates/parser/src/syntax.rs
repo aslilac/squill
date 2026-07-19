@@ -6,8 +6,8 @@
 // otherwise denies unsafe_code), and lint attributes on the derived
 // enum do not reach the expansion — allow at module level instead.
 mod kinds {
-    #![allow(unsafe_code)]
-    include!(concat!(env!("OUT_DIR"), "/syntax_kinds.rs"));
+	#![allow(unsafe_code)]
+	include!(concat!(env!("OUT_DIR"), "/syntax_kinds.rs"));
 }
 pub use kinds::SyntaxKind;
 
