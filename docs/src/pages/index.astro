@@ -1,0 +1,195 @@
+---
+const before = `select w.id, w.name, count(*) as build_count from workspaces w join workspace_builds wb on wb.workspace_id = w.id where w.deleted = false and w.last_used_at > NOW() - interval '30 days' group by w.id, w.name order by build_count desc limit 20;
+
+CREATE FUNCTION notify_workspace_change() RETURNS trigger SECURITY DEFINER AS $$ BEGIN PERFORM pg_notify('workspaces', NEW.id::text); RETURN NEW; END; $$ LANGUAGE plpgsql;`;
+
+const after = `select w.id, w.name, count(*) as build_count
+from workspaces w
+\tjoin workspace_builds wb on wb.workspace_id = w.id
+where w.deleted = false and w.last_used_at > now() - interval '30 days'
+group by w.id, w.name
+order by build_count desc
+limit 20;
+
+create function notify_workspace_change()
+returns trigger
+language plpgsql
+security definer
+as $$
+\tbegin
+\t\tperform pg_notify('workspaces', NEW.id::text);
+\t\treturn NEW;
+\tend;
+$$;`;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>squill — a SQL formatter you can trust</title>
+    <meta
+      name="description"
+      content="A fast, trustworthy SQL formatter for Postgres and SQLite, with embedded-SQL support for Rust, Go, Python, JavaScript/TypeScript, and Gleam."
+    />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>squill</h1>
+        <p class="tagline">A SQL formatter you can trust.</p>
+        <p>
+          Postgres and SQLite. Every statement squill rewrites is
+          <em>self-checked</em>: the output must re-lex to the same tokens and
+          keep every comment, or squill emits your original bytes untouched.
+          Output is never less correct than input.
+        </p>
+      </header>
+
+      <section>
+        <h2>Before &amp; after</h2>
+        <div class="pair">
+          <figure>
+            <figcaption>input</figcaption>
+            <pre><code>{before}</code></pre>
+          </figure>
+          <figure>
+            <figcaption><code>squill fmt</code></figcaption>
+            <pre><code>{after}</code></pre>
+          </figure>
+        </div>
+      </section>
+
+      <section>
+        <h2>Fast</h2>
+        <p>
+          The entire SQL corpus of <a href="https://github.com/coder/coder"
+          >coder/coder</a> — 1,255 files, 36,000+ lines of migrations, queries,
+          and fixtures — formats in about <strong>215&nbsp;ms</strong>. A single
+          15,000-line file takes <strong>94&nbsp;ms</strong>. Fast enough for
+          pre-commit, save-on-format, everything.
+        </p>
+      </section>
+
+      <section>
+        <h2>Install</h2>
+        <pre><code>git clone https://tree.ht/kayla/squill
+cd squill
+cargo install --path crates/cli
+
+squill fmt path/to/queries/</code></pre>
+      </section>
+
+      <section>
+        <h2>Settings</h2>
+        <p>
+          Configured in the nearest <code>squill.toml</code>, overridable with
+          flags. The defaults are the house style; everything is optional.
+        </p>
+        <table>
+          <thead>
+            <tr><th>key</th><th>values</th><th>default</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>dialect</code></td>
+              <td><code>postgres</code> | <code>sqlite</code></td>
+              <td><code>postgres</code></td>
+            </tr>
+            <tr>
+              <td><code>indent</code></td>
+              <td><code>tab</code> | <code>spaces</code></td>
+              <td><code>tab</code></td>
+            </tr>
+            <tr>
+              <td><code>indent-width</code></td>
+              <td>width of one level (and tab measure)</td>
+              <td><code>2</code></td>
+            </tr>
+            <tr>
+              <td><code>keyword-case</code></td>
+              <td><code>lower</code> | <code>upper</code></td>
+              <td><code>lower</code></td>
+            </tr>
+            <tr>
+              <td><code>quote-idents</code></td>
+              <td><code>unquote-safe</code> | <code>always</code></td>
+              <td><code>unquote-safe</code></td>
+            </tr>
+            <tr>
+              <td><code>at-params</code></td>
+              <td>lex sqlc-style <code>@name</code> parameters</td>
+              <td><code>false</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>SQL in your source code</h2>
+        <p>
+          squill also formats SQL embedded in host languages, located with
+          tree-sitter queries: <code>sqlx::query!</code> in Rust,
+          <code>database/sql</code> calls in Go, <code>cursor.execute</code> in
+          Python (with <code>%s</code> placeholders preserved),
+          <code>db.query</code> and <code>sql`…`</code> templates in
+          JavaScript/TypeScript, and <code>sqlight</code>/<code>pog</code> in
+          Gleam. Only multiline string syntaxes are rewritten; anything with
+          interpolation holes is never touched.
+        </p>
+      </section>
+
+      <footer>
+        <p>Built by Kayla at treehut. Source at <a href="https://tree.ht/kayla/squill">tree.ht/kayla/squill</a>.</p>
+      </footer>
+    </main>
+
+    <style>
+      :root {
+        color-scheme: light dark;
+        --ink: light-dark(#1a1a1f, #e8e8ee);
+        --paper: light-dark(#fdfdfb, #17171c);
+        --accent: light-dark(#22636b, #7fd0da);
+        --edge: light-dark(#e3e3dc, #2c2c34);
+        --code-bg: light-dark(#f4f4ef, #1f1f26);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font: 16px/1.6 system-ui, sans-serif;
+        color: var(--ink);
+        background: var(--paper);
+      }
+      main { max-width: 60rem; margin: 0 auto; padding: 3rem 1.25rem 4rem; }
+      h1 { font-size: 3rem; margin: 0; letter-spacing: -0.02em; }
+      .tagline { font-size: 1.3rem; color: var(--accent); margin-top: 0.25rem; }
+      h2 { margin-top: 2.75rem; border-bottom: 1px solid var(--edge); padding-bottom: 0.3rem; }
+      pre {
+        background: var(--code-bg);
+        border: 1px solid var(--edge);
+        border-radius: 8px;
+        padding: 0.9rem 1rem;
+        overflow-x: auto;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        tab-size: 4;
+      }
+      code { font-family: ui-monospace, monospace; }
+      .pair { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+      @media (min-width: 900px) { .pair { grid-template-columns: 1fr 1fr; } }
+      figure { margin: 0; min-width: 0; }
+      figcaption {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--accent);
+        margin-bottom: 0.4rem;
+      }
+      table { border-collapse: collapse; width: 100%; }
+      th, td { text-align: left; padding: 0.45rem 0.75rem; border-bottom: 1px solid var(--edge); }
+      th { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; }
+      a { color: var(--accent); }
+      footer { margin-top: 3.5rem; font-size: 0.9rem; color: light-dark(#666, #999); }
+    </style>
+  </body>
+</html>
