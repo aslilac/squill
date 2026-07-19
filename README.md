@@ -32,7 +32,7 @@ squill fmt --help                                       # the full flag surface
 
 Options (via the nearest squill.toml or flags — flags win): `--dialect postgres|sqlite`,
 `--indent tab|spaces`, `--indent-width N` (default 2), `--keyword-case
-lower|upper`, `--quote-idents unquote-safe|always`, `--at-params` for
+lower|upper`, `--quote-idents as-needed|always`, `--at-params` for
 sqlc-style `@name` parameters, `--strict` to fail on statements that
 could not be parsed.
 

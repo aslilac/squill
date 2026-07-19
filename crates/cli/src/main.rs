@@ -35,7 +35,7 @@ Options:
   --indent <STYLE>        tab (default) | spaces
   --indent-width <N>      Indent width (and tab measure), default 2
   --keyword-case <CASE>   lower (default) | upper
-  --quote-idents <MODE>   unquote-safe (default) | always
+  --quote-idents <MODE>   as-needed (default) | always
   --at-params             Treat sqlc-style @name as parameters (Postgres)
   --no-config             Ignore squill.toml files
   --embedded              Also format SQL embedded in host files (.rs,

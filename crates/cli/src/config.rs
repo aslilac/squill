@@ -74,7 +74,7 @@ pub fn parse_keyword_case(value: &str) -> Result<KeywordCase, String> {
 
 pub fn parse_quoting(value: &str) -> Result<IdentQuoting, String> {
 	match value {
-		"unquote-safe" => Ok(IdentQuoting::UnquotedWhenSafe),
+		"as-needed" => Ok(IdentQuoting::UnquotedWhenSafe),
 		"always" => Ok(IdentQuoting::AlwaysQuoted),
 		other => Err(format!("unknown quoting mode `{other}`")),
 	}
