@@ -1,5 +1,8 @@
+.astro/
+dist/
+node_modules/
 target/
-crates/parser/fuzz/corpus
-crates/parser/fuzz/artifacts
-crates/parser/fuzz/Cargo.lock
 .DS_Store
+crates/parser/fuzz/artifacts/
+crates/parser/fuzz/corpus/
+crates/parser/fuzz/Cargo.lock
