@@ -34,7 +34,13 @@ const baseHref = import.meta.env.BASE_URL;
 			<span id="ms" class="ms" title="Time spent formatting">— ms</span>
 			<button id="copy" class="button" title="Copy formatted output">copy</button>
 			<div class="settings-wrap">
-				<button id="gear" class="button" title="Settings" aria-haspopup="true">⚙</button>
+				<button
+					id="gear"
+					class="button icon"
+					title="Settings"
+					aria-haspopup="true"
+					set:html={settingsIcon}
+				/>
 				<div id="settings" class="popover" hidden>
 					<label>dialect
 						<select data-opt="dialect">
