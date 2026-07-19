@@ -139,10 +139,7 @@ const baseHref = import.meta.env.BASE_URL;
 
 				<p>
 					squill also formats SQL embedded in host languages, located with
-					tree-sitter queries: ,
-					<code>database/sql</code> calls in Go, (with <code>%s</code> placeholders
-					preserved),
-					<code>db.query</code> and , and . Only multiline string syntaxes are rewritten;
+					tree-sitter queries. Only multiline string syntaxes are rewritten;
 					anything with interpolation holes is never touched. Try it in the <a
 						href="playground/">playground</a
 					>.
@@ -179,7 +176,9 @@ const baseHref = import.meta.env.BASE_URL;
 					<li>
 						<div style="display: inline-flex; gap: 4px; align-items: center;">
 							<img style="height: 16px;" src="/langs/python.svg" />
-							<code class="boxed">cursor.execute</code> in Python
+							<code class="boxed">cursor.execute</code> in Python (<code
+								class="boxed">%s</code
+							> placeholders preserved)
 						</div>
 					</li>
 				</ul>
