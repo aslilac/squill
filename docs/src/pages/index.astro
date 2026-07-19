@@ -404,9 +404,18 @@ squill fmt path/to/queries/</code></pre>
 			.tidy {
 				color: var(--green);
 			}
+			/* The set:html wrapper and the pre both stretch so the scrollable
+			   area fills the pane, not just the lines of text. */
+			.pair figure > div {
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+				min-width: 0;
+			}
 			/* shiki emits the <pre> at build time, so it needs :global and a
 			   background override (the panes supply their own). */
 			.pair :global(pre) {
+				flex: 1;
 				margin: 0;
 				padding: 0.5rem 1.25rem 1.25rem;
 				overflow-x: auto;
