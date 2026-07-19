@@ -32,7 +32,9 @@ const baseHref = import.meta.env.BASE_URL;
 			<select id="example" title="Example" aria-label="Example"></select>
 			<div class="spacer"></div>
 			<span id="ms" class="ms" title="Time spent formatting">— ms</span>
-			<button id="copy" class="button" title="Copy formatted output">copy</button>
+			<button id="copy" class="button" title="Copy formatted output"
+				>copy</button
+			>
 			<div class="settings-wrap">
 				<button
 					id="gear"
@@ -42,28 +44,39 @@ const baseHref = import.meta.env.BASE_URL;
 					set:html={settingsIcon}
 				/>
 				<div id="settings" class="popover" hidden>
-					<label>dialect
+					<label
+						>dialect
 						<select data-opt="dialect">
 							<option value="postgres">postgres</option>
 							<option value="sqlite">sqlite</option>
 						</select>
 					</label>
-					<label>indent
+					<label
+						>indent
 						<select data-opt="indent">
 							<option value="tab">tabs</option>
 							<option value="spaces">spaces</option>
 						</select>
 					</label>
-					<label>indent-width
-						<input data-opt="indent_width" type="number" min="1" max="16" value="2" />
+					<label
+						>indent-width
+						<input
+							data-opt="indent_width"
+							type="number"
+							min="1"
+							max="16"
+							value="2"
+						/>
 					</label>
-					<label>keyword-case
+					<label
+						>keyword-case
 						<select data-opt="keyword_case">
 							<option value="lower">lower</option>
 							<option value="upper">upper</option>
 						</select>
 					</label>
-					<label>quote-idents
+					<label
+						>quote-idents
 						<select data-opt="quote_idents">
 							<option value="as-needed">as-needed</option>
 							<option value="always">always</option>
@@ -87,7 +100,9 @@ const baseHref = import.meta.env.BASE_URL;
 					<span>formatted</span>
 					<span id="status" class="tidy">✓ tidy</span>
 				</div>
-				<div id="output" class="output"><div class="loading">loading squill.wasm…</div></div>
+				<div id="output" class="output">
+					<div class="loading">loading squill.wasm…</div>
+				</div>
 			</section>
 		</main>
 
@@ -129,7 +144,11 @@ const baseHref = import.meta.env.BASE_URL;
 				base: "vs-dark",
 				inherit: true,
 				rules: [
-					{ token: "keyword", foreground: colors.keyword.slice(1), fontStyle: "bold" },
+					{
+						token: "keyword",
+						foreground: colors.keyword.slice(1),
+						fontStyle: "bold",
+					},
 					{ token: "string", foreground: colors.string.slice(1) },
 					{ token: "string.sql", foreground: colors.string.slice(1) },
 					{ token: "number", foreground: colors.number.slice(1) },
@@ -148,14 +167,26 @@ const baseHref = import.meta.env.BASE_URL;
 			const shikiTheme = {
 				name: "squill-dark",
 				type: "dark",
-				colors: { "editor.background": colors.bgDeep, "editor.foreground": colors.fg },
+				colors: {
+					"editor.background": colors.bgDeep,
+					"editor.foreground": colors.fg,
+				},
 				settings: [
 					{ settings: { background: colors.bgDeep, foreground: colors.fg } },
-					{ scope: ["keyword", "storage"], settings: { foreground: colors.keyword, fontStyle: "bold" } },
+					{
+						scope: ["keyword", "storage"],
+						settings: { foreground: colors.keyword, fontStyle: "bold" },
+					},
 					{ scope: ["string"], settings: { foreground: colors.string } },
-					{ scope: ["constant.numeric"], settings: { foreground: colors.number } },
+					{
+						scope: ["constant.numeric"],
+						settings: { foreground: colors.number },
+					},
 					{ scope: ["comment"], settings: { foreground: colors.comment } },
-					{ scope: ["entity.name.function", "support.function"], settings: { foreground: colors.func } },
+					{
+						scope: ["entity.name.function", "support.function"],
+						settings: { foreground: colors.func },
+					},
 				],
 			};
 
@@ -163,15 +194,34 @@ const baseHref = import.meta.env.BASE_URL;
 			let memory;
 			const dataView = () => new DataView(memory.buffer);
 			const wasiHandlers = {
-				fd_write: (fd, iovs, n, out) => { dataView().setUint32(out, 0, true); return 0; },
-				random_get: (ptr, len) => { crypto.getRandomValues(new Uint8Array(memory.buffer, ptr, len)); return 0; },
-				clock_time_get: (id, prec, out) => { dataView().setBigUint64(out, BigInt(Date.now()) * 1000000n, true); return 0; },
-				environ_sizes_get: (c, s) => { dataView().setUint32(c, 0, true); dataView().setUint32(s, 0, true); return 0; },
+				fd_write: (fd, iovs, n, out) => {
+					dataView().setUint32(out, 0, true);
+					return 0;
+				},
+				random_get: (ptr, len) => {
+					crypto.getRandomValues(new Uint8Array(memory.buffer, ptr, len));
+					return 0;
+				},
+				clock_time_get: (id, prec, out) => {
+					dataView().setBigUint64(out, BigInt(Date.now()) * 1000000n, true);
+					return 0;
+				},
+				environ_sizes_get: (c, s) => {
+					dataView().setUint32(c, 0, true);
+					dataView().setUint32(s, 0, true);
+					return 0;
+				},
 				environ_get: () => 0,
-				args_sizes_get: (c, s) => { dataView().setUint32(c, 0, true); dataView().setUint32(s, 0, true); return 0; },
+				args_sizes_get: (c, s) => {
+					dataView().setUint32(c, 0, true);
+					dataView().setUint32(s, 0, true);
+					return 0;
+				},
 				args_get: () => 0,
 				sched_yield: () => 0,
-				proc_exit: (code) => { throw new Error("wasm exited: " + code); },
+				proc_exit: (code) => {
+					throw new Error("wasm exited: " + code);
+				},
 			};
 
 			async function loadWasm() {
@@ -200,7 +250,9 @@ const baseHref = import.meta.env.BASE_URL;
 				instance.exports.squill_dealloc(ptr, bytes.length);
 				const outPtr = Number(packed >> 32n);
 				const outLen = Number(packed & 0xffffffffn);
-				const text = new TextDecoder().decode(new Uint8Array(memory.buffer, outPtr, outLen));
+				const text = new TextDecoder().decode(
+					new Uint8Array(memory.buffer, outPtr, outLen),
+				);
 				instance.exports.squill_dealloc(outPtr, outLen);
 				return { ms, ...JSON.parse(text) };
 			}
@@ -282,7 +334,8 @@ const baseHref = import.meta.env.BASE_URL;
 					statusBadge.className = "tidy";
 				} else {
 					// Keep the last good output visible; report in the console.
-					consoleOut.textContent = result.diagnostics.join("\n") || "unknown error";
+					consoleOut.textContent =
+						result.diagnostics.join("\n") || "unknown error";
 					statusBadge.textContent = `✗ ${result.diagnostics.length} issue(s)`;
 					statusBadge.className = "bad";
 				}
@@ -291,7 +344,10 @@ const baseHref = import.meta.env.BASE_URL;
 			// The indent-width setting drives how both panes measure tabs.
 			function applyIndentWidth() {
 				editor.getModel().updateOptions({ tabSize: options.indent_width });
-				outputPane.style.setProperty("--tab-width", String(options.indent_width));
+				outputPane.style.setProperty(
+					"--tab-width",
+					String(options.indent_width),
+				);
 			}
 			applyIndentWidth();
 
@@ -317,7 +373,10 @@ const baseHref = import.meta.env.BASE_URL;
 				settingsPopover.hidden = !settingsPopover.hidden;
 			});
 			document.addEventListener("click", (event) => {
-				if (!settingsPopover.hidden && !event.target.closest(".settings-wrap")) {
+				if (
+					!settingsPopover.hidden &&
+					!event.target.closest(".settings-wrap")
+				) {
 					settingsPopover.hidden = true;
 				}
 			});
@@ -325,9 +384,11 @@ const baseHref = import.meta.env.BASE_URL;
 				control.addEventListener("change", () => {
 					const key = control.dataset.opt;
 					options[key] =
-						control.type === "checkbox" ? control.checked
-						: control.type === "number" ? Number(control.value)
-						: control.value;
+						control.type === "checkbox"
+							? control.checked
+							: control.type === "number"
+								? Number(control.value)
+								: control.value;
 					applyIndentWidth();
 					render();
 				});
@@ -350,15 +411,23 @@ const baseHref = import.meta.env.BASE_URL;
 				--green: oklch(0.68 0.13 155);
 				--red: oklch(0.7 0.15 25);
 			}
-			* { box-sizing: border-box; }
-			html, body { height: 100%; }
+			* {
+				box-sizing: border-box;
+			}
+			html,
+			body {
+				height: 100%;
+			}
 			body {
 				margin: 0;
 				display: flex;
 				flex-direction: column;
 				background: var(--bg);
 				color: var(--fg);
-				font: 14px/1.5 "IBM Plex Sans", system-ui, sans-serif;
+				font:
+					14px/1.5 "IBM Plex Sans",
+					system-ui,
+					sans-serif;
 			}
 
 			.toolbar {
@@ -369,10 +438,27 @@ const baseHref = import.meta.env.BASE_URL;
 				background: var(--top);
 				border-bottom: 1px solid var(--edge);
 			}
-			.brand { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; color: inherit; }
-			.wordmark { font-family: "Spectral", serif; font-weight: 600; font-size: 1.1rem; color: #fff; }
-			.sub { font-family: "JetBrains Mono", monospace; font-size: 0.7rem; color: var(--muted); }
-			.spacer { flex: 1; }
+			.brand {
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				text-decoration: none;
+				color: inherit;
+			}
+			.wordmark {
+				font-family: "Spectral", serif;
+				font-weight: 600;
+				font-size: 1.1rem;
+				color: #fff;
+			}
+			.sub {
+				font-family: "JetBrains Mono", monospace;
+				font-size: 0.7rem;
+				color: var(--muted);
+			}
+			.spacer {
+				flex: 1;
+			}
 			.ms {
 				font-family: "JetBrains Mono", monospace;
 				font-size: 0.72rem;
@@ -380,21 +466,41 @@ const baseHref = import.meta.env.BASE_URL;
 				min-width: 4.5rem;
 				text-align: right;
 			}
-			select, .button, .popover input {
-				font: 500 0.78rem "IBM Plex Sans", sans-serif;
+			select,
+			.button,
+			.popover input {
+				font:
+					500 0.78rem "IBM Plex Sans",
+					sans-serif;
 				color: var(--fg);
 				background: var(--pane);
 				border: 1px solid var(--edge);
 				border-radius: 7px;
 				padding: 0.35rem 0.6rem;
 			}
-			.button { cursor: pointer; }
-			.button:hover { border-color: var(--violet-solid); }
-			.button.icon { display: flex; align-items: center; padding: 0.3rem 0.45rem; }
-			.button.icon svg { width: 15px; height: 15px; stroke: currentColor; }
+			.button {
+				cursor: pointer;
+			}
+			.button:hover {
+				border-color: var(--violet-solid);
+			}
+			.button.icon {
+				display: flex;
+				align-items: center;
+				padding: 0.3rem 0.45rem;
+			}
+			.button.icon svg {
+				width: 15px;
+				height: 15px;
+				stroke: currentColor;
+			}
 
-			.settings-wrap { position: relative; }
-			.popover[hidden] { display: none; }
+			.settings-wrap {
+				position: relative;
+			}
+			.popover[hidden] {
+				display: none;
+			}
 			.popover {
 				position: absolute;
 				right: 0;
@@ -403,8 +509,8 @@ const baseHref = import.meta.env.BASE_URL;
 				display: flex;
 				flex-direction: column;
 				gap: 0.55rem;
-				width: 15rem;
-				padding: 0.9rem;
+				width: 18rem;
+				padding: 1rem;
 				background: var(--pane);
 				border: 1px solid var(--edge);
 				border-radius: 10px;
@@ -419,8 +525,13 @@ const baseHref = import.meta.env.BASE_URL;
 				font-size: 0.72rem;
 				color: var(--muted);
 			}
-			.popover label.row { justify-content: flex-start; }
-			.popover select, .popover input[type="number"] { width: 7.5rem; }
+			.popover label.row {
+				justify-content: flex-start;
+			}
+			.popover select,
+			.popover input[type="number"] {
+				width: 7.5rem;
+			}
 
 			.panes {
 				flex: 1;
@@ -428,8 +539,15 @@ const baseHref = import.meta.env.BASE_URL;
 				grid-template-columns: 1fr 1fr;
 				min-height: 0;
 			}
-			.pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-			.pane + .pane { border-left: 1px solid var(--edge); }
+			.pane {
+				display: flex;
+				flex-direction: column;
+				min-width: 0;
+				min-height: 0;
+			}
+			.pane + .pane {
+				border-left: 1px solid var(--edge);
+			}
 			.pane-label {
 				display: flex;
 				justify-content: space-between;
@@ -440,9 +558,17 @@ const baseHref = import.meta.env.BASE_URL;
 				color: var(--muted);
 				padding: 0.5rem 1rem 0.35rem;
 			}
-			#editor { flex: 1; min-height: 0; }
-			.output-pane { background: var(--pane-deep); }
-			.output { flex: 1; overflow: auto; }
+			#editor {
+				flex: 1;
+				min-height: 0;
+			}
+			.output-pane {
+				background: var(--pane-deep);
+			}
+			.output {
+				flex: 1;
+				overflow: auto;
+			}
 			.output .loading {
 				font-family: "JetBrains Mono", monospace;
 				font-size: 0.8rem;
@@ -457,11 +583,18 @@ const baseHref = import.meta.env.BASE_URL;
 				tab-size: var(--tab-width, 2);
 				background: transparent !important;
 			}
-			/* Line numbers live in reserved padding, absolutely positioned,
-			   so they never join the inline flow: CSS tab stops are measured
-			   from the line box start, and an inline gutter would shift the
-			   first tab stop by its own width. */
-			.output code { display: block; white-space: normal; counter-reset: line; }
+			/* CSS tab stops are measured from the line box start, and an inline
+			gutter would shift the first tab stop by its own width. */
+			.output code {
+				display: block;
+				white-space: normal;
+				counter-reset: line;
+			}
+			.output code {
+				display: block;
+				white-space: normal;
+				counter-reset: line;
+			}
 			.output .line {
 				display: block;
 				position: relative;
@@ -481,8 +614,12 @@ const baseHref = import.meta.env.BASE_URL;
 				font-family: "JetBrains Mono", monospace;
 				user-select: none;
 			}
-			.tidy { color: var(--green); }
-			.bad { color: var(--red); }
+			.tidy {
+				color: var(--green);
+			}
+			.bad {
+				color: var(--red);
+			}
 
 			.console {
 				border-top: 1px solid var(--edge);
@@ -495,12 +632,20 @@ const baseHref = import.meta.env.BASE_URL;
 				margin: 0;
 				padding: 0 1rem 0.7rem;
 				overflow: auto;
-				font: 12px/1.6 "JetBrains Mono", monospace;
+				font:
+					12px/1.6 "JetBrains Mono",
+					monospace;
 				color: var(--muted);
 			}
 			@media (max-width: 800px) {
-				.panes { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
-				.pane + .pane { border-left: none; border-top: 1px solid var(--edge); }
+				.panes {
+					grid-template-columns: 1fr;
+					grid-template-rows: 1fr 1fr;
+				}
+				.pane + .pane {
+					border-left: none;
+					border-top: 1px solid var(--edge);
+				}
 			}
 		</style>
 	</body>
