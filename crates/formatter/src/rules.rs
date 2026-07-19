@@ -13,8 +13,8 @@ use parser::syntax::{SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
 use crate::attr_order;
 
 use crate::doc::{
-    Doc, IdentPos, break_parent, concat, fill, fresh_line, group, hard_line, ident, if_break,
-    indent, keyword, nil, soft_line, soft_line_or_space, space, text, verbatim,
+    Doc, IdentPos, break_parent, concat, fill, fresh_line, group, hard_line, ident, indent,
+    keyword, nil, soft_line, soft_line_or_space, space, text, verbatim,
 };
 
 /// Does this node's first non-trivia token open a paren group?
@@ -2184,7 +2184,3 @@ impl ListJoiner {
         self.any = true;
     }
 }
-
-// Suppress an unused-import lint when if_break gains users in TREE-98.
-#[allow(unused_imports)]
-use if_break as _if_break;
