@@ -47,7 +47,7 @@ const baseHref = import.meta.env.BASE_URL;
 		<main>
 			<header>
 				<div class="masthead">
-					<img src="/squill.svg" width="72" height="72" alt="" />
+					<img src="/squill.svg" width="64" height="64" alt="" />
 					<div>
 						<h1>squill</h1>
 						<p class="tagline">
@@ -55,6 +55,11 @@ const baseHref = import.meta.env.BASE_URL;
 							everywhere.
 						</p>
 					</div>
+					<nav>
+						<a href="playground/">Playground</a>
+						<a href="https://tree.ht/birds/squill">Source</a>
+						<span class="badge">v0.1 · MPL-2.0</span>
+					</nav>
 				</div>
 				<p>
 					squill (/skwɪl/) uses Tree-sitter grammars to locate your SQL code
@@ -76,60 +81,37 @@ const baseHref = import.meta.env.BASE_URL;
 				</p>
 			</header>
 
-			<nav>
-				<div class="links">
-					<a href="playground/">Playground</a>
-					<a href="https://tree.ht/birds/squill">Source</a>
-				</div>
-				<span class="badge">v0.1 · MPL-2.0</span>
-			</nav>
+			<div class="pair">
+				<figure>
+					<figcaption>input</figcaption>
+					<pre><code>{before}</code></pre>
+				</figure>
+				<figure>
+					<figcaption>
+						formatted <span class="tidy">✓ tidy</span>
+					</figcaption>
+					<pre><code>{after}</code></pre>
+				</figure>
+			</div>
+			<p>
+				It's quick, too: the entire SQL corpus of <a
+					href="https://github.com/coder/coder">coder/coder</a
+				> — 1,255 files, 36,000+ lines of migrations, queries, and fixtures — formats
+				in about <strong>215&nbsp;ms</strong>. A single 15,000-line file takes <strong
+					>94&nbsp;ms</strong
+				>. Fast enough for pre-commit, save-on-format, everything.
+			</p>
 
-			<section class="card">
-				<div class="label">01 — before &amp; after</div>
-				<div class="panes">
-					<div class="toolbar">
-						<img src="/squill.svg" width="18" height="18" alt="" />
-						<span class="toolbar-name">squill</span>
-						<span class="toolbar-note">playground</span>
-						<span class="chip">postgres</span>
-					</div>
-					<div class="pair">
-						<figure>
-							<figcaption>input</figcaption>
-							<pre><code>{before}</code></pre>
-						</figure>
-						<figure>
-							<figcaption>
-								formatted <span class="tidy">✓ tidy</span>
-							</figcaption>
-							<pre><code>{after}</code></pre>
-						</figure>
-					</div>
-				</div>
-			</section>
-
-			<section class="card">
-				<div class="label">02 — fast</div>
-				<p>
-					The entire SQL corpus of <a href="https://github.com/coder/coder"
-						>coder/coder</a
-					> — 1,255 files, 36,000+ lines of migrations, queries, and fixtures — formats
-					in about <strong>215&nbsp;ms</strong>. A single 15,000-line file takes <strong
-						>94&nbsp;ms</strong
-					>. Fast enough for pre-commit, save-on-format, everything.
-				</p>
-			</section>
-
-			<section class="card">
-				<div class="label">03 — install</div>
+			<section>
+				<h2>Install</h2>
 				<pre
 					class="dark"><code>cargo install --git https://tree.ht/birds/squill.git cli
 
 squill fmt path/to/queries/</code></pre>
 			</section>
 
-			<section class="card">
-				<div class="label">04 — settings</div>
+			<section>
+				<h2>Configuration</h2>
 				<p>
 					Configured in the nearest <code>squill.toml</code>, overridable with
 					flags. The defaults are the house style; everything is optional.
@@ -179,8 +161,8 @@ squill fmt path/to/queries/</code></pre>
 				</table>
 			</section>
 
-			<section class="card">
-				<div class="label">05 — sql in your source code</div>
+			<section>
+				<h2>SQL in your source code</h2>
 				<p>
 					squill also formats SQL embedded in host languages, located with
 					tree-sitter queries: <code>sqlx::query!</code> in Rust,
@@ -189,6 +171,7 @@ squill fmt path/to/queries/</code></pre>
 					<code>db.query</code> and <code>sql`…`</code> templates in JavaScript/TypeScript,
 					and <code>sqlight</code>/<code>pog</code> in Gleam. Only multiline string
 					syntaxes are rewritten; anything with interpolation holes is never touched.
+					Try it in the <a href="playground/">playground</a>.
 				</p>
 			</section>
 
@@ -207,13 +190,11 @@ squill fmt path/to/queries/</code></pre>
 				--violet-deep: light-dark(oklch(0.44 0.16 293), oklch(0.8 0.12 293));
 				--ink: light-dark(#221d2b, #e6e1ee);
 				--paper: light-dark(#f4f1f8, #131019);
-				--card: light-dark(#ffffff, #1c1824);
 				--edge: light-dark(#e7e2ee, #322b3e);
 				--muted: light-dark(#6f6878, #8a8296);
 				--inset: light-dark(#faf8fd, #191520);
 				--pane: #1c1824;
 				--pane-deep: #191520;
-				--pane-top: #241f2e;
 				--pane-edge: #322b3e;
 				--pane-text: #cfc7db;
 				--green: oklch(0.68 0.13 155);
@@ -224,45 +205,51 @@ squill fmt path/to/queries/</code></pre>
 			body {
 				margin: 0;
 				font:
-					16px/2 "IBM Plex Sans",
+					16px/1.7 "IBM Plex Sans",
 					system-ui,
 					sans-serif;
 				color: var(--ink);
 				background: var(--paper);
 			}
 			main {
-				max-width: 72rem;
+				max-width: 64rem;
 				margin: 0 auto;
-				padding: 2rem 1.25rem 4rem;
+				padding: 3rem 1.25rem 4rem;
 			}
 			::selection {
 				background: light-dark(oklch(0.9 0.05 293), oklch(0.4 0.1 293));
 			}
 
-			nav {
+			header {
+				margin-bottom: 2.5rem;
+			}
+			.masthead {
 				display: flex;
 				align-items: center;
-				justify-content: space-between;
-				padding: 0.75rem 1.1rem;
-				border: 1px solid var(--edge);
-				border-radius: 12px;
-				background: var(--card);
+				gap: 1.1rem;
+				margin-bottom: 1.5rem;
 			}
-			.brand {
-				display: flex;
-				align-items: center;
-				gap: 0.6rem;
-			}
-			.wordmark {
+			h1 {
 				font-family: "Spectral", serif;
+				font-size: 2.8rem;
 				font-weight: 600;
-				font-size: 1.75rem;
-				letter-spacing: -0.01em;
+				letter-spacing: -0.02em;
+				margin: 0;
+				line-height: 1;
 			}
-			.links {
+			.tagline {
+				font-family: "Spectral", serif;
+				font-style: italic;
+				font-size: 1.15rem;
+				color: var(--violet);
+				margin: 0.4rem 0 0;
+			}
+			nav {
+				margin-left: auto;
 				display: flex;
 				align-items: center;
 				gap: 1rem;
+				white-space: nowrap;
 			}
 			.badge {
 				font-family: "JetBrains Mono", monospace;
@@ -273,34 +260,14 @@ squill fmt path/to/queries/</code></pre>
 				padding: 0.3rem 0.7rem;
 				border-radius: 999px;
 			}
-
-			header {
-				padding: 2.75rem 0.25rem 1rem;
-			}
-			.masthead {
-				display: flex;
-				align-items: center;
-				gap: 1.1rem;
-				padding-top: 92px;
-				padding-bottom: 64px;
-			}
-			h1 {
-				font-family: "Spectral", serif;
-				font-size: 3.2rem;
-				font-weight: 600;
-				letter-spacing: -0.02em;
-				margin: 0;
-				line-height: 1;
-			}
-			.tagline {
-				font-family: "Spectral", serif;
-				font-style: italic;
-				font-size: 1.25rem;
-				color: var(--violet);
-				margin: 0.4rem 0 0;
-			}
-			header > p {
-				max-width: 64rem;
+			@media (max-width: 720px) {
+				.masthead {
+					flex-wrap: wrap;
+				}
+				nav {
+					margin-left: 0;
+					flex-basis: 100%;
+				}
 			}
 			.flower {
 				font-family: "Spectral", serif;
@@ -309,64 +276,24 @@ squill fmt path/to/queries/</code></pre>
 				font-size: 0.95rem;
 			}
 
-			.card {
-				background: var(--card);
-				border: 1px solid var(--edge);
-				border-radius: 18px;
-				padding: 1.8rem 2rem;
-				margin-top: 1.75rem;
+			h2 {
+				font-family: "Spectral", serif;
+				font-size: 1.5rem;
+				font-weight: 600;
+				letter-spacing: -0.01em;
+				margin: 0 0 0.75rem;
 			}
-			.label {
-				font-family: "JetBrains Mono", monospace;
-				font-size: 0.7rem;
-				letter-spacing: 0.12em;
-				text-transform: uppercase;
-				color: var(--violet);
-				margin-bottom: 1.1rem;
-			}
-			.aside {
-				font-family: "JetBrains Mono", monospace;
-				font-size: 0.75rem;
-				color: var(--muted);
-				margin-top: 1rem;
+			section {
+				margin-top: 2.75rem;
 			}
 
-			.panes {
+			.pair {
+				display: grid;
+				grid-template-columns: 1fr;
 				border: 1px solid var(--pane-edge);
 				border-radius: 14px;
 				overflow: hidden;
 				background: var(--pane);
-			}
-			.toolbar {
-				display: flex;
-				align-items: center;
-				gap: 0.6rem;
-				padding: 0.7rem 1rem;
-				background: var(--pane-top);
-				border-bottom: 1px solid var(--pane-edge);
-			}
-			.toolbar-name {
-				font-family: "Spectral", serif;
-				font-weight: 600;
-				font-size: 1rem;
-				color: #fff;
-			}
-			.toolbar-note {
-				font-size: 0.9rem;
-				color: #8a8296;
-			}
-			.chip {
-				margin-left: auto;
-				font-family: "JetBrains Mono", monospace;
-				font-size: 0.7rem;
-				color: #8a8296;
-				border: 1px solid #3a3348;
-				border-radius: 7px;
-				padding: 0.25rem 0.6rem;
-			}
-			.pair {
-				display: grid;
-				grid-template-columns: 1fr;
 			}
 			@media (min-width: 900px) {
 				.pair {
@@ -423,7 +350,7 @@ squill fmt path/to/queries/</code></pre>
 				font-size: 0.85rem;
 				line-height: 1.6;
 			}
-			section p code,
+			p code,
 			td code {
 				background: var(--inset);
 				border: 1px solid var(--edge);
@@ -457,7 +384,7 @@ squill fmt path/to/queries/</code></pre>
 				color: var(--violet-deep);
 			}
 			footer {
-				margin-top: 3rem;
+				margin-top: 3.5rem;
 				text-align: center;
 				font-family: "JetBrains Mono", monospace;
 				font-size: 0.75rem;
