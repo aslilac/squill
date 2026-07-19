@@ -1,26 +1,64 @@
 ---
-const before = `select w.id, w.name, count(*) as build_count from workspaces w join workspace_builds wb on wb.workspace_id = w.id where w.deleted = false and w.last_used_at > NOW() - interval '30 days' group by w.id, w.name order by build_count desc limit 20;
+import { codeToHtml } from "shiki";
+import { colors, shikiTheme } from "../playground/theme.js";
 
-CREATE FUNCTION notify_workspace_change() RETURNS trigger SECURITY DEFINER AS $$ BEGIN PERFORM pg_notify('workspaces', NEW.id::text); RETURN NEW; END; $$ LANGUAGE plpgsql;`;
+// The formatted pane is squill's real output for the input pane
+// (Rust host, default options) — keep them in sync if either changes.
+const before = `pub async fn recent_builds(
+\tpool: &PgPool,
+\tworkspace: Uuid,
+) -> sqlx::Result<Vec<Build>> {
+\tsqlx::query_as!(
+\t\tBuild,
+\t\tr#"SELECT wb.id, wb.build_number, w.name FROM workspace_builds wb JOIN workspaces w ON w.id = wb.workspace_id WHERE wb.workspace_id = $1 AND wb.created_at > now() - interval '30 days' ORDER BY wb.build_number DESC LIMIT 25"#,
+\t\tworkspace,
+\t)
+\t.fetch_all(pool)
+\t.await
+}`;
 
-const after = `select w.id, w.name, count(*) as build_count
-from workspaces w
-\tjoin workspace_builds wb on wb.workspace_id = w.id
-where w.deleted = false and w.last_used_at > now() - interval '30 days'
-group by w.id, w.name
-order by build_count desc
-limit 20;
+const after = `pub async fn recent_builds(
+\tpool: &PgPool,
+\tworkspace: Uuid,
+) -> sqlx::Result<Vec<Build>> {
+\tsqlx::query_as!(
+\t\tBuild,
+\t\tr#"
+\t\tselect wb.id, wb.build_number, w.name
+\t\tfrom workspace_builds wb join workspaces w on w.id = wb.workspace_id
+\t\twhere wb.workspace_id = $1 and wb.created_at > now() - interval '30 days'
+\t\torder by wb.build_number desc
+\t\tlimit 25
+\t\t"#,
+\t\tworkspace,
+\t)
+\t.fetch_all(pool)
+\t.await
+}`;
 
-create function notify_workspace_change()
-returns trigger
-language plpgsql
-security definer
-as $$
-\tbegin
-\t\tperform pg_notify('workspaces', NEW.id::text);
-\t\treturn NEW;
-\tend;
-$$;`;
+const rust = (code) => codeToHtml(code, { lang: "rust", theme: shikiTheme });
+const sql = (code) => codeToHtml(code, { lang: "sql", theme: shikiTheme });
+const inner = (html) =>
+	html.replace(/^[\s\S]*?<code[^>]*>/, "").replace(/<\/code>[\s\S]*$/, "");
+
+const beforeHtml = await rust(before);
+
+// In the formatted pane, splice real SQL highlighting into the query
+// body (in an editor that's a language plugin's job; here it's done by
+// hand at build time). The host lines stay Rust-highlighted.
+const lines = after.split("\n");
+const open = lines.findIndex((line) => line.endsWith('r#"'));
+const close = lines.findIndex((line, i) => i > open && line.includes('"#'));
+const head = inner(await rust(lines.slice(0, open + 1).join("\n")));
+const body = inner(await sql(lines.slice(open + 1, close).join("\n")));
+// A throwaway `r#"` line keeps the tail's `"#,` lexing as a raw-string
+// close instead of an unterminated string; dropped after highlighting.
+const tail = inner(
+	await rust(['\t\tr#"', ...lines.slice(close)].join("\n")),
+).replace(/^<span class="line">[\s\S]*?<\/span>\n/, "");
+const afterHtml = `<pre class="shiki squill-dark" style="color:${colors.fg}"><code>${head}
+${body}
+${tail}</code></pre>`;
 
 const baseHref = import.meta.env.BASE_URL;
 ---
@@ -85,14 +123,14 @@ const baseHref = import.meta.env.BASE_URL;
 
 			<div class="pair">
 				<figure>
-					<figcaption>input</figcaption>
-					<pre><code>{before}</code></pre>
+					<figcaption>input <span>rust · sqlx</span></figcaption>
+					<div set:html={beforeHtml} />
 				</figure>
 				<figure>
 					<figcaption>
 						formatted <span class="tidy">✓ tidy</span>
 					</figcaption>
-					<pre><code>{after}</code></pre>
+					<div set:html={afterHtml} />
 				</figure>
 			</div>
 
@@ -367,14 +405,17 @@ squill fmt path/to/queries/</code></pre>
 			.tidy {
 				color: var(--green);
 			}
-			.pair pre {
+			/* shiki emits the <pre> at build time, so it needs :global and a
+			   background override (the panes supply their own). */
+			.pair :global(pre) {
 				margin: 0;
 				padding: 0.3rem 1rem 1.1rem;
 				overflow-x: auto;
-				color: var(--pane-text);
+				background: transparent !important;
+				font-family: "JetBrains Mono", monospace;
 				font-size: 0.8rem;
 				line-height: 1.7;
-				tab-size: 4;
+				tab-size: 2;
 			}
 			code {
 				font-family: "JetBrains Mono", monospace;

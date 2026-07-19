@@ -122,25 +122,13 @@ const baseHref = import.meta.env.BASE_URL;
 				gleamConfiguration,
 				gleamLanguage,
 			} from "../playground/gleam-monarch.js";
+			import { colors, shikiTheme } from "../playground/theme.js";
 
 			self.MonacoEnvironment = { getWorker: () => new EditorWorker() };
 
 			monaco.languages.register({ id: "gleam" });
 			monaco.languages.setMonarchTokensProvider("gleam", gleamLanguage);
 			monaco.languages.setLanguageConfiguration("gleam", gleamConfiguration);
-
-			// ---- brand colors, shared by the editor and the output ----
-			const colors = {
-				bg: "#1c1824",
-				bgDeep: "#191520",
-				fg: "#cfc7db",
-				keyword: "#a58fe0",
-				string: "#63b98a",
-				number: "#d9a05c",
-				comment: "#6f6878",
-				func: "#7ba3e0",
-				selection: "#3a3348",
-			};
 
 			monaco.editor.defineTheme("squill-dark", {
 				base: "vs-dark",
@@ -165,32 +153,6 @@ const baseHref = import.meta.env.BASE_URL;
 					"editorLineNumber.foreground": colors.comment,
 				},
 			});
-
-			const shikiTheme = {
-				name: "squill-dark",
-				type: "dark",
-				colors: {
-					"editor.background": colors.bgDeep,
-					"editor.foreground": colors.fg,
-				},
-				settings: [
-					{ settings: { background: colors.bgDeep, foreground: colors.fg } },
-					{
-						scope: ["keyword", "storage"],
-						settings: { foreground: colors.keyword, fontStyle: "bold" },
-					},
-					{ scope: ["string"], settings: { foreground: colors.string } },
-					{
-						scope: ["constant.numeric"],
-						settings: { foreground: colors.number },
-					},
-					{ scope: ["comment"], settings: { foreground: colors.comment } },
-					{
-						scope: ["entity.name.function", "support.function"],
-						settings: { foreground: colors.func },
-					},
-				],
-			};
 
 			// ---- the wasm module, behind a minimal WASI stub ----
 			let memory;
