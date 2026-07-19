@@ -7,6 +7,7 @@ alter table notification_templates
 
 create or replace function inhibit_enqueue_if_disabled()
 returns trigger
+language plpgsql
 as $$
 	begin
 		-- Fail the insertion if one of the following:
@@ -37,5 +38,4 @@ as $$
 		end if;
 		return NEW;
 	end;
-$$
-language plpgsql;
+$$;

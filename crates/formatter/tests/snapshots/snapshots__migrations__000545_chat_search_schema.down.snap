@@ -5,6 +5,7 @@ expression: formatted
 -- Restore the original trigger bodies from 000519.
 create or replace function set_chat_message_revision_before()
 returns trigger
+language plpgsql
 as $$
 	declare
 		chat_snapshot_version bigint;
@@ -33,11 +34,11 @@ as $$
 		new.revision = chat_snapshot_version;
 		return NEW;
 	end;
-$$
-language plpgsql;
+$$;
 
 create or replace function update_chat_history_after_message_update()
 returns trigger
+language plpgsql
 as $$
 	begin
 		update chats c
@@ -56,8 +57,7 @@ as $$
 			);
 		return null;
 	end;
-$$
-language plpgsql;
+$$;
 
 drop index if exists idx_chat_diff_statuses_pr_title_fts;
 

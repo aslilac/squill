@@ -19,6 +19,7 @@ create index idx_usage_events_ai_seats
 -- Heartbeat events replace the previous value for the same time period.
 create or replace function aggregate_usage_event()
 returns trigger
+language plpgsql
 as $$
 	begin
 		-- Check for supported event types and throw error for unknown types.
@@ -56,5 +57,4 @@ as $$
 				end;
 		return NEW;
 	end;
-$$
-language plpgsql;
+$$;

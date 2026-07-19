@@ -89,6 +89,7 @@ comment on index idx_chats_title_fts is 'Used for full text search. Defined over
 
 create or replace function set_chat_message_revision_before()
 returns trigger
+language plpgsql
 as $$
 	declare
 		chat_snapshot_version bigint;
@@ -120,13 +121,13 @@ as $$
 		new.revision = chat_snapshot_version;
 		return NEW;
 	end;
-$$
-language plpgsql;
+$$;
 
 comment on function set_chat_message_revision_before is 'Component of chatd. Updates chat_snapshot_version when any fields of chat_messages change. Excludes changes to search_tsv as it is not relevant to chatd''s processing loop.';
 
 create or replace function update_chat_history_after_message_update()
 returns trigger
+language plpgsql
 as $$
 	begin
 		update chats c
@@ -146,7 +147,6 @@ as $$
 			);
 		return null;
 	end;
-$$
-language plpgsql;
+$$;
 
 comment on function update_chat_history_after_message_update is 'Component of chatd. Updates history_version and generation_attempt on chats when chat_messages is updated. Excludes changes to search_tsv.';

@@ -145,3 +145,14 @@ fn crlf_input_normalizes_to_lf() {
     assert!(!out.contains('\r'));
     assert_eq!(format(&out), out);
 }
+
+#[test]
+fn function_attributes_reorder_even_with_empty_parens() {
+    // `f()` parses as a call expression (name and parens in one node);
+    // the canonical attribute order must still apply.
+    let out = format("create function f() returns trigger as 'x' language plpgsql;");
+    assert_eq!(
+        out,
+        "create function f()\nreturns trigger\nlanguage plpgsql\nas 'x';\n"
+    );
+}

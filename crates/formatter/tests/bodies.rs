@@ -28,9 +28,10 @@ fn language_sql_body_formats_and_anchors() {
 #[test]
 fn language_before_as_also_detected() {
     let out = format("CREATE FUNCTION two() RETURNS int AS $$SELECT   2$$ LANGUAGE sql;");
+    // The body formats as SQL, and the clause reorders canonically.
     assert_eq!(
         out,
-        "create function two()\nreturns int\nas $$\n\tselect 2\n$$\nlanguage sql;\n"
+        "create function two()\nreturns int\nlanguage sql\nas $$\n\tselect 2\n$$;\n"
     );
 }
 

@@ -55,6 +55,7 @@ where
 -- placeholder org-member system role for it.
 create or replace function insert_org_member_system_role()
 returns trigger
+language plpgsql
 as $$
 	begin
 		insert into custom_roles (
@@ -84,8 +85,7 @@ as $$
 			);
 		return NEW;
 	end;
-$$
-language plpgsql;
+$$;
 
 create trigger trigger_insert_org_member_system_role
 	after insert on organizations

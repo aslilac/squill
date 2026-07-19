@@ -18,6 +18,7 @@ alter table usage_events
 -- Restore the original aggregate function without hb_ai_seats_v1 support.
 create or replace function aggregate_usage_event()
 returns trigger
+language plpgsql
 as $$
 	begin
 		if NEW.event_type not in ('dc_managed_agents_v1') then
@@ -44,5 +45,4 @@ as $$
 				end;
 		return NEW;
 	end;
-$$
-language plpgsql;
+$$;

@@ -67,6 +67,7 @@ drop function IF exists check_workspace_agent_name_unique();
 
 create or replace function check_workspace_agent_name_unique()
 returns trigger
+language plpgsql
 as $$
 	declare
 		workspace_build_id uuid;
@@ -108,8 +109,7 @@ as $$
 		end if;
 		return NEW;
 	end;
-$$
-language plpgsql;
+$$;
 
 create trigger workspace_agent_name_unique_trigger
 	before insert or update of name,

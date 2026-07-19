@@ -103,20 +103,31 @@ pub(crate) fn canonical_order(words: &[W]) -> Option<Vec<usize>> {
     if object != "function" && object != "procedure" {
         return None;
     }
-    // The name: never an attribute starter, however it is spelled.
-    let (i, _) = word_at(words, pos)?;
-    pos = i + 1;
-    // Qualified-name continuations: `.` then another name part.
-    loop {
-        let mut j = pos;
-        while matches!(words.get(j), Some(W::Trivia)) {
-            j += 1;
+    // The name: never an attribute starter, however it is spelled. In
+    // the lowerer's element view, `f()` parses as a call *expression*,
+    // so name and parens can arrive as one opaque node.
+    let mut j = pos;
+    while matches!(words.get(j), Some(W::Trivia)) {
+        j += 1;
+    }
+    match words.get(j)? {
+        W::Other => pos = j + 1,
+        W::Word(_) => {
+            pos = j + 1;
+            // Qualified-name continuations: `.` then another name part.
+            loop {
+                let mut j = pos;
+                while matches!(words.get(j), Some(W::Trivia)) {
+                    j += 1;
+                }
+                if !matches!(words.get(j), Some(W::Dot)) {
+                    break;
+                }
+                let (k, _) = word_at(words, j + 1)?;
+                pos = k + 1;
+            }
         }
-        if !matches!(words.get(j), Some(W::Dot)) {
-            break;
-        }
-        let (k, _) = word_at(words, j + 1)?;
-        pos = k + 1;
+        _ => return None,
     }
 
     // Tail scan: segment starts at each attribute keyword at paren

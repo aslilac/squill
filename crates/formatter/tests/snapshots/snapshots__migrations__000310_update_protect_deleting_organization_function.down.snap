@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 -- Drop trigger that uses this function
@@ -9,6 +8,7 @@ drop trigger if exists protect_deleting_organizations on organizations;
 -- Revert the function to its original implementation
 create or replace function protect_deleting_organizations()
 returns trigger
+language plpgsql
 as $$
 	declare
 		workspace_count int;
@@ -69,8 +69,7 @@ as $$
 		end if;
 		return NEW;
 	end;
-$$
-language plpgsql;
+$$;
 
 -- Re-create trigger that uses this function
 create trigger protect_deleting_organizations

@@ -16,6 +16,7 @@ create unique index on notification_messages (dedupe_hash);
 -- This could have been a unique index, but we cannot immutably create an index on a timestamp with a timezone.
 create or replace function compute_notification_message_dedupe_hash()
 returns trigger
+language plpgsql
 as $$
 	begin
 		new.dedupe_hash := md5(
@@ -31,8 +32,7 @@ as $$
 		);
 		return NEW;
 	end;
-$$
-language plpgsql;
+$$;
 
 comment on function compute_notification_message_dedupe_hash is 'Computes a unique hash which will be used to prevent duplicate messages from being enqueued on the same day';
 create trigger update_notification_message_dedupe_hash

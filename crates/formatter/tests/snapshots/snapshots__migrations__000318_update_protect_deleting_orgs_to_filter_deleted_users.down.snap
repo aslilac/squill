@@ -7,6 +7,7 @@ drop trigger if exists protect_deleting_organizations on organizations;
 -- Replace the function with the new implementation
 create or replace function protect_deleting_organizations()
 returns trigger
+language plpgsql
 as $$
 	declare
 		workspace_count int;
@@ -91,8 +92,7 @@ as $$
 		end if;
 		return NEW;
 	end;
-$$
-language plpgsql;
+$$;
 
 -- Trigger to protect organizations from being soft deleted with existing resources
 create trigger protect_deleting_organizations

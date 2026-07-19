@@ -15,6 +15,7 @@ comment on column usage_events_daily.day is 'The date of the summed usage events
 -- Function to handle usage event aggregation
 create or replace function aggregate_usage_event()
 returns trigger
+language plpgsql
 as $$
 	begin
 		-- Check for supported event types and throw error for unknown types
@@ -45,8 +46,7 @@ as $$
 				end;
 		return NEW;
 	end;
-$$
-language plpgsql;
+$$;
 
 -- Create trigger to automatically aggregate usage events
 create trigger trigger_aggregate_usage_event

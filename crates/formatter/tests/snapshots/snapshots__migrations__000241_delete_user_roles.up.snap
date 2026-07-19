@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 -- When a custom role is deleted, we need to remove the assigned role
@@ -9,6 +8,7 @@ expression: formatted
 -- done with caution.
 create or replace function remove_organization_member_role()
 returns trigger
+language plpgsql
 as $$
 	begin
 		-- Delete the role from all organization members that have it.
@@ -27,8 +27,7 @@ as $$
 		end if;
 		return OLD;
 	end;
-$$
-language plpgsql;
+$$;
 
 -- Attach the function to deleting the custom role
 create trigger remove_organization_member_custom_role

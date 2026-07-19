@@ -63,6 +63,7 @@ drop function IF exists insert_org_member_system_role;
 
 create or replace function insert_organization_system_roles()
 returns trigger
+language plpgsql
 as $$
 	begin
 		insert into custom_roles (
@@ -104,8 +105,7 @@ as $$
 			);
 		return NEW;
 	end;
-$$
-language plpgsql;
+$$;
 
 create trigger trigger_insert_organization_system_roles
 	after insert on organizations

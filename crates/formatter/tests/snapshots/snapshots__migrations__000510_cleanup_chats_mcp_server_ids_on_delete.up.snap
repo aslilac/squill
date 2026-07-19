@@ -33,6 +33,7 @@ where
 
 create or replace function remove_mcp_server_config_id_from_chats()
 returns trigger
+language plpgsql
 as $$
 	begin
 		update chats
@@ -40,8 +41,7 @@ as $$
 		where OLD.id = any(mcp_server_ids);
 		return OLD;
 	end;
-$$
-language plpgsql;
+$$;
 
 create trigger remove_chat_mcp_server_config_id
 	before delete on mcp_server_configs

@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 create table user_status_changes (
@@ -37,6 +36,7 @@ where deleted;
 
 create or replace function record_user_status_change()
 returns trigger
+language plpgsql
 as $$
 	begin
 		if TG_OP = 'INSERT' or OLD.status is distinct from NEW.status then
@@ -49,8 +49,7 @@ as $$
 		end if;
 		return NEW;
 	end;
-$$
-language plpgsql;
+$$;
 
 create trigger user_status_change_trigger
 	after insert or update on users

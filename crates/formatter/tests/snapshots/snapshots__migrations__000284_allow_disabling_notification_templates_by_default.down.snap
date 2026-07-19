@@ -6,6 +6,7 @@ alter table notification_templates drop column enabled_by_default;
 
 create or replace function inhibit_enqueue_if_disabled()
 returns trigger
+language plpgsql
 as $$
 	begin
 		-- Fail the insertion if the user has disabled this notification.
@@ -21,5 +22,4 @@ as $$
 		end if;
 		return NEW;
 	end;
-$$
-language plpgsql;
+$$;
