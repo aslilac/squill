@@ -63,8 +63,10 @@ pub fn parse(tokens: &[Token<'_>], dialect: Dialect) -> Parse {
         dialect,
         eof,
         depth: 0,
+        fuel: 0,
         in_plpgsql: false,
     };
+    parser.refuel();
     parser.events.push(Event::StartNode(SyntaxKind::Root));
     while !parser.at_eof() {
         parser.statement();
@@ -103,8 +105,10 @@ pub fn parse_plpgsql_body(tokens: &[Token<'_>], dialect: Dialect) -> Parse {
         dialect,
         eof,
         depth: 0,
+        fuel: 0,
         in_plpgsql: true,
     };
+    parser.refuel();
     parser.events.push(Event::StartNode(SyntaxKind::Root));
     while !parser.at_eof() {
         plpgsql::body_statement(&mut parser);
@@ -137,6 +141,14 @@ pub(crate) type PResult = Result<(), StmtError>;
 /// `ErrorStatement` instead of risking stack overflow.
 const MAX_DEPTH: u32 = 200;
 
+/// Work budget per statement: generous linear headroom over the token
+/// count. Exponential speculative backtracking (deep paren runs feeding
+/// the `((SELECT` disambiguation) burns through it, and the statement
+/// falls back to `ErrorStatement` — verbatim, lossless — instead of
+/// hanging.
+const FUEL_BASE: usize = 4096;
+const FUEL_PER_TOKEN: usize = 64;
+
 pub(crate) struct Parser<'src> {
     toks: Vec<Tok<'src>>,
     pos: usize,
@@ -145,6 +157,8 @@ pub(crate) struct Parser<'src> {
     dialect: Dialect,
     eof: usize,
     depth: u32,
+    /// Remaining work budget; see [`FUEL_BASE`].
+    fuel: usize,
     /// Parsing a PL/pgSQL body: enables `INTO [STRICT]` targets in
     /// query positions.
     in_plpgsql: bool,
@@ -249,6 +263,10 @@ impl Parser<'_> {
     }
 
     pub(crate) fn backtrack(&mut self, state: (usize, usize, u32)) {
+        // Rewound events are re-done work: charge them, so exponential
+        // speculation exhausts the budget instead of the clock.
+        let rewound = self.events.len() - state.0;
+        self.fuel = self.fuel.saturating_sub(rewound + 1);
         self.events.truncate(state.0);
         self.pos = state.1;
         self.depth = state.2;
@@ -305,9 +323,18 @@ impl Parser<'_> {
         self.depth += 1;
         if self.depth > MAX_DEPTH {
             Err(self.error("nesting too deep"))
+        } else if self.fuel == 0 {
+            Err(self.error("statement too complex"))
         } else {
             Ok(())
         }
+    }
+
+    /// Reset the work budget (per statement, and once at parse start so
+    /// the PL/pgSQL body path is covered too).
+    fn refuel(&mut self) {
+        let remaining = self.toks.len().saturating_sub(self.pos);
+        self.fuel = FUEL_BASE + remaining * FUEL_PER_TOKEN;
     }
 
     pub(crate) fn exit_depth(&mut self) {
@@ -336,6 +363,7 @@ impl Parser<'_> {
         }
         let events_checkpoint = self.events.len();
         let pos_checkpoint = self.pos;
+        self.refuel();
         let result = self.statement_inner();
         self.depth = 0;
         if let Err(error) = result {

@@ -280,3 +280,19 @@ fn garbage_never_loses_tokens() {
         }
     }
 }
+
+#[test]
+fn pathological_paren_speculation_terminates() {
+    // Fuzz find (minimized from a libFuzzer timeout artifact): runs of
+    // `(` feeding the `((SELECT` disambiguation made speculative
+    // backtracking exponential. The per-statement fuel budget degrades
+    // such statements to verbatim ErrorStatements instead of hanging.
+    let parens = "(".repeat(30);
+    let bomb =
+        format!("ALTER T{parens}-- c\nSELECT\nT(!={parens}-- c\nSELECT\n= $2\nLIMIT\n{parens}@x");
+    let tokens = lex(&bomb, Dialect::Postgres);
+    let parse = parse(&tokens, Dialect::Postgres);
+    // Still lossless, and it got here in bounded time.
+    assert_eq!(parse.cst.text(), bomb, "round-trip failed");
+    assert!(!parse.diagnostics.is_empty(), "expected a diagnostic");
+}
