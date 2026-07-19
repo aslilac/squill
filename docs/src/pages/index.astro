@@ -64,9 +64,11 @@ $$;`;
         </div>
         <p>
           Postgres and SQLite. Every statement squill rewrites is
-          <em>self-checked</em>: the output must re-lex to the same tokens and
-          keep every comment, or squill emits your original bytes untouched.
-          Output is never less correct than input.
+          <em>self-checked</em>: the output must re-lex to the same tokens —
+          allowing only named, verified transforms like keyword case and
+          pg_dump's clause order — and keep every comment, or squill emits
+          your original bytes untouched. Output is never less correct than
+          input.
         </p>
         <p class="flower">
           named for the nodding squill — a small wild bloom that leans like a
