@@ -4,7 +4,7 @@ expression: formatted
 ---
 -- Default to `false`. Users will have to manually opt into the terraform workspace cache feature.
 alter table templates
-	add column use_terraform_workspace_cache bool not null default false;
+	add column use_terraform_workspace_cache BOOL not null default false;
 
 comment on column templates.use_terraform_workspace_cache is 'Determines whether to keep terraform directories cached between runs for workspaces created from this template. ' 'When enabled, this can significantly speed up the `terraform init` step at the cost of increased disk usage. ' 'This is an opt-in experience, as it prevents modules from being updated, and therefore is a behavioral difference ' 'from the default.';
 ;

@@ -3,6 +3,6 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 alter table chats
-	add column workspace_agent_id uuid references workspace_agents (
+	add column workspace_agent_id UUID references workspace_agents (
 		id
 	) on delete set null;

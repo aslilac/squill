@@ -3,7 +3,7 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 create table if not exists aibridge_interceptions (
-	id uuid primary key,
+	id UUID primary key,
 	initiator_id uuid not null,
 	provider text not null,
 	model text not null,
@@ -17,12 +17,12 @@ create index idx_aibridge_interceptions_initiator_id
 	on aibridge_interceptions (initiator_id);
 
 create table if not exists aibridge_token_usages (
-	id uuid primary key,
-	interception_id uuid not null,
+	id UUID primary key,
+	interception_id UUID not null,
 	provider_response_id text not null,
 	input_tokens bigint not null,
 	output_tokens bigint not null,
-	metadata jsonb default null,
+	metadata JSONB default null,
 	created_at timestamp with time zone not null
 );
 
@@ -36,11 +36,11 @@ create index idx_aibridge_token_usages_provider_response_id
 	on aibridge_token_usages (provider_response_id);
 
 create table if not exists aibridge_user_prompts (
-	id uuid primary key,
-	interception_id uuid not null,
+	id UUID primary key,
+	interception_id UUID not null,
 	provider_response_id text not null,
 	prompt text not null,
-	metadata jsonb default null,
+	metadata JSONB default null,
 	created_at timestamp with time zone not null
 );
 
@@ -54,15 +54,15 @@ create index idx_aibridge_user_prompts_provider_response_id
 	on aibridge_user_prompts (provider_response_id);
 
 create table if not exists aibridge_tool_usages (
-	id uuid primary key,
-	interception_id uuid not null,
+	id UUID primary key,
+	interception_id UUID not null,
 	provider_response_id text not null,
 	server_url text null,
 	tool text not null,
 	input text not null,
 	injected boolean not null default false,
 	invocation_error text null,
-	metadata jsonb default null,
+	metadata JSONB default null,
 	created_at timestamp with time zone not null
 );
 

@@ -7,7 +7,7 @@ alter table aibridge_token_usages
 	-- user has no effective group (no budget configured). Intentionally not a
 	-- foreign key: this is an immutable historical attribution that must
 	-- survive group deletion, so the id is retained even after the group is gone.
-	add column effective_group_id uuid,
+	add column effective_group_id UUID,
 	-- Snapshotted prices at interception time, in micro-units per million
 	-- tokens. NULL if the model is not present in ai_model_prices.
 	add column input_price_micros bigint check (input_price_micros >= 0),

@@ -31,6 +31,11 @@ use parser::syntax::SyntaxKind;
 use parser::syntax::SyntaxNode;
 use parser::syntax::SyntaxToken;
 
+/// Words that begin a table-level constraint rather than a column
+/// definition (the one `column_def` item shape with no leading name).
+const CONSTRAINT_HEADS: &[&str] =
+	&["check", "constraint", "exclude", "foreign", "like", "primary", "unique"];
+
 /// Does this node's first non-trivia token open a paren group?
 fn starts_with_lparen(node: &SyntaxNode) -> bool {
 	node.children_with_tokens()
@@ -2012,8 +2017,20 @@ impl Lowerer {
 							| SyntaxKind::LBracket
 							| SyntaxKind::ColonColon
 					);
+					// The item's first word is the column name (never
+					// keyword-cased, even for keyword collisions like a
+					// column called `name`) — unless this item is a
+					// table constraint.
+					let is_leading_name = at == start
+						&& token.kind() == SyntaxKind::Ident
+						&& !CONSTRAINT_HEADS
+							.iter()
+							.any(|head| token.text().eq_ignore_ascii_case(head));
 					let leaf = match token.kind() {
 						SyntaxKind::QuotedIdent => {
+							name_leaf(token, IdentPos::ColumnOrTable)
+						}
+						SyntaxKind::Ident if is_leading_name => {
 							name_leaf(token, IdentPos::ColumnOrTable)
 						}
 						_ => token_leaf(token),

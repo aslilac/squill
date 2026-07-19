@@ -3,13 +3,13 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 create table chat_files (
-	id uuid primary key default gen_random_uuid(),
-	owner_id uuid not null references users (id) on delete cascade,
-	organization_id uuid not null references organizations (id) on delete cascade,
-	created_at timestamptz not null default now(),
+	id UUID primary key default gen_random_uuid(),
+	owner_id UUID not null references users (id) on delete cascade,
+	organization_id UUID not null references organizations (id) on delete cascade,
+	created_at TIMESTAMPTZ not null default now(),
 	name text not null default '',
 	mimetype text not null,
-	data bytea not null
+	data BYTEA not null
 );
 
 create index idx_chat_files_owner on chat_files (owner_id);

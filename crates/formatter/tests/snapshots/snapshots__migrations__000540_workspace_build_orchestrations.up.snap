@@ -15,21 +15,21 @@ alter table template_version_presets
 	);
 
 create table workspace_build_orchestrations (
-	id uuid primary key not null,
-	created_at timestamptz not null,
-	updated_at timestamptz not null,
-	workspace_id uuid not null,
-	parent_build_id uuid unique not null,
-	child_build_id uuid unique,
+	id UUID primary key not null,
+	created_at TIMESTAMPTZ not null,
+	updated_at TIMESTAMPTZ not null,
+	workspace_id UUID not null,
+	parent_build_id UUID unique not null,
+	child_build_id UUID unique,
 	child_transition workspace_transition not null,
-	child_template_version_id uuid references template_versions (id)
+	child_template_version_id UUID references template_versions (id)
 		on delete cascade,
-	child_template_version_preset_id uuid, -- a constraint is added below
-	child_rich_parameter_values jsonb default '[]'::jsonb not null,
+	child_template_version_preset_id UUID, -- a constraint is added below
+	child_rich_parameter_values JSONB default '[]'::JSONB not null,
 	child_log_level text default '' not null,
 	child_reason build_reason,
 	attempt_count integer default 0 not null,
-	next_retry_after timestamptz,
+	next_retry_after TIMESTAMPTZ,
 	status text default 'pending' not null,
 	error text,
 	constraint workspace_build_orchestrations_status_check

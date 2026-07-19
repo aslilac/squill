@@ -6,9 +6,9 @@ expression: formatted
 -- This table holds the conversation history from AgentAPI, allowing users to view
 -- task logs even when the workspace is stopped.
 create table task_snapshots (
-	task_id uuid not null primary key references tasks (id) on delete cascade,
-	log_snapshot jsonb not null,
-	log_snapshot_created_at timestamptz not null default now()
+	task_id UUID not null primary key references tasks (id) on delete cascade,
+	log_snapshot JSONB not null,
+	log_snapshot_created_at TIMESTAMPTZ not null default now()
 );
 
 comment on table task_snapshots is 'Stores snapshots of task state when paused, currently limited to conversation history.';

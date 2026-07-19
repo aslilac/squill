@@ -55,7 +55,7 @@ values
 	);
 
 alter table provisioner_daemons
-	add column key_id uuid references provisioner_keys (
+	add column key_id UUID references provisioner_keys (
 		id
 	) on delete cascade default '00000000-0000-0000-0000-000000000001'::uuid not null;
 alter table provisioner_daemons alter column key_id drop default;

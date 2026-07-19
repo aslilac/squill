@@ -2,7 +2,7 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table boundary_logs add column owner_id uuid;
+alter table boundary_logs add column owner_id UUID;
 
 comment on column boundary_logs.owner_id is 'The ID of the user who owns the workspace. NULL for logs inserted before this column existed or if the user was deleted.';
 

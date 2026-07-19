@@ -3,9 +3,9 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 create table workspace_agent_devcontainers (
-	id uuid primary key,
-	workspace_agent_id uuid not null,
-	created_at timestamptz not null default now(),
+	id UUID primary key,
+	workspace_agent_id UUID not null,
+	created_at TIMESTAMPTZ not null default now(),
 	workspace_folder text not null,
 	config_path text not null,
 	foreign key (workspace_agent_id) references workspace_agents (id)

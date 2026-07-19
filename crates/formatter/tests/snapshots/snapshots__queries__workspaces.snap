@@ -561,7 +561,7 @@ where
 	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
 	-- are managed by the reconciliation loop, not the lifecycle executor which handles
 	-- autostart_schedule and next_start_at
-	and owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid;
+	and owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID;
 
 -- name: UpdateWorkspaceNextStartAt :exec
 update workspaces
@@ -571,7 +571,7 @@ where
 	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
 	-- are managed by the reconciliation loop, not the lifecycle executor which handles
 	-- next_start_at
-	and owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid;
+	and owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID;
 
 -- name: BatchUpdateWorkspaceNextStartAt :exec
 update workspaces
@@ -595,7 +595,7 @@ where
 	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
 	-- are managed by the reconciliation loop, not the lifecycle executor which handles
 	-- ttl
-	and owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid;
+	and owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID;
 
 -- name: UpdateWorkspacesTTLByTemplateID :exec
 update workspaces
@@ -605,7 +605,7 @@ where
 	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
 	-- should not have their TTL updated, as they are handled by the prebuilds
 	-- reconciliation loop.
-	and workspaces.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid;
+	and workspaces.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID;
 
 -- name: UpdateWorkspaceLastUsedAt :exec
 update workspaces set last_used_at = $2 where id = $1;
@@ -904,7 +904,7 @@ where
 	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
 	-- should not be considered by the lifecycle executor, as they are handled by the
 	-- prebuilds reconciliation loop.
-	and workspaces.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid;
+	and workspaces.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID;
 
 -- name: UpdateWorkspaceDormantDeletingAt :one
 update workspaces
@@ -934,7 +934,7 @@ where
 	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
 	-- are managed by the reconciliation loop, not the lifecycle executor which handles
 	-- dormant_at and deleting_at
-	and owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid
+	and owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID
 returning workspaces.*;
 
 -- name: UpdateWorkspacesDormantDeletingAtByTemplateID :many
@@ -960,7 +960,7 @@ where
 	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
 	-- should not have their dormant or deleting at set, as these are handled by the
 	-- prebuilds reconciliation loop.
-	and workspaces.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid
+	and workspaces.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID
 returning *;
 
 -- name: UpdateTemplateWorkspacesLastUsedAt :exec

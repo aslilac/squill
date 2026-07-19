@@ -2,4 +2,4 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table chats add column last_injected_context jsonb;
+alter table chats add column last_injected_context JSONB;

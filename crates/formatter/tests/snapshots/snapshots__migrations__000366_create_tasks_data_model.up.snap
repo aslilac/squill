@@ -3,25 +3,25 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 create table tasks (
-	id uuid not null primary key,
-	organization_id uuid not null references organizations (id) on delete cascade,
-	owner_id uuid not null references users (id) on delete cascade,
+	id UUID not null primary key,
+	organization_id UUID not null references organizations (id) on delete cascade,
+	owner_id UUID not null references users (id) on delete cascade,
 	name text not null,
-	workspace_id uuid references workspaces (id) on delete cascade,
-	template_version_id uuid not null references template_versions (id)
+	workspace_id UUID references workspaces (id) on delete cascade,
+	template_version_id UUID not null references template_versions (id)
 		on delete cascade,
-	template_parameters jsonb not null default '{}'::jsonb,
+	template_parameters JSONB not null default '{}'::JSONB,
 	prompt text not null,
-	created_at timestamptz not null,
-	deleted_at timestamptz
+	created_at TIMESTAMPTZ not null,
+	deleted_at TIMESTAMPTZ
 );
 
 create table task_workspace_apps (
-	task_id uuid not null references tasks (id) on delete cascade,
-	workspace_build_id uuid not null references workspace_builds (id)
+	task_id UUID not null references tasks (id) on delete cascade,
+	workspace_build_id UUID not null references workspace_builds (id)
 		on delete cascade,
-	workspace_agent_id uuid not null references workspace_agents (id)
+	workspace_agent_id UUID not null references workspace_agents (id)
 		on delete cascade,
-	workspace_app_id uuid not null references workspace_apps (id)
+	workspace_app_id UUID not null references workspace_apps (id)
 		on delete cascade
 );

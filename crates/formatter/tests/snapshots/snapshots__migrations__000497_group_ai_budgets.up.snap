@@ -3,11 +3,11 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 create table group_ai_budgets (
-	group_id uuid primary key references groups (id) on delete cascade,
+	group_id UUID primary key references groups (id) on delete cascade,
 	-- Spend limit applied to each member, in micro-units (1 unit = 1,000,000).
 	spend_limit_micros bigint not null check (spend_limit_micros >= 0),
-	created_at timestamptz not null default now(),
-	updated_at timestamptz not null default now()
+	created_at TIMESTAMPTZ not null default now(),
+	updated_at TIMESTAMPTZ not null default now()
 );
 
 comment on table group_ai_budgets is 'Per-group AI spend limit applied to each member of the group. No row means no budget is enforced.';

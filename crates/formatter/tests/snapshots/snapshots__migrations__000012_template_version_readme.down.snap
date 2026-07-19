@@ -2,4 +2,4 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table template_versions rename readme to description;
+alter table template_versions rename README to description;

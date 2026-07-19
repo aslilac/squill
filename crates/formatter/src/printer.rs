@@ -6,6 +6,48 @@
 
 use crate::IndentStyle;
 use crate::KeywordCase;
+use crate::keywords::is_sqlite_keyword;
+use crate::keywords::pg_keyword_category;
+
+/// PL/pgSQL statement words that are keywords to squill but absent from
+/// Postgres' kwlist.h (they only exist inside procedural bodies).
+const PL_KEYWORDS: &[&str] = &[
+	"assert",
+	"constant",
+	"continue",
+	"debug",
+	"diagnostics",
+	"elsif",
+	"exception",
+	"exit",
+	"foreach",
+	"get",
+	"if",
+	"info",
+	"log",
+	"loop",
+	"notice",
+	"perform",
+	"raise",
+	"reverse",
+	"slice",
+	"sqlstate",
+	"stacked",
+	"warning",
+	"while",
+];
+
+/// Does this bare word change case under the keyword-case option?
+fn cases_as_keyword(word: &str, dialect: parser::Dialect) -> bool {
+	let lower = word.to_ascii_lowercase();
+	match dialect {
+		parser::Dialect::Postgres => {
+			pg_keyword_category(&lower).is_some()
+				|| PL_KEYWORDS.contains(&lower.as_str())
+		}
+		parser::Dialect::Sqlite => is_sqlite_keyword(&lower),
+	}
+}
 use crate::MAX_WIDTH;
 use crate::Options;
 use crate::doc::Doc;
@@ -76,11 +118,18 @@ impl Printer<'_> {
 		match doc {
 			Doc::Text(text) => self.push_text(text),
 			Doc::Keyword(keyword) => {
-				let cased = match self.options.keyword_case {
-					KeywordCase::Lower => keyword.to_ascii_lowercase(),
-					KeywordCase::Upper => keyword.to_ascii_uppercase(),
-				};
-				self.push_text(&cased);
+				// Only real keywords change case; a bare word in keyword
+				// position that is actually a name (table, column, type
+				// like `uuid`) keeps the author's spelling.
+				if cases_as_keyword(keyword, self.options.dialect) {
+					let cased = match self.options.keyword_case {
+						KeywordCase::Lower => keyword.to_ascii_lowercase(),
+						KeywordCase::Upper => keyword.to_ascii_uppercase(),
+					};
+					self.push_text(&cased);
+				} else {
+					self.push_text(keyword);
+				}
 			}
 			Doc::Ident { text, pos } => {
 				let rendered = quoting::render_ident(text, *pos, self.options);

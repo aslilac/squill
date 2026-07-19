@@ -8,8 +8,8 @@ alter table template_version_presets
 
 -- Add table for prebuild schedules
 create table template_version_preset_prebuild_schedules (
-	id uuid primary key default gen_random_uuid() not null,
-	preset_id uuid not null,
+	id UUID primary key default gen_random_uuid() not null,
+	preset_id UUID not null,
 	cron_expression text not null,
 	desired_instances integer not null,
 	foreign key (preset_id) references template_version_presets (id)

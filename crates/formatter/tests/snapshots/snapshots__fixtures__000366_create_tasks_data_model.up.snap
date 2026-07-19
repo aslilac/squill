@@ -11,7 +11,7 @@ values
 		'Test Task 1', -- name
 		'3a9a1feb-e89d-457c-9d53-ac751b198ebe', -- workspace_id
 		'920baba5-4c64-4686-8b7d-d1bef5683eae', -- template_version_id
-		'{}'::jsonb, -- template_parameters
+		'{}'::JSONB, -- template_parameters
 		'Create a React component for tasks', -- prompt
 		'2024-11-02 13:10:00.000000+02', -- created_at
 		null -- deleted_at

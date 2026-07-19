@@ -3,12 +3,12 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 create table user_ai_budget_overrides (
-	user_id uuid primary key references users (id) on delete cascade,
-	group_id uuid not null references groups (id) on delete cascade,
+	user_id UUID primary key references users (id) on delete cascade,
+	group_id UUID not null references groups (id) on delete cascade,
 	-- Spend limit applied to the user, in micro-units (1 unit = 1,000,000).
 	spend_limit_micros bigint not null check (spend_limit_micros >= 0),
-	created_at timestamptz not null default now(),
-	updated_at timestamptz not null default now()
+	created_at TIMESTAMPTZ not null default now(),
+	updated_at TIMESTAMPTZ not null default now()
 	-- The membership invariant (user must be a member of the attributed
 	-- group, including when that group is "Everyone") would naturally be
 	-- a composite FK to group_members_expanded, but PostgreSQL does not
@@ -36,7 +36,7 @@ as $$
 			raise exception 'user % is not a member of group %',
 			NEW.user_id,
 			NEW.group_id
-			using errcode = 'check_violation',
+			using ERRCODE = 'check_violation',
 			constraint = 'user_ai_budget_overrides_must_be_group_member';
 		end if;
 		return NEW;

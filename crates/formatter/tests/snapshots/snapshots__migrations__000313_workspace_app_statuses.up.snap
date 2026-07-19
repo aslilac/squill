@@ -10,15 +10,15 @@ create type workspace_app_status_state as enum (
 
 -- Workspace app statuses allow agents to report statuses per-app in the UI.
 create table workspace_app_statuses (
-	id uuid primary key default gen_random_uuid(),
+	id UUID primary key default gen_random_uuid(),
 	created_at timestamp with time zone not null default CURRENT_TIMESTAMP,
 	-- The agent that the status is for.
-	agent_id uuid not null references workspace_agents (id),
+	agent_id UUID not null references workspace_agents (id),
 	-- The slug of the app that the status is for. This will be used
 	-- to reference the app in the UI - with an icon.
-	app_id uuid not null references workspace_apps (id),
+	app_id UUID not null references workspace_apps (id),
 	-- workspace_id is the workspace that the status is for.
-	workspace_id uuid not null references workspaces (id),
+	workspace_id UUID not null references workspaces (id),
 	-- The status determines how the status is displayed in the UI.
 	state workspace_app_status_state not null,
 	-- Whether the status needs user attention.

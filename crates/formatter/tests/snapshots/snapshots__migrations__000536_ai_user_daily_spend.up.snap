@@ -6,10 +6,10 @@ expression: formatted
 -- UTC day. Drives budget enforcement and reporting.
 create table ai_user_daily_spend (
 	-- No FK to users. Spend records persist after user deletion.
-	user_id uuid not null,
+	user_id UUID not null,
 	-- No FK to groups. Spend records persist after group deletion.
-	effective_group_id uuid not null,
-	day date not null,
+	effective_group_id UUID not null,
+	day DATE not null,
 	spend_micros bigint not null check (spend_micros >= 0),
 	primary key (user_id, effective_group_id, day)
 );

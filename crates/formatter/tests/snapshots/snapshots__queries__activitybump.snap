@@ -70,7 +70,7 @@ with
 			workspace_builds.workspace_id = @workspace_id::uuid
 			-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
 			-- are managed by the reconciliation loop and not subject to activity bumping
-			and workspaces.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid
+			and workspaces.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID
 		order by workspace_builds.build_number desc
 		limit 1
 	) update workspace_builds wb

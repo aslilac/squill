@@ -2,4 +2,4 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table template_version_presets add column last_invalidated_at timestamptz;
+alter table template_version_presets add column last_invalidated_at TIMESTAMPTZ;

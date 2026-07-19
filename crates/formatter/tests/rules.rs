@@ -156,3 +156,30 @@ fn function_attributes_reorder_even_with_empty_parens() {
 		"create function f()\nreturns trigger\nlanguage plpgsql\nas 'x';\n"
 	);
 }
+
+#[test]
+fn keyword_case_spares_names_and_types() {
+	// Only real keywords respond to keyword-case; table, column, and
+	// type names keep the author's spelling in both directions — even
+	// a column named after a keyword, like `name`.
+	let options = Options {
+		keyword_case: formatter::KeywordCase::Upper,
+		..Options::default()
+	};
+	let tokens = lex_with(
+		"create table Foo_Bar (id uuid not null, name text not null, primary key (id));",
+		Dialect::Postgres,
+		options.lex_options(),
+	);
+	let parse = parser::parser::parse(&tokens, Dialect::Postgres);
+	let out = format_cst(&parse.cst, &options).text;
+	assert_eq!(
+		out,
+		"CREATE TABLE Foo_Bar (\n\tid uuid NOT NULL,\n\tname TEXT NOT NULL,\n\tPRIMARY KEY (id)\n);\n"
+	);
+	// And lower mode leaves deliberately-cased names alone.
+	assert_eq!(
+		format("CREATE TABLE Foo (Name TEXT);"),
+		"create table Foo (\n\tName text\n);\n"
+	);
+}
