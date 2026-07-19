@@ -5,6 +5,7 @@ members = [
 	"crates/embed/",
 	"crates/formatter/",
 	"crates/parser/",
+	"crates/playground/",
 ]
 exclude = ["crates/parser/fuzz/", "crates/embed/tests/fixtures/sqlx_app/"]
 
@@ -22,3 +23,12 @@ formatter = { path = "crates/formatter/" }
 parser = { path = "crates/parser/" }
 cstree = { version = "0.12", features = ["derive"] }
 insta = "1"
+
+# The docs-playground wasm module: small and slow-to-build is the right
+# trade for a binary users download.
+[profile.wasm-release]
+inherits = "release"
+opt-level = "z"
+lto = true
+strip = true
+codegen-units = 1

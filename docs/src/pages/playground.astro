@@ -1,0 +1,469 @@
+---
+const baseHref = import.meta.env.BASE_URL;
+---
+
+<html lang="en">
+	<head>
+		<base href={baseHref} />
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>squill playground</title>
+		<meta
+			name="description"
+			content="Format SQL live in your browser — squill compiled to WebAssembly."
+		/>
+		<link rel="icon" type="image/svg+xml" href="squill-mark.svg" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap"
+			rel="stylesheet"
+		/>
+	</head>
+	<body>
+		<header class="toolbar">
+			<a class="brand" href=".">
+				<img src="squill-mark-white.svg" width="22" height="22" alt="" />
+				<span class="wordmark">squill</span>
+				<span class="sub">playground</span>
+			</a>
+			<select id="example" title="Example" aria-label="Example"></select>
+			<div class="spacer"></div>
+			<span id="ms" class="ms" title="Time spent formatting">— ms</span>
+			<button id="copy" class="button" title="Copy formatted output">copy</button>
+			<div class="settings-wrap">
+				<button id="gear" class="button" title="Settings" aria-haspopup="true">⚙</button>
+				<div id="settings" class="popover" hidden>
+					<label>dialect
+						<select data-opt="dialect">
+							<option value="postgres">postgres</option>
+							<option value="sqlite">sqlite</option>
+						</select>
+					</label>
+					<label>indent
+						<select data-opt="indent">
+							<option value="tab">tabs</option>
+							<option value="spaces">spaces</option>
+						</select>
+					</label>
+					<label>indent-width
+						<input data-opt="indent_width" type="number" min="1" max="16" value="2" />
+					</label>
+					<label>keyword-case
+						<select data-opt="keyword_case">
+							<option value="lower">lower</option>
+							<option value="upper">upper</option>
+						</select>
+					</label>
+					<label>quote-idents
+						<select data-opt="quote_idents">
+							<option value="as-needed">as-needed</option>
+							<option value="always">always</option>
+						</select>
+					</label>
+					<label class="row">
+						<input data-opt="at_params" type="checkbox" />
+						at-params
+					</label>
+				</div>
+			</div>
+		</header>
+
+		<main class="panes">
+			<section class="pane">
+				<div class="pane-label">input</div>
+				<div id="editor"></div>
+			</section>
+			<section class="pane output-pane">
+				<div class="pane-label">
+					<span>formatted</span>
+					<span id="status" class="tidy">✓ tidy</span>
+				</div>
+				<div id="output" class="output"><div class="loading">loading squill.wasm…</div></div>
+			</section>
+		</main>
+
+		<footer class="console">
+			<div class="pane-label">console</div>
+			<pre id="console-out">—</pre>
+		</footer>
+
+		<script>
+			import * as monaco from "monaco-editor";
+			import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
+			import { createHighlighter } from "shiki";
+			import { examples } from "../playground/examples.js";
+
+			self.MonacoEnvironment = { getWorker: () => new EditorWorker() };
+
+			// ---- brand colors, shared by the editor and the output ----
+			const colors = {
+				bg: "#1c1824",
+				bgDeep: "#191520",
+				fg: "#cfc7db",
+				keyword: "#a58fe0",
+				string: "#63b98a",
+				number: "#d9a05c",
+				comment: "#6f6878",
+				func: "#7ba3e0",
+				selection: "#3a3348",
+			};
+
+			monaco.editor.defineTheme("squill-dark", {
+				base: "vs-dark",
+				inherit: true,
+				rules: [
+					{ token: "keyword", foreground: colors.keyword.slice(1), fontStyle: "bold" },
+					{ token: "string", foreground: colors.string.slice(1) },
+					{ token: "string.sql", foreground: colors.string.slice(1) },
+					{ token: "number", foreground: colors.number.slice(1) },
+					{ token: "comment", foreground: colors.comment.slice(1) },
+					{ token: "predefined", foreground: colors.func.slice(1) },
+				],
+				colors: {
+					"editor.background": colors.bg,
+					"editor.foreground": colors.fg,
+					"editor.selectionBackground": colors.selection,
+					"editorLineNumber.foreground": colors.comment,
+				},
+			});
+
+			const shikiTheme = {
+				name: "squill-dark",
+				type: "dark",
+				colors: { "editor.background": colors.bgDeep, "editor.foreground": colors.fg },
+				settings: [
+					{ settings: { background: colors.bgDeep, foreground: colors.fg } },
+					{ scope: ["keyword", "storage"], settings: { foreground: colors.keyword, fontStyle: "bold" } },
+					{ scope: ["string"], settings: { foreground: colors.string } },
+					{ scope: ["constant.numeric"], settings: { foreground: colors.number } },
+					{ scope: ["comment"], settings: { foreground: colors.comment } },
+					{ scope: ["entity.name.function", "support.function"], settings: { foreground: colors.func } },
+				],
+			};
+
+			// ---- the wasm module, behind a minimal WASI stub ----
+			let memory;
+			const dataView = () => new DataView(memory.buffer);
+			const wasiHandlers = {
+				fd_write: (fd, iovs, n, out) => { dataView().setUint32(out, 0, true); return 0; },
+				random_get: (ptr, len) => { crypto.getRandomValues(new Uint8Array(memory.buffer, ptr, len)); return 0; },
+				clock_time_get: (id, prec, out) => { dataView().setBigUint64(out, BigInt(Date.now()) * 1000000n, true); return 0; },
+				environ_sizes_get: (c, s) => { dataView().setUint32(c, 0, true); dataView().setUint32(s, 0, true); return 0; },
+				environ_get: () => 0,
+				args_sizes_get: (c, s) => { dataView().setUint32(c, 0, true); dataView().setUint32(s, 0, true); return 0; },
+				args_get: () => 0,
+				sched_yield: () => 0,
+				proc_exit: (code) => { throw new Error("wasm exited: " + code); },
+			};
+
+			async function loadWasm() {
+				const response = await fetch("playground.wasm");
+				const module = await WebAssembly.compileStreaming(response);
+				const wasi = {};
+				for (const imp of WebAssembly.Module.imports(module)) {
+					if (imp.module !== "wasi_snapshot_preview1") continue;
+					wasi[imp.name] = wasiHandlers[imp.name] ?? (() => 8); // default: WASI EBADF
+				}
+				const instance = await WebAssembly.instantiate(module, {
+					wasi_snapshot_preview1: wasi,
+				});
+				memory = instance.exports.memory;
+				instance.exports._initialize?.();
+				return instance;
+			}
+
+			function callFormat(instance, request) {
+				const bytes = new TextEncoder().encode(JSON.stringify(request));
+				const ptr = instance.exports.squill_alloc(bytes.length);
+				new Uint8Array(memory.buffer, ptr, bytes.length).set(bytes);
+				const start = performance.now();
+				const packed = instance.exports.squill_format(ptr, bytes.length);
+				const ms = performance.now() - start;
+				instance.exports.squill_dealloc(ptr, bytes.length);
+				const outPtr = Number(packed >> 32n);
+				const outLen = Number(packed & 0xffffffffn);
+				const text = new TextDecoder().decode(new Uint8Array(memory.buffer, outPtr, outLen));
+				instance.exports.squill_dealloc(outPtr, outLen);
+				return { ms, ...JSON.parse(text) };
+			}
+
+			// ---- page state ----
+			const exampleSelect = document.getElementById("example");
+			const msBadge = document.getElementById("ms");
+			const statusBadge = document.getElementById("status");
+			const outputPane = document.getElementById("output");
+			const consoleOut = document.getElementById("console-out");
+			const copyButton = document.getElementById("copy");
+			const gear = document.getElementById("gear");
+			const settingsPopover = document.getElementById("settings");
+
+			for (const [index, example] of examples.entries()) {
+				const option = document.createElement("option");
+				option.value = String(index);
+				option.textContent = example.label;
+				exampleSelect.append(option);
+			}
+
+			const options = {
+				dialect: "postgres",
+				indent: "tab",
+				indent_width: 2,
+				keyword_case: "lower",
+				quote_idents: "as-needed",
+				at_params: false,
+			};
+			let lastGoodOutput = "";
+			let current = examples[0];
+
+			const editor = monaco.editor.create(document.getElementById("editor"), {
+				value: current.source,
+				language: current.monacoLang,
+				theme: "squill-dark",
+				minimap: { enabled: false },
+				fontFamily: "JetBrains Mono, monospace",
+				fontSize: 13,
+				lineHeight: 22,
+				scrollBeyondLastLine: false,
+				automaticLayout: true,
+				tabSize: 4,
+				wordWrap: "off",
+			});
+
+			const [highlighter, wasm] = await Promise.all([
+				createHighlighter({
+					themes: [shikiTheme],
+					langs: ["sql", "rust", "go", "python", "typescript", "gleam"],
+				}),
+				loadWasm(),
+			]);
+
+			function render() {
+				const request = {
+					source: editor.getValue(),
+					host: current.host,
+					options,
+				};
+				let result;
+				try {
+					result = callFormat(wasm, request);
+				} catch (error) {
+					consoleOut.textContent = String(error);
+					statusBadge.textContent = "✗ error";
+					statusBadge.className = "bad";
+					return;
+				}
+				msBadge.textContent = `${result.ms.toFixed(1)} ms`;
+				if (result.output != null && result.diagnostics.length === 0) {
+					lastGoodOutput = result.output;
+					outputPane.innerHTML = highlighter.codeToHtml(result.output, {
+						lang: current.shikiLang,
+						theme: "squill-dark",
+					});
+					consoleOut.textContent = "—";
+					statusBadge.textContent = "✓ tidy";
+					statusBadge.className = "tidy";
+				} else {
+					// Keep the last good output visible; report in the console.
+					consoleOut.textContent = result.diagnostics.join("\n") || "unknown error";
+					statusBadge.textContent = `✗ ${result.diagnostics.length} issue(s)`;
+					statusBadge.className = "bad";
+				}
+			}
+
+			let debounce;
+			editor.onDidChangeModelContent(() => {
+				clearTimeout(debounce);
+				debounce = setTimeout(render, 100);
+			});
+
+			exampleSelect.addEventListener("change", () => {
+				current = examples[Number(exampleSelect.value)];
+				monaco.editor.setModelLanguage(editor.getModel(), current.monacoLang);
+				editor.setValue(current.source); // triggers render via the change event
+			});
+
+			copyButton.addEventListener("click", async () => {
+				await navigator.clipboard.writeText(lastGoodOutput);
+				copyButton.textContent = "copied!";
+				setTimeout(() => (copyButton.textContent = "copy"), 1200);
+			});
+
+			gear.addEventListener("click", () => {
+				settingsPopover.hidden = !settingsPopover.hidden;
+			});
+			document.addEventListener("click", (event) => {
+				if (!settingsPopover.hidden && !event.target.closest(".settings-wrap")) {
+					settingsPopover.hidden = true;
+				}
+			});
+			for (const control of settingsPopover.querySelectorAll("[data-opt]")) {
+				control.addEventListener("change", () => {
+					const key = control.dataset.opt;
+					options[key] =
+						control.type === "checkbox" ? control.checked
+						: control.type === "number" ? Number(control.value)
+						: control.value;
+					render();
+				});
+			}
+
+			render();
+		</script>
+
+		<style is:global>
+			:root {
+				--bg: #131019;
+				--pane: #1c1824;
+				--pane-deep: #191520;
+				--top: #241f2e;
+				--edge: #322b3e;
+				--fg: #cfc7db;
+				--muted: #8a8296;
+				--violet: oklch(0.72 0.15 293);
+				--violet-solid: oklch(0.53 0.17 293);
+				--green: oklch(0.68 0.13 155);
+				--red: oklch(0.7 0.15 25);
+			}
+			* { box-sizing: border-box; }
+			html, body { height: 100%; }
+			body {
+				margin: 0;
+				display: flex;
+				flex-direction: column;
+				background: var(--bg);
+				color: var(--fg);
+				font: 14px/1.5 "IBM Plex Sans", system-ui, sans-serif;
+			}
+
+			.toolbar {
+				display: flex;
+				align-items: center;
+				gap: 0.75rem;
+				padding: 0.55rem 0.9rem;
+				background: var(--top);
+				border-bottom: 1px solid var(--edge);
+			}
+			.brand { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; color: inherit; }
+			.wordmark { font-family: "Spectral", serif; font-weight: 600; font-size: 1.1rem; color: #fff; }
+			.sub { font-family: "JetBrains Mono", monospace; font-size: 0.7rem; color: var(--muted); }
+			.spacer { flex: 1; }
+			.ms {
+				font-family: "JetBrains Mono", monospace;
+				font-size: 0.72rem;
+				color: var(--green);
+				min-width: 4.5rem;
+				text-align: right;
+			}
+			select, .button, .popover input {
+				font: 500 0.78rem "IBM Plex Sans", sans-serif;
+				color: var(--fg);
+				background: var(--pane);
+				border: 1px solid var(--edge);
+				border-radius: 7px;
+				padding: 0.35rem 0.6rem;
+			}
+			.button { cursor: pointer; }
+			.button:hover { border-color: var(--violet-solid); }
+
+			.settings-wrap { position: relative; }
+			.popover {
+				position: absolute;
+				right: 0;
+				top: calc(100% + 8px);
+				z-index: 10;
+				display: flex;
+				flex-direction: column;
+				gap: 0.55rem;
+				width: 15rem;
+				padding: 0.9rem;
+				background: var(--pane);
+				border: 1px solid var(--edge);
+				border-radius: 10px;
+				box-shadow: 0 8px 30px rgb(0 0 0 / 0.45);
+			}
+			.popover label {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 0.6rem;
+				font-family: "JetBrains Mono", monospace;
+				font-size: 0.72rem;
+				color: var(--muted);
+			}
+			.popover label.row { justify-content: flex-start; }
+			.popover select, .popover input[type="number"] { width: 7.5rem; }
+
+			.panes {
+				flex: 1;
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				min-height: 0;
+			}
+			.pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+			.pane + .pane { border-left: 1px solid var(--edge); }
+			.pane-label {
+				display: flex;
+				justify-content: space-between;
+				font-family: "JetBrains Mono", monospace;
+				font-size: 0.65rem;
+				letter-spacing: 0.1em;
+				text-transform: uppercase;
+				color: var(--muted);
+				padding: 0.5rem 1rem 0.35rem;
+			}
+			#editor { flex: 1; min-height: 0; }
+			.output-pane { background: var(--pane-deep); }
+			.output { flex: 1; overflow: auto; }
+			.output .loading {
+				font-family: "JetBrains Mono", monospace;
+				font-size: 0.8rem;
+				color: var(--muted);
+				padding: 1rem;
+			}
+			.output pre {
+				margin: 0;
+				padding: 0.3rem 0 1rem;
+				font-size: 13px;
+				line-height: 22px;
+				background: transparent !important;
+			}
+			.output code { display: block; counter-reset: line; }
+			.output .line {
+				counter-increment: line;
+				padding-right: 1rem;
+			}
+			.output .line::before {
+				content: counter(line);
+				display: inline-block;
+				width: 3.2rem;
+				padding-right: 1.1rem;
+				text-align: right;
+				color: #4a4453;
+				font-family: "JetBrains Mono", monospace;
+				user-select: none;
+			}
+			.tidy { color: var(--green); }
+			.bad { color: var(--red); }
+
+			.console {
+				border-top: 1px solid var(--edge);
+				background: var(--pane);
+				max-height: 9rem;
+				display: flex;
+				flex-direction: column;
+			}
+			.console pre {
+				margin: 0;
+				padding: 0 1rem 0.7rem;
+				overflow: auto;
+				font: 12px/1.6 "JetBrains Mono", monospace;
+				color: var(--muted);
+			}
+			@media (max-width: 800px) {
+				.panes { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+				.pane + .pane { border-left: none; border-top: 1px solid var(--edge); }
+			}
+		</style>
+	</body>
+</html>
