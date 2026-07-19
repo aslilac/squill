@@ -270,7 +270,7 @@ const baseHref = import.meta.env.BASE_URL;
 					statusBadge.className = "bad";
 					return;
 				}
-				msBadge.textContent = `${result.ms.toFixed(1)} ms`;
+				msBadge.textContent = `${Math.ceil(result.ms)} ms`;
 				if (result.output != null && result.diagnostics.length === 0) {
 					lastGoodOutput = result.output;
 					outputPane.innerHTML = highlighter.codeToHtml(result.output, {
