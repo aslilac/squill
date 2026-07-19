@@ -37,10 +37,10 @@ Options:
   --quote-idents <MODE>   unquote-safe (default) | always
   --at-params             Treat sqlc-style @name as parameters (Postgres)
   --no-config             Ignore squill.toml files
-  --embed                 Also format SQL embedded in host files (.rs,
+  --embedded              Also format SQL embedded in host files (.rs,
                           .go, .py, .js/.ts/.tsx, .gleam) when recursing
                           directories (explicit host paths always format)
-  --embed-query <SCM>     Override the tree-sitter extraction query
+  --embedded-query <SCM>  Override the tree-sitter extraction query
   -h, --help              Show this help
 
 Configuration: the nearest squill.toml at or above each formatted file
@@ -90,12 +90,12 @@ fn parse_args() -> Result<Args, String> {
             "--stdin" => args.stdin_mode = true,
             "--strict" => args.strict = true,
             "--no-config" => args.no_config = true,
-            "--embed" => args.embed = true,
-            "--embed-query" => {
-                let path = value(&mut argv, "--embed-query")?;
+            "--embedded" => args.embed = true,
+            "--embedded-query" => {
+                let path = value(&mut argv, "--embedded-query")?;
                 args.embed_query = Some(
                     std::fs::read_to_string(&path)
-                        .map_err(|err| format!("--embed-query {path}: {err}"))?,
+                        .map_err(|err| format!("--embedded-query {path}: {err}"))?,
                 );
             }
             "--at-params" => args.overrides.at_params = Some(true),

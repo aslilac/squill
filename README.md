@@ -42,7 +42,7 @@ strings — are reformatted, always into a vertical block: quotes on
 their own lines, one clause per line. Plain single-line strings stay
 byte-identical, and so do Python f-strings and `${}`-interpolated
 templates (SQL with holes is never touched). Directories include host
-files with `--embed`; `--embed-query custom.scm` swaps the tree-sitter
+files with `--embedded`; `--embedded-query custom.scm` swaps the tree-sitter
 extraction query.
 
 ## Design

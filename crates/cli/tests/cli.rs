@@ -368,7 +368,7 @@ fn directory_recursion_needs_embed_flag() {
     std::fs::write(dir.join("q.rs"), RS_FIXTURE).expect("write");
     std::fs::write(dir.join("plain.sql"), "SELECT   1;\n").expect("write");
 
-    // Without --embed: only the .sql file changes.
+    // Without --embedded: only the .sql file changes.
     let status = squill().arg("fmt").arg(&dir).status().expect("run");
     assert!(status.success());
     assert_eq!(
@@ -380,9 +380,9 @@ fn directory_recursion_needs_embed_flag() {
         "select 1;\n"
     );
 
-    // With --embed: the .rs file formats too, and --check is then clean.
+    // With --embedded: the .rs file formats too, and --check is then clean.
     let status = squill()
-        .args(["fmt", "--embed"])
+        .args(["fmt", "--embedded"])
         .arg(&dir)
         .status()
         .expect("run");
@@ -393,11 +393,14 @@ fn directory_recursion_needs_embed_flag() {
             .contains("select id, name\n        from users"),
     );
     let status = squill()
-        .args(["fmt", "--embed", "--check"])
+        .args(["fmt", "--embedded", "--check"])
         .arg(&dir)
         .status()
         .expect("run");
-    assert!(status.success(), "--check after --embed fmt must be clean");
+    assert!(
+        status.success(),
+        "--check after --embedded fmt must be clean"
+    );
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -453,7 +456,7 @@ fn custom_embed_query_file() {
     )
     .expect("write");
     let status = squill()
-        .args(["fmt", "--embed-query"])
+        .args(["fmt", "--embedded-query"])
         .arg(dir.join("only_mine.scm"))
         .arg(&file)
         .status()
