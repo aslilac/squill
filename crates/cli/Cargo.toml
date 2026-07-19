@@ -6,6 +6,7 @@ license.workspace = true
 
 [lints]
 workspace = true
+
 [dependencies]
 embed.workspace = true
 parser.workspace = true

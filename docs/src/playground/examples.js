@@ -4,7 +4,7 @@
 
 export const examples = [
 	{
-		label: "plain SQL",
+		label: "SQL",
 		host: "sql",
 		monacoLang: "sql",
 		shikiLang: "sql",
@@ -16,7 +16,7 @@ CREATE TABLE workspace_agents (id uuid NOT NULL, workspace_id uuid NOT NULL REFE
 `,
 	},
 	{
-		label: "Rust · sqlx",
+		label: "Rust + sqlx",
 		host: "rust",
 		monacoLang: "rust",
 		shikiLang: "rust",
@@ -40,7 +40,7 @@ pub async fn delete_rule(pool: &PgPool, team: Uuid, id: Uuid) -> sqlx::Result<()
 `,
 	},
 	{
-		label: "Go · database/sql",
+		label: "Go + database/sql",
 		host: "go",
 		monacoLang: "go",
 		shikiLang: "go",
@@ -51,7 +51,7 @@ pub async fn delete_rule(pool: &PgPool, team: Uuid, id: Uuid) -> sqlx::Result<()
 `,
 	},
 	{
-		label: "Python · psycopg",
+		label: "Python + psycopg",
 		host: "python",
 		monacoLang: "python",
 		shikiLang: "python",
@@ -61,7 +61,7 @@ pub async fn delete_rule(pool: &PgPool, team: Uuid, id: Uuid) -> sqlx::Result<()
 `,
 	},
 	{
-		label: "TypeScript · postgres.js",
+		label: "TypeScript + postgres.js",
 		host: "typescript",
 		monacoLang: "typescript",
 		shikiLang: "typescript",
@@ -72,7 +72,7 @@ pub async fn delete_rule(pool: &PgPool, team: Uuid, id: Uuid) -> sqlx::Result<()
 `,
 	},
 	{
-		label: "Gleam · sqlight",
+		label: "Gleam + sqlight",
 		host: "gleam",
 		monacoLang: "gleam",
 		shikiLang: "gleam",

@@ -19,7 +19,7 @@ at `max-width` (default 80).
 ## Quickstart
 
 ```console
-cargo install --git https://tree.ht/birds/squill.git cli
+cargo install --git https://tree.ht/birds/squill.git cli --bin squill
 ```
 
 In CI, skip the Rust toolchain and pull the static binary off a
