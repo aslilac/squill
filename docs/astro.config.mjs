@@ -2,5 +2,6 @@
 import { defineConfig } from "astro/config";
 
 export default defineConfig({
-  site: "https://squill.tree.ht",
+	site: "https://mckayla.dev",
+	base: "/squill",
 });
