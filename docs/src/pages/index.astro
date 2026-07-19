@@ -62,10 +62,12 @@ const baseHref = import.meta.env.BASE_URL;
 					</nav>
 				</div>
 				<p>
-					squill (/skwɪl/) uses Tree-sitter grammars to locate your SQL code
-					wherever it lives. It plucks your queries out surgically and formats
-					them in-place without disturbing your other code. It aims to support
-					all features of Postgres and SQLite, however you use them.
+					squill (/skwɪl/) is a formatter for SQL code that's built to reliably
+					format SQL wherever it may live. It uses Tree-sitter grammars to
+					locate your SQL code, even when it's embedded in another language. It
+					plucks your queries out surgically and formats them in-place without
+					disturbing your other code. It aims to support all features of
+					Postgres and SQLite, however you use them.
 				</p>
 				<p>
 					Every statement squill rewrites is
@@ -93,6 +95,58 @@ const baseHref = import.meta.env.BASE_URL;
 					<pre><code>{after}</code></pre>
 				</figure>
 			</div>
+
+			<section>
+				<h2>SQL in your source code</h2>
+
+				<p>
+					squill also formats SQL embedded in host languages, located with
+					tree-sitter queries: ,
+					<code>database/sql</code> calls in Go, (with <code>%s</code> placeholders
+					preserved),
+					<code>db.query</code> and , and . Only multiline string syntaxes are rewritten;
+					anything with interpolation holes is never touched. Try it in the <a
+						href="playground/">playground</a
+					>.
+				</p>
+
+				<ul>
+					<li>
+						<div style="display: inline-flex; gap: 4px; align-items: center;">
+							<img style="height: 16px;" src="/langs/rust.svg" />
+							<code class="boxed">sqlx::query!</code> and <code class="boxed"
+								>sqlx::query_as!</code
+							> in Rust
+						</div>
+					</li>
+					<li>
+						<div style="display: inline-flex; gap: 4px; align-items: center;">
+							<img style="height: 16px;" src="/langs/go.svg" />
+							<code class="boxed">"database/sql"</code> in Go
+						</div>
+					</li>
+					<li>
+						<div style="display: inline-flex; gap: 4px; align-items: center;">
+							<img style="height: 16px;" src="/langs/typescript.svg" />
+							<code class="boxed">sql`&hellip;`</code> templates in JavaScript/TypeScript
+						</div>
+					</li>
+					<li>
+						<div style="display: inline-flex; gap: 4px; align-items: center;">
+							<img style="height: 16px;" src="/langs/gleam.svg" />
+							<code class="boxed">sqlight</code>/<code class="boxed">pog</code> in
+							Gleam
+						</div>
+					</li>
+					<li>
+						<div style="display: inline-flex; gap: 4px; align-items: center;">
+							<img style="height: 16px;" src="/langs/python.svg" />
+							<code class="boxed">cursor.execute</code> in Python
+						</div>
+					</li>
+				</ul>
+			</section>
+
 			<p>
 				It's quick, too: the entire SQL corpus of <a
 					href="https://github.com/coder/coder">coder/coder</a
@@ -161,23 +215,9 @@ squill fmt path/to/queries/</code></pre>
 				</table>
 			</section>
 
-			<section>
-				<h2>SQL in your source code</h2>
-				<p>
-					squill also formats SQL embedded in host languages, located with
-					tree-sitter queries: <code>sqlx::query!</code> in Rust,
-					<code>database/sql</code> calls in Go, <code>cursor.execute</code> in Python
-					(with <code>%s</code> placeholders preserved),
-					<code>db.query</code> and <code>sql`…`</code> templates in JavaScript/TypeScript,
-					and <code>sqlight</code>/<code>pog</code> in Gleam. Only multiline string
-					syntaxes are rewritten; anything with interpolation holes is never touched.
-					Try it in the <a href="playground/">playground</a>.
-				</p>
-			</section>
-
 			<footer>
 				<p>
-					Built by Kayla and her birds · source at{" "}
+					Built by Kayla and her birds &middot; source at{" "}
 					<a href="https://tree.ht/birds/squill">tree.ht/birds/squill</a>
 				</p>
 			</footer>
@@ -227,7 +267,7 @@ squill fmt path/to/queries/</code></pre>
 				display: flex;
 				align-items: center;
 				gap: 1.1rem;
-				margin-bottom: 1.5rem;
+				margin: 12lvh 0;
 			}
 			h1 {
 				font-family: "Spectral", serif;
@@ -339,7 +379,6 @@ squill fmt path/to/queries/</code></pre>
 			code {
 				font-family: "JetBrains Mono", monospace;
 			}
-
 			pre.dark {
 				background: var(--pane);
 				color: var(--pane-text);
@@ -351,7 +390,8 @@ squill fmt path/to/queries/</code></pre>
 				line-height: 1.6;
 			}
 			p code,
-			td code {
+			td code,
+			code.boxed {
 				background: var(--inset);
 				border: 1px solid var(--edge);
 				border-radius: 5px;
@@ -376,6 +416,9 @@ squill fmt path/to/queries/</code></pre>
 				letter-spacing: 0.1em;
 				color: var(--muted);
 			}
+			ul li {
+				padding: 0.2em 0;
+			}
 			a {
 				color: var(--violet);
 				text-decoration: none;
@@ -386,8 +429,6 @@ squill fmt path/to/queries/</code></pre>
 			footer {
 				margin-top: 3.5rem;
 				text-align: center;
-				font-family: "JetBrains Mono", monospace;
-				font-size: 0.75rem;
 				color: var(--muted);
 			}
 		</style>
