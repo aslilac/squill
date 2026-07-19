@@ -243,7 +243,7 @@ const baseHref = import.meta.env.BASE_URL;
 				lineHeight: 22,
 				scrollBeyondLastLine: false,
 				automaticLayout: true,
-				tabSize: 4,
+				tabSize: options.indent_width,
 				wordWrap: "off",
 			});
 
@@ -288,6 +288,13 @@ const baseHref = import.meta.env.BASE_URL;
 				}
 			}
 
+			// The indent-width setting drives how both panes measure tabs.
+			function applyIndentWidth() {
+				editor.getModel().updateOptions({ tabSize: options.indent_width });
+				outputPane.style.setProperty("--tab-width", String(options.indent_width));
+			}
+			applyIndentWidth();
+
 			let debounce;
 			editor.onDidChangeModelContent(() => {
 				clearTimeout(debounce);
@@ -321,6 +328,7 @@ const baseHref = import.meta.env.BASE_URL;
 						control.type === "checkbox" ? control.checked
 						: control.type === "number" ? Number(control.value)
 						: control.value;
+					applyIndentWidth();
 					render();
 				});
 			}
@@ -446,7 +454,7 @@ const baseHref = import.meta.env.BASE_URL;
 				padding: 0.3rem 0 1rem;
 				font-size: 13px;
 				line-height: 22px;
-				tab-size: 2;
+				tab-size: var(--tab-width, 2);
 				background: transparent !important;
 			}
 			.output code { display: block; counter-reset: line; }
