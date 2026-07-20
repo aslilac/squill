@@ -152,7 +152,7 @@ impl std::fmt::Display for EmbedError {
 impl std::error::Error for EmbedError {}
 
 /// Format every SQL snippet the query captures in `source`, returning the
-/// rewritten host file. Unparseable or unsafe snippets stay byte-exact.
+/// rewritten host file. Unparsable or unsafe snippets stay byte-exact.
 pub fn format_embedded(
 	source: &str,
 	host: Host,

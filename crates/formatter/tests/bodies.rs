@@ -129,12 +129,12 @@ fn plpgsql_comments_survive_in_bodies() {
 }
 
 #[test]
-fn unparseable_sql_body_stays_byte_identical() {
+fn unparsable_sql_body_stays_byte_identical() {
 	let source = "CREATE FUNCTION f() RETURNS int LANGUAGE sql AS $$ {definitely not sql} $$;";
 	let out = format(source);
 	assert!(
 		out.contains("$$ {definitely not sql} $$"),
-		"unparseable body was modified: {out}"
+		"unparsable body was modified: {out}"
 	);
 }
 
