@@ -18,14 +18,24 @@ jobs:
       - run: cargo build --release --target x86_64-unknown-linux-gnu -p cli
         env:
           RUSTFLAGS: -C target-feature=+crt-static
-      - name: stage release assets
+      # Plain API calls instead of an action: the runner only needs curl
+      # and the job's own token.
+      - name: publish release with binary
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir release
-          cp target/x86_64-unknown-linux-gnu/release/squill \
-            release/squill-x86_64-linux
-      - uses: https://code.forgejo.org/actions/forgejo-release@v2
-        with:
-          direction: upload
-          tag: ${{ github.ref_name }}
-          release-dir: release
-          token: ${{ secrets.GITHUB_TOKEN }}
+          bin=target/x86_64-unknown-linux-gnu/release/squill
+          api="$GITHUB_SERVER_URL/api/v1/repos/$GITHUB_REPOSITORY"
+          tag="$GITHUB_REF_NAME"
+          auth="Authorization: token $TOKEN"
+          release=$(
+            curl -fsS -X POST -H "$auth" -H 'Content-Type: application/json' \
+              -d "{\"tag_name\": \"$tag\", \"name\": \"$tag\"}" "$api/releases" \
+            || curl -fsS -H "$auth" "$api/releases/tags/$tag"
+          )
+          release_id=$(echo "$release" | grep -o '"id":[0-9]*' | head -1 | cut -d: -f2)
+          curl -fsS -X POST -H "$auth" \
+            -F "attachment=@$bin" \
+            "$api/releases/$release_id/assets?name=squill-x86_64-linux" \
+            > /dev/null
+          echo "uploaded squill-x86_64-linux to release $tag (id $release_id)"
