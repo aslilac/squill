@@ -23,6 +23,10 @@ jobs:
         name: Format
 
       - run: cargo clippy --workspace --all-targets -- -D warnings
+        name: Lint
+
       - run: cargo test --workspace
+        name: Test
+
       - name: corpus report (informational)
         run: cargo run -p cli --bin corpus-report -- --summary
