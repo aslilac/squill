@@ -1,16 +1,27 @@
-name: ci
+name: Check
 
 on:
   push:
-    branches: [trunk]
+    branches: ["trunk"]
   pull_request:
+    branches: ["**"]
 
 jobs:
-  check:
+  conformance:
+    name: Conformance
+
     runs-on: ubuntu-26.04
+
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+        name: Checkout
+
+      - uses: actions/typos@v1
+        name: Spellcheck
+
       - run: cargo fmt --check
+        name: Format
+
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
       - name: corpus report (informational)
