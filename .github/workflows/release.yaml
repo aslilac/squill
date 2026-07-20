@@ -97,4 +97,4 @@ jobs:
       - uses: softprops/action-gh-release@v3
         name: Publish
         with:
-          files: ./dist/${{ matrix.release.target }}/release/squill-${{ github.ref_name }}-${{ matrix.release.target }}.*
+          files: ./dist/squill-${{ github.ref_name }}-${{ matrix.release.target }}.*
