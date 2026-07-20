@@ -199,6 +199,14 @@ const baseHref = import.meta.env.BASE_URL;
 					class="dark"><code>cargo install --git https://tree.ht/birds/squill.git cli
 
 squill fmt path/to/queries/</code></pre>
+				<p>
+					In CI, skip the Rust toolchain: every release ships a static Linux
+					binary you can pull and run directly.
+				</p>
+				<pre
+					class="dark"><code>curl -fsSLo squill https://tree.ht/birds/squill/releases/download/v0.1.0/squill-x86_64-linux
+chmod +x squill
+./squill fmt --check .</code></pre>
 			</section>
 
 			<section>

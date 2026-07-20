@@ -1,0 +1,29 @@
+name: release
+
+# Tag `vX.Y.Z` -> build a static x86_64 linux binary and attach it to
+# the Forgejo release, so CI elsewhere can curl it instead of building
+# from source.
+
+on:
+  push:
+    tags: [v*]
+
+jobs:
+  release:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - run: rustup target add x86_64-unknown-linux-musl
+      - run: cargo build --release --target x86_64-unknown-linux-musl -p cli
+      - name: stage release assets
+        run: |
+          mkdir release
+          cp target/x86_64-unknown-linux-musl/release/squill \
+            release/squill-x86_64-linux
+      - uses: https://code.forgejo.org/actions/forgejo-release@v2
+        with:
+          direction: upload
+          tag: ${{ github.ref_name }}
+          release-dir: release
+          token: ${{ secrets.GITHUB_TOKEN }}

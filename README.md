@@ -14,12 +14,21 @@ order by n desc;
 ```
 
 Short statements collapse onto one line; long ones break clause-per-line
-at 80 columns.
+at `max-width` (default 80).
 
 ## Quickstart
 
 ```console
 cargo install --git https://tree.ht/birds/squill.git cli
+```
+
+In CI, skip the Rust toolchain and pull the static binary off a
+release (built by `.forgejo/workflows/release.yml` on every `v*` tag):
+
+```console
+curl -fsSLo squill https://tree.ht/birds/squill/releases/download/v0.1.0/squill-x86_64-linux
+chmod +x squill
+./squill fmt --check .
 ```
 
 Or from a checkout:
@@ -31,7 +40,8 @@ squill fmt --help                                       # the full flag surface
 ```
 
 Options (via the nearest squill.toml or flags — flags win): `--dialect postgres|sqlite`,
-`--indent tab|spaces`, `--indent-width N` (default 2), `--keyword-case
+`--indent tab|spaces`, `--indent-width N` (default 2), `--max-width N`
+(default 80), `--keyword-case
 lower|upper`, `--quote-idents as-needed|always`, `--at-params` for
 sqlc-style `@name` parameters, `--strict` to fail on statements that
 could not be parsed.
