@@ -1,0 +1,97 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    name: Verify
+
+    steps:
+      - uses: actions/checkout@v7
+        name: Checkout
+
+      - run: |
+          version="v$(cat Cargo.toml | grep -m 1 "version" | sed -r "s/version *= *\"([[:digit:].]+)\"/\1/")"
+          if [ "$version" != "${{ github.ref_name }}" ]; then
+            echo "tag ${{ github.ref_name }} does not match version $version in Cargo.toml"
+            exit 1
+          fi
+        name: Verify version
+
+      - uses: dtolnay/rust-toolchain@stable
+        name: Configure Rust
+
+      - run: cargo test
+        name: Test
+
+      - uses: softprops/action-gh-release@v3
+        name: Release
+
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        release:
+          - os: ubuntu-26.04-arm
+            target: aarch64-unknown-linux-gnu
+            executable: squill
+
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            executable: squill
+
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            executable: squill.exe
+
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            executable: squill.exe
+
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            executable: squill
+
+    name: Package.${{ matrix.release.target }}
+
+    runs-on: ${{ matrix.release.os }}
+
+    needs:
+      - publish
+
+    steps:
+      - uses: actions/checkout@v7
+        name: Checkout
+
+      - uses: dtolnay/rust-toolchain@stable
+        name: Configure Rust
+        with:
+          target: ${{ matrix.release.target }}
+
+      - run: cargo build --target ${{ matrix.release.target }} --release
+        name: Build
+
+      - run: mkdir dist/
+        name: Prepare for packaging
+
+      # Create .tar.gz files for Linux and macOS
+      - run: tar -a -cf ../../../dist/squill-${{ github.ref_name }}-${{ matrix.release.target }}.tar.gz ${{ matrix.release.executable }}
+        name: Package (tar) — ${{ matrix.release.target }}
+        working-directory: ./target/${{ matrix.release.target }}/release/
+        if: ${{ !startsWith(matrix.release.os, 'windows') }}
+
+      # Create .zip files for Windows
+      - run: Compress-Archive ${{ matrix.release.executable }} -DestinationPath ../../../dist/squill-${{ github.ref_name }}-${{ matrix.release.target }}.zip
+        name: Package (zip) — ${{ matrix.release.target }}
+        working-directory: ./target/${{ matrix.release.target }}/release/
+        if: ${{ startsWith(matrix.release.os, 'windows') }}
+
+      # Upload archives to a Github release for this version
+      - uses: softprops/action-gh-release@v3
+        name: Publish
+        with:
+          files: ./dist/${{ matrix.release.target }}/release/squill-${{ github.ref_name }}-${{ matrix.release.target }}.*
