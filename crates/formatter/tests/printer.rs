@@ -3,7 +3,6 @@
 
 use formatter::IndentStyle;
 use formatter::KeywordCase;
-use formatter::MAX_WIDTH;
 use formatter::Options;
 use formatter::doc::*;
 use formatter::render;
@@ -47,6 +46,27 @@ fn group_breaks_when_too_wide() {
 		&doc,
 		&opts(),
 		&format!("{}\n{}", "x".repeat(60), "y".repeat(60)),
+	);
+}
+
+#[test]
+fn max_width_option_moves_the_boundary() {
+	// Flat layout is 21 chars: fits the default 80, not a width of 20.
+	let doc = group(concat([
+		text("a".repeat(10)),
+		soft_line_or_space(),
+		text("b".repeat(10)),
+	]));
+	assert_render(
+		&doc,
+		&opts(),
+		&format!("{} {}", "a".repeat(10), "b".repeat(10)),
+	);
+	let narrow = Options { max_width: 20, ..opts() };
+	assert_render(
+		&doc,
+		&narrow,
+		&format!("{}\n{}", "a".repeat(10), "b".repeat(10)),
 	);
 }
 
@@ -129,7 +149,8 @@ fn fill_breaks_only_where_needed() {
 	let rendered = render(&fill(items), &opts());
 	let lines: Vec<&str> = rendered.lines().collect();
 	assert_eq!(lines.len(), 2, "six 18-char words fill two lines: {rendered}");
-	assert!(lines.iter().all(|line| line.chars().count() <= MAX_WIDTH));
+	let max_width = usize::from(opts().max_width);
+	assert!(lines.iter().all(|line| line.chars().count() <= max_width));
 	assert!(
 		lines[0].contains("word-0000000000000")
 			&& lines[0].contains("word-0000000000003")

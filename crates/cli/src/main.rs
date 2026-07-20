@@ -34,6 +34,7 @@ Options:
   --dialect <D>           postgres (default) | sqlite
   --indent <STYLE>        tab (default) | spaces
   --indent-width <N>      Indent width (and tab measure), default 2
+  --max-width <N>         Target line width (20 to 500), default 80
   --keyword-case <CASE>   lower (default) | upper
   --quote-idents <MODE>   as-needed (default) | always
   --at-params             Treat sqlc-style @name as parameters (Postgres)
@@ -45,8 +46,9 @@ Options:
   -h, --help              Show this help
 
 Configuration: the nearest squill.toml at or above each formatted file
-supplies defaults (keys: dialect, indent, indent-width, keyword-case,
-quote-idents, at-params). Explicit flags override the config.
+supplies defaults (keys: dialect, indent, indent-width, max-width,
+keyword-case, quote-idents, at-params). Explicit flags override the
+config.
 ";
 
 struct Args {
@@ -114,6 +116,15 @@ fn parse_args() -> Result<Args, String> {
 						.parse()
 						.map_err(|_| "--indent-width needs a number".to_string())?,
 				)
+			}
+			"--max-width" => {
+				let width: u16 = value(&mut argv, "--max-width")?
+					.parse()
+					.map_err(|_| "--max-width needs a number".to_string())?;
+				if !(20..=500).contains(&width) {
+					return Err("--max-width expects 20 to 500".to_string());
+				}
+				args.overrides.max_width = Some(width);
 			}
 			"--keyword-case" => {
 				args.overrides.keyword_case = Some(config::parse_keyword_case(&value(

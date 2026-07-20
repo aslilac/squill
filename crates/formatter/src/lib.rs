@@ -16,9 +16,6 @@ use parser::lexer::LexOptions;
 use parser::parser::Cst;
 use parser::syntax::SyntaxKind;
 
-/// Maximum line width. Fixed; not part of the config surface.
-pub const MAX_WIDTH: usize = 80;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum IndentStyle {
 	#[default]
@@ -48,6 +45,10 @@ pub struct Options {
 	/// Width of one indent level: the space count in spaces mode, and the
 	/// measured width of a tab in tab mode. Default 2.
 	pub indent_width: u8,
+	/// Target maximum line width; a group breaks when its flat layout
+	/// would overrun this. Single tokens longer than the width still
+	/// overrun. Default 80.
+	pub max_width: u16,
 	pub keyword_case: KeywordCase,
 	pub quoting: IdentQuoting,
 	/// Governs the identifier-quoting safety rules.
@@ -70,6 +71,7 @@ impl Default for Options {
 		Options {
 			indent_style: IndentStyle::default(),
 			indent_width: 2,
+			max_width: 80,
 			keyword_case: KeywordCase::default(),
 			quoting: IdentQuoting::default(),
 			dialect: Dialect::default(),

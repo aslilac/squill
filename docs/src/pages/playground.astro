@@ -68,6 +68,16 @@ const baseHref = import.meta.env.BASE_URL;
 						/>
 					</label>
 					<label
+						>max-width
+						<input
+							data-opt="max_width"
+							type="number"
+							min="20"
+							max="500"
+							value="80"
+						/>
+					</label>
+					<label
 						>keyword-case
 						<select data-opt="keyword_case">
 							<option value="lower">lower</option>
@@ -242,6 +252,7 @@ const baseHref = import.meta.env.BASE_URL;
 				dialect: "postgres",
 				indent: "tab",
 				indent_width: 2,
+				max_width: 80,
 				keyword_case: "lower",
 				quote_idents: "as-needed",
 				at_params: false,

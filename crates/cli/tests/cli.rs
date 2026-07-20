@@ -182,6 +182,30 @@ fn option_flags_apply() {
 }
 
 #[test]
+fn max_width_flag_applies() {
+	// 38 chars flat: fits the default 80, breaks under --max-width 30.
+	let sql = b"select aaaaaaaa, bbbbbbbb from big_table;";
+	let mut child = squill()
+		.args(["fmt", "--stdin", "--max-width", "30"])
+		.stdin(Stdio::piped())
+		.stdout(Stdio::piped())
+		.spawn()
+		.expect("spawn");
+	child.stdin.take().expect("stdin").write_all(sql).expect("write");
+	let output = child.wait_with_output().expect("wait");
+	let stdout = String::from_utf8_lossy(&output.stdout);
+	assert_eq!(stdout, "select aaaaaaaa, bbbbbbbb\nfrom big_table;\n");
+
+	let status = squill()
+		.args(["fmt", "--stdin", "--max-width", "10"])
+		.stdin(Stdio::piped())
+		.stdout(Stdio::piped())
+		.status()
+		.expect("run");
+	assert_eq!(status.code(), Some(2), "out-of-range width is an error");
+}
+
+#[test]
 fn sqlite_dialect_flag() {
 	let mut child = squill()
 		.args(["fmt", "--stdin", "--dialect", "sqlite"])

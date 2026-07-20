@@ -19,6 +19,7 @@ pub struct PartialOptions {
 	pub dialect: Option<Dialect>,
 	pub indent_style: Option<IndentStyle>,
 	pub indent_width: Option<u8>,
+	pub max_width: Option<u16>,
 	pub keyword_case: Option<KeywordCase>,
 	pub quoting: Option<IdentQuoting>,
 	pub at_params: Option<bool>,
@@ -34,6 +35,9 @@ impl PartialOptions {
 		}
 		if let Some(value) = self.indent_width {
 			options.indent_width = value;
+		}
+		if let Some(value) = self.max_width {
+			options.max_width = value;
 		}
 		if let Some(value) = self.keyword_case {
 			options.keyword_case = value;
@@ -138,6 +142,16 @@ pub fn parse_config(text: &str, path: &Path) -> Result<PartialOptions, String> {
 				_ => {
 					return Err(err(
 						"`indent-width` expects an integer from 1 to 16".into(),
+					));
+				}
+			},
+			"max-width" => match value {
+				Value::Integer(n) if (20..=500).contains(&n) => {
+					options.max_width = Some(n as u16);
+				}
+				_ => {
+					return Err(err(
+						"`max-width` expects an integer from 20 to 500".into(),
 					));
 				}
 			},

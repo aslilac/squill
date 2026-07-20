@@ -48,7 +48,6 @@ fn cases_as_keyword(word: &str, dialect: parser::Dialect) -> bool {
 		parser::Dialect::Sqlite => is_sqlite_keyword(&lower),
 	}
 }
-use crate::MAX_WIDTH;
 use crate::Options;
 use crate::doc::Doc;
 use crate::quoting;
@@ -332,7 +331,7 @@ impl Printer<'_> {
 	/// `rest` fit on the current line? Measurement ends at the first line
 	/// break in break-mode content (the line ends there anyway).
 	fn fits_many(&self, head: &[Cmd<'_>], rest: &[Cmd<'_>]) -> bool {
-		let mut remaining = MAX_WIDTH as isize - self.col as isize;
+		let mut remaining = self.options.max_width as isize - self.col as isize;
 		// Work queue: `head` in order, then `rest` from its top (end).
 		let mut queue: Vec<Cmd<'_>> = head.iter().rev().copied().collect();
 		let mut rest_iter = rest.iter().rev();

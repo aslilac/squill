@@ -22,6 +22,7 @@ struct RequestOptions {
 	dialect: Option<String>,
 	indent: Option<String>,
 	indent_width: Option<u8>,
+	max_width: Option<u16>,
 	keyword_case: Option<String>,
 	quote_idents: Option<String>,
 	at_params: Option<bool>,
@@ -52,6 +53,9 @@ fn build_options(req: &RequestOptions) -> formatter::Options {
 	}
 	if let Some(width) = req.indent_width {
 		options.indent_width = width.clamp(1, 16);
+	}
+	if let Some(width) = req.max_width {
+		options.max_width = width.clamp(20, 500);
 	}
 	if let Some(case) = req.keyword_case.as_deref() {
 		options.keyword_case = match case {
