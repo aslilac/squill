@@ -45,8 +45,7 @@ with
 						-- Extend to the autostart, then add the activity bump
 						(
 							(@next_autostart::timestamptz) - now()
-						)
-						+ case
+						) + case
 							when templates.allow_user_autostop
 								then (
 									workspaces.ttl / 1000 / 1000 / 1000 || ' seconds'

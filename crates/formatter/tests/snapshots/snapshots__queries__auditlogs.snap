@@ -30,20 +30,21 @@ from audit_logs
 	-- First join on workspaces to get the initial workspace create
 	-- to workspace build 1 id. This is because the first create is
 	-- is a different audit log than subsequent starts.
-	left join workspaces on audit_logs.resource_type = 'workspace'
-	and audit_logs.resource_id = workspaces.id
+	left join workspaces
+		on audit_logs.resource_type = 'workspace'
+		and audit_logs.resource_id = workspaces.id
 	-- Get the reason from the build if the resource type
 	-- is a workspace_build
-	left join workspace_builds wb_build on audit_logs.resource_type
-	= 'workspace_build'
-	and audit_logs.resource_id = wb_build.id
+	left join workspace_builds wb_build
+		on audit_logs.resource_type = 'workspace_build'
+		and audit_logs.resource_id = wb_build.id
 	-- Get the reason from the build #1 if this is the first
 	-- workspace create.
-	left join workspace_builds wb_workspace on audit_logs.resource_type
-	= 'workspace'
-	and audit_logs.action = 'create'
-	and workspaces.id = wb_workspace.workspace_id
-	and wb_workspace.build_number = 1
+	left join workspace_builds wb_workspace
+		on audit_logs.resource_type = 'workspace'
+		and audit_logs.action = 'create'
+		and workspaces.id = wb_workspace.workspace_id
+		and wb_workspace.build_number = 1
 where
 	-- Filter resource_type
 	case
@@ -82,8 +83,7 @@ where
 	-- Filter by username
 	and case
 		when @username::text != ''
-			then user_id
-			= (
+			then user_id = (
 				select id
 				from users
 				where lower(username) = lower(@username) and deleted = false
@@ -158,20 +158,21 @@ from (
 		-- First join on workspaces to get the initial workspace create
 		-- to workspace build 1 id. This is because the first create is
 		-- is a different audit log than subsequent starts.
-		left join workspaces on audit_logs.resource_type = 'workspace'
-		and audit_logs.resource_id = workspaces.id
+		left join workspaces
+			on audit_logs.resource_type = 'workspace'
+			and audit_logs.resource_id = workspaces.id
 		-- Get the reason from the build if the resource type
 		-- is a workspace_build
-		left join workspace_builds wb_build on audit_logs.resource_type
-		= 'workspace_build'
-		and audit_logs.resource_id = wb_build.id
+		left join workspace_builds wb_build
+			on audit_logs.resource_type = 'workspace_build'
+			and audit_logs.resource_id = wb_build.id
 		-- Get the reason from the build #1 if this is the first
 		-- workspace create.
-		left join workspace_builds wb_workspace on audit_logs.resource_type
-		= 'workspace'
-		and audit_logs.action = 'create'
-		and workspaces.id = wb_workspace.workspace_id
-		and wb_workspace.build_number = 1
+		left join workspace_builds wb_workspace
+			on audit_logs.resource_type = 'workspace'
+			and audit_logs.action = 'create'
+			and workspaces.id = wb_workspace.workspace_id
+			and wb_workspace.build_number = 1
 	where
 		-- Filter resource_type
 		case
@@ -211,8 +212,7 @@ from (
 		-- Filter by username
 		and case
 			when @username::text != ''
-				then user_id
-				= (
+				then user_id = (
 					select id
 					from users
 					where lower(username) = lower(@username) and deleted = false

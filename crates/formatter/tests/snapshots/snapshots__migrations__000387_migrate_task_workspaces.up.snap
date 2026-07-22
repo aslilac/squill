@@ -106,8 +106,8 @@ from tasks t
 		limit 1
 	) latest_build on true
 	-- Get the sidebar app (optional, can be NULL).
-	left join workspace_apps sidebar_app on sidebar_app.id
-	= latest_build.ai_task_sidebar_app_id
+	left join workspace_apps sidebar_app
+		on sidebar_app.id = latest_build.ai_task_sidebar_app_id
 where
 	-- Safe-guard, do not create for existing tasks.
 	not exists (select 1 from task_workspace_apps twa where twa.task_id = t.id);

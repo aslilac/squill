@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 -- This migration is intended to maintain the existing behavior of single org
@@ -17,8 +16,7 @@ update organizations
 set is_default = true
 where
 	-- The first organization created will be the default.
-	id
-	= (
+	id = (
 		select id
 		from organizations
 		order by organizations.created_at asc

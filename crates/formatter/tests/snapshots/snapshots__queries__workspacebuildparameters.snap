@@ -20,8 +20,8 @@ from (
 	from workspace_build_parameters wbp
 		join workspace_builds wb on wb.id = wbp.workspace_build_id
 		join workspaces w on w.id = wb.workspace_id
-		join template_version_parameters tvp on tvp.template_version_id
-		= wb.template_version_id
+		join template_version_parameters tvp
+			on tvp.template_version_id = wb.template_version_id
 	where
 		w.owner_id = $1
 		and wb.transition = 'start'

@@ -95,25 +95,25 @@ on conflict
 		not exists (
 			select 1
 			from workspace_agents as existing_agent
-				inner join workspace_resources as existing_resource on existing_agent.resource_id
-				= existing_resource.id
-				inner join workspace_builds as existing_build on existing_resource.job_id
-				= existing_build.job_id
+				inner join workspace_resources as existing_resource
+					on existing_agent.resource_id = existing_resource.id
+				inner join workspace_builds as existing_build
+					on existing_resource.job_id = existing_build.job_id
 			where existing_agent.id = workspace_apps.agent_id
 		)
 		or exists (
 			select 1
 			from workspace_agents as existing_agent
-				inner join workspace_resources as existing_resource on existing_agent.resource_id
-				= existing_resource.id
-				inner join workspace_builds as existing_build on existing_resource.job_id
-				= existing_build.job_id
-				inner join workspace_agents as incoming_agent on incoming_agent.id
-				= EXCLUDED.agent_id
-				inner join workspace_resources as incoming_resource on incoming_agent.resource_id
-				= incoming_resource.id
-				inner join workspace_builds as incoming_build on incoming_resource.job_id
-				= incoming_build.job_id
+				inner join workspace_resources as existing_resource
+					on existing_agent.resource_id = existing_resource.id
+				inner join workspace_builds as existing_build
+					on existing_resource.job_id = existing_build.job_id
+				inner join workspace_agents as incoming_agent
+					on incoming_agent.id = EXCLUDED.agent_id
+				inner join workspace_resources as incoming_resource
+					on incoming_agent.resource_id = incoming_resource.id
+				inner join workspace_builds as incoming_build
+					on incoming_resource.job_id = incoming_build.job_id
 			where
 				existing_agent.id = workspace_apps.agent_id
 				and existing_build.workspace_id = incoming_build.workspace_id

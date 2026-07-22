@@ -9,13 +9,11 @@ select * from workspaces_expanded where id = $1 limit 1;
 select *
 from workspaces_expanded as workspaces
 where
-	workspaces.id
-	= (
+	workspaces.id = (
 		select workspace_id
 		from workspace_builds
 		where
-			workspace_builds.job_id
-			= (
+			workspace_builds.job_id = (
 				select job_id
 				from workspace_resources
 				where workspace_resources.id = @resource_id
@@ -27,23 +25,19 @@ limit 1;
 select *
 from workspaces_expanded as workspaces
 where
-	workspaces.id
-	= (
+	workspaces.id = (
 		select workspace_id
 		from workspace_builds
 		where
-			workspace_builds.job_id
-			= (
+			workspace_builds.job_id = (
 				select job_id
 				from workspace_resources
 				where
-					workspace_resources.id
-					= (
+					workspace_resources.id = (
 						select resource_id
 						from workspace_agents
 						where
-							workspace_agents.id
-							= (
+							workspace_agents.id = (
 								select agent_id
 								from workspace_apps
 								where workspace_apps.id = @workspace_app_id
@@ -56,18 +50,15 @@ where
 select *
 from workspaces_expanded as workspaces
 where
-	workspaces.id
-	= (
+	workspaces.id = (
 		select workspace_id
 		from workspace_builds
 		where
-			workspace_builds.job_id
-			= (
+			workspace_builds.job_id = (
 				select job_id
 				from workspace_resources
 				where
-					workspace_resources.id
-					= (
+					workspace_resources.id = (
 						select resource_id
 						from workspace_agents
 						where workspace_agents.id = @agent_id
@@ -115,8 +106,8 @@ with
 					provisioner_jobs.job_status
 				from workspace_builds
 					join provisioner_jobs on provisioner_jobs.id = workspace_builds.job_id
-					left join template_versions on template_versions.id
-					= workspace_builds.template_version_id
+					left join template_versions
+						on template_versions.id = workspace_builds.template_version_id
 				where workspace_builds.workspace_id = workspaces.id
 				order by build_number desc
 				limit 1
@@ -211,11 +202,11 @@ with
 					then exists (
 						select 1
 						from workspace_build_parameters
-							inner join build_params on lower(workspace_build_parameters.name)
-							= build_params.name
-							and lower(workspace_build_parameters.value) = build_params.value
-							and workspace_build_parameters.workspace_build_id
-							= latest_build.id
+							inner join build_params
+								on lower(workspace_build_parameters.name) = build_params.name
+								and lower(workspace_build_parameters.value) = build_params.value
+								and workspace_build_parameters.workspace_build_id
+								= latest_build.id
 					)
 				else true
 			end
@@ -223,8 +214,7 @@ with
 			-- Filter by owner_name
 			and case
 				when @owner_username::text != ''
-					then workspaces.owner_id
-					= (
+					then workspaces.owner_id = (
 						select id
 						from users
 						where
@@ -269,8 +259,8 @@ with
 					then (
 						select count(*)
 						from workspace_resources
-							join workspace_agents on workspace_agents.resource_id
-							= workspace_resources.id
+							join workspace_agents
+								on workspace_agents.resource_id = workspace_resources.id
 						where
 							workspace_resources.job_id = latest_build.provisioner_job_id
 							and latest_build.transition = 'start'::workspace_transition
@@ -332,8 +322,7 @@ with
 			-- Filter by has_ai_task, checks if this is a task workspace.
 			and case
 				when sqlc.narg('has_ai_task')::boolean is not null
-					then sqlc.narg('has_ai_task')::boolean
-					= exists (
+					then sqlc.narg('has_ai_task')::boolean = exists (
 						select 1
 						from tasks
 						where
@@ -386,8 +375,11 @@ with
 			-- To ensure that 'favorite' workspaces show up first in the list only for their owner.
 			case
 				when favorite
-				and owner_username
-				= (select users.username from users where users.id = @requester_id)
+				and owner_username = (
+					select users.username
+					from users
+					where users.id = @requester_id
+				)
 					then 0
 				else 1
 			end asc,
@@ -468,8 +460,8 @@ select
 	templates.id as template_id,
 	count(distinct workspaces.owner_id) as unique_owners_sum
 from templates
-	left join workspaces on workspaces.template_id = templates.id
-	and workspaces.deleted = false
+	left join workspaces
+		on workspaces.template_id = templates.id and workspaces.deleted = false
 where templates.id = any(@template_ids::uuid[])
 group by templates.id;
 
@@ -635,8 +627,8 @@ with
 					provisioner_jobs.completed_at,
 					provisioner_jobs.error
 				from workspace_builds
-					left join provisioner_jobs on provisioner_jobs.id
-					= workspace_builds.job_id
+					left join provisioner_jobs
+						on provisioner_jobs.id = workspace_builds.job_id
 				where workspace_builds.workspace_id = workspaces.id
 				order by build_number desc
 				limit 1
@@ -709,8 +701,7 @@ from workspaces
 	inner join templates on workspaces.template_id = templates.id
 	inner join users on workspaces.owner_id = users.id
 where
-	workspace_builds.build_number
-	= (
+	workspace_builds.build_number = (
 		select max(build_number)
 		from workspace_builds
 		where workspace_builds.workspace_id = workspaces.id
@@ -770,8 +761,9 @@ where
 		(
 			workspaces.dormant_at is null
 			and templates.time_til_dormant > 0
-			and (@now::timestamptz) - workspaces.last_used_at
-			> (interval '1 millisecond' * (templates.time_til_dormant / 1000000))
+			and (@now::timestamptz) - workspaces.last_used_at > (
+				interval '1 millisecond' * (templates.time_til_dormant / 1000000)
+			)
 		)
 		or
 
@@ -796,8 +788,7 @@ where
 							or provisioner_jobs.completed_at is not null
 						)
 						and (
-							(@now::timestamptz)
-							- (
+							(@now::timestamptz) - (
 								case
 									when provisioner_jobs.canceled_at is not null
 										then provisioner_jobs.canceled_at
@@ -828,8 +819,9 @@ where
 			)
 			and provisioner_jobs.job_status = 'failed'::provisioner_job_status
 			and provisioner_jobs.completed_at is not null
-			and (@now::timestamptz) - provisioner_jobs.completed_at
-			> (interval '1 millisecond' * (templates.failure_ttl / 1000000))
+			and (@now::timestamptz) - provisioner_jobs.completed_at > (
+				interval '1 millisecond' * (templates.failure_ttl / 1000000)
+			)
 		)
 		or
 
@@ -862,10 +854,10 @@ where
 			and workspace_builds.deadline > @now::timestamptz
 			and templates.time_til_autostop_notify > 0
 			and workspace_builds.deadline
-			<= (@now::timestamptz)
-			+ (
-				interval '1 millisecond'
-				* (templates.time_til_autostop_notify / 1000000)
+			<= (@now::timestamptz) + (
+				interval '1 millisecond' * (
+					templates.time_til_autostop_notify / 1000000
+				)
 			)
 			and workspace_builds.notified_autostop_deadline
 			!= workspace_builds.deadline
@@ -891,10 +883,10 @@ where
 				or (
 					workspace_builds.max_deadline != '0001-01-01 00:00:00+00'::timestamptz
 					and workspace_builds.max_deadline
-					<= (@now::timestamptz)
-					+ (
-						interval '1 millisecond'
-						* (templates.time_til_autostop_notify / 1000000)
+					<= (@now::timestamptz) + (
+						interval '1 millisecond' * (
+							templates.time_til_autostop_notify / 1000000
+						)
 					)
 				)
 			)
@@ -921,10 +913,10 @@ set
 	deleting_at = case
 		when $2::timestamptz is null or templates.time_til_dormant_autodelete = 0
 			then null
-		else $2::timestamptz
-		+ (
-			interval '1 millisecond'
-			* (templates.time_til_dormant_autodelete / 1000000)
+		else $2::timestamptz + (
+			interval '1 millisecond' * (
+				templates.time_til_dormant_autodelete / 1000000
+			)
 		)
 	end
 from templates
@@ -1003,11 +995,12 @@ from workspaces
 			workspace_agents.name as agent_name,
 			job_id
 		from workspace_resources
-			join workspace_agents on (
-				workspace_agents.resource_id = workspace_resources.id
-				-- Filter out deleted sub agents.
-				and workspace_agents.deleted = false
-			)
+			join workspace_agents
+				on (
+					workspace_agents.resource_id = workspace_resources.id
+					-- Filter out deleted sub agents.
+					and workspace_agents.deleted = false
+				)
 		where job_id = latest_build.job_id
 	) resources on true
 where
@@ -1072,8 +1065,8 @@ select
 from first_success_build fsb
 	join workspaces w on w.id = fsb.workspace_id
 	join templates t on t.id = w.template_id
-	left join template_version_presets tvp on tvp.id
-	= fsb.template_version_preset_id
+	left join template_version_presets tvp
+		on tvp.id = fsb.template_version_preset_id
 	join organizations o on o.id = w.organization_id
 where
 	not t.deleted
@@ -1097,8 +1090,7 @@ from workspaces w
 	left join template_versions tv on wb.template_version_id = tv.id
 where
 	w.deleted = false
-	and wb.build_number
-	= (
+	and wb.build_number = (
 		select max(wb2.build_number)
 		from workspace_builds wb2
 		where wb2.workspace_id = w.id

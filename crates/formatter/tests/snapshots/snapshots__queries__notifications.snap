@@ -121,10 +121,11 @@ select
 	)::bool as disabled
 from acquired nm
 	join notification_templates nt on nm.notification_template_id = nt.id
-	left join notification_preferences as np on (
-		np.user_id = nm.user_id
-		and np.notification_template_id = nm.notification_template_id
-	);
+	left join notification_preferences as np
+		on (
+			np.user_id = nm.user_id
+			and np.notification_template_id = nm.notification_template_id
+		);
 
 -- name: BulkMarkNotificationMessagesFailed :execrows
 update notification_messages

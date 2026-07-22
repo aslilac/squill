@@ -31,8 +31,7 @@ where
 				-- rows after the cursor.
 				(
 					lower(user_username)
-				)
-				> (
+				) > (
 					select lower(user_username)
 					from group_members_expanded
 					where group_id = @group_id and user_id = @after_id

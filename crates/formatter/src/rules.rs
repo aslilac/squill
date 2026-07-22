@@ -1190,6 +1190,13 @@ impl Lowerer {
 					if child.kind() == SyntaxKind::JoinExpr && first {
 						// Flatten the left-nested join chain.
 						self.join_segments(docs, child);
+					} else if child.kind() == SyntaxKind::JoinCondition {
+						// The condition is the segment's preferred break
+						// point: a too-long segment puts `on ...` on its own
+						// indented line before anything inside the condition
+						// expression breaks.
+						let doc = self.node(child);
+						self.push(docs, group(indent(concat([soft_line_or_space(), doc]))));
 					} else {
 						if !first && !segment_started {
 							docs.push(soft_line_or_space());
@@ -1738,15 +1745,18 @@ impl Lowerer {
 		node: &SyntaxNode,
 		chain_op: Option<&str>,
 	) {
+		let elements: Vec<_> = node.children_with_tokens().collect();
+		let hug_op =
+			if chain_op.is_none() { hug_op_index(&elements) } else { None };
 		let mut first = true;
 		let mut after_op = false;
-		for element in node.children_with_tokens() {
+		for (index, element) in elements.into_iter().enumerate() {
 			match element {
 				SyntaxElement::Token(token) if token.kind().is_trivia() => {
 					self.trivia(docs, token)
 				}
 				SyntaxElement::Token(token) => {
-					if after_op {
+					if after_op || hug_op == Some(index) {
 						docs.push(space());
 					} else {
 						docs.push(soft_line_or_space());
@@ -2208,6 +2218,45 @@ fn bool_chain_op(node: &SyntaxNode) -> Option<String> {
 		.filter(|t| t.kind() == SyntaxKind::Ident)
 		.map(|t| t.text().to_ascii_lowercase())
 		.find(|t| t == "and" || t == "or")
+}
+
+/// The index of the operator token whose leading break should be
+/// suppressed because the final operand hugs: bracket-like constructs
+/// absorb the break themselves (`x = (` / `x = case` with the contents
+/// broken inside), so the operator stays glued to the left-hand side
+/// instead of dangling on its own line.
+fn hug_op_index(elements: &[SyntaxElement<'_>]) -> Option<usize> {
+	let is_trivia = |el: &SyntaxElement<'_>| matches!(el, SyntaxElement::Token(token) if token.kind().is_trivia());
+	let last = elements.iter().rposition(|el| !is_trivia(el))?;
+	match elements[last] {
+		SyntaxElement::Node(node) if hugs(node.kind()) => {}
+		_ => return None,
+	}
+	// The break sits before the first token of the operator run directly
+	// preceding the operand: scan back to the previous operand.
+	let mut op = None;
+	for i in (0..last).rev() {
+		match elements[i] {
+			el if is_trivia(&el) => {}
+			SyntaxElement::Token(_) => op = Some(i),
+			SyntaxElement::Node(_) => break,
+		}
+	}
+	op
+}
+
+/// Operand kinds that absorb a layout break internally when they are the
+/// right-hand side of a binary operator.
+fn hugs(kind: SyntaxKind) -> bool {
+	matches!(
+		kind,
+		SyntaxKind::ParenExpr
+			| SyntaxKind::ParenSelect
+			| SyntaxKind::SubqueryExpr
+			| SyntaxKind::RowExpr
+			| SyntaxKind::ArrayExpr
+			| SyntaxKind::CaseExpr
+	)
 }
 
 /// Raw token text as a leaf: multi-line tokens (dollar-quoted bodies,

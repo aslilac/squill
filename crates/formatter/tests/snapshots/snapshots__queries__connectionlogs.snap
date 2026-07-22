@@ -25,8 +25,8 @@ select
 	organizations.display_name as organization_display_name,
 	organizations.icon as organization_icon
 from connection_logs
-	join users as workspace_owner on connection_logs.workspace_owner_id
-	= workspace_owner.id
+	join users as workspace_owner
+		on connection_logs.workspace_owner_id = workspace_owner.id
 	left join users on connection_logs.user_id = users.id
 	join organizations on connection_logs.organization_id = organizations.id
 where
@@ -39,8 +39,7 @@ where
 	-- Filter by workspace owner username
 	and case
 		when @workspace_owner::text != ''
-			then workspace_owner_id
-			= (
+			then workspace_owner_id = (
 				select id
 				from users
 				where lower(username) = lower(@workspace_owner) and deleted = false
@@ -57,8 +56,7 @@ where
 	-- Filter by workspace_owner_email
 	and case
 		when @workspace_owner_email::text != ''
-			then workspace_owner_id
-			= (
+			then workspace_owner_id = (
 				select id
 				from users
 				where email = @workspace_owner_email and deleted = false
@@ -79,8 +77,7 @@ where
 	-- Filter by username
 	and case
 		when @username::text != ''
-			then user_id
-			= (
+			then user_id = (
 				select id
 				from users
 				where lower(username) = lower(@username) and deleted = false
@@ -148,8 +145,8 @@ select count(*) as count
 from (
 	select 1
 	from connection_logs
-		join users as workspace_owner on connection_logs.workspace_owner_id
-		= workspace_owner.id
+		join users as workspace_owner
+			on connection_logs.workspace_owner_id = workspace_owner.id
 		left join users on connection_logs.user_id = users.id
 		join organizations on connection_logs.organization_id = organizations.id
 	where
@@ -163,8 +160,7 @@ from (
 		-- Filter by workspace owner username
 		and case
 			when @workspace_owner::text != ''
-				then workspace_owner_id
-				= (
+				then workspace_owner_id = (
 					select id
 					from users
 					where lower(username) = lower(@workspace_owner) and deleted = false
@@ -181,8 +177,7 @@ from (
 		-- Filter by workspace_owner_email
 		and case
 			when @workspace_owner_email::text != ''
-				then workspace_owner_id
-				= (
+				then workspace_owner_id = (
 					select id
 					from users
 					where email = @workspace_owner_email and deleted = false
@@ -203,8 +198,7 @@ from (
 		-- Filter by username
 		and case
 			when @username::text != ''
-				then user_id
-				= (
+				then user_id = (
 					select id
 					from users
 					where lower(username) = lower(@username) and deleted = false

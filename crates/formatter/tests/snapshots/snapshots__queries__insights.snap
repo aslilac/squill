@@ -285,20 +285,21 @@ with
 			apps.icon,
 			(tus.app_usage_mins -> apps.slug)::smallint as usage_mins
 		from apps
-			join template_usage_stats as tus on
-			-- Query parameter filter.
-			tus.start_time
-			>= @start_time::timestamptz
-			and tus.end_time <= @end_time::timestamptz
-			and case
-				when coalesce(array_length(@template_ids::uuid[], 1), 0) > 0
-					then tus.template_id = any(@template_ids::uuid[])
-				else true
-			end
-			-- Primary join condition.
-			and tus.template_id = apps.template_id
-			and tus.app_usage_mins
-			? apps.slug -- Key exists in object.
+			join template_usage_stats as tus
+				on
+				-- Query parameter filter.
+				tus.start_time
+				>= @start_time::timestamptz
+				and tus.end_time <= @end_time::timestamptz
+				and case
+					when coalesce(array_length(@template_ids::uuid[], 1), 0) > 0
+						then tus.template_id = any(@template_ids::uuid[])
+					else true
+				end
+				-- Primary join condition.
+				and tus.template_id = apps.template_id
+				and tus.app_usage_mins
+				? apps.slug -- Key exists in object.
 	),
 	-- Group the app insights by interval, user and unique app. This
 	-- allows us to deduplicate a user using the same app across
@@ -331,8 +332,7 @@ with
 			-- Since we're aggregating per user app usage across templates,
 			-- there can be duplicate start_times. To handle this, we use the
 			-- dense_rank() function, otherwise row_number() would suffice.
-			start_time
-			- (
+			start_time - (
 				dense_rank() over (
 					partition by user_id,
 					slug,
@@ -375,9 +375,10 @@ select
 		0
 	)::bigint as times_used
 from app_insights as ai
-	join templates as t on t.slug = ai.slug
-	and t.display_name = ai.display_name
-	and t.icon = ai.icon
+	join templates as t
+		on t.slug = ai.slug
+		and t.display_name = ai.display_name
+		and t.icon = ai.icon
 group by t.template_ids, ai.slug, ai.display_name, ai.icon;
 
 -- name: GetTemplateAppInsightsByTemplate :many
@@ -421,8 +422,8 @@ with
 			join workspaces as w on w.id = fs.workspace_id
 			-- We do a left join here because we want to include user IDs that have used
 			-- e.g. ports when counting active users.
-			left join workspace_apps wa on wa.agent_id = fs.agent_id
-			and wa.slug = fs.slug_or_port
+			left join workspace_apps wa
+				on wa.agent_id = fs.agent_id and wa.slug = fs.slug_or_port
 			-- Generate a series of minute buckets for each session for computing the
 			-- mintes/bucket.
 			cross join generate_series(
@@ -486,15 +487,16 @@ select
 	)::uuid[] as template_ids,
 	count(distinct tus.user_id) as active_users
 from ts
-	left join template_usage_stats as tus on tus.start_time >= ts.from_
-	and tus.start_time
-	< ts.to_ -- End time exclusion criteria optimization for index.
-	and tus.end_time <= ts.to_
-	and case
-		when coalesce(array_length(@template_ids::uuid[], 1), 0) > 0
-			then tus.template_id = any(@template_ids::uuid[])
-		else true
-	end
+	left join template_usage_stats as tus
+		on tus.start_time >= ts.from_
+		and tus.start_time
+		< ts.to_ -- End time exclusion criteria optimization for index.
+		and tus.end_time <= ts.to_
+		and case
+			when coalesce(array_length(@template_ids::uuid[], 1), 0) > 0
+				then tus.template_id = any(@template_ids::uuid[])
+			else true
+		end
 group by ts.from_, ts.to_;
 
 -- name: GetTemplateUsageStats :many
@@ -580,8 +582,7 @@ with
 		where
 			-- s.minute_bucket >= @start_time::timestamptz
 			-- AND s.minute_bucket < @end_time::timestamptz
-			s.minute_bucket
-			>= (select t from latest_start)
+			s.minute_bucket >= (select t from latest_start)
 			and s.minute_bucket < now()
 		group by
 			time_bucket,
@@ -649,8 +650,7 @@ with
 		where
 			-- created_at >= @start_time::timestamptz
 			-- AND created_at < @end_time::timestamptz
-			created_at
-			>= (select t from latest_start)
+			created_at >= (select t from latest_start)
 			and created_at < now()
 			-- Inclusion criteria to filter out empty results.
 			and (
@@ -741,13 +741,13 @@ with
 			percentile_cont(0.5) within group (order by
 				was.connection_median_latency_ms)::real as median_latency_ms
 		from minute_buckets as mb
-			join workspace_agent_stats as was on was.created_at
-			>= (select t from latest_start)
-			and was.created_at < now()
-			and date_trunc('minute', was.created_at) = mb.minute_bucket
-			and was.template_id = mb.template_id
-			and was.user_id = mb.user_id
-			and was.connection_median_latency_ms > 0
+			join workspace_agent_stats as was
+				on was.created_at >= (select t from latest_start)
+				and was.created_at < now()
+				and date_trunc('minute', was.created_at) = mb.minute_bucket
+				and was.template_id = mb.template_id
+				and was.user_id = mb.user_id
+				and was.connection_median_latency_ms > 0
 		group by mb.start_time, mb.template_id, mb.user_id
 	) insert into template_usage_stats as tus (
 	start_time,
@@ -777,12 +777,13 @@ with
 		stats.jetbrains_mins,
 		stats.app_usage_mins
 	from stats
-		left join latencies on
-		-- The latencies group-by ensures there at most one row.
-		latencies.start_time
-		= stats.start_time
-		and latencies.template_id = stats.template_id
-		and latencies.user_id = stats.user_id
+		left join latencies
+			on
+			-- The latencies group-by ensures there at most one row.
+			latencies.start_time
+			= stats.start_time
+			and latencies.template_id = stats.template_id
+			and latencies.user_id = stats.user_id
 )
 on conflict
 	(start_time,
@@ -823,10 +824,11 @@ with
 				end
 			group by tv.template_id, wbmax.workspace_id
 		) wbmax
-			join workspace_builds wb on (
-				wb.workspace_id = wbmax.workspace_id
-				and wb.build_number = wbmax.max_build_number
-			)
+			join workspace_builds wb
+				on (
+					wb.workspace_id = wbmax.workspace_id
+					and wb.build_number = wbmax.max_build_number
+				)
 	),
 	unique_template_params as (
 		select
@@ -839,9 +841,8 @@ with
 			tvp.description,
 			tvp.options
 		from latest_workspace_builds wb
-			join template_version_parameters tvp on (
-				tvp.template_version_id = wb.template_version_id
-			)
+			join template_version_parameters tvp
+				on (tvp.template_version_id = wb.template_version_id)
 		group by tvp.name, tvp.type, tvp.display_name, tvp.description, tvp.options
 	)
 select
@@ -855,10 +856,11 @@ select
 	wbp.value,
 	count(wbp.value) as count
 from unique_template_params utp
-	join workspace_build_parameters wbp on (
-		utp.workspace_build_ids @> array [wbp.workspace_build_id]
-		and utp.name = wbp.name
-	)
+	join workspace_build_parameters wbp
+		on (
+			utp.workspace_build_ids @> array [wbp.workspace_build_id]
+			and utp.name = wbp.name
+		)
 group by
 	utp.num,
 	utp.template_ids,
@@ -953,8 +955,11 @@ select
 			not exists (select 1 from user_deleted where user_id = rscpupd.user_id)
 			or
 			-- Or users whose deletion date is after the current date we're looking at
-			rscpupd.date
-			< (select deleted_at from user_deleted where user_id = rscpupd.user_id)
+			rscpupd.date < (
+				select deleted_at
+				from user_deleted
+				where user_id = rscpupd.user_id
+			)
 		)
 	)) as count
 from ranked_status_change_per_user_per_date rscpupd cross join statuses

@@ -27,8 +27,8 @@ select
 	workspace_builds.id as workspace_build_id,
 	sqlc.embed(workspaces)
 from workspace_agents
-	join workspace_resources on workspace_resources.id
-	= workspace_agents.resource_id
+	join workspace_resources
+		on workspace_resources.id = workspace_agents.resource_id
 	join workspace_builds on workspace_builds.job_id = workspace_resources.job_id
 	join provisioner_jobs on provisioner_jobs.id = workspace_builds.job_id
 	join workspaces on workspaces.id = workspace_builds.workspace_id
@@ -251,8 +251,9 @@ with
 		from workspace_agents as wa
 			join workspace_resources as wr on wa.resource_id = wr.id
 			join workspace_builds as wb on wb.job_id = wr.job_id
-			left join latest_builds on latest_builds.workspace_id = wb.workspace_id
-			and latest_builds.max_build_number = wb.build_number
+			left join latest_builds
+				on latest_builds.workspace_id = wb.workspace_id
+				and latest_builds.max_build_number = wb.build_number
 		where
 			-- Filter out the latest builds for each workspace.
 			latest_builds.workspace_id
@@ -270,13 +271,12 @@ where agent_id in (select id from old_agents);
 -- name: GetWorkspaceAgentsInLatestBuildByWorkspaceID :many
 select workspace_agents.*
 from workspace_agents
-	join workspace_resources on workspace_agents.resource_id
-	= workspace_resources.id
+	join workspace_resources
+		on workspace_agents.resource_id = workspace_resources.id
 	join workspace_builds on workspace_resources.job_id = workspace_builds.job_id
 where
 	workspace_builds.workspace_id = @workspace_id::uuid
-	and workspace_builds.build_number
-	= (
+	and workspace_builds.build_number = (
 		select max(build_number)
 		from workspace_builds as wb
 		where wb.workspace_id = @workspace_id::uuid
@@ -287,24 +287,24 @@ where
 -- name: GetWorkspaceAgentsInLatestBuildByWorkspaceIDs :many
 select workspace_builds.workspace_id, sqlc.embed(workspace_agents)
 from workspace_agents
-	join workspace_resources on workspace_agents.resource_id
-	= workspace_resources.id
+	join workspace_resources
+		on workspace_agents.resource_id = workspace_resources.id
 	join workspace_builds on workspace_resources.job_id = workspace_builds.job_id
 	join (
 		select workspace_id, max(build_number) as build_number
 		from workspace_builds
 		where workspace_id = any(@workspace_ids::uuid[])
 		group by workspace_id
-	) as latest_builds on latest_builds.workspace_id
-	= workspace_builds.workspace_id
-	and latest_builds.build_number = workspace_builds.build_number
+	) as latest_builds
+		on latest_builds.workspace_id = workspace_builds.workspace_id
+		and latest_builds.build_number = workspace_builds.build_number
 where workspace_agents.deleted = false;
 
 -- name: GetWorkspaceAgentsByWorkspaceAndBuildNumber :many
 select workspace_agents.*
 from workspace_agents
-	join workspace_resources on workspace_agents.resource_id
-	= workspace_resources.id
+	join workspace_resources
+		on workspace_agents.resource_id = workspace_resources.id
 	join workspace_builds on workspace_resources.job_id = workspace_builds.job_id
 where
 	workspace_builds.workspace_id = @workspace_id::uuid
@@ -363,10 +363,10 @@ select
 	sqlc.embed(workspace_build_with_user),
 	tasks.id as task_id
 from workspace_agents
-	join workspace_resources on workspace_agents.resource_id
-	= workspace_resources.id
-	join workspace_build_with_user on workspace_resources.job_id
-	= workspace_build_with_user.job_id
+	join workspace_resources
+		on workspace_agents.resource_id = workspace_resources.id
+	join workspace_build_with_user
+		on workspace_resources.job_id = workspace_build_with_user.job_id
 	join workspaces on workspace_build_with_user.workspace_id = workspaces.id
 	left join tasks on tasks.workspace_id = workspaces.id
 where
@@ -380,8 +380,7 @@ where
 	-- Use CASE for short-circuiting: check normal case first (most common), then shutdown case.
 	and case
 		-- Normal case: Agent's build is the latest build.
-		when workspace_build_with_user.build_number
-		= (
+		when workspace_build_with_user.build_number = (
 			select max(build_number)
 			from workspace_builds
 			where workspace_id = workspace_build_with_user.workspace_id
@@ -405,8 +404,7 @@ where
 			where
 				latest.workspace_id = workspace_build_with_user.workspace_id
 				and latest.build_number = workspace_build_with_user.build_number + 1
-				and latest.build_number
-				= (
+				and latest.build_number = (
 					select max(build_number)
 					from workspace_builds l2
 					where l2.workspace_id = latest.workspace_id
@@ -437,14 +435,14 @@ select distinct on (workspace_agent_script_timings.script_id)
 	workspace_agents.id as workspace_agent_id,
 	workspace_agents.name as workspace_agent_name
 from workspace_agent_script_timings
-	inner join workspace_agent_scripts on workspace_agent_scripts.id
-	= workspace_agent_script_timings.script_id
-	inner join workspace_agents on workspace_agents.id
-	= workspace_agent_scripts.workspace_agent_id
-	inner join workspace_resources on workspace_resources.id
-	= workspace_agents.resource_id
-	inner join workspace_builds on workspace_builds.job_id
-	= workspace_resources.job_id
+	inner join workspace_agent_scripts
+		on workspace_agent_scripts.id = workspace_agent_script_timings.script_id
+	inner join workspace_agents
+		on workspace_agents.id = workspace_agent_scripts.workspace_agent_id
+	inner join workspace_resources
+		on workspace_resources.id = workspace_agents.resource_id
+	inner join workspace_builds
+		on workspace_builds.job_id = workspace_resources.job_id
 where workspace_builds.id = $1
 order by
 	workspace_agent_script_timings.script_id,
@@ -495,8 +493,7 @@ from workspaces w
 	join workspace_agents on wr.id = workspace_agents.resource_id
 where
 	w.deleted = false
-	and wb.build_number
-	= (
+	and wb.build_number = (
 		select max(wb2.build_number)
 		from workspace_builds wb2
 		where wb2.workspace_id = w.id
@@ -509,8 +506,8 @@ select
 	sqlc.embed(workspaces),
 	users.username as owner_username
 from workspace_agents
-	join workspace_resources on workspace_agents.resource_id
-	= workspace_resources.id
+	join workspace_resources
+		on workspace_agents.resource_id = workspace_resources.id
 	join provisioner_jobs on workspace_resources.job_id = provisioner_jobs.id
 	join workspace_builds on provisioner_jobs.id = workspace_builds.job_id
 	join workspaces on workspace_builds.workspace_id = workspaces.id

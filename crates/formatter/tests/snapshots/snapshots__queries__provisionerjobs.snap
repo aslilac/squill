@@ -12,8 +12,7 @@ expression: formatted
 update provisioner_jobs
 set started_at = @started_at, updated_at = @started_at, worker_id = @worker_id
 where
-	id
-	= (
+	id = (
 		select id
 		from provisioner_jobs as potential_job
 		where
@@ -76,8 +75,9 @@ with
 		from provisioner_daemons pd
 		where
 			pd.last_seen_at is not null
-			and pd.last_seen_at
-			>= (now() - (@stale_interval_ms::bigint || ' ms')::interval)
+			and pd.last_seen_at >= (
+				now() - (@stale_interval_ms::bigint || ' ms')::interval
+			)
 	),
 	relevant_daemon_tags as (
 		select udt.tags
@@ -102,10 +102,8 @@ with
 			) as queue_position,
 			count(*) over (partition by rdt.tags) as queue_size
 		from pending_jobs pj
-			inner join relevant_daemon_tags rdt on provisioner_tagset_contains(
-				rdt.tags,
-				pj.tags
-			)
+			inner join relevant_daemon_tags rdt
+				on provisioner_tagset_contains(rdt.tags, pj.tags)
 	),
 	final_jobs as (
 		-- Step 4: Compute best queue position and max queue size per job
@@ -121,8 +119,9 @@ with
 				0
 			)::bigint as queue_size -- Max queue size across provisioners
 		from filtered_provisioner_jobs fpj -- Use the pre-filtered dataset instead of full provisioner_jobs
-			left join ranked_jobs rj on fpj.id
-			= rj.id -- Join with the ranking jobs CTE to assign a rank to each specified provisioner job.
+			left join ranked_jobs rj
+				on fpj.id
+				= rj.id -- Join with the ranking jobs CTE to assign a rank to each specified provisioner job.
 		group by fpj.id, fpj.created_at
 	)
 select
@@ -133,8 +132,9 @@ select
 	fj.queue_position,
 	fj.queue_size
 from final_jobs fj
-	inner join provisioner_jobs pj on fj.id
-	= pj.id -- Ensure we retrieve full details from `provisioner_jobs`.
+	inner join provisioner_jobs pj
+		on fj.id
+		= pj.id -- Ensure we retrieve full details from `provisioner_jobs`.
 -- JOIN with pj is required for sqlc.embed(pj) to compile successfully.
 order by
 	fj.created_at;
@@ -194,28 +194,26 @@ select
 from provisioner_jobs pj
 	left join queue_position qp on qp.id = pj.id
 	left join queue_size qs on true
-	left join workspace_builds wb on wb.id
-	= case
-		when pj.input ? 'workspace_build_id'
-			then (pj.input ->> 'workspace_build_id')::uuid
-	end
-	left join workspaces w on (
-		w.id = wb.workspace_id and w.organization_id = pj.organization_id
-	)
+	left join workspace_builds wb
+		on wb.id = case
+			when pj.input ? 'workspace_build_id'
+				then (pj.input ->> 'workspace_build_id')::uuid
+		end
+	left join workspaces w
+		on (w.id = wb.workspace_id and w.organization_id = pj.organization_id)
 	left join
 	-- We should always have a template version, either explicitly or implicitly via workspace build.
-	template_versions tv on (
-		tv.id
-		= case
-			when pj.input ? 'template_version_id'
-				then (pj.input ->> 'template_version_id')::uuid
-			else wb.template_version_id
-		end
-		and tv.organization_id = pj.organization_id
-	)
-	left join templates t on (
-		t.id = tv.template_id and t.organization_id = pj.organization_id
-	)
+	template_versions tv
+		on (
+			tv.id = case
+				when pj.input ? 'template_version_id'
+					then (pj.input ->> 'template_version_id')::uuid
+				else wb.template_version_id
+			end
+			and tv.organization_id = pj.organization_id
+		)
+	left join templates t
+		on (t.id = tv.template_id and t.organization_id = pj.organization_id)
 	left join
 	-- Join to get the daemon name corresponding to the job's worker_id
 	provisioner_daemons pd on pd.id = pj.worker_id

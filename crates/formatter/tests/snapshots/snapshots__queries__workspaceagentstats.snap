@@ -50,8 +50,7 @@ select
 -- name: DeleteOldWorkspaceAgentStats :exec
 delete from workspace_agent_stats
 where
-	created_at
-	< (
+	created_at < (
 		select
 			coalesce(
 				-- When generating initial template usage stats, all the
@@ -69,8 +68,7 @@ where
 			)
 		from template_usage_stats
 	)
-	and created_at
-	< (
+	and created_at < (
 		-- Delete at most in batches of 4 hours (with this batch size, assuming
 		-- 1 iteration / 10 minutes, we can clear out the previous 6 months of
 		-- data in 7.5 days) whilst keeping the DB load low.
@@ -476,8 +474,8 @@ select
 	coalesce(connection_count, 0)::bigint as connection_count,
 	connection_median_latency_ms
 from agent_stats
-	left join latest_agent_stats on agent_stats.agent_id
-	= latest_agent_stats.agent_id
+	left join latest_agent_stats
+		on agent_stats.agent_id = latest_agent_stats.agent_id
 	join users on users.id = agent_stats.user_id
 	join workspace_agents on workspace_agents.id = agent_stats.agent_id
 	join workspaces on workspaces.id = agent_stats.workspace_id;

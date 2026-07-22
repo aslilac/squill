@@ -30,9 +30,8 @@ select
 	coalesce(visible_users.name, ''::text) as created_by_name
 from (
 	template_versions
-		left join visible_users on (
-			(template_versions.created_by = visible_users.id)
-		)
+		left join visible_users
+			on ((template_versions.created_by = visible_users.id))
 );
 
 comment on view template_version_with_user is 'Joins in the username + avatar url of the created by user.';
@@ -69,9 +68,8 @@ select
 	coalesce(visible_users.name, ''::text) as initiator_by_name
 from (
 	workspace_builds
-		left join visible_users on (
-			(workspace_builds.initiator_id = visible_users.id)
-		)
+		left join visible_users
+			on ((workspace_builds.initiator_id = visible_users.id))
 );
 
 comment on view workspace_build_with_user is 'Joins in the username + avatar url of the initiated by user.';

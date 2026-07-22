@@ -27,8 +27,7 @@ where
 				(
 					created_at,
 					id
-				)
-				> (select created_at, id from template_versions where id = @after_id)
+				) > (select created_at, id from template_versions where id = @after_id)
 			)
 		else true
 	end
@@ -98,8 +97,7 @@ where job_id = $1;
 select *
 from template_version_with_user as template_versions
 where
-	created_at
-	< (
+	created_at < (
 		select created_at
 		from template_version_with_user as tv
 		where tv.organization_id = $1 and tv.name = $2 and tv.template_id = $3
@@ -144,8 +142,8 @@ from
 				else true
 			end
 	) as scoped_template_versions
-		left join provisioner_jobs on scoped_template_versions.job_id
-		= provisioner_jobs.id
+		left join provisioner_jobs
+			on scoped_template_versions.job_id = provisioner_jobs.id
 		left join templates on scoped_template_versions.template_id = templates.id
 	where
 		-- Actively used template versions (meaning the latest build is using

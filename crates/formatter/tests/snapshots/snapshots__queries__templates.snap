@@ -79,8 +79,7 @@ where
 	-- Filter by author_username
 	and case
 		when @author_username::text != ''
-			then t.created_by
-			= (
+			then t.created_by = (
 				select id
 				from users
 				where
@@ -186,8 +185,8 @@ with
 			)::float as exec_time_sec,
 			workspace_builds.transition
 		from workspace_builds
-			join template_versions on workspace_builds.template_version_id
-			= template_versions.id
+			join template_versions
+				on workspace_builds.template_version_id = template_versions.id
 			join provisioner_jobs pj on workspace_builds.job_id = pj.id
 		where
 			template_versions.template_id = @template_id

@@ -10,8 +10,7 @@ where
 	-- Update the first user with the role 'admin'. This should be the first
 	-- user ever, but if that user was demoted from an admin, then choose
 	-- the next best user.
-	id
-	= (
+	id = (
 		select id
 		from users
 		where 'admin' = any(rbac_roles)

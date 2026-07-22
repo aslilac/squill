@@ -209,12 +209,13 @@ with
 					and was.created_at > start_build.created_at
 				order by was.created_at asc
 				limit 1
-			) fsar on twa.workspace_app_id is not null
-			and start_build.created_at is not null
-			and (
-				stop_build.created_at is null
-				or start_build.created_at > stop_build.created_at
-			)
+			) fsar
+				on twa.workspace_app_id is not null
+				and start_build.created_at is not null
+				and (
+					stop_build.created_at is null
+					or start_build.created_at > stop_build.created_at
+				)
 			-- Active duration: cumulative time spent in "working" state across all
 			-- historical app IDs for this task. Uses LEAD() to convert point-in-time
 			-- statuses into intervals, then sums intervals where state='working'. For

@@ -73,8 +73,7 @@ select
 	) as thread_root_id
 from aibridge_interceptions
 where
-	aibridge_interceptions.id
-	= (
+	aibridge_interceptions.id = (
 		select interception_id
 		from aibridge_tool_usages
 		where provider_tool_call_id = @tool_call_id::text
@@ -392,10 +391,13 @@ with
 -- Cumulative count.
 select
 	(
-		(select count(*) from model_thoughts) + (select count(*) from tool_usages)
-		+ (select count(*) from token_usages)
-		+ (select count(*) from user_prompts)
-		+ (select count(*) from interceptions)
+		(select count(*) from model_thoughts) + (
+			select count(*)
+			from tool_usages
+		) + (select count(*) from token_usages) + (
+			select count(*)
+			from user_prompts
+		) + (select count(*) from interceptions)
 	)::bigint as total_deleted;
 
 -- name: CountAIBridgeSessions :one
@@ -576,8 +578,10 @@ with
 						(
 							coalesce(max(latest_prompt.latest_prompt_at), min(ai.started_at)),
 							ai.session_id
+						) < (
+							(select last_active_at from cursor_pos),
+							@after_session_id::text
 						)
-						< ((select last_active_at from cursor_pos), @after_session_id::text)
 					)
 				else true
 			end
@@ -665,8 +669,7 @@ with
 			-- Pagination cursor.
 			and (
 				@after_id::uuid = '00000000-0000-0000-0000-000000000000'::uuid
-				or (aibridge_interceptions.started_at, aibridge_interceptions.id)
-				> (
+				or (aibridge_interceptions.started_at, aibridge_interceptions.id) > (
 					(
 						select started_at
 						from aibridge_interceptions ai2
@@ -677,8 +680,7 @@ with
 			)
 			and (
 				@before_id::uuid = '00000000-0000-0000-0000-000000000000'::uuid
-				or (aibridge_interceptions.started_at, aibridge_interceptions.id)
-				< (
+				or (aibridge_interceptions.started_at, aibridge_interceptions.id) < (
 					(
 						select started_at
 						from aibridge_interceptions ai2
@@ -699,8 +701,9 @@ select
 	) as thread_id,
 	sqlc.embed(aibridge_interceptions)
 from aibridge_interceptions
-	join paginated_threads pt on pt.thread_id
-	= coalesce(aibridge_interceptions.thread_root_id, aibridge_interceptions.id)
+	join paginated_threads pt
+		on pt.thread_id
+		= coalesce(aibridge_interceptions.thread_root_id, aibridge_interceptions.id)
 where
 	aibridge_interceptions.session_id = @session_id::text
 	and aibridge_interceptions.ended_at is not null

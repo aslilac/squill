@@ -107,8 +107,8 @@ with
 			latest_prebuilds.id as workspace_id,
 			workspace_builds.template_version_preset_id as current_preset_id
 		from latest_prebuilds
-			join workspace_builds on workspace_builds.workspace_id
-			= latest_prebuilds.id
+			join workspace_builds
+				on workspace_builds.workspace_id = latest_prebuilds.id
 		where
 			workspace_builds.transition = 'start'::workspace_transition
 			and workspace_builds.template_version_preset_id is not null
@@ -123,10 +123,10 @@ with
 				= 'ready'::workspace_agent_lifecycle_state
 			)::boolean as ready
 		from latest_prebuilds
-			join workspace_resources on workspace_resources.job_id
-			= latest_prebuilds.job_id
-			join workspace_agents on workspace_agents.resource_id
-			= workspace_resources.id
+			join workspace_resources
+				on workspace_resources.job_id = latest_prebuilds.job_id
+			join workspace_agents
+				on workspace_agents.resource_id = workspace_resources.id
 		where
 			workspace_agents.deleted = false and workspace_agents.parent_id is null
 		group by latest_prebuilds.job_id
@@ -141,8 +141,8 @@ select
 	latest_prebuilds.created_at
 from latest_prebuilds
 	left join ready_agents on ready_agents.job_id = latest_prebuilds.job_id
-	left join workspace_latest_presets on workspace_latest_presets.workspace_id
-	= latest_prebuilds.id
+	left join workspace_latest_presets
+		on workspace_latest_presets.workspace_id = latest_prebuilds.id
 order by latest_prebuilds.id;
 
 -- name: CountInProgressPrebuilds :many
@@ -197,12 +197,12 @@ with
 			wlb.job_status,
 			tvp.desired_instances
 		from template_version_presets tvp
-			inner join workspace_latest_builds wlb on wlb.template_version_preset_id
-			= tvp.id
+			inner join workspace_latest_builds wlb
+				on wlb.template_version_preset_id = tvp.id
 			inner join workspaces w on wlb.workspace_id = w.id
 			inner join template_versions tv on wlb.template_version_id = tv.id
-			inner join templates t on tv.template_id = t.id
-			and t.active_version_id = tv.id
+			inner join templates t
+				on tv.template_id = t.id and t.active_version_id = tv.id
 		where
 			tvp.desired_instances
 			is not null -- Consider only presets that have a prebuild configuration.
@@ -265,12 +265,12 @@ with
 			wlb.job_status,
 			tvp.desired_instances
 		from template_version_presets tvp
-			inner join workspace_latest_builds wlb on wlb.template_version_preset_id
-			= tvp.id
+			inner join workspace_latest_builds wlb
+				on wlb.template_version_preset_id = tvp.id
 			inner join workspaces w on wlb.workspace_id = w.id
 			inner join template_versions tv on wlb.template_version_id = tv.id
-			inner join templates t on tv.template_id = t.id
-			and t.active_version_id = tv.id
+			inner join templates t
+				on tv.template_id = t.id and t.active_version_id = tv.id
 		where
 			tvp.desired_instances
 			is not null -- Consider only presets that have a prebuild configuration.
@@ -315,8 +315,8 @@ select
 from workspaces w
 	inner join workspace_prebuild_builds wpb on wpb.workspace_id = w.id
 	inner join templates t on t.id = w.template_id
-	inner join template_version_presets tvp on tvp.id
-	= wpb.template_version_preset_id
+	inner join template_version_presets tvp
+		on tvp.id = wpb.template_version_preset_id
 	inner join provisioner_jobs pj on pj.id = wpb.job_id
 	inner join organizations o on o.id = w.organization_id
 where not t.deleted and wpb.build_number = 1
@@ -340,10 +340,10 @@ with
 			coalesce(count(tvpp.name), 0) as total_preset_params,
 			coalesce(count(pp.name), 0) as matching_params
 		from template_version_presets tvp
-			left join template_version_preset_parameters tvpp on tvpp.template_version_preset_id
-			= tvp.id
-			left join provided_params pp on pp.name = tvpp.name
-			and pp.value = tvpp.value
+			left join template_version_preset_parameters tvpp
+				on tvpp.template_version_preset_id = tvp.id
+			left join provided_params pp
+				on pp.name = tvpp.name and pp.value = tvpp.value
 		where tvp.template_version_id = @template_version_id
 		group by tvp.id
 	)

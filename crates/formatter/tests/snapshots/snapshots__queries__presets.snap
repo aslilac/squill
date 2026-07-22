@@ -64,15 +64,16 @@ where template_version_id = @template_version_id;
 -- name: GetPresetByWorkspaceBuildID :one
 select template_version_presets.*
 from template_version_presets
-	inner join workspace_builds on workspace_builds.template_version_preset_id
-	= template_version_presets.id
+	inner join workspace_builds
+		on workspace_builds.template_version_preset_id = template_version_presets.id
 where workspace_builds.id = @workspace_build_id;
 
 -- name: GetPresetParametersByTemplateVersionID :many
 select template_version_preset_parameters.*
 from template_version_preset_parameters
-	inner join template_version_presets on template_version_preset_parameters.template_version_preset_id
-	= template_version_presets.id
+	inner join template_version_presets
+		on template_version_preset_parameters.template_version_preset_id
+		= template_version_presets.id
 where template_version_presets.template_version_id = @template_version_id;
 
 -- name: GetPresetParametersByPresetID :many

@@ -386,8 +386,7 @@ where
 				-- rows after the cursor.
 				(
 					lower(username)
-				)
-				> (select lower(username) from users where id = @after_id)
+				) > (select lower(username) from users where id = @after_id)
 			)
 		else true
 	end
@@ -527,8 +526,8 @@ select
 					org_roles || ':' || organization_members.organization_id::text
 				)
 			from organization_members
-				join organizations on organizations.id
-				= organization_members.organization_id,
+				join organizations
+					on organizations.id = organization_members.organization_id,
 				-- All org members get an implied role for their orgs. Most members
 				-- get organization-member, but service accounts will get
 				-- organization-service-account instead. They're largely the same,

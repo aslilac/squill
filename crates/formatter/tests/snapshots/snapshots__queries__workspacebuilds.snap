@@ -37,8 +37,11 @@ where
 				-- The pagination cursor is the last ID of the previous page.
 				-- The query is ordered by the build_number field, so select all
 				-- rows after the cursor.
-				build_number
-				> (select build_number from workspace_builds where id = @after_id)
+				build_number > (
+					select build_number
+					from workspace_builds
+					where id = @after_id
+				)
 			)
 		else true
 	end
@@ -128,8 +131,8 @@ from (
 	where workspace_id in (select id from workspaces where template_id = $1)
 	group by workspace_id
 ) m
-	join workspace_build_with_user as wb on m.workspace_id = wb.workspace_id
-	and m.max_build_number = wb.build_number
+	join workspace_build_with_user as wb
+		on m.workspace_id = wb.workspace_id and m.max_build_number = wb.build_number
 	join provisioner_jobs as pj on wb.job_id = pj.id
 where
 	wb.transition = 'start'::workspace_transition and pj.completed_at is not null;
@@ -206,8 +209,11 @@ from workspace_builds wb
 	join workspace_resources wr on wr.job_id = wb.job_id
 	join workspace_agents wa on wa.resource_id = wr.id and wa.parent_id is null
 where
-	wb.job_id
-	= (select job_id from workspace_resources where workspace_resources.id = $1)
+	wb.job_id = (
+		select job_id
+		from workspace_resources
+		where workspace_resources.id = $1
+	)
 group by wb.created_at, wb.transition, t.name, o.name, w.owner_id;
 
 -- name: GetWorkspaceBuildProvisionerStateByID :one

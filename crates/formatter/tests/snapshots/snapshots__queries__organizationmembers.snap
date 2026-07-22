@@ -21,8 +21,8 @@ select
 	users.created_at as user_created_at,
 	users.updated_at as user_updated_at
 from organization_members
-	inner join users on organization_members.user_id = users.id
-	and users.deleted = false
+	inner join users
+		on organization_members.user_id = users.id and users.deleted = false
 where
 	-- Filter by organization id
 	case
@@ -90,8 +90,8 @@ select
 	users.updated_at as user_updated_at,
 	count(*) over () as count
 from organization_members
-	inner join users on organization_members.user_id = users.id
-	and users.deleted = false
+	inner join users
+		on organization_members.user_id = users.id and users.deleted = false
 where
 	case
 		-- This allows using the last element on a page as effectively a cursor.
@@ -104,8 +104,7 @@ where
 				-- rows after the cursor.
 				(
 					lower(users.username)
-				)
-				> (
+				) > (
 					select lower(users.username)
 					from organization_members
 						inner join users on organization_members.user_id = users.id

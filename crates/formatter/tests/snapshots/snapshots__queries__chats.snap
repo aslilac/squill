@@ -57,8 +57,9 @@ with
 			updated_chats.context_dirty_resources,
 			updated_chats.context_error
 		from updated_chats
-			left join chats root on root.id
-			= coalesce(updated_chats.root_chat_id, updated_chats.parent_chat_id)
+			left join chats root
+				on root.id
+				= coalesce(updated_chats.root_chat_id, updated_chats.parent_chat_id)
 			join visible_users owner on owner.id = updated_chats.owner_id
 	)
 select *
@@ -127,8 +128,9 @@ with
 			updated_chats.context_dirty_resources,
 			updated_chats.context_error
 		from updated_chats
-			left join chats root on root.id
-			= coalesce(updated_chats.root_chat_id, updated_chats.parent_chat_id)
+			left join chats root
+				on root.id
+				= coalesce(updated_chats.root_chat_id, updated_chats.parent_chat_id)
 			join visible_users owner on owner.id = updated_chats.owner_id
 	)
 select *
@@ -459,8 +461,7 @@ where
 					-chats_expanded.pin_order,
 					chats_expanded.updated_at,
 					chats_expanded.id
-				)
-				< (
+				) < (
 					select
 						case when cursor_chat.pin_order > 0 then 1 else 0 end,
 						-cursor_chat.pin_order,
@@ -763,8 +764,9 @@ with
 			inserted_chat.context_dirty_resources,
 			inserted_chat.context_error
 		from inserted_chat
-			left join chats root on root.id
-			= coalesce(inserted_chat.root_chat_id, inserted_chat.parent_chat_id)
+			left join chats root
+				on root.id
+				= coalesce(inserted_chat.root_chat_id, inserted_chat.parent_chat_id)
 			join visible_users owner on owner.id = inserted_chat.owner_id
 	)
 select *
@@ -919,8 +921,9 @@ with
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
 		from updated_chat
-			left join chats root on root.id
-			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			left join chats root
+				on root.id
+				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -985,8 +988,9 @@ with
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
 		from updated_chat
-			left join chats root on root.id
-			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			left join chats root
+				on root.id
+				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1049,8 +1053,9 @@ with
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
 		from updated_chat
-			left join chats root on root.id
-			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			left join chats root
+				on root.id
+				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1113,8 +1118,9 @@ with
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
 		from updated_chat
-			left join chats root on root.id
-			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			left join chats root
+				on root.id
+				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1175,8 +1181,9 @@ with
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
 		from updated_chat
-			left join chats root on root.id
-			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			left join chats root
+				on root.id
+				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1241,8 +1248,9 @@ with
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
 		from updated_chat
-			left join chats root on root.id
-			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			left join chats root
+				on root.id
+				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1306,8 +1314,9 @@ with
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
 		from updated_chat
-			left join chats root on root.id
-			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			left join chats root
+				on root.id
+				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1389,8 +1398,9 @@ with
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
 		from updated_chat
-			left join chats root on root.id
-			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			left join chats root
+				on root.id
+				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1560,8 +1570,10 @@ with
 		returning file_id
 	)
 select
-	(select count(*)::int from genuinely_new)
-	- (select count(*)::int from inserted) as rejected_new_files;
+	(select count(*)::int from genuinely_new) - (
+		select count(*)::int
+		from inserted
+	) as rejected_new_files;
 
 -- name: UpdateChatStatus :one
 with
@@ -1624,8 +1636,9 @@ with
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
 		from updated_chat
-			left join chats root on root.id
-			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			left join chats root
+				on root.id
+				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1818,8 +1831,7 @@ delete from chat_queued_messages where chat_id = @chat_id;
 -- name: PopNextQueuedMessage :one
 delete from chat_queued_messages
 where
-	id
-	= (
+	id = (
 		select cqm.id
 		from chat_queued_messages cqm
 		where cqm.chat_id = @chat_id
@@ -1900,8 +1912,9 @@ with
 			locked_chat.context_dirty_resources,
 			locked_chat.context_error
 		from locked_chat
-			left join chats root on root.id
-			= coalesce(locked_chat.root_chat_id, locked_chat.parent_chat_id)
+			left join chats root
+				on root.id
+				= coalesce(locked_chat.root_chat_id, locked_chat.parent_chat_id)
 			join visible_users owner on owner.id = locked_chat.owner_id
 	)
 select *
@@ -1957,8 +1970,9 @@ with
 			shared_chat.context_dirty_resources,
 			shared_chat.context_error
 		from shared_chat
-			left join chats root on root.id
-			= coalesce(shared_chat.root_chat_id, shared_chat.parent_chat_id)
+			left join chats root
+				on root.id
+				= coalesce(shared_chat.root_chat_id, shared_chat.parent_chat_id)
 			join visible_users owner on owner.id = shared_chat.owner_id
 	)
 select *
@@ -2512,8 +2526,9 @@ select
 			> now() - (interval '1 second' * @stale_seconds::int)
 	) as heartbeat_stale
 from chats_expanded
-	left join chat_heartbeats on chat_heartbeats.chat_id = chats_expanded.id
-	and chat_heartbeats.runner_id = chats_expanded.runner_id
+	left join chat_heartbeats
+		on chat_heartbeats.chat_id = chats_expanded.id
+		and chat_heartbeats.runner_id = chats_expanded.runner_id
 where
 	chats_expanded.status in (
 		'running'::chat_status,
@@ -2544,9 +2559,8 @@ select * from chats_expanded where id = any(@ids::uuid[]) order by id asc;
 insert into chat_heartbeats (chat_id, runner_id, heartbeat_at)
 select chat_ids.chat_id, runner_ids.runner_id, now()
 from unnest(@chat_ids::uuid[]) with ordinality as chat_ids(chat_id, ord)
-	join unnest(
-		@runner_ids::uuid[]
-	) with ordinality as runner_ids(runner_id, ord) using (ord)
+	join unnest(@runner_ids::uuid[]) with ordinality as runner_ids(runner_id, ord)
+		using (ord)
 on conflict
 	(chat_id, runner_id) do update set heartbeat_at = EXCLUDED.heartbeat_at;
 
@@ -2650,8 +2664,9 @@ with
 			bumped_chat.context_dirty_resources,
 			bumped_chat.context_error
 		from bumped_chat
-			left join chats root on root.id
-			= coalesce(bumped_chat.root_chat_id, bumped_chat.parent_chat_id)
+			left join chats root
+				on root.id
+				= coalesce(bumped_chat.root_chat_id, bumped_chat.parent_chat_id)
 			join visible_users owner on owner.id = bumped_chat.owner_id
 	)
 select *
@@ -2726,8 +2741,9 @@ with
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
 		from updated_chat
-			left join chats root on root.id
-			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			left join chats root
+				on root.id
+				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -2790,8 +2806,9 @@ with
 			updated_chat.context_dirty_resources,
 			updated_chat.context_error
 		from updated_chat
-			left join chats root on root.id
-			= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+			left join chats root
+				on root.id
+				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *

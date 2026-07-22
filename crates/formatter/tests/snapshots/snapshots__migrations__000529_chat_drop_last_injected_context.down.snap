@@ -58,9 +58,8 @@ select
 from (
 	(
 		chats c
-			left join chats root on (
-				(root.id = coalesce(c.root_chat_id, c.parent_chat_id))
-			)
+			left join chats root
+				on ((root.id = coalesce(c.root_chat_id, c.parent_chat_id)))
 	)
 		join visible_users owner on ((owner.id = c.owner_id))
 );

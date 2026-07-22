@@ -23,8 +23,8 @@ as $$
 			workspace_builds.id
 		into workspace_build_id
 		from workspace_resources
-			join workspace_builds on workspace_builds.job_id
-			= workspace_resources.job_id
+			join workspace_builds
+				on workspace_builds.job_id = workspace_resources.job_id
 		where workspace_resources.id = NEW.resource_id;
 
 		-- If the agent doesn't have a workspace build, we'll allow the insert.
@@ -37,10 +37,10 @@ as $$
 			count(*)
 		into agents_with_name
 		from workspace_agents
-			join workspace_resources on workspace_resources.id
-			= workspace_agents.resource_id
-			join workspace_builds on workspace_builds.job_id
-			= workspace_resources.job_id
+			join workspace_resources
+				on workspace_resources.id = workspace_agents.resource_id
+			join workspace_builds
+				on workspace_builds.job_id = workspace_resources.job_id
 		where
 			workspace_builds.id = workspace_build_id
 			and workspace_agents.name = NEW.name
@@ -101,9 +101,8 @@ with
 					join workspace_resources wr on ((wr.job_id = wlb.job_id))
 			)
 				-- ADD: deleted check for sub agents.
-				join workspace_agents wa on (
-					(wa.resource_id = wr.id and wa.deleted = false)
-				)
+				join workspace_agents wa
+					on ((wa.resource_id = wr.id and wa.deleted = false))
 		)
 		where (w.owner_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid)
 		group by w.id
