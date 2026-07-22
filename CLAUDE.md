@@ -26,7 +26,7 @@ Docs site (`docs/`, Astro + Monaco playground): `pnpm dev` / `pnpm build`. The p
 
 Pipeline: **lex → parse (CST) → doc IR → render → safety check**, one crate per stage:
 
-- **`crates/parser`** — hand-written dual-dialect lexer (lossless: every byte, including whitespace/comments, is a token), recursive-descent parser with Pratt expressions (`src/parser/{grammar,dml,ddl,expr,plpgsql}.rs`), CST on `cstree`. Unparseable statements recover into verbatim `ErrorStatement` nodes rather than failing.
+- **`crates/parser`** — hand-written dual-dialect lexer (lossless: every byte, including whitespace/comments, is a token), recursive-descent parser with Pratt expressions (`src/parser/{grammar,dml,ddl,expr,plpgsql}.rs`), CST on `cstree`. Unparsable statements recover into verbatim `ErrorStatement` nodes rather than failing.
   - **`syntax.def` is the source of truth for all token/node kinds.** `build.rs` code-gens the `SyntaxKind` enum and the typed AST accessor layer (`src/ast.rs`) from it. To add a node kind or accessor, edit `syntax.def`, not the generated code. The format is documented at the top of that file.
 - **`crates/formatter`** — Wadler/Prettier-style doc IR (`doc.rs`), renderer (`printer.rs`), CST→doc rules (`rules.rs`), vendored keyword tables (`keywords.rs`), identifier-quoting transform (`quoting.rs`), and the safety check (`check.rs`).
 - **`crates/embed`** — formats SQL embedded in host source (Rust sqlx macros, Go, Python, JS/TS, Gleam) located via tree-sitter queries. Only multiline string syntaxes are rewritten; interpolated strings (f-strings, `${}` templates) are never touched.
