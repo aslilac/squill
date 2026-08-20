@@ -30,7 +30,7 @@ Pipeline: **lex → parse (CST) → doc IR → render → safety check**, one cr
   - **`syntax.def` is the source of truth for all token/node kinds.** `build.rs` code-gens the `SyntaxKind` enum and the typed AST accessor layer (`src/ast.rs`) from it. To add a node kind or accessor, edit `syntax.def`, not the generated code. The format is documented at the top of that file.
 - **`crates/formatter`** — Wadler/Prettier-style doc IR (`doc.rs`), renderer (`printer.rs`), CST→doc rules (`rules.rs`), vendored keyword tables (`keywords.rs`), identifier-quoting transform (`quoting.rs`), and the safety check (`check.rs`).
 - **`crates/embed`** — formats SQL embedded in host source (Rust sqlx macros, Go, Python, JS/TS, Gleam) located via tree-sitter queries. Only multiline string syntaxes are rewritten; interpolated strings (f-strings, `${}` templates) are never touched.
-- **`crates/cli`** — the `squill` binary (config resolution: nearest `squill.toml`, flags win) and the `corpus-report` coverage harness.
+- **`crates/cli`** — the `squill` binary (config resolution: nearest `squill.toml` or `.config/squill.toml`, flags win; directory recursion respects `.gitignore` plus `ignore` globs from config/`--ignore`) and the `corpus-report` coverage harness.
 - **`crates/playground`** — wasm module for the docs-site playground (built with the `wasm-release` profile).
 
 `crates/parser/fuzz/` and `crates/embed/tests/fixtures/sqlx_app/` are excluded from the workspace.

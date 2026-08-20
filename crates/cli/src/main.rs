@@ -31,6 +31,9 @@ Options:
   --stdin                 Read from stdin, write to stdout
   --strict                Exit 1 when statements could not be parsed and
                           passed through verbatim
+  --ignore <GLOB>         Skip matching paths when recursing directories
+                          (repeatable; relative to the working directory;
+                          `*`, `**`, `?`, `[abc]`, `{a,b}` globs)
   --dialect <D>           postgres (default) | sqlite
   --indent <STYLE>        tab (default) | spaces
   --indent-width <N>      Indent width (and tab measure), default 2
@@ -45,10 +48,13 @@ Options:
   --embedded-query <SCM>  Override the tree-sitter extraction query
   -h, --help              Show this help
 
-Configuration: the nearest squill.toml at or above each formatted file
-supplies defaults (keys: dialect, indent, indent-width, max-width,
-keyword-case, quote-idents, at-params). Explicit flags override the
-config.
+Configuration: the nearest squill.toml or .config/squill.toml at or
+above each formatted file supplies defaults (keys: dialect, indent,
+indent-width, max-width, keyword-case, quote-idents, at-params, and
+ignore — an array of glob patterns relative to the config file).
+Explicit flags override the config. Directory recursion honors
+.gitignore and skips hidden files; explicitly listed files always
+format.
 ";
 
 struct Args {
@@ -61,6 +67,8 @@ struct Args {
 	embed: bool,
 	/// Override the tree-sitter extraction query (.scm source).
 	embed_query: Option<String>,
+	/// Glob patterns to skip when recursing (cwd-relative).
+	ignore: Vec<String>,
 	overrides: PartialOptions,
 	paths: Vec<PathBuf>,
 }
@@ -80,6 +88,7 @@ fn parse_args() -> Result<Args, String> {
 		no_config: false,
 		embed: false,
 		embed_query: None,
+		ignore: Vec::new(),
 		overrides: PartialOptions::default(),
 		paths: Vec::new(),
 	};
@@ -101,6 +110,7 @@ fn parse_args() -> Result<Args, String> {
 						.map_err(|err| format!("--embedded-query {path}: {err}"))?,
 				);
 			}
+			"--ignore" => args.ignore.push(value(&mut argv, "--ignore")?),
 			"--at-params" => args.overrides.at_params = Some(true),
 			"--dialect" => {
 				args.overrides.dialect =
@@ -152,28 +162,35 @@ fn parse_args() -> Result<Args, String> {
 	Ok(args)
 }
 
+type ConfigCache = std::collections::HashMap<PathBuf, PartialOptions>;
+
+/// Read and parse a config file, memoized on its path.
+fn load_partial(
+	config_path: &Path,
+	cache: &mut ConfigCache,
+) -> Result<PartialOptions, String> {
+	if let Some(partial) = cache.get(config_path) {
+		return Ok(partial.clone());
+	}
+	let text = std::fs::read_to_string(config_path)
+		.map_err(|err| format!("{}: {err}", config_path.display()))?;
+	let partial = config::parse_config(&text, config_path)?;
+	cache.insert(config_path.to_path_buf(), partial.clone());
+	Ok(partial)
+}
+
 /// Resolve effective options for a file in `dir`: defaults, then the
-/// nearest squill.toml (unless --no-config), then explicit flags.
+/// nearest config file (unless --no-config), then explicit flags.
 fn resolve_options(
 	dir: &Path,
 	args: &Args,
-	cache: &mut std::collections::HashMap<PathBuf, PartialOptions>,
+	cache: &mut ConfigCache,
 ) -> Result<Options, String> {
 	let mut options = Options::default();
 	if !args.no_config
 		&& let Some(config_path) = config::discover(dir)
 	{
-		let partial = match cache.get(&config_path) {
-			Some(partial) => *partial,
-			None => {
-				let text = std::fs::read_to_string(&config_path)
-					.map_err(|err| format!("{}: {err}", config_path.display()))?;
-				let partial = config::parse_config(&text, &config_path)?;
-				cache.insert(config_path.clone(), partial);
-				partial
-			}
-		};
-		partial.apply(&mut options);
+		load_partial(&config_path, cache)?.apply(&mut options);
 	}
 	args.overrides.apply(&mut options);
 	Ok(options)
@@ -245,27 +262,88 @@ fn line_col(source: &str, offset: usize) -> (usize, usize) {
 	(line, col)
 }
 
-fn collect_files(
-	path: &Path,
-	embed: bool,
-	out: &mut Vec<PathBuf>,
-) -> std::io::Result<()> {
-	if path.is_dir() {
-		let mut entries: Vec<_> = std::fs::read_dir(path)?
-			.map(|entry| entry.map(|e| e.path()))
-			.collect::<Result<_, _>>()?;
-		entries.sort();
-		for entry in entries {
-			if entry.is_dir() {
-				collect_files(&entry, embed, out)?;
-			} else if entry.extension().is_some_and(|ext| {
-				ext == "sql" || (embed && (ext == "rs" || ext == "go"))
-			}) {
-				out.push(entry);
-			}
+/// Ignore patterns compiled to globs, anchored to a directory: paths
+/// are matched relative to `anchor`.
+#[derive(Clone)]
+struct IgnoreSet {
+	set: globset::GlobSet,
+	anchor: PathBuf,
+}
+
+impl IgnoreSet {
+	fn matches(&self, absolute: Option<&Path>, walk_relative: &Path) -> bool {
+		let relative = absolute
+			.and_then(|path| path.strip_prefix(&self.anchor).ok())
+			.unwrap_or(walk_relative);
+		self.set.is_match(relative)
+	}
+}
+
+/// Compile ignore patterns. Each pattern also matches anywhere below
+/// the anchor (`**/pat`) and prunes whole directories (`pat/**`),
+/// gitignore-style.
+fn build_ignore_set(
+	patterns: &[String],
+	anchor: &Path,
+) -> Result<IgnoreSet, String> {
+	let mut builder = globset::GlobSetBuilder::new();
+	for pattern in patterns {
+		let base = pattern.trim_end_matches('/');
+		if base.is_empty() {
+			return Err(format!("invalid ignore pattern `{pattern}`"));
 		}
-	} else {
-		out.push(path.to_path_buf());
+		for variant in [
+			base.to_string(),
+			format!("{base}/**"),
+			format!("**/{base}"),
+			format!("**/{base}/**"),
+		] {
+			let glob = globset::GlobBuilder::new(&variant)
+				.literal_separator(true)
+				.build()
+				.map_err(|err| format!("invalid ignore pattern `{pattern}`: {err}"))?;
+			builder.add(glob);
+		}
+	}
+	let set =
+		builder.build().map_err(|err| format!("invalid ignore pattern: {err}"))?;
+	Ok(IgnoreSet { set, anchor: anchor.to_path_buf() })
+}
+
+/// Recursively gather formattable files under the directory `root`.
+/// The walker honors .gitignore and skips hidden entries; `ignores`
+/// prunes squill's own patterns on top.
+fn collect_files(
+	root: &Path,
+	embed: bool,
+	ignores: Vec<IgnoreSet>,
+	out: &mut Vec<PathBuf>,
+) -> Result<(), String> {
+	let root_buf = root.to_path_buf();
+	let mut builder = ignore::WalkBuilder::new(root);
+	builder.filter_entry(move |entry| {
+		if entry.depth() == 0 {
+			return true;
+		}
+		// Match anchor-relative, falling back to the walk-relative path
+		// when the entry is outside an anchor (e.g. cwd-anchored
+		// --ignore patterns while formatting a tree elsewhere).
+		let walk_relative =
+			entry.path().strip_prefix(&root_buf).unwrap_or(entry.path());
+		let absolute = std::path::absolute(entry.path()).ok();
+		!ignores.iter().any(|set| set.matches(absolute.as_deref(), walk_relative))
+	});
+	for entry in builder.build() {
+		let entry = entry.map_err(|err| format!("{}: {err}", root.display()))?;
+		if !entry.file_type().is_some_and(|kind| kind.is_file()) {
+			continue;
+		}
+		let path = entry.into_path();
+		if path.extension().is_some_and(|ext| ext == "sql")
+			|| (embed && host_for(&path).is_some())
+		{
+			out.push(path);
+		}
 	}
 	Ok(())
 }
@@ -356,10 +434,48 @@ fn main() -> ExitCode {
 		return ExitCode::SUCCESS;
 	}
 
+	let mut cache: ConfigCache = std::collections::HashMap::new();
+	let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+	let cli_ignores = match build_ignore_set(&args.ignore, &cwd) {
+		Ok(set) => set,
+		Err(message) => {
+			eprintln!("squill: {message}");
+			return ExitCode::from(2);
+		}
+	};
 	let mut files = Vec::new();
 	for path in &args.paths {
-		if let Err(err) = collect_files(path, args.embed, &mut files) {
-			eprintln!("squill: {}: {err}", path.display());
+		if !path.is_dir() {
+			// Explicit file arguments always format, bypassing ignores.
+			files.push(path.clone());
+			continue;
+		}
+		let mut ignores = vec![cli_ignores.clone()];
+		if !args.no_config
+			&& let Some(config_path) = config::discover(path)
+		{
+			let partial = match load_partial(&config_path, &mut cache) {
+				Ok(partial) => partial,
+				Err(message) => {
+					eprintln!("squill: {message}");
+					return ExitCode::from(2);
+				}
+			};
+			if !partial.ignore.is_empty() {
+				let anchor = config::anchor_dir(&config_path);
+				let anchor =
+					std::path::absolute(anchor).unwrap_or_else(|_| anchor.to_path_buf());
+				match build_ignore_set(&partial.ignore, &anchor) {
+					Ok(set) => ignores.push(set),
+					Err(message) => {
+						eprintln!("squill: {}: {message}", config_path.display());
+						return ExitCode::from(2);
+					}
+				}
+			}
+		}
+		if let Err(message) = collect_files(path, args.embed, ignores, &mut files) {
+			eprintln!("squill: {message}");
 			return ExitCode::from(2);
 		}
 	}
@@ -374,7 +490,6 @@ fn main() -> ExitCode {
 
 	// Resolve options per file up front (sequential, cached per config
 	// path); a config error is a hard error before any file is touched.
-	let mut cache = std::collections::HashMap::new();
 	let mut per_file_options = Vec::with_capacity(files.len());
 	for path in &files {
 		let dir = path.parent().unwrap_or_else(|| Path::new("."));

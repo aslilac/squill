@@ -39,12 +39,16 @@ cargo run -p cli --bin squill -- fmt --check .          # CI mode: diff + exit 1
 squill fmt --help                                       # the full flag surface
 ```
 
-Options (via the nearest squill.toml or flags — flags win): `--dialect postgres|sqlite`,
+Options (via the nearest squill.toml or .config/squill.toml, or flags —
+flags win): `--dialect postgres|sqlite`,
 `--indent tab|spaces`, `--indent-width N` (default 2), `--max-width N`
 (default 80), `--keyword-case
 lower|upper`, `--quote-idents as-needed|always`, `--at-params` for
 sqlc-style `@name` parameters, `--strict` to fail on statements that
-could not be parsed.
+could not be parsed. Directory recursion honors `.gitignore` and skips
+hidden files; an `ignore = ["legacy", "*.gen.sql"]` array in config (or
+repeated `--ignore` flags) skips more, with `*`, `**`, `?`, `[abc]`,
+and `{a,b}` glob syntax. Explicitly listed files always format.
 
 SQL embedded in host code formats too: `squill fmt src/queries.rs`
 rewrites the string literals inside `sqlx::query!`-family macros, with

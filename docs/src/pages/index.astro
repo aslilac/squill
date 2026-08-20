@@ -212,8 +212,12 @@ chmod +x squill
 			<section>
 				<h2>Configuration</h2>
 				<p>
-					Configured in the nearest <code>squill.toml</code>, overridable with
-					flags. The defaults are the house style; everything is optional.
+					Configured in the nearest <code>squill.toml</code> (or
+					<code>.config/squill.toml</code>), overridable with flags. The
+					defaults are the house style; everything is optional. When
+					recursing directories, squill honors <code>.gitignore</code> and
+					skips hidden files; the <code>ignore</code> key and repeated
+					<code>--ignore</code> flags skip more.
 				</p>
 				<table>
 					<thead>
@@ -260,6 +264,11 @@ chmod +x squill
 								<code>@name</code> parameters</td
 							>
 							<td><code>false</code></td>
+						</tr>
+						<tr>
+							<td><code>ignore</code></td>
+							<td>array of glob patterns to skip when recursing</td>
+							<td><code>[]</code></td>
 						</tr>
 					</tbody>
 				</table>

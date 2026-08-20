@@ -342,6 +342,183 @@ fn stdin_uses_cwd_config() {
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
+// ---- ignore mechanisms ----
+
+#[test]
+fn gitignore_and_hidden_files_are_skipped() {
+	let dir = temp_dir("gitignore");
+	std::fs::create_dir_all(dir.join("gen")).expect("mkdir");
+	std::fs::write(dir.join(".gitignore"), "gen/\nscratch.sql\n").expect("write");
+	std::fs::write(dir.join("gen/skip.sql"), "SELECT   1;\n").expect("write");
+	std::fs::write(dir.join("scratch.sql"), "SELECT   1;\n").expect("write");
+	std::fs::write(dir.join(".hidden.sql"), "SELECT   1;\n").expect("write");
+	std::fs::write(dir.join("keep.sql"), "SELECT   1;\n").expect("write");
+	let status = Command::new("git")
+		.args(["init", "-q"])
+		.current_dir(&dir)
+		.status()
+		.expect("git init");
+	assert!(status.success());
+
+	let status = squill().arg("fmt").arg(&dir).status().expect("run");
+	assert!(status.success());
+	assert_eq!(
+		std::fs::read_to_string(dir.join("keep.sql")).expect("read"),
+		"select 1;\n"
+	);
+	for untouched in ["gen/skip.sql", "scratch.sql", ".hidden.sql"] {
+		assert_eq!(
+			std::fs::read_to_string(dir.join(untouched)).expect("read"),
+			"SELECT   1;\n",
+			"{untouched} must be skipped"
+		);
+	}
+
+	// Explicit file arguments bypass ignores.
+	let status =
+		squill().arg("fmt").arg(dir.join("gen/skip.sql")).status().expect("run");
+	assert!(status.success());
+	assert_eq!(
+		std::fs::read_to_string(dir.join("gen/skip.sql")).expect("read"),
+		"select 1;\n"
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn ignore_patterns_from_config_and_flags() {
+	let dir = temp_dir("ignorepatterns");
+	std::fs::create_dir_all(dir.join("legacy")).expect("mkdir");
+	std::fs::create_dir_all(dir.join("sub")).expect("mkdir");
+	// Multi-line array with a comment and a trailing comma.
+	std::fs::write(
+		dir.join("squill.toml"),
+		"ignore = [\n\t\"legacy\", # frozen migrations\n\t\"*.gen.sql\",\n\t\"sub/skip.sql\",\n]\n",
+	)
+	.expect("write config");
+	std::fs::write(dir.join("legacy/old.sql"), "SELECT   1;\n").expect("write");
+	std::fs::write(dir.join("report.gen.sql"), "SELECT   1;\n").expect("write");
+	std::fs::write(dir.join("sub/skip.sql"), "SELECT   1;\n").expect("write");
+	std::fs::write(dir.join("sub/other.sql"), "SELECT   1;\n").expect("write");
+	std::fs::write(dir.join("keep.sql"), "SELECT   1;\n").expect("write");
+
+	let status = squill().arg("fmt").arg(&dir).status().expect("run");
+	assert!(status.success());
+	assert_eq!(
+		std::fs::read_to_string(dir.join("keep.sql")).expect("read"),
+		"select 1;\n"
+	);
+	assert_eq!(
+		std::fs::read_to_string(dir.join("sub/other.sql")).expect("read"),
+		"select 1;\n"
+	);
+	for untouched in ["legacy/old.sql", "report.gen.sql", "sub/skip.sql"] {
+		assert_eq!(
+			std::fs::read_to_string(dir.join(untouched)).expect("read"),
+			"SELECT   1;\n",
+			"{untouched} must be skipped"
+		);
+	}
+
+	// Config patterns are relative to the config file: formatting the
+	// subdirectory still skips sub/skip.sql.
+	std::fs::write(dir.join("sub/other.sql"), "SELECT   1;\n").expect("write");
+	let status = squill().arg("fmt").arg(dir.join("sub")).status().expect("run");
+	assert!(status.success());
+	assert_eq!(
+		std::fs::read_to_string(dir.join("sub/other.sql")).expect("read"),
+		"select 1;\n"
+	);
+	assert_eq!(
+		std::fs::read_to_string(dir.join("sub/skip.sql")).expect("read"),
+		"SELECT   1;\n"
+	);
+
+	// --ignore adds patterns (cwd-relative), on top of the config's.
+	std::fs::write(dir.join("keep.sql"), "SELECT   2;\n").expect("write");
+	let status = squill()
+		.args(["fmt", "--ignore", "keep*", "."])
+		.current_dir(&dir)
+		.status()
+		.expect("run");
+	assert!(status.success());
+	assert_eq!(
+		std::fs::read_to_string(dir.join("keep.sql")).expect("read"),
+		"SELECT   2;\n",
+		"--ignore pattern must skip keep.sql"
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn ignore_array_errors_have_locations() {
+	let dir = temp_dir("ignoreerrors");
+	std::fs::write(dir.join("f.sql"), "select 1;\n").expect("write");
+
+	// Unterminated array.
+	std::fs::write(dir.join("squill.toml"), "ignore = [\n\t\"a\",\n")
+		.expect("write");
+	let output = squill().arg("fmt").arg(&dir).output().expect("run");
+	assert_eq!(output.status.code(), Some(2));
+	let stderr = String::from_utf8_lossy(&output.stderr);
+	assert!(
+		stderr.contains("squill.toml:1:") && stderr.contains("unterminated"),
+		"got: {stderr}"
+	);
+
+	// Scalar instead of an array.
+	std::fs::write(dir.join("squill.toml"), "ignore = \"legacy\"\n")
+		.expect("write");
+	let output = squill().arg("fmt").arg(&dir).output().expect("run");
+	assert_eq!(output.status.code(), Some(2));
+	let stderr = String::from_utf8_lossy(&output.stderr);
+	assert!(stderr.contains("expects an array"), "got: {stderr}");
+
+	// Invalid glob.
+	std::fs::write(dir.join("squill.toml"), "ignore = [\"a[\"]\n")
+		.expect("write");
+	let output = squill().arg("fmt").arg(&dir).output().expect("run");
+	assert_eq!(output.status.code(), Some(2));
+	let stderr = String::from_utf8_lossy(&output.stderr);
+	assert!(stderr.contains("invalid ignore pattern"), "got: {stderr}");
+
+	assert_eq!(
+		std::fs::read_to_string(dir.join("f.sql")).expect("read"),
+		"select 1;\n",
+		"no file may be touched on config errors"
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn dot_config_location_and_precedence() {
+	let dir = temp_dir("dotconfig");
+	std::fs::create_dir_all(dir.join(".config")).expect("mkdir");
+	std::fs::write(dir.join(".config/squill.toml"), "keyword-case = \"upper\"\n")
+		.expect("write");
+	std::fs::write(dir.join("a.sql"), "select 1;\n").expect("write");
+
+	let status = squill().arg("fmt").arg(&dir).status().expect("run");
+	assert!(status.success());
+	assert_eq!(
+		std::fs::read_to_string(dir.join("a.sql")).expect("read"),
+		"SELECT 1;\n",
+		".config/squill.toml must apply"
+	);
+
+	// A bare squill.toml at the same level wins.
+	std::fs::write(dir.join("squill.toml"), "keyword-case = \"lower\"\n")
+		.expect("write");
+	let status = squill().arg("fmt").arg(&dir).status().expect("run");
+	assert!(status.success());
+	assert_eq!(
+		std::fs::read_to_string(dir.join("a.sql")).expect("read"),
+		"select 1;\n",
+		"squill.toml must win over .config/squill.toml"
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
 // ---- TREE-108: embedded SQL through the CLI ----
 
 const RS_FIXTURE: &str = r####"fn q(pool: &PgPool) {

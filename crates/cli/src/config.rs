@@ -2,8 +2,9 @@
 //!
 //! The config surface is exactly the CLI's option surface — nothing new sneaks
 //! in through config. The format is a deliberately flat TOML subset:
-//! `key = value` lines, `#` comments, no sections, no arrays. Parse errors and
-//! unknown keys are hard errors with file:line.
+//! `key = value` lines, `#` comments, no sections. The only array-valued key
+//! is `ignore` (quoted glob patterns; the array may span lines). Parse errors
+//! and unknown keys are hard errors with file:line.
 
 use std::path::Path;
 use std::path::PathBuf;
@@ -14,7 +15,7 @@ use formatter::KeywordCase;
 use parser::Dialect;
 
 /// Options set explicitly (by config or flags); unset fields fall back.
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone)]
 pub struct PartialOptions {
 	pub dialect: Option<Dialect>,
 	pub indent_style: Option<IndentStyle>,
@@ -23,6 +24,9 @@ pub struct PartialOptions {
 	pub keyword_case: Option<KeywordCase>,
 	pub quoting: Option<IdentQuoting>,
 	pub at_params: Option<bool>,
+	/// Glob patterns of paths to skip when recursing directories,
+	/// relative to the config file's directory.
+	pub ignore: Vec<String>,
 }
 
 impl PartialOptions {
@@ -84,28 +88,46 @@ pub fn parse_quoting(value: &str) -> Result<IdentQuoting, String> {
 	}
 }
 
-/// Find the nearest squill.toml at or above `dir`.
+/// Find the nearest config at or above `dir`: `squill.toml`, or
+/// `.config/squill.toml` when the bare file is absent at that level.
 pub fn discover(dir: &Path) -> Option<PathBuf> {
 	let mut dir = Some(dir);
 	while let Some(current) = dir {
-		let candidate = current.join("squill.toml");
-		if candidate.is_file() {
-			return Some(candidate);
+		for candidate in
+			[current.join("squill.toml"), current.join(".config/squill.toml")]
+		{
+			if candidate.is_file() {
+				return Some(candidate);
+			}
 		}
 		dir = current.parent();
 	}
 	None
 }
 
+/// The directory `ignore` patterns in `config_path` are relative to:
+/// the config file's directory, or its parent for `.config/squill.toml`.
+pub fn anchor_dir(config_path: &Path) -> &Path {
+	let dir = config_path.parent().unwrap_or(Path::new("."));
+	if dir.file_name().is_some_and(|name| name == ".config") {
+		dir.parent().unwrap_or(dir)
+	} else {
+		dir
+	}
+}
+
 /// Parse a config file. Errors carry `path:line:` prefixes.
 pub fn parse_config(text: &str, path: &Path) -> Result<PartialOptions, String> {
 	let mut options = PartialOptions::default();
 	let mut seen: Vec<String> = Vec::new();
-	for (index, raw) in text.lines().enumerate() {
+	let lines: Vec<&str> = text.lines().collect();
+	let mut index = 0;
+	while index < lines.len() {
 		let lineno = index + 1;
 		let err =
 			|message: String| format!("{}:{lineno}: {message}", path.display());
-		let line = raw.trim();
+		let line = lines[index].trim();
+		index += 1;
 		if line.is_empty() || line.starts_with('#') {
 			continue;
 		}
@@ -116,11 +138,35 @@ pub fn parse_config(text: &str, path: &Path) -> Result<PartialOptions, String> {
 			return Err(err("expected `key = value`".to_string()));
 		};
 		let key = key.trim();
-		let value = parse_value(value).map_err(&err)?;
 		if seen.iter().any(|k| k == key) {
 			return Err(err(format!("duplicate key `{key}`")));
 		}
 		seen.push(key.to_string());
+		if key == "ignore" {
+			// Array value, possibly spanning lines: accumulate until the
+			// closing `]` (strings cannot contain newlines).
+			let mut buffer = strip_comment(value).map_err(&err)?;
+			if !buffer.trim_start().starts_with('[') {
+				return Err(err("`ignore` expects an array of strings".to_string()));
+			}
+			while !array_closed(&buffer) {
+				let Some(next) = lines.get(index) else {
+					return Err(err("unterminated array".to_string()));
+				};
+				index += 1;
+				buffer.push(' ');
+				buffer.push_str(&strip_comment(next).map_err(&err)?);
+			}
+			let patterns = parse_string_array(&buffer).map_err(&err)?;
+			for pattern in &patterns {
+				globset::Glob::new(pattern).map_err(|glob_err| {
+					err(format!("invalid ignore pattern `{pattern}`: {glob_err}"))
+				})?;
+			}
+			options.ignore = patterns;
+			continue;
+		}
+		let value = parse_value(value).map_err(&err)?;
 		let string = |value: &Value| -> Result<String, String> {
 			match value {
 				Value::String(s) => Ok(s.clone()),
@@ -204,5 +250,74 @@ fn parse_value(raw: &str) -> Result<Value, String> {
 			.parse::<i64>()
 			.map(Value::Integer)
 			.map_err(|_| format!("cannot parse value `{bare}`")),
+	}
+}
+
+/// Cut a `# comment` off a physical line, respecting quoted strings.
+fn strip_comment(line: &str) -> Result<String, String> {
+	let mut in_string = false;
+	for (offset, ch) in line.char_indices() {
+		match ch {
+			'"' => in_string = !in_string,
+			'#' if !in_string => return Ok(line[..offset].to_string()),
+			_ => {}
+		}
+	}
+	if in_string {
+		return Err("unterminated string".to_string());
+	}
+	Ok(line.to_string())
+}
+
+/// Whether accumulated array text contains its closing `]` outside of
+/// any quoted string.
+fn array_closed(text: &str) -> bool {
+	let mut in_string = false;
+	for ch in text.chars() {
+		match ch {
+			'"' => in_string = !in_string,
+			']' if !in_string => return true,
+			_ => {}
+		}
+	}
+	false
+}
+
+/// Parse `[ "a", "b", ]` (comments already stripped): quoted strings,
+/// comma-separated, trailing comma allowed.
+fn parse_string_array(raw: &str) -> Result<Vec<String>, String> {
+	let raw = raw.trim();
+	let Some(mut rest) = raw.strip_prefix('[') else {
+		return Err("`ignore` expects an array of strings".to_string());
+	};
+	rest = rest.trim_start();
+	let mut items = Vec::new();
+	loop {
+		if let Some(tail) = rest.strip_prefix(']') {
+			if !tail.trim().is_empty() {
+				return Err(format!("unexpected trailing `{}`", tail.trim()));
+			}
+			return Ok(items);
+		}
+		let Some(after_quote) = rest.strip_prefix('"') else {
+			return Err("`ignore` expects an array of quoted strings".to_string());
+		};
+		let Some(end) = after_quote.find('"') else {
+			return Err("unterminated string".to_string());
+		};
+		let inner = &after_quote[..end];
+		if inner.contains('\\') {
+			return Err("string escapes are not supported".to_string());
+		}
+		if inner.is_empty() {
+			return Err("empty ignore pattern".to_string());
+		}
+		items.push(inner.to_string());
+		rest = after_quote[end + 1..].trim_start();
+		if let Some(after_comma) = rest.strip_prefix(',') {
+			rest = after_comma.trim_start();
+		} else if !rest.starts_with(']') {
+			return Err("expected `,` or `]`".to_string());
+		}
 	}
 }
