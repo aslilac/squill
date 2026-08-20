@@ -455,14 +455,14 @@ fn ignore_array_errors_have_locations() {
 	let dir = temp_dir("ignoreerrors");
 	std::fs::write(dir.join("f.sql"), "select 1;\n").expect("write");
 
-	// Unterminated array.
+	// Unterminated array: a TOML syntax error with a location.
 	std::fs::write(dir.join("squill.toml"), "ignore = [\n\t\"a\",\n")
 		.expect("write");
 	let output = squill().arg("fmt").arg(&dir).output().expect("run");
 	assert_eq!(output.status.code(), Some(2));
 	let stderr = String::from_utf8_lossy(&output.stderr);
 	assert!(
-		stderr.contains("squill.toml:1:") && stderr.contains("unterminated"),
+		stderr.contains("squill.toml:2:") && stderr.contains("unclosed array"),
 		"got: {stderr}"
 	);
 
