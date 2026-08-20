@@ -696,8 +696,7 @@ with
 				app_minutes,
 				minute_buckets
 			from workspace_app_stat_buckets
-			union
-			all
+			union all
 			select
 				time_bucket,
 				template_id,
@@ -921,8 +920,7 @@ with
 	relevant_status_changes as (
 		select user_id, new_status, changed_at
 		from latest_status_before_range
-		union
-		all
+		union all
 		select user_id, new_status, changed_at
 		from status_changes_during_range
 	),

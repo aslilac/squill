@@ -386,6 +386,7 @@ impl Lowerer {
 	/// space-joined; `;` attached tight.
 	fn statement_flow(&mut self, docs: &mut Vec<Doc>, node: &SyntaxNode) {
 		let mut first = true;
+		let mut prev_keyword = false;
 		for element in node.children_with_tokens() {
 			match element {
 				SyntaxElement::Token(token) if token.kind().is_trivia() => {
@@ -398,14 +399,17 @@ impl Lowerer {
 				}
 				SyntaxElement::Token(token) => {
 					// Set-operation keywords (`union all`) sit directly in
-					// the flow, on their own line when broken.
+					// the flow; a keyword run stays on one line when broken.
 					if !first {
-						docs.push(soft_line_or_space());
+						docs.push(if prev_keyword {
+							space()
+						} else {
+							soft_line_or_space()
+						});
 					}
 					self.push(docs, token_leaf(token));
 					first = false;
-					// Keyword runs: following keywords join with a space.
-					while false {}
+					prev_keyword = true;
 				}
 				SyntaxElement::Node(child) => {
 					if !first {
@@ -414,6 +418,7 @@ impl Lowerer {
 					let doc = self.node(child);
 					self.push(docs, doc);
 					first = false;
+					prev_keyword = false;
 				}
 			}
 		}

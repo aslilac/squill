@@ -399,8 +399,7 @@ with
 		from filtered_workspaces_order fwo
 		-- Return a technical summary row with total count of workspaces.
 		-- It is used to present the correct count if pagination goes beyond the offset.
-		union
-		all
+		union all
 		select
 			'00000000-0000-0000-0000-000000000000'::uuid, -- id
 			'0001-01-01 00:00:00+00'::timestamptz, -- created_at

@@ -160,8 +160,7 @@ with
 	updates as (
 		select ranked.id, ranked.next_pin_order as pin_order
 		from ranked
-		union
-		all
+		union all
 		select
 			target_chat.id,
 			coalesce((select max(ranked.next_pin_order) from ranked), 0)

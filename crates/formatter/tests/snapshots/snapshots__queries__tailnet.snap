@@ -91,8 +91,7 @@ select * from tailnet_tunnels;
 select src_id as lookup_id, dst_id as peer_id, coordinator_id, updated_at
 from tailnet_tunnels
 where src_id = any(@ids::uuid[])
-union
-all
+union all
 select dst_id as lookup_id, src_id as peer_id, coordinator_id, updated_at
 from tailnet_tunnels
 where dst_id = any(@ids::uuid[]);

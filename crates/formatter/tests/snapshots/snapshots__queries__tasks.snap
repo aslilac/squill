@@ -135,8 +135,7 @@ with
 			tai.task_id, was.created_at, was.state::text as state
 		from workspace_app_statuses was
 			join task_app_ids tai on tai.workspace_app_id = was.app_id
-		union
-		all
+		union all
 		select t.id as task_id, wb.created_at, '_boundary' as state
 		from tasks t join workspace_builds wb on wb.workspace_id = t.workspace_id
 		where
