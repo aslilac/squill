@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
 	"crates/cli/",
+	"crates/corpus-report/",
 	"crates/embed/",
 	"crates/formatter/",
 	"crates/parser/",

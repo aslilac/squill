@@ -1,0 +1,14 @@
+[package]
+name = "corpus-report"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+# Test/CI harness only; keeps `cargo install` of the cli lean.
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+formatter.workspace = true
+parser.workspace = true

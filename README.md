@@ -76,8 +76,9 @@ extraction query.
   semantics-preserving identifier-quoting transform.
 - **`crates/embed`** — formats SQL embedded in host files (Rust sqlx
   macros, Go database/sql calls) located via tree-sitter queries.
-- **`crates/cli`** — the `squill` binary and the `corpus-report`
-  coverage harness.
+- **`crates/cli`** — the `squill` binary.
+- **`crates/corpus-report`** — the corpus coverage harness (not
+  installed with the cli).
 
 ## Why you can trust it
 
@@ -94,7 +95,7 @@ parsed and formatted):
    changes.
 3. **Comment conservation** — never dropped, duplicated, or reordered.
 
-`cargo run -p cli --bin corpus-report -- --summary` prints the current
+`cargo run -p corpus-report -- --summary` prints the current
 coverage numbers.
 
 ## License
