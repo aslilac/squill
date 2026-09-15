@@ -69,46 +69,46 @@ create or replace function check_workspace_agent_name_unique()
 returns trigger
 language plpgsql
 as $$
-	declare
-		workspace_build_id uuid;
-		agents_with_name int;
-	begin
-		-- Find the workspace build the workspace agent is being inserted into.
-		select
-			workspace_builds.id
-		into workspace_build_id
-		from workspace_resources
-			join workspace_builds
-				on workspace_builds.job_id = workspace_resources.job_id
-		where workspace_resources.id = NEW.resource_id;
+declare
+	workspace_build_id uuid;
+	agents_with_name int;
+begin
+	-- Find the workspace build the workspace agent is being inserted into.
+	select
+		workspace_builds.id
+	into workspace_build_id
+	from workspace_resources
+		join workspace_builds
+			on workspace_builds.job_id = workspace_resources.job_id
+	where workspace_resources.id = NEW.resource_id;
 
-		-- If the agent doesn't have a workspace build, we'll allow the insert.
-		if workspace_build_id is null then
-			return NEW;
-		end if;
-
-		-- Count how many agents in this workspace build already have the given agent name.
-		select
-			count(*)
-		into agents_with_name
-		from workspace_agents
-			join workspace_resources
-				on workspace_resources.id = workspace_agents.resource_id
-			join workspace_builds
-				on workspace_builds.job_id = workspace_resources.job_id
-		where
-			workspace_builds.id = workspace_build_id
-			and workspace_agents.name = NEW.name
-			and workspace_agents.id != NEW.id;
-
-		-- If there's already an agent with this name, raise an error
-		if agents_with_name > 0 then
-			raise exception 'workspace agent name "%" already exists in this workspace build',
-			NEW.name
-			using ERRCODE = 'unique_violation';
-		end if;
+	-- If the agent doesn't have a workspace build, we'll allow the insert.
+	if workspace_build_id is null then
 		return NEW;
-	end;
+	end if;
+
+	-- Count how many agents in this workspace build already have the given agent name.
+	select
+		count(*)
+	into agents_with_name
+	from workspace_agents
+		join workspace_resources
+			on workspace_resources.id = workspace_agents.resource_id
+		join workspace_builds
+			on workspace_builds.job_id = workspace_resources.job_id
+	where
+		workspace_builds.id = workspace_build_id
+		and workspace_agents.name = NEW.name
+		and workspace_agents.id != NEW.id;
+
+	-- If there's already an agent with this name, raise an error
+	if agents_with_name > 0 then
+		raise exception 'workspace agent name "%" already exists in this workspace build',
+		NEW.name
+		using ERRCODE = 'unique_violation';
+	end if;
+	return NEW;
+end;
 $$;
 
 create trigger workspace_agent_name_unique_trigger

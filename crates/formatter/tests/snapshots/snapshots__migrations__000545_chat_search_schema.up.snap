@@ -91,36 +91,36 @@ create or replace function set_chat_message_revision_before()
 returns trigger
 language plpgsql
 as $$
-	declare
-		chat_snapshot_version bigint;
-		cmp chat_messages;
-	begin
-		if TG_OP = 'INSERT' and NEW.revision is not null then
+declare
+	chat_snapshot_version bigint;
+	cmp chat_messages;
+begin
+	if TG_OP = 'INSERT' and NEW.revision is not null then
+		raise exception 'chat_messages.revision must be assigned by trigger';
+	end if;
+	if TG_OP = 'UPDATE' then
+		if OLD.chat_id is distinct from NEW.chat_id then
+			raise exception 'chat_messages.chat_id is immutable';
+		end if;
+		if OLD.revision is distinct from NEW.revision then
 			raise exception 'chat_messages.revision must be assigned by trigger';
 		end if;
-		if TG_OP = 'UPDATE' then
-			if OLD.chat_id is distinct from NEW.chat_id then
-				raise exception 'chat_messages.chat_id is immutable';
-			end if;
-			if OLD.revision is distinct from NEW.revision then
-				raise exception 'chat_messages.revision must be assigned by trigger';
-			end if;
-			cmp := NEW;
-			cmp.search_tsv := OLD.search_tsv;
-			if OLD is not distinct from cmp then
-				return NEW;
-			end if;
+		cmp := NEW;
+		cmp.search_tsv := OLD.search_tsv;
+		if OLD is not distinct from cmp then
+			return NEW;
 		end if;
-		select snapshot_version
-		into chat_snapshot_version
-		from chats
-		where id = NEW.chat_id;
-		if chat_snapshot_version is null then
-			raise exception 'chat % does not exist', NEW.chat_id;
-		end if;
-		new.revision = chat_snapshot_version;
-		return NEW;
-	end;
+	end if;
+	select snapshot_version
+	into chat_snapshot_version
+	from chats
+	where id = NEW.chat_id;
+	if chat_snapshot_version is null then
+		raise exception 'chat % does not exist', NEW.chat_id;
+	end if;
+	new.revision = chat_snapshot_version;
+	return NEW;
+end;
 $$;
 
 comment on function set_chat_message_revision_before is 'Component of chatd. Updates chat_snapshot_version when any fields of chat_messages change. Excludes changes to search_tsv as it is not relevant to chatd''s processing loop.';
@@ -129,24 +129,24 @@ create or replace function update_chat_history_after_message_update()
 returns trigger
 language plpgsql
 as $$
-	begin
-		update chats c
-		set history_version = c.snapshot_version, generation_attempt = 0
-		from (
-			select distinct n.chat_id
-			from chat_message_history_new_rows n
-				join chat_message_history_old_rows o on o.id = n.id
-			where
-				(to_jsonb(o) - 'search_tsv') is distinct from (to_jsonb(n) - 'search_tsv')
-		) as affected
+begin
+	update chats c
+	set history_version = c.snapshot_version, generation_attempt = 0
+	from (
+		select distinct n.chat_id
+		from chat_message_history_new_rows n
+			join chat_message_history_old_rows o on o.id = n.id
 		where
-			c.id = affected.chat_id
-			and (
-				c.history_version is distinct from c.snapshot_version
-				or c.generation_attempt <> 0
-			);
-		return null;
-	end;
+			(to_jsonb(o) - 'search_tsv') is distinct from (to_jsonb(n) - 'search_tsv')
+	) as affected
+	where
+		c.id = affected.chat_id
+		and (
+			c.history_version is distinct from c.snapshot_version
+			or c.generation_attempt <> 0
+		);
+	return null;
+end;
 $$;
 
 comment on function update_chat_history_after_message_update is 'Component of chatd. Updates history_version and generation_attempt on chats when chat_messages is updated. Excludes changes to search_tsv.';

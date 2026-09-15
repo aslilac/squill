@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 -- We need to delete all existing API keys for soft-deleted users.
@@ -11,13 +10,13 @@ create function delete_deleted_user_api_keys()
 returns trigger
 language plpgsql
 as $$
-	declare
-	begin
-		if (NEW.deleted) then
-			delete from api_keys where user_id = OLD.id;
-		end if;
-		return NEW;
-	end;
+declare
+begin
+	if (NEW.deleted) then
+		delete from api_keys where user_id = OLD.id;
+	end if;
+	return NEW;
+end;
 $$;
 
 create trigger trigger_update_users
@@ -31,15 +30,15 @@ create function insert_apikey_fail_if_user_deleted()
 returns trigger
 language plpgsql
 as $$
-	declare
-	begin
-		if (NEW.user_id is not null) then
-			if (select deleted from users where id = NEW.user_id limit 1) then
-				raise exception 'Cannot create API key for deleted user';
-			end if;
+declare
+begin
+	if (NEW.user_id is not null) then
+		if (select deleted from users where id = NEW.user_id limit 1) then
+			raise exception 'Cannot create API key for deleted user';
 		end if;
-		return NEW;
-	end;
+	end if;
+	return NEW;
+end;
 $$;
 
 create trigger trigger_insert_apikeys

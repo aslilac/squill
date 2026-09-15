@@ -129,33 +129,33 @@ create function set_chat_message_revision_before()
 returns trigger
 language plpgsql
 as $$
-	declare
-		chat_snapshot_version bigint;
-	begin
-		if TG_OP = 'INSERT' and NEW.revision is not null then
+declare
+	chat_snapshot_version bigint;
+begin
+	if TG_OP = 'INSERT' and NEW.revision is not null then
+		raise exception 'chat_messages.revision must be assigned by trigger';
+	end if;
+	if TG_OP = 'UPDATE' then
+		if OLD.chat_id is distinct from NEW.chat_id then
+			raise exception 'chat_messages.chat_id is immutable';
+		end if;
+		if OLD.revision is distinct from NEW.revision then
 			raise exception 'chat_messages.revision must be assigned by trigger';
 		end if;
-		if TG_OP = 'UPDATE' then
-			if OLD.chat_id is distinct from NEW.chat_id then
-				raise exception 'chat_messages.chat_id is immutable';
-			end if;
-			if OLD.revision is distinct from NEW.revision then
-				raise exception 'chat_messages.revision must be assigned by trigger';
-			end if;
-			if OLD is not distinct from NEW then
-				return NEW;
-			end if;
+		if OLD is not distinct from NEW then
+			return NEW;
 		end if;
-		select snapshot_version
-		into chat_snapshot_version
-		from chats
-		where id = NEW.chat_id;
-		if chat_snapshot_version is null then
-			raise exception 'chat % does not exist', NEW.chat_id;
-		end if;
-		new.revision = chat_snapshot_version;
-		return NEW;
-	end;
+	end if;
+	select snapshot_version
+	into chat_snapshot_version
+	from chats
+	where id = NEW.chat_id;
+	if chat_snapshot_version is null then
+		raise exception 'chat % does not exist', NEW.chat_id;
+	end if;
+	new.revision = chat_snapshot_version;
+	return NEW;
+end;
 $$;
 
 -- AFTER STATEMENT trigger functions. Use the transition tables to
@@ -174,41 +174,41 @@ create function update_chat_history_after_message_insert()
 returns trigger
 language plpgsql
 as $$
-	begin
-		update chats c
-		set history_version = c.snapshot_version, generation_attempt = 0
-		from (select distinct chat_id from chat_message_history_new_rows) as affected
-		where
-			c.id = affected.chat_id
-			and (
-				c.history_version is distinct from c.snapshot_version
-				or c.generation_attempt <> 0
-			);
-		return null;
-	end;
+begin
+	update chats c
+	set history_version = c.snapshot_version, generation_attempt = 0
+	from (select distinct chat_id from chat_message_history_new_rows) as affected
+	where
+		c.id = affected.chat_id
+		and (
+			c.history_version is distinct from c.snapshot_version
+			or c.generation_attempt <> 0
+		);
+	return null;
+end;
 $$;
 
 create function update_chat_history_after_message_update()
 returns trigger
 language plpgsql
 as $$
-	begin
-		update chats c
-		set history_version = c.snapshot_version, generation_attempt = 0
-		from (
-			select distinct n.chat_id
-			from chat_message_history_new_rows n
-				join chat_message_history_old_rows o on o.id = n.id
-			where o is distinct from n
-		) as affected
-		where
-			c.id = affected.chat_id
-			and (
-				c.history_version is distinct from c.snapshot_version
-				or c.generation_attempt <> 0
-			);
-		return null;
-	end;
+begin
+	update chats c
+	set history_version = c.snapshot_version, generation_attempt = 0
+	from (
+		select distinct n.chat_id
+		from chat_message_history_new_rows n
+			join chat_message_history_old_rows o on o.id = n.id
+		where o is distinct from n
+	) as affected
+	where
+		c.id = affected.chat_id
+		and (
+			c.history_version is distinct from c.snapshot_version
+			or c.generation_attempt <> 0
+		);
+	return null;
+end;
 $$;
 
 create trigger trigger_set_chat_message_revision_on_insert
@@ -236,20 +236,20 @@ create function bump_chat_queue_version_on_queued_message_change()
 returns trigger
 language plpgsql
 as $$
-	declare
-		changed_chat_id uuid;
-	begin
-		if TG_OP = 'DELETE' then
-			changed_chat_id = OLD.chat_id;
-		else
-			changed_chat_id = NEW.chat_id;
-		end if;
-		update chats set queue_version = snapshot_version where id = changed_chat_id;
-		if TG_OP = 'DELETE' then
-			return OLD;
-		end if;
-		return NEW;
-	end;
+declare
+	changed_chat_id uuid;
+begin
+	if TG_OP = 'DELETE' then
+		changed_chat_id = OLD.chat_id;
+	else
+		changed_chat_id = NEW.chat_id;
+	end if;
+	update chats set queue_version = snapshot_version where id = changed_chat_id;
+	if TG_OP = 'DELETE' then
+		return OLD;
+	end if;
+	return NEW;
+end;
 $$;
 
 create trigger trigger_bump_chat_queue_version_on_queued_message_insert
@@ -275,18 +275,18 @@ create function sync_chat_retry_state()
 returns trigger
 language plpgsql
 as $$
-	begin
-		if OLD.retry_state_version is distinct from NEW.retry_state_version then
-			raise exception 'chats.retry_state_version must be assigned by trigger';
-		end if;
-		if NEW.generation_attempt is distinct from OLD.generation_attempt then
-			new.retry_state = null;
-		end if;
-		if NEW.retry_state is distinct from OLD.retry_state then
-			new.retry_state_version = NEW.snapshot_version;
-		end if;
-		return NEW;
-	end;
+begin
+	if OLD.retry_state_version is distinct from NEW.retry_state_version then
+		raise exception 'chats.retry_state_version must be assigned by trigger';
+	end if;
+	if NEW.generation_attempt is distinct from OLD.generation_attempt then
+		new.retry_state = null;
+	end if;
+	if NEW.retry_state is distinct from OLD.retry_state then
+		new.retry_state_version = NEW.snapshot_version;
+	end if;
+	return NEW;
+end;
 $$;
 
 create trigger trigger_sync_chat_retry_state

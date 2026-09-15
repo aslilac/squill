@@ -3,50 +3,50 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 do $$
-	begin
-		if to_regclass('chat_providers') is null then
-			return;
-		end if;
-		with
-			migrated_provider_ids as (
-				select id
-				from chat_providers
-				union
-				select id
-				from ai_providers
-				where name like 'agents-%' and deleted = true
-			) update chat_model_configs
-		set ai_provider_id = null
-		where ai_provider_id in (select id from migrated_provider_ids);
-		with
-			migrated_provider_ids as (
-				select id
-				from chat_providers
-				union
-				select id
-				from ai_providers
-				where name like 'agents-%' and deleted = true
-			) delete from user_ai_provider_keys
-		where ai_provider_id in (select id from migrated_provider_ids);
-		with
-			migrated_provider_ids as (
-				select id
-				from chat_providers
-				union
-				select id
-				from ai_providers
-				where name like 'agents-%' and deleted = true
-			) delete from ai_provider_keys
-		where provider_id in (select id from migrated_provider_ids);
-		with
-			migrated_provider_ids as (
-				select id
-				from chat_providers
-				union
-				select id
-				from ai_providers
-				where name like 'agents-%' and deleted = true
-			) delete from ai_providers
-		where id in (select id from migrated_provider_ids);
-	end
+begin
+	if to_regclass('chat_providers') is null then
+		return;
+	end if;
+	with
+		migrated_provider_ids as (
+			select id
+			from chat_providers
+			union
+			select id
+			from ai_providers
+			where name like 'agents-%' and deleted = true
+		) update chat_model_configs
+	set ai_provider_id = null
+	where ai_provider_id in (select id from migrated_provider_ids);
+	with
+		migrated_provider_ids as (
+			select id
+			from chat_providers
+			union
+			select id
+			from ai_providers
+			where name like 'agents-%' and deleted = true
+		) delete from user_ai_provider_keys
+	where ai_provider_id in (select id from migrated_provider_ids);
+	with
+		migrated_provider_ids as (
+			select id
+			from chat_providers
+			union
+			select id
+			from ai_providers
+			where name like 'agents-%' and deleted = true
+		) delete from ai_provider_keys
+	where provider_id in (select id from migrated_provider_ids);
+	with
+		migrated_provider_ids as (
+			select id
+			from chat_providers
+			union
+			select id
+			from ai_providers
+			where name like 'agents-%' and deleted = true
+		) delete from ai_providers
+	where id in (select id from migrated_provider_ids);
+end
 $$;

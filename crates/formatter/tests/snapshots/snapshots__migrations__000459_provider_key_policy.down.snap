@@ -5,14 +5,14 @@ expression: formatted
 drop table if exists user_chat_provider_keys;
 
 do $$
-	begin
-		if to_regclass('chat_providers') is null then
-			return;
-		end if;
-		alter table chat_providers drop constraint if exists valid_credential_policy;
-		alter table chat_providers
-			drop column if exists central_api_key_enabled,
-			drop column if exists allow_user_api_key,
-			drop column if exists allow_central_api_key_fallback;
-	end
+begin
+	if to_regclass('chat_providers') is null then
+		return;
+	end if;
+	alter table chat_providers drop constraint if exists valid_credential_policy;
+	alter table chat_providers
+		drop column if exists central_api_key_enabled,
+		drop column if exists allow_user_api_key,
+		drop column if exists allow_central_api_key_fallback;
+end
 $$;

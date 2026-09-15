@@ -317,12 +317,18 @@ fn splice_sql_bodies(statement: &str, options: &Options, depth: u32) -> String {
 		{
 			continue;
 		}
-		// Re-anchor: body lines one indent unit under the line holding
-		// the opening tag; closing tag on its own line at that indent.
+		// Re-anchor the body against the line holding the opening tag,
+		// with the closing tag on its own line at that indent. A
+		// PL/pgSQL body carries its own `begin`/`end` bracketing, so it
+		// sits flush with the tags; a bare SQL body has none, and gets
+		// one indent unit to mark it off.
 		let anchor = line_indent(statement, range.start);
-		let unit = match options.indent_style {
-			IndentStyle::Tab => "\t".to_string(),
-			IndentStyle::Spaces => " ".repeat(usize::from(options.indent_width)),
+		let unit = match lang {
+			BodyLang::Plpgsql => String::new(),
+			BodyLang::Sql => match options.indent_style {
+				IndentStyle::Tab => "\t".to_string(),
+				IndentStyle::Spaces => " ".repeat(usize::from(options.indent_width)),
+			},
 		};
 		let mut replacement = String::from(tag);
 		for line in body.split('\n') {

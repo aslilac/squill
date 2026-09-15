@@ -36,11 +36,11 @@ create function delete_deleted_oauth2_provider_app_token_api_key()
 returns trigger
 language plpgsql
 as $$
-	declare
-	begin
-		delete from api_keys where id = OLD.api_key_id;
-		return OLD;
-	end;
+declare
+begin
+	delete from api_keys where id = OLD.api_key_id;
+	return OLD;
+end;
 $$;
 
 create trigger trigger_delete_oauth2_provider_app_token

@@ -45,16 +45,16 @@ create function tailnet_notify_client_change()
 returns trigger
 language plpgsql
 as $$
-	begin
-		if (OLD is not null) then
-			perform pg_notify('tailnet_client_update', OLD.id || ',' || OLD.agent_id);
-			return null;
-		end if;
-		if (NEW is not null) then
-			perform pg_notify('tailnet_client_update', NEW.id || ',' || NEW.agent_id);
-			return null;
-		end if;
-	end;
+begin
+	if (OLD is not null) then
+		perform pg_notify('tailnet_client_update', OLD.id || ',' || OLD.agent_id);
+		return null;
+	end if;
+	if (NEW is not null) then
+		perform pg_notify('tailnet_client_update', NEW.id || ',' || NEW.agent_id);
+		return null;
+	end if;
+end;
 $$;
 
 create trigger tailnet_notify_client_change
@@ -67,16 +67,16 @@ create function tailnet_notify_agent_change()
 returns trigger
 language plpgsql
 as $$
-	begin
-		if (OLD is not null) then
-			perform pg_notify('tailnet_agent_update', OLD.id::text);
-			return null;
-		end if;
-		if (NEW is not null) then
-			perform pg_notify('tailnet_agent_update', NEW.id::text);
-			return null;
-		end if;
-	end;
+begin
+	if (OLD is not null) then
+		perform pg_notify('tailnet_agent_update', OLD.id::text);
+		return null;
+	end if;
+	if (NEW is not null) then
+		perform pg_notify('tailnet_agent_update', NEW.id::text);
+		return null;
+	end if;
+end;
 $$;
 
 create trigger tailnet_notify_agent_change
@@ -89,10 +89,10 @@ create function tailnet_notify_coordinator_heartbeat()
 returns trigger
 language plpgsql
 as $$
-	begin
-		perform pg_notify('tailnet_coordinator_heartbeat', NEW.id::text);
-		return null;
-	end;
+begin
+	perform pg_notify('tailnet_coordinator_heartbeat', NEW.id::text);
+	return null;
+end;
 $$;
 
 create trigger tailnet_notify_coordinator_heartbeat

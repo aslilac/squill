@@ -11,14 +11,14 @@ create or replace function migrate_external_auth_providers_to_jsonb(text[])
 returns jsonb
 language plpgsql
 as $$
-	declare
-		result jsonb;
-	begin
-		select jsonb_agg(jsonb_build_object('id', value::text))
-		into result
-		from unnest($1) as value;
-		return result;
-	end;
+declare
+	result jsonb;
+begin
+	select jsonb_agg(jsonb_build_object('id', value::text))
+	into result
+	from unnest($1) as value;
+	return result;
+end;
 $$;
 
 -- Update the column type and migrate the values

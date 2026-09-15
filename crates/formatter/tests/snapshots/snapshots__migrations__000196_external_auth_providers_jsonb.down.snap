@@ -13,20 +13,20 @@ create or replace function revert_migrate_external_auth_providers_to_jsonb(
 returns text[]
 language plpgsql
 as $$
-	declare
-		result text[];
-	begin
-		if jsonb_typeof($1) = 'null' then
-			result := '{}';
-		else
-			select array_agg(id::text)
-			into result
-			from (
-				select jsonb_array_elements($1) ->> 'id' as id
-			) as external_auth_provider_ids;
-		end if;
-		return result;
-	end;
+declare
+	result text[];
+begin
+	if jsonb_typeof($1) = 'null' then
+		result := '{}';
+	else
+		select array_agg(id::text)
+		into result
+		from (
+			select jsonb_array_elements($1) ->> 'id' as id
+		) as external_auth_provider_ids;
+	end if;
+	return result;
+end;
 $$;
 
 -- Remove the non-null constraint and default

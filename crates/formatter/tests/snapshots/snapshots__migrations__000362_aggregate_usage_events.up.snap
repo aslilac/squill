@@ -17,35 +17,35 @@ create or replace function aggregate_usage_event()
 returns trigger
 language plpgsql
 as $$
-	begin
-		-- Check for supported event types and throw error for unknown types
-		if NEW.event_type not in ('dc_managed_agents_v1') then
-			raise exception 'Unhandled usage event type in aggregate_usage_event: %',
-			NEW.event_type;
-		end if;
-		insert into usage_events_daily (day, event_type, usage_data)
-		values
-			(
-				-- Extract the date from the created_at timestamp, always using UTC for
-				-- consistency
-				date_trunc('day', NEW.created_at at time zone 'UTC')::date,
-				NEW.event_type,
-				NEW.event_data
-			)
-		on conflict
-			(day,
-			event_type) do update set
-				usage_data = case
-					-- Handle simple counter events by summing the count
-					when NEW.event_type in ('dc_managed_agents_v1')
-						then jsonb_build_object(
-							'count',
-							coalesce((usage_events_daily.usage_data ->> 'count')::bigint, 0)
-							+ coalesce((NEW.event_data ->> 'count')::bigint, 0)
-						)
-				end;
-		return NEW;
-	end;
+begin
+	-- Check for supported event types and throw error for unknown types
+	if NEW.event_type not in ('dc_managed_agents_v1') then
+		raise exception 'Unhandled usage event type in aggregate_usage_event: %',
+		NEW.event_type;
+	end if;
+	insert into usage_events_daily (day, event_type, usage_data)
+	values
+		(
+			-- Extract the date from the created_at timestamp, always using UTC for
+			-- consistency
+			date_trunc('day', NEW.created_at at time zone 'UTC')::date,
+			NEW.event_type,
+			NEW.event_data
+		)
+	on conflict
+		(day,
+		event_type) do update set
+			usage_data = case
+				-- Handle simple counter events by summing the count
+				when NEW.event_type in ('dc_managed_agents_v1')
+					then jsonb_build_object(
+						'count',
+						coalesce((usage_events_daily.usage_data ->> 'count')::bigint, 0)
+						+ coalesce((NEW.event_data ->> 'count')::bigint, 0)
+					)
+			end;
+	return NEW;
+end;
 $$;
 
 -- Create trigger to automatically aggregate usage events

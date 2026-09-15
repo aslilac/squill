@@ -6,41 +6,41 @@ create function tailnet_notify_coordinator_heartbeat()
 returns trigger
 language plpgsql
 as $$
-	begin
-		perform pg_notify('tailnet_coordinator_heartbeat', NEW.id::text);
-		return null;
-	end;
+begin
+	perform pg_notify('tailnet_coordinator_heartbeat', NEW.id::text);
+	return null;
+end;
 $$;
 
 create function tailnet_notify_peer_change()
 returns trigger
 language plpgsql
 as $$
-	begin
-		if (OLD is not null) then
-			perform pg_notify('tailnet_peer_update', OLD.id::text);
-			return null;
-		end if;
-		if (NEW is not null) then
-			perform pg_notify('tailnet_peer_update', NEW.id::text);
-			return null;
-		end if;
-	end;
+begin
+	if (OLD is not null) then
+		perform pg_notify('tailnet_peer_update', OLD.id::text);
+		return null;
+	end if;
+	if (NEW is not null) then
+		perform pg_notify('tailnet_peer_update', NEW.id::text);
+		return null;
+	end if;
+end;
 $$;
 
 create function tailnet_notify_tunnel_change()
 returns trigger
 language plpgsql
 as $$
-	begin
-		if (NEW is not null) then
-			perform pg_notify('tailnet_tunnel_update', NEW.src_id || ',' || NEW.dst_id);
-			return null;
-		elsif (OLD is not null) then
-			perform pg_notify('tailnet_tunnel_update', OLD.src_id || ',' || OLD.dst_id);
-			return null;
-		end if;
-	end;
+begin
+	if (NEW is not null) then
+		perform pg_notify('tailnet_tunnel_update', NEW.src_id || ',' || NEW.dst_id);
+		return null;
+	elsif (OLD is not null) then
+		perform pg_notify('tailnet_tunnel_update', OLD.src_id || ',' || OLD.dst_id);
+		return null;
+	end if;
+end;
 $$;
 
 create trigger tailnet_notify_coordinator_heartbeat

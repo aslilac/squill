@@ -65,46 +65,46 @@ create or replace function insert_organization_system_roles()
 returns trigger
 language plpgsql
 as $$
-	begin
-		insert into custom_roles (
-			name,
-			display_name,
-			organization_id,
-			site_permissions,
-			org_permissions,
-			user_permissions,
-			member_permissions,
-			is_system,
-			created_at,
-			updated_at
-		)
-		values
-			(
-				'organization-member',
-				'',
-				NEW.id,
-				'[]'::jsonb,
-				'[]'::jsonb,
-				'[]'::jsonb,
-				'[]'::jsonb,
-				true,
-				now(),
-				now()
-			),
-			(
-				'organization-service-account',
-				'',
-				NEW.id,
-				'[]'::jsonb,
-				'[]'::jsonb,
-				'[]'::jsonb,
-				'[]'::jsonb,
-				true,
-				now(),
-				now()
-			);
-		return NEW;
-	end;
+begin
+	insert into custom_roles (
+		name,
+		display_name,
+		organization_id,
+		site_permissions,
+		org_permissions,
+		user_permissions,
+		member_permissions,
+		is_system,
+		created_at,
+		updated_at
+	)
+	values
+		(
+			'organization-member',
+			'',
+			NEW.id,
+			'[]'::jsonb,
+			'[]'::jsonb,
+			'[]'::jsonb,
+			'[]'::jsonb,
+			true,
+			now(),
+			now()
+		),
+		(
+			'organization-service-account',
+			'',
+			NEW.id,
+			'[]'::jsonb,
+			'[]'::jsonb,
+			'[]'::jsonb,
+			'[]'::jsonb,
+			true,
+			now(),
+			now()
+		);
+	return NEW;
+end;
 $$;
 
 create trigger trigger_insert_organization_system_roles

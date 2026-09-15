@@ -20,14 +20,14 @@ create or replace function tailnet_notify_client_change()
 returns trigger
 language plpgsql
 as $$
-	begin
-		if (OLD is not null) then
-			perform pg_notify('tailnet_client_update', OLD.id || ',' || OLD.agent_id);
-			return null;
-		end if;
-		if (NEW is not null) then
-			perform pg_notify('tailnet_client_update', NEW.id || ',' || NEW.agent_id);
-			return null;
-		end if;
-	end;
+begin
+	if (OLD is not null) then
+		perform pg_notify('tailnet_client_update', OLD.id || ',' || OLD.agent_id);
+		return null;
+	end if;
+	if (NEW is not null) then
+		perform pg_notify('tailnet_client_update', NEW.id || ',' || NEW.agent_id);
+		return null;
+	end if;
+end;
 $$;

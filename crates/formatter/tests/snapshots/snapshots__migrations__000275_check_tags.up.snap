@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 create domain tagset as jsonb;
@@ -14,15 +13,15 @@ create or replace function provisioner_tagset_contains(
 returns boolean
 language plpgsql
 as $$
-	begin
-		return case
-			-- Special case for untagged provisioners, where only an exact match should count
-			when job_tags::jsonb = '{"scope": "organization", "owner": ""}'::jsonb
-				then job_tags::jsonb = provisioner_tags::jsonb
-			-- General case
-			else job_tags::jsonb <@ provisioner_tags::jsonb
-		end;
+begin
+	return case
+		-- Special case for untagged provisioners, where only an exact match should count
+		when job_tags::jsonb = '{"scope": "organization", "owner": ""}'::jsonb
+			then job_tags::jsonb = provisioner_tags::jsonb
+		-- General case
+		else job_tags::jsonb <@ provisioner_tags::jsonb
 	end;
+end;
 $$;
 
 comment on function provisioner_tagset_contains (

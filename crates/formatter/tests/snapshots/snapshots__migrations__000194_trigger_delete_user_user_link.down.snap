@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 drop trigger if exists trigger_update_users on users;
@@ -14,13 +13,13 @@ create function delete_deleted_user_api_keys()
 returns trigger
 language plpgsql
 as $$
-	declare
-	begin
-		if (NEW.deleted) then
-			delete from api_keys where user_id = OLD.id;
-		end if;
-		return NEW;
-	end;
+declare
+begin
+	if (NEW.deleted) then
+		delete from api_keys where user_id = OLD.id;
+	end if;
+	return NEW;
+end;
 $$;
 
 create trigger trigger_update_users

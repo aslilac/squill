@@ -18,20 +18,20 @@ create or replace function compute_notification_message_dedupe_hash()
 returns trigger
 language plpgsql
 as $$
-	begin
-		new.dedupe_hash := md5(
-			concat_ws(
-				':',
-				NEW.notification_template_id,
-				NEW.user_id,
-				NEW.method,
-				NEW.payload::text,
-				array_to_string(NEW.targets, ','),
-				date_trunc('day', NEW.created_at at time zone 'UTC')::text
-			)
-		);
-		return NEW;
-	end;
+begin
+	new.dedupe_hash := md5(
+		concat_ws(
+			':',
+			NEW.notification_template_id,
+			NEW.user_id,
+			NEW.method,
+			NEW.payload::text,
+			array_to_string(NEW.targets, ','),
+			date_trunc('day', NEW.created_at at time zone 'UTC')::text
+		)
+	);
+	return NEW;
+end;
 $$;
 
 comment on function compute_notification_message_dedupe_hash is 'Computes a unique hash which will be used to prevent duplicate messages from being enqueued on the same day';

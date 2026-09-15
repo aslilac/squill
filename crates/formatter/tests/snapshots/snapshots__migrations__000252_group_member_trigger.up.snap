@@ -1,26 +1,25 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 create function delete_group_members_on_org_member_delete()
 returns trigger
 language plpgsql
 as $$
-	declare
-	begin
-		-- Remove the user from all groups associated with the same
-		-- organization as the organization_member being deleted.
-		delete from group_members
-		where
-			user_id = OLD.user_id
-			and group_id in (
-				select id
-				from groups
-				where organization_id = OLD.organization_id
-			);
-		return OLD;
-	end;
+declare
+begin
+	-- Remove the user from all groups associated with the same
+	-- organization as the organization_member being deleted.
+	delete from group_members
+	where
+		user_id = OLD.user_id
+		and group_id in (
+			select id
+			from groups
+			where organization_id = OLD.organization_id
+		);
+	return OLD;
+end;
 $$;
 
 create trigger trigger_delete_group_members_on_org_member_delete

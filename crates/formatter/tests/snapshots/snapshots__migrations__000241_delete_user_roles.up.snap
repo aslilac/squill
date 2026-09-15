@@ -10,23 +10,23 @@ create or replace function remove_organization_member_role()
 returns trigger
 language plpgsql
 as $$
-	begin
-		-- Delete the role from all organization members that have it.
-		-- TODO: When site wide custom roles are supported, if the
-		--	organization_id is null, we should remove the role from the 'users'
-		--	table instead.
-		if OLD.organization_id is not null then
-			update organization_members
-			-- this is a noop if the role is not assigned to the member
-			set
-				roles = array_remove(roles, OLD.name)
-			where
-				-- Scope to the correct organization
-				organization_members.organization_id
-				= OLD.organization_id;
-		end if;
-		return OLD;
-	end;
+begin
+	-- Delete the role from all organization members that have it.
+	-- TODO: When site wide custom roles are supported, if the
+	--	organization_id is null, we should remove the role from the 'users'
+	--	table instead.
+	if OLD.organization_id is not null then
+		update organization_members
+		-- this is a noop if the role is not assigned to the member
+		set
+			roles = array_remove(roles, OLD.name)
+		where
+			-- Scope to the correct organization
+			organization_members.organization_id
+			= OLD.organization_id;
+	end if;
+	return OLD;
+end;
 $$;
 
 -- Attach the function to deleting the custom role

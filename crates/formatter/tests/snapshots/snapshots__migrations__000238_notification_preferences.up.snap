@@ -32,20 +32,20 @@ create or replace function inhibit_enqueue_if_disabled()
 returns trigger
 language plpgsql
 as $$
-	begin
-		-- Fail the insertion if the user has disabled this notification.
-		if exists (
-			select 1
-			from notification_preferences
-			where
-				disabled = true
-				and user_id = NEW.user_id
-				and notification_template_id = NEW.notification_template_id
-		) then
-			raise exception 'cannot enqueue message: user has disabled this notification';
-		end if;
-		return NEW;
-	end;
+begin
+	-- Fail the insertion if the user has disabled this notification.
+	if exists (
+		select 1
+		from notification_preferences
+		where
+			disabled = true
+			and user_id = NEW.user_id
+			and notification_template_id = NEW.notification_template_id
+	) then
+		raise exception 'cannot enqueue message: user has disabled this notification';
+	end if;
+	return NEW;
+end;
 $$;
 
 -- Trigger to execute above function on insertion.

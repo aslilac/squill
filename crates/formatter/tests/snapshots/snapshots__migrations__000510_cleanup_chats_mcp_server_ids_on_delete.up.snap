@@ -35,12 +35,12 @@ create or replace function remove_mcp_server_config_id_from_chats()
 returns trigger
 language plpgsql
 as $$
-	begin
-		update chats
-		set mcp_server_ids = array_remove(mcp_server_ids, OLD.id)
-		where OLD.id = any(mcp_server_ids);
-		return OLD;
-	end;
+begin
+	update chats
+	set mcp_server_ids = array_remove(mcp_server_ids, OLD.id)
+	where OLD.id = any(mcp_server_ids);
+	return OLD;
+end;
 $$;
 
 create trigger remove_chat_mcp_server_config_id

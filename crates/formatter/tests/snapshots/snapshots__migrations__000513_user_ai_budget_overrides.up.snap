@@ -27,20 +27,20 @@ create function enforce_user_ai_budget_override_membership()
 returns trigger
 language plpgsql
 as $$
-	begin
-		if not exists (
-			select 1
-			from group_members_expanded
-			where user_id = NEW.user_id and group_id = NEW.group_id
-		) then
-			raise exception 'user % is not a member of group %',
-			NEW.user_id,
-			NEW.group_id
-			using ERRCODE = 'check_violation',
-			constraint = 'user_ai_budget_overrides_must_be_group_member';
-		end if;
-		return NEW;
-	end;
+begin
+	if not exists (
+		select 1
+		from group_members_expanded
+		where user_id = NEW.user_id and group_id = NEW.group_id
+	) then
+		raise exception 'user % is not a member of group %',
+		NEW.user_id,
+		NEW.group_id
+		using ERRCODE = 'check_violation',
+		constraint = 'user_ai_budget_overrides_must_be_group_member';
+	end if;
+	return NEW;
+end;
 $$;
 
 create trigger trigger_enforce_user_ai_budget_override_membership
@@ -54,11 +54,11 @@ create function delete_user_ai_budget_overrides_on_group_member_delete()
 returns trigger
 language plpgsql
 as $$
-	begin
-		delete from user_ai_budget_overrides
-		where user_id = OLD.user_id and group_id = OLD.group_id;
-		return OLD;
-	end;
+begin
+	delete from user_ai_budget_overrides
+	where user_id = OLD.user_id and group_id = OLD.group_id;
+	return OLD;
+end;
 $$;
 
 create trigger trigger_delete_user_ai_budget_overrides_on_group_member_delete
@@ -73,11 +73,11 @@ create function delete_user_ai_budget_overrides_on_org_member_delete()
 returns trigger
 language plpgsql
 as $$
-	begin
-		delete from user_ai_budget_overrides
-		where user_id = OLD.user_id and group_id = OLD.organization_id;
-		return OLD;
-	end;
+begin
+	delete from user_ai_budget_overrides
+	where user_id = OLD.user_id and group_id = OLD.organization_id;
+	return OLD;
+end;
 $$;
 
 create trigger trigger_delete_user_ai_budget_overrides_on_org_member_delete

@@ -10,65 +10,65 @@ create or replace function protect_deleting_organizations()
 returns trigger
 language plpgsql
 as $$
-	declare
-		workspace_count int;
-		template_count int;
-		group_count int;
-		member_count int;
-		provisioner_keys_count int;
-	begin
-		workspace_count := (
-			select count(*) as count
-			from workspaces
-			where workspaces.organization_id = OLD.id and workspaces.deleted = false
-		);
-		template_count := (
-			select count(*) as count
-			from templates
-			where templates.organization_id = OLD.id and templates.deleted = false
-		);
-		group_count := (
-			select count(*) as count
-			from groups
-			where groups.organization_id = OLD.id
-		);
-		member_count := (
-			select count(*) as count
-			from organization_members
-			where organization_members.organization_id = OLD.id
-		);
-		provisioner_keys_count := (
-			select count(*) as count
-			from provisioner_keys
-			where provisioner_keys.organization_id = OLD.id
-		);
+declare
+	workspace_count int;
+	template_count int;
+	group_count int;
+	member_count int;
+	provisioner_keys_count int;
+begin
+	workspace_count := (
+		select count(*) as count
+		from workspaces
+		where workspaces.organization_id = OLD.id and workspaces.deleted = false
+	);
+	template_count := (
+		select count(*) as count
+		from templates
+		where templates.organization_id = OLD.id and templates.deleted = false
+	);
+	group_count := (
+		select count(*) as count
+		from groups
+		where groups.organization_id = OLD.id
+	);
+	member_count := (
+		select count(*) as count
+		from organization_members
+		where organization_members.organization_id = OLD.id
+	);
+	provisioner_keys_count := (
+		select count(*) as count
+		from provisioner_keys
+		where provisioner_keys.organization_id = OLD.id
+	);
 
-		-- Fail the deletion if one of the following:
-		-- * the organization has 1 or more workspaces
-		-- * the organization has 1 or more templates
-		-- * the organization has 1 or more groups other than "Everyone" group
-		-- * the organization has 1 or more members other than the organization owner
-		-- * the organization has 1 or more provisioner keys
-		if (workspace_count + template_count + provisioner_keys_count) > 0 then
-			raise exception 'cannot delete organization: organization has % workspaces, % templates, and % provisioner keys that must be deleted first',
-			workspace_count,
-			template_count,
-			provisioner_keys_count;
-		end if;
-		if (group_count) > 1 then
-			raise exception 'cannot delete organization: organization has % groups that must be deleted first',
-			group_count - 1;
-		end if;
+	-- Fail the deletion if one of the following:
+	-- * the organization has 1 or more workspaces
+	-- * the organization has 1 or more templates
+	-- * the organization has 1 or more groups other than "Everyone" group
+	-- * the organization has 1 or more members other than the organization owner
+	-- * the organization has 1 or more provisioner keys
+	if (workspace_count + template_count + provisioner_keys_count) > 0 then
+		raise exception 'cannot delete organization: organization has % workspaces, % templates, and % provisioner keys that must be deleted first',
+		workspace_count,
+		template_count,
+		provisioner_keys_count;
+	end if;
+	if (group_count) > 1 then
+		raise exception 'cannot delete organization: organization has % groups that must be deleted first',
+		group_count - 1;
+	end if;
 
-		-- Allow 1 member to exist, because you cannot remove yourself. You can
-		-- remove everyone else. Ideally, we only omit the member that matches
-		-- the user_id of the caller, however in a trigger, the caller is unknown.
-		if (member_count) > 1 then
-			raise exception 'cannot delete organization: organization has % members that must be deleted first',
-			member_count - 1;
-		end if;
-		return NEW;
-	end;
+	-- Allow 1 member to exist, because you cannot remove yourself. You can
+	-- remove everyone else. Ideally, we only omit the member that matches
+	-- the user_id of the caller, however in a trigger, the caller is unknown.
+	if (member_count) > 1 then
+		raise exception 'cannot delete organization: organization has % members that must be deleted first',
+		member_count - 1;
+	end if;
+	return NEW;
+end;
 $$;
 
 -- Re-create trigger that uses this function

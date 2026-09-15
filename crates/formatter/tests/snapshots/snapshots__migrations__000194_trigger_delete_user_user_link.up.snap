@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 -- We need to delete all existing user_links for soft-deleted users
@@ -17,22 +16,22 @@ create function delete_deleted_user_resources()
 returns trigger
 language plpgsql
 as $$
-	declare
-	begin
-		if (NEW.deleted) then
-			-- Remove their api_keys
-			delete from api_keys
-			where user_id = OLD.id;
+declare
+begin
+	if (NEW.deleted) then
+		-- Remove their api_keys
+		delete from api_keys
+		where user_id = OLD.id;
 
-			-- Remove their user_links
-			-- Their login_type is preserved in the users table.
-			-- Matching this user back to the link can still be done by their
-			-- email if the account is undeleted. Although that is not a guarantee.
-			delete from user_links
-			where user_id = OLD.id;
-		end if;
-		return NEW;
-	end;
+		-- Remove their user_links
+		-- Their login_type is preserved in the users table.
+		-- Matching this user back to the link can still be done by their
+		-- email if the account is undeleted. Although that is not a guarantee.
+		delete from user_links
+		where user_id = OLD.id;
+	end if;
+	return NEW;
+end;
 $$;
 
 -- Update it to the new trigger
@@ -47,15 +46,15 @@ create function insert_user_links_fail_if_user_deleted()
 returns trigger
 language plpgsql
 as $$
-	declare
-	begin
-		if (NEW.user_id is not null) then
-			if (select deleted from users where id = NEW.user_id limit 1) then
-				raise exception 'Cannot create user_link for deleted user';
-			end if;
+declare
+begin
+	if (NEW.user_id is not null) then
+		if (select deleted from users where id = NEW.user_id limit 1) then
+			raise exception 'Cannot create user_link for deleted user';
 		end if;
-		return NEW;
-	end;
+	end if;
+	return NEW;
+end;
 $$;
 
 create trigger trigger_upsert_user_links

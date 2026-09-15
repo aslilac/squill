@@ -53,9 +53,9 @@ fn plpgsql_bodies_format() {
 	assert_eq!(
 		out,
 		"create function f()\nreturns int\nlanguage plpgsql\nas $$\n\
-         \tbegin\n\
-         \t\treturn 1;\n\
-         \tend;\n\
+         begin\n\
+         \treturn 1;\n\
+         end;\n\
          $$;\n"
 	);
 }
@@ -64,7 +64,7 @@ fn plpgsql_bodies_format() {
 fn do_blocks_default_to_plpgsql_and_format() {
 	let source = "DO $$ BEGIN RAISE NOTICE   'hi'; END $$;";
 	let out = format(source);
-	assert_eq!(out, "do $$\n\tbegin\n\t\traise notice 'hi';\n\tend\n$$;\n");
+	assert_eq!(out, "do $$\nbegin\n\traise notice 'hi';\nend\n$$;\n");
 }
 
 #[test]
@@ -87,28 +87,28 @@ fn plpgsql_control_flow_layout() {
 	assert_eq!(
 		out,
 		"create function guard()\nreturns trigger\nlanguage plpgsql\nas $fn$\n\
-         \tdeclare\n\
-         \t\tn int := 0;\n\
-         \tbegin\n\
-         \t\tselect count(*)\n\
-         \t\tinto n\n\
-         \t\tfrom t\n\
-         \t\twhere id = NEW.id;\n\
-         \t\tif n > 10 then\n\
-         \t\t\traise exception 'too many';\n\
-         \t\telsif n > 5 then\n\
-         \t\t\traise warning 'getting close';\n\
-         \t\telse\n\
-         \t\t\treturn NEW;\n\
-         \t\tend if;\n\
-         \t\tfor i in 1..3 loop\n\
-         \t\t\tperform audit(i);\n\
-         \t\tend loop;\n\
+         declare\n\
+         \tn int := 0;\n\
+         begin\n\
+         \tselect count(*)\n\
+         \tinto n\n\
+         \tfrom t\n\
+         \twhere id = NEW.id;\n\
+         \tif n > 10 then\n\
+         \t\traise exception 'too many';\n\
+         \telsif n > 5 then\n\
+         \t\traise warning 'getting close';\n\
+         \telse\n\
          \t\treturn NEW;\n\
-         \texception\n\
-         \t\twhen OTHERS then\n\
-         \t\t\treturn null;\n\
-         \tend;\n\
+         \tend if;\n\
+         \tfor i in 1..3 loop\n\
+         \t\tperform audit(i);\n\
+         \tend loop;\n\
+         \treturn NEW;\n\
+         exception\n\
+         \twhen OTHERS then\n\
+         \t\treturn null;\n\
+         end;\n\
          $fn$;\n"
 	);
 }

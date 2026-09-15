@@ -3,16 +3,16 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 do $$
-	begin
-		if exists (
-			select 1
-			from chat_providers cp
-				join ai_providers ap on ap.name = 'agents-' || cp.provider
-			where ap.deleted = false and ap.id != cp.id
-		) then
-			raise exception 'cannot finalize chat provider migration because a live agents-* AI provider name already exists';
-		end if;
-	end
+begin
+	if exists (
+		select 1
+		from chat_providers cp
+			join ai_providers ap on ap.name = 'agents-' || cp.provider
+		where ap.deleted = false and ap.id != cp.id
+	) then
+		raise exception 'cannot finalize chat provider migration because a live agents-* AI provider name already exists';
+	end if;
+end
 $$;
 
 insert into ai_providers (
