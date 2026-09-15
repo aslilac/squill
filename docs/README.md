@@ -31,6 +31,7 @@ curl -LO https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-33/w
 tar xf wasi-sdk-33.0-arm64-linux.tar.gz
 mv wasi-sdk-33.0-arm64-linux ~/.local/wasi-sdk
 ```
+
 </details>
 
 ## Language icons

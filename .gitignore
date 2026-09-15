@@ -1,4 +1,5 @@
 .astro/
+.direnv/
 dist/
 docs/public/playground.wasm
 node_modules/
@@ -7,3 +8,4 @@ target/
 crates/parser/fuzz/artifacts/
 crates/parser/fuzz/corpus/
 crates/parser/fuzz/Cargo.lock
+.envrc

@@ -1,102 +1,37 @@
 # squill
 
-A SQL formatter for Postgres and SQLite, built on a lossless CST.
+A SQL formatter for Postgres and SQLite.
 
-```console
-$ echo 'SELECT id,name FROM users WHERE org_id=$1 ORDER BY name;' | squill fmt --stdin
-select id, name from users where org_id = $1 order by name;
-
-$ echo 'SELECT u.id,count(*) FILTER (WHERE o.active) AS n FROM users u LEFT JOIN orgs o ON o.id=u.org_id GROUP BY u.id ORDER BY n DESC;' | squill fmt --stdin
-select u.id, count(*) filter (where o.active) as n
-from users u left join orgs o on o.id = u.org_id
-group by u.id
-order by n desc;
-```
-
-Short statements collapse onto one line; long ones break clause-per-line
-at `max-width` (default 80).
+Get familiar with its code style in the [playground](https://mckayla.dev/squill/playground). The playground works in any modern browser, and your input stays on your machine.
 
 ## Quickstart
 
-```console
-cargo install --git https://tree.ht/birds/squill.git cli --bin squill
+Build from source:
+
+```sh
+cargo install --git https://github.com/aslilac/squill.git cli --bin squill
 ```
 
-In CI, skip the Rust toolchain and pull the static binary off a
-release (built by `.forgejo/workflows/release.yml` on every `v*` tag):
+Or download a prebuilt binary:
 
-```console
-curl -fsSLo squill https://tree.ht/birds/squill/releases/download/v0.1.0/squill-x86_64-linux
+```sh
+curl -fsSLo squill https://github.com/aslilac/squill/releases/download/v0.1.0/squill-x86_64-linux
 chmod +x squill
-./squill fmt --check .
+cp squill /usr/local/bin/
+squill fmt --check .
 ```
 
-Or from a checkout:
+Options (via the nearest squill.toml or .config/squill.toml, or flags — flags win): `--dialect postgres|sqlite`, `--indent tab|spaces`, `--indent-width N` (default 2), `--max-width N` (default 80), `--keyword-case lower|upper`, `--quote-idents as-needed|always`, `--at-params` for sqlc-style `@name` parameters, `--strict` to fail on statements that could not be parsed. Directory recursion honors `.gitignore` and skips hidden files; an `ignore = ["legacy", "*.gen.sql"]` array in config (or repeated `--ignore` flags) skips more, with `*`, `**`, `?`, `[abc]`, and `{a,b}` glob syntax. Explicitly listed files always format.
 
-```console
-cargo run -p cli --bin squill -- fmt path/to/queries/   # format in place
-cargo run -p cli --bin squill -- fmt --check .          # CI mode: diff + exit 1
-squill fmt --help                                       # the full flag surface
-```
-
-Options (via the nearest squill.toml or .config/squill.toml, or flags —
-flags win): `--dialect postgres|sqlite`,
-`--indent tab|spaces`, `--indent-width N` (default 2), `--max-width N`
-(default 80), `--keyword-case
-lower|upper`, `--quote-idents as-needed|always`, `--at-params` for
-sqlc-style `@name` parameters, `--strict` to fail on statements that
-could not be parsed. Directory recursion honors `.gitignore` and skips
-hidden files; an `ignore = ["legacy", "*.gen.sql"]` array in config (or
-repeated `--ignore` flags) skips more, with `*`, `**`, `?`, `[abc]`,
-and `{a,b}` glob syntax. Explicitly listed files always format.
-
-SQL embedded in host code formats too: `squill fmt src/queries.rs`
-rewrites the string literals inside `sqlx::query!`-family macros, with
-built-in support for Rust, Go (`database/sql` calls), Python
-(`.execute`-family and `text(...)`, with `%s` / `%(name)s` params
-preserved), JavaScript/TypeScript/TSX (`.query`/`.execute`/`.prepare`
-and `sql`-tagged templates), and Gleam (`sqlight.query` as SQLite,
-`pog.query` etc. as the session dialect). Only multiline string
-syntaxes — raw strings, backticks, triple quotes, templates, Gleam
-strings — are reformatted, always into a vertical block: quotes on
-their own lines, one clause per line. Plain single-line strings stay
-byte-identical, and so do Python f-strings and `${}`-interpolated
-templates (SQL with holes is never touched). Directories include host
-files with `--embedded`; `--embedded-query custom.scm` swaps the tree-sitter
-extraction query.
+SQL embedded in host code formats too: `squill fmt src/queries.rs` rewrites the string literals inside `sqlx::query!`-family macros, with built-in support for Rust, Go (`database/sql` calls), Python (`.execute`-family and `text(...)`, with `%s` / `%(name)s` params preserved), JavaScript/TypeScript/TSX (`.query`/`.execute`/`.prepare` and `sql`-tagged templates), and Gleam (`sqlight.query` as SQLite, `pog.query` etc. as the session dialect). Only multiline string syntaxes — raw strings, backticks, triple quotes, templates, Gleam strings — are reformatted, always into a vertical block: quotes on their own lines, one clause per line. Plain single-line strings stay byte-identical, and so do Python f-strings and `${}`-interpolated templates (SQL with holes is never touched). Directories include host files with `--embedded`; `--embedded-query custom.scm` swaps the tree-sitter extraction query.
 
 ## Design
 
-- **`crates/parser`** — hand-written dual-dialect lexer (lossless: every
-  byte is a token, including comments), recursive-descent parser with
-  Pratt expressions, error recovery into verbatim `ErrorStatement`
-  nodes, and a codegen'd CST layer on `cstree` (see `syntax.def`).
-- **`crates/formatter`** — Wadler/Prettier doc IR and renderer, the
-  CST-to-doc rules, vendored Postgres/SQLite keyword tables, and the
-  semantics-preserving identifier-quoting transform.
-- **`crates/embed`** — formats SQL embedded in host files (Rust sqlx
-  macros, Go database/sql calls) located via tree-sitter queries.
+- **`crates/parser`** — hand-written dual-dialect lexer (lossless: every byte is a token, including comments), recursive-descent parser with Pratt expressions, error recovery into verbatim `ErrorStatement` nodes, and a codegen'd CST layer on `cstree` (see `syntax.def`).
+- **`crates/formatter`** — Wadler/Prettier doc IR and renderer, the CST-to-doc rules, vendored Postgres/SQLite keyword tables, and the semantics-preserving identifier-quoting transform.
+- **`crates/embed`** — formats SQL embedded in host files (Rust sqlx macros, Go database/sql calls) located via tree-sitter queries.
 - **`crates/cli`** — the `squill` binary.
-- **`crates/corpus-report`** — the corpus coverage harness (not
-  installed with the cli).
-
-## Why you can trust it
-
-Every formatted statement is re-lexed and compared with its input:
-token streams must match modulo whitespace, keyword case, and sanctioned
-identifier-quote changes, and comments must survive in order. On any
-mismatch the original text passes through verbatim — output is never
-less correct than input. CI enforces the safety oracle over the whole
-vendored coder/coder corpus (1,168 files, 4,174 statements, 100%
-parsed and formatted):
-
-1. **Idempotence** — `format(format(x)) == format(x)`.
-2. **Token equivalence** — the meaning-bearing token stream never
-   changes.
-3. **Comment conservation** — never dropped, duplicated, or reordered.
-
-`cargo run -p corpus-report -- --summary` prints the current
-coverage numbers.
+- **`crates/corpus-report`** — the corpus coverage harness (not installed with the cli).
 
 ## License
 

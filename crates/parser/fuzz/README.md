@@ -1,12 +1,9 @@
 # Fuzzing
 
-Two libFuzzer targets guard the lossless-CST invariants on arbitrary
-input, in both dialects:
+Two libFuzzer targets guard the lossless-CST invariants on arbitrary input, in both dialects:
 
-- **`lex_roundtrip`** — lexing never panics, and the token texts
-  concatenate back to the input byte-for-byte.
-- **`parse_roundtrip`** — parsing never panics, and the CST reproduces
-  the input byte-for-byte.
+- **`lex_roundtrip`** — lexing never panics, and the token texts concatenate back to the input byte-for-byte.
+- **`parse_roundtrip`** — parsing never panics, and the CST reproduces the input byte-for-byte.
 
 ## Setup
 
@@ -17,10 +14,7 @@ cargo install cargo-fuzz --locked
 
 ## Seeding the corpus
 
-libFuzzer mutates whatever is in `corpus/<target>/`; starting from valid
-SQL reaches deep parser states far faster than starting from random
-bytes. Seed both targets from the checked-in SQL corpus (small files
-mutate best, so cap the size):
+libFuzzer mutates whatever is in `corpus/<target>/`; starting from valid SQL reaches deep parser states far faster than starting from random bytes. Seed both targets from the checked-in SQL corpus (small files mutate best, so cap the size):
 
 ```sh
 cd crates/parser/fuzz
@@ -34,8 +28,7 @@ for f in ../../../corpus/coder/*/*.sql; do
 done
 ```
 
-The corpus directories are gitignored: they are regenerable from the SQL
-corpus, and the fuzzer grows them with its own discoveries as it runs.
+The corpus directories are gitignored: they are regenerable from the SQL corpus, and the fuzzer grows them with its own discoveries as it runs.
 
 ## Running
 
@@ -45,8 +38,7 @@ cargo +nightly fuzz run lex_roundtrip -- -max_total_time=600 -max_len=4096
 cargo +nightly fuzz run parse_roundtrip -- -max_total_time=600 -max_len=4096
 ```
 
-Drop `-max_total_time` to fuzz until interrupted. On a crash, libFuzzer
-writes the failing input to `artifacts/<target>/`; reproduce with:
+Drop `-max_total_time` to fuzz until interrupted. On a crash, libFuzzer writes the failing input to `artifacts/<target>/`; reproduce with:
 
 ```sh
 cargo +nightly fuzz run <target> artifacts/<target>/<file>

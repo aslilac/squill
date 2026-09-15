@@ -1,21 +1,21 @@
 {
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "prebuild": "./scripts/build-wasm.sh",
-    "build": "astro build",
-    "predev": "./scripts/build-wasm.sh",
-    "dev": "astro dev",
-    "preview": "astro preview"
-  },
-  "dependencies": {
-    "lucide-static": "^1.25.0",
-    "monaco-editor": "^0.55.1",
-    "shiki": "^4.3.1"
-  },
-  "devDependencies": {
-    "@types/node": "^24.13.3",
-    "astro": "^7.1.1"
-  },
-  "packageManager": "pnpm@11.15.0+sha512.266f8957a30d2be6e9468e5e66bcdedd35a794175f71b067ba8504d686cce1d0c0f429b33c323c3c569ad4891e667574a49ff71d1b89a22cc66f13c65818c578"
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"prebuild": "../scripts/build-wasm.sh",
+		"build": "astro build",
+		"predev": "../scripts/build-wasm.sh",
+		"dev": "astro dev",
+		"preview": "astro preview"
+	},
+	"dependencies": {
+		"lucide-static": "^1.25.0",
+		"monaco-editor": "^0.55.1",
+		"shiki": "^4.3.1"
+	},
+	"devDependencies": {
+		"@types/node": "^24.13.3",
+		"astro": "^7.1.1"
+	},
+	"packageManager": "pnpm@12.4.1+sha512.2e81e399d73fe8390dab25e06aa788ab7a5908248d2f5a370f82b481147a6a7a367bf8048f9a6fdb6460f21a66f0542dedb8b94ca2c8723596741920b1656d4c"
 }
