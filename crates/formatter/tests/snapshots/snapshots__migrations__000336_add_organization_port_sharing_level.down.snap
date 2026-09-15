@@ -54,6 +54,7 @@ drop type app_sharing_level;
 alter type new_app_sharing_level rename to app_sharing_level;
 
 -- Recreate the template_with_names view
+
 create view template_with_names as
 select
 	templates.id,

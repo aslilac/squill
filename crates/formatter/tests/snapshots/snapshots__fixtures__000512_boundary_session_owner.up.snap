@@ -6,6 +6,7 @@ expression: formatted
 -- deletes orphaned rows (the original fixture's workspace_agent links to a
 -- template_version_import job, not a workspace_build, so the backfill
 -- cannot resolve the owner).
+
 insert into boundary_sessions (
 	id,
 	workspace_agent_id,

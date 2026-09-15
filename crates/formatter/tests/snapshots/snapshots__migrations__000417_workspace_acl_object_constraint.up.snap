@@ -4,6 +4,7 @@ expression: formatted
 ---
 -- Add constraints that reject 'null'::jsonb for group and user ACLs
 -- because they would break the new workspace_expanded view.
+
 update workspaces set group_acl = '{}'::jsonb where group_acl = 'null'::jsonb;
 update workspaces set user_acl = '{}'::jsonb where user_acl = 'null'::jsonb;
 

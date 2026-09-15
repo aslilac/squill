@@ -123,6 +123,12 @@ pub(crate) fn lower_statement(
 					}
 				}
 			}
+			// A gap below the comment block is the author's too: it makes
+			// the comment a standalone remark rather than a caption on
+			// the statement. One line, like the gaps between comments.
+			if pending_blank && emitted {
+				header.push(hard_line());
+			}
 			let mut lowerer = Lowerer {
 				pending: Vec::new(),
 				at_line_start: true,

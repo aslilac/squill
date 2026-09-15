@@ -5,6 +5,7 @@ expression: formatted
 -- Fixture for migration 000417_workspace_acl_object_constraint.
 -- Inserts a workspace with 'null'::json ACLs to ensure the migration
 -- correctly normalizes such values.
+
 insert into workspaces (
 	id,
 	created_at,

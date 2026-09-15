@@ -129,7 +129,24 @@ fn blank_lines_around_standalone_comments_survive() {
 	// A comment separated from the next statement by a blank line is a
 	// standalone remark, not a caption: both gaps are the author's.
 	let out = format("select 1;\n\n\n-- a remark\n\nselect 2;");
-	assert_eq!(out, "select 1;\n\n\n-- a remark\nselect 2;\n");
+	assert_eq!(out, "select 1;\n\n\n-- a remark\n\nselect 2;\n");
+	assert_eq!(format(&out), out);
+}
+
+#[test]
+fn comment_caption_versus_standalone_remark() {
+	// No gap: the comment captions the statement, and stays welded to it.
+	let out = format("-- caption\nselect 1;");
+	assert_eq!(out, "-- caption\nselect 1;\n");
+	// One gap: kept, so the comment still reads as standalone.
+	let out = format("-- remark\n\nselect 1;");
+	assert_eq!(out, "-- remark\n\nselect 1;\n");
+	assert_eq!(format(&out), out);
+	// More than one gap below a comment collapses to one.
+	assert_eq!(format("-- remark\n\n\n\nselect 1;"), "-- remark\n\nselect 1;\n");
+	// Gaps between stacked comments and below the block are independent.
+	let out = format("-- a\n\n-- b\n\nselect 1;");
+	assert_eq!(out, "-- a\n\n-- b\n\nselect 1;\n");
 	assert_eq!(format(&out), out);
 }
 

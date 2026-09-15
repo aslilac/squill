@@ -4,6 +4,7 @@ expression: formatted
 ---
 -- Enum additions to api_key_scope are intentionally not reversed
 -- because Postgres cannot drop enum values safely.
+
 drop table if exists workspace_build_orchestrations;
 
 alter table template_version_presets

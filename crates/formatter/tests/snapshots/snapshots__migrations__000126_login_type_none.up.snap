@@ -1,12 +1,12 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 -- This migration has been modified after its initial commit.
 -- The new implementation makes the same changes as the original, but
 -- takes into account the message in create_migration.sh. This is done
 -- to allow the insertion of a user with the "none" login type in later migrations.
+
 create type new_logintype as enum (
 	'password',
 	'github',

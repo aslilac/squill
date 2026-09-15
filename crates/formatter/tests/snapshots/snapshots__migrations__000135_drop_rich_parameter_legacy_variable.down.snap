@@ -3,6 +3,7 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- Unfortunately we can't bring back deleted values.
+
 alter table template_version_parameters
 	add column legacy_variable_name text not null default '';
 

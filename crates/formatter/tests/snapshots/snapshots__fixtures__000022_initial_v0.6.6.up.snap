@@ -14,6 +14,7 @@ Copy of v0.6.6/000022_dump_v0.6.6.up.sql
 
 -- Dumped from database version 13.7 (Debian 13.7-0+deb11u1)
 -- Dumped by pg_dump version 13.7 (Debian 13.7-0+deb11u1)
+
 set statement_timeout = 0;
 set lock_timeout = 0;
 set idle_in_transaction_session_timeout = 0;
@@ -29,6 +30,7 @@ set row_security = off;
 --
 -- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: coder
 --
+
 insert into users
 values
 	(
@@ -60,6 +62,7 @@ on conflict do nothing;
 --
 -- Data for Name: api_keys; Type: TABLE DATA; Schema: public; Owner: coder
 --
+
 insert into api_keys
 values
 	(
@@ -105,6 +108,7 @@ on conflict do nothing;
 --
 -- Data for Name: files; Type: TABLE DATA; Schema: public; Owner: coder
 --
+
 insert into files
 values
 	(
@@ -120,6 +124,7 @@ on conflict do nothing;
 --
 -- Data for Name: gitsshkeys; Type: TABLE DATA; Schema: public; Owner: coder
 --
+
 insert into gitsshkeys
 values
 	(
@@ -165,6 +170,7 @@ on conflict do nothing;
 --
 -- Data for Name: organizations; Type: TABLE DATA; Schema: public; Owner: coder
 --
+
 insert into organizations
 values
 	(
@@ -180,6 +186,7 @@ on conflict do nothing;
 --
 -- Data for Name: organization_members; Type: TABLE DATA; Schema: public; Owner: coder
 --
+
 insert into organization_members
 values
 	(
@@ -205,6 +212,7 @@ on conflict do nothing;
 --
 -- Data for Name: provisioner_jobs; Type: TABLE DATA; Schema: public; Owner: coder
 --
+
 insert into provisioner_jobs
 values
 	(
@@ -438,6 +446,7 @@ on conflict do nothing;
 --
 -- Data for Name: provisioner_daemons; Type: TABLE DATA; Schema: public; Owner: coder
 --
+
 insert into provisioner_daemons
 values
 	(
@@ -503,6 +512,7 @@ on conflict do nothing;
 --
 -- Data for Name: provisioner_job_logs; Type: TABLE DATA; Schema: public; Owner: coder
 --
+
 insert into provisioner_job_logs
 values
 	(
@@ -7756,12 +7766,14 @@ on conflict do nothing;
 --
 -- Data for Name: schema_migrations; Type: TABLE DATA; Schema: public; Owner: coder
 --
+
 insert into schema_migrations values (22, false) on conflict do nothing;
 
 
 --
 -- Data for Name: templates; Type: TABLE DATA; Schema: public; Owner: coder
 --
+
 insert into templates
 values
 	(
@@ -7784,6 +7796,7 @@ on conflict do nothing;
 --
 -- Data for Name: template_versions; Type: TABLE DATA; Schema: public; Owner: coder
 --
+
 insert into template_versions
 values
 	(
@@ -7865,6 +7878,7 @@ on conflict do nothing;
 --
 -- Data for Name: workspace_resources; Type: TABLE DATA; Schema: public; Owner: coder
 --
+
 insert into workspace_resources
 values
 	(
@@ -8101,6 +8115,7 @@ on conflict do nothing;
 --
 -- Data for Name: workspace_agents; Type: TABLE DATA; Schema: public; Owner: coder
 --
+
 insert into workspace_agents
 values
 	(
@@ -8282,6 +8297,7 @@ on conflict do nothing;
 --
 -- Data for Name: workspace_apps; Type: TABLE DATA; Schema: public; Owner: coder
 --
+
 insert into workspace_apps
 values
 	(
@@ -8391,6 +8407,7 @@ on conflict do nothing;
 --
 -- Data for Name: workspaces; Type: TABLE DATA; Schema: public; Owner: coder
 --
+
 insert into workspaces
 values
 	(
@@ -8441,6 +8458,7 @@ on conflict do nothing;
 --
 -- Data for Name: workspace_builds; Type: TABLE DATA; Schema: public; Owner: coder
 --
+
 insert into workspace_builds
 values
 	(
@@ -8582,6 +8600,7 @@ on conflict do nothing;
 --
 -- Name: licenses_id_seq; Type: SEQUENCE SET; Schema: public; Owner: coder
 --
+
 select pg_catalog.setval('licenses_id_seq', 1, false);
 
 

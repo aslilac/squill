@@ -123,6 +123,7 @@ from (
 comment on view template_version_with_user is 'Joins in the username + avatar url of the created by user.';
 
 -- Recreate `workspaces_expanded` as described in dump.sql
+
 create view workspaces_expanded as
 select
 	workspaces.id,

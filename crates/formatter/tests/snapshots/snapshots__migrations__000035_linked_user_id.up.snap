@@ -20,6 +20,7 @@ create table if not exists user_links (
 -- values to the user_links table.
 -- A user should at most have a row for an OIDC account and a Github account.
 -- 'password' login types are ignored.
+
 insert into user_links (
 	user_id,
 	login_type,

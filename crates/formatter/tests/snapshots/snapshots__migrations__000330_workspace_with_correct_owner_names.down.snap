@@ -13,6 +13,7 @@ drop view workspaces_expanded;
 drop view visible_users;
 
 -- Recreate `visible_users` as described in dump.sql
+
 create view visible_users as
 select users.id, users.username, users.avatar_url
 from users;
@@ -20,6 +21,7 @@ from users;
 comment on view visible_users is 'Visible fields of users are allowed to be joined with other tables for including context of other resources.';
 
 -- Recreate `workspace_build_with_user` as described in dump.sql
+
 create view workspace_build_with_user as
 select
 	workspace_builds.id,
@@ -48,6 +50,7 @@ from (
 comment on view workspace_build_with_user is 'Joins in the username + avatar url of the initiated by user.';
 
 -- Recreate `template_with_names` as described in dump.sql
+
 create view template_with_names as
 select
 	templates.id,
@@ -95,6 +98,7 @@ from (
 comment on view template_with_names is 'Joins in the display name information such as username, avatar, and organization name.';
 
 -- Recreate `template_version_with_user` as described in dump.sql
+
 create view template_version_with_user as
 select
 	template_versions.id,
@@ -120,6 +124,7 @@ from (
 comment on view template_version_with_user is 'Joins in the username + avatar url of the created by user.';
 
 -- Recreate `workspaces_expanded` as described in dump.sql
+
 create view workspaces_expanded as
 select
 	workspaces.id,

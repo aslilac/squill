@@ -12,6 +12,7 @@ expression: formatted
 -- We use REPLACE on body_template, scoped by id and LIKE so the update
 -- is robust to the various intermediate forms that prior migrations
 -- (000232, 000262, 000305, 000311) have left on disk.
+
 update notification_templates
 set
 	body_template = replace(
