@@ -41,6 +41,7 @@ set
 	E'Your account **{{.Labels.suspended_account_name}}** has been suspended by **{{.Labels.account_suspender_user_name}}**.'
 where id = '6a2f0609-9b69-4d36-a989-9f5925b6cbff';
 
+
 -- UserAccountActivated
 update notification_templates
 set

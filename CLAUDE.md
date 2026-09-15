@@ -20,7 +20,7 @@ cargo run -p corpus-report -- --summary                 # corpus coverage number
 
 Snapshot tests use `insta` (formatter snapshots cover every file in `corpus/coder/`). After an intentional formatting change, review/accept with `cargo insta review` (or `INSTA_UPDATE=always cargo test ...` then inspect the diff).
 
-Docs site (`docs/`, Astro + Monaco playground): `pnpm dev` / `pnpm build`. The pre-step compiles `crates/playground` to wasm and needs `rustup target add wasm32-wasip1` plus wasi-sdk at `~/.local/wasi-sdk` (see `docs/README.md`).
+Docs site (`docs/`, Astro + Monaco playground): `pnpm dev` / `pnpm build`. The pre-step (`scripts/build-wasm.sh`) compiles `crates/playground` to wasm; it needs the `wasm32-wasip1` target plus a C toolchain for the tree-sitter grammars. `nix develop` supplies both (see `flake.nix`); otherwise add the target with `rustup` and install wasi-sdk at `~/.local/wasi-sdk` (see `docs/README.md`).
 
 ## Architecture
 
@@ -30,7 +30,7 @@ Pipeline: **lex → parse (CST) → doc IR → render → safety check**, one cr
   - **`syntax.def` is the source of truth for all token/node kinds.** `build.rs` code-gens the `SyntaxKind` enum and the typed AST accessor layer (`src/ast.rs`) from it. To add a node kind or accessor, edit `syntax.def`, not the generated code. The format is documented at the top of that file.
 - **`crates/formatter`** — Wadler/Prettier-style doc IR (`doc.rs`), renderer (`printer.rs`), CST→doc rules (`rules.rs`), vendored keyword tables (`keywords.rs`), identifier-quoting transform (`quoting.rs`), and the safety check (`check.rs`).
 - **`crates/embed`** — formats SQL embedded in host source (Rust sqlx macros, Go, Python, JS/TS, Gleam) located via tree-sitter queries. Only multiline string syntaxes are rewritten; interpolated strings (f-strings, `${}` templates) are never touched.
-- **`crates/cli`** — the `squill` binary (config resolution: nearest `squill.toml` or `.config/squill.toml`, flags win; directory recursion respects `.gitignore` plus `ignore` globs from config/`--ignore`).
+- **`crates/cli`** — the `squill` binary (config resolution: nearest `squill.toml` or `.config/squill.toml`, then its `[<host-language>]` section for embedded files, then flags; directory recursion respects `.gitignore` plus `ignore` globs from config/`--ignore`).
 - **`crates/corpus-report`** — the corpus coverage harness (CI-only, kept out of `cargo install`).
 - **`crates/playground`** — wasm module for the docs-site playground (built with the `wasm-release` profile).
 
@@ -48,4 +48,4 @@ Any change to lexer, parser, or formatter rules must keep the oracle green; don'
 
 ## CI / releases
 
-CI is Forgejo Actions (`.forgejo/workflows/ci.yml`): fmt, clippy `-D warnings`, tests, corpus report — `runs-on: ubuntu-26.04` with Rust preinstalled on the runner image (no `container:`). Tags `v*` trigger `release.yml`, which builds a static x86_64 binary (`RUSTFLAGS=-C target-feature=+crt-static` on the stock gnu target) and uploads it to the Forgejo release via plain API calls.
+CI is Forgejo Actions (`.forgejo/workflows/check.yaml`): typos spellcheck, fmt, clippy `-D warnings`, tests, corpus report — `runs-on: ubuntu-26.04` with Rust preinstalled on the runner image (no `container:`). Tags `v*` trigger `release.yaml`, which builds a static x86_64 binary (`RUSTFLAGS=-C target-feature=+crt-static` on the stock gnu target) and uploads it to the Forgejo release via plain API calls.

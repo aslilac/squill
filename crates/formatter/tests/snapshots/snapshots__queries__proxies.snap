@@ -32,6 +32,7 @@ set
 where id = @id
 returning *;
 
+
 -- name: UpdateWorkspaceProxyDeleted :exec
 update workspace_proxies
 set updated_at = now(), deleted = @deleted

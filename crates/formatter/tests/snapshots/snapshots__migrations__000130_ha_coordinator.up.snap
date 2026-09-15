@@ -20,6 +20,7 @@ create table tailnet_clients (
 		on delete cascade
 );
 
+
 -- For querying/deleting mappings
 create index idx_tailnet_clients_agent on tailnet_clients (agent_id);
 
@@ -36,6 +37,7 @@ create table tailnet_agents (
 	foreign key (coordinator_id) references tailnet_coordinators (id)
 		on delete cascade
 );
+
 
 -- For shutting down / GC a coordinator
 create index idx_tailnet_agents_coordinator on tailnet_agents (coordinator_id);

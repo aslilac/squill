@@ -5,6 +5,7 @@ expression: formatted
 -- We cannot alter the column type while a view depends on it, so we drop it and recreate it.
 drop view template_version_with_user;
 
+
 -- Turns the list of provider names into JSONB with the type `Array<{ id: string; optional?: boolean }>`
 -- eg. `'{github,gitlab}'::text[]` would become `'[{"id": "github"}, {"id": "gitlab"}]'::jsonb`
 create or replace function migrate_external_auth_providers_to_jsonb(text[])
@@ -21,11 +22,13 @@ begin
 end;
 $$;
 
+
 -- Update the column type and migrate the values
 alter table template_versions
 	alter column external_auth_providers type jsonb using migrate_external_auth_providers_to_jsonb(
 		external_auth_providers
 	);
+
 
 -- Make the column non-nullable to make the types nicer on the Go side
 update template_versions
@@ -34,6 +37,7 @@ where external_auth_providers is null;
 alter table template_versions
 	alter column external_auth_providers set default '[]'::jsonb;
 alter table template_versions alter column external_auth_providers set not null;
+
 
 -- Recreate `template_version_with_user` as described in dump.sql
 create view template_version_with_user as
@@ -58,6 +62,7 @@ from (
 );
 
 comment on view template_version_with_user is 'Joins in the username + avatar url of the created by user.';
+
 
 -- Cleanup
 drop function migrate_external_auth_providers_to_jsonb;

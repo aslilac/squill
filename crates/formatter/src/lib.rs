@@ -120,16 +120,17 @@ const MAX_BODY_DEPTH: u32 = 3;
 
 fn format_cst_at(cst: &Cst, options: &Options, depth: u32) -> Formatted {
 	let lex_options = options.lex_options();
-	let mut pieces: Vec<(bool, String)> = Vec::new();
+	// Each piece carries the number of blank lines that precede it.
+	let mut pieces: Vec<(usize, String)> = Vec::new();
 	let mut fallbacks = 0;
-	let mut pending_blank = false;
+	let mut pending_blank = 0usize;
 
 	for element in cst.root().children_with_tokens() {
 		match element {
 			parser::syntax::SyntaxElement::Node(node) => {
 				let original = node.to_string();
-				let blank = pending_blank || leading_blank(&original);
-				pending_blank = false;
+				let blank = pending_blank.max(leading_blanks(&original));
+				pending_blank = 0;
 				match rules::lower_statement(node, options.always_break_statements) {
 					Some(doc) => {
 						let rendered = render(&doc, options);
@@ -176,18 +177,16 @@ fn format_cst_at(cst: &Cst, options: &Options, depth: u32) -> Formatted {
 			}
 			parser::syntax::SyntaxElement::Token(token) => match token.kind() {
 				SyntaxKind::Whitespace => {
-					if token.text().matches('\n').count() >= 2 {
-						pending_blank = true;
-					}
+					pending_blank = pending_blank.max(blank_lines(token.text()));
 				}
 				SyntaxKind::LineComment | SyntaxKind::BlockComment => {
 					pieces.push((pending_blank, token.text().to_string()));
-					pending_blank = false;
+					pending_blank = 0;
 				}
 				_ => {
 					// Stray root-level tokens (shouldn't happen): keep.
 					pieces.push((pending_blank, token.text().to_string()));
-					pending_blank = false;
+					pending_blank = 0;
 				}
 			},
 		}
@@ -197,7 +196,7 @@ fn format_cst_at(cst: &Cst, options: &Options, depth: u32) -> Formatted {
 	for (index, (blank, piece)) in pieces.iter().enumerate() {
 		if index > 0 {
 			out.push('\n');
-			if *blank {
+			for _ in 0..*blank {
 				out.push('\n');
 			}
 		}
@@ -209,12 +208,24 @@ fn format_cst_at(cst: &Cst, options: &Options, depth: u32) -> Formatted {
 	Formatted { text: out, fallback_statements: fallbacks }
 }
 
-/// Does the statement's own text begin with a blank line (before any
-/// comment or code)?
-fn leading_blank(original: &str) -> bool {
+/// The most blank lines squill will keep between two top-level pieces.
+/// One is the ordinary paragraph break; a second is a section divider
+/// authors use deliberately. Past that it is just drift, and collapses.
+const MAX_BLANK_LINES: usize = 2;
+
+/// How many blank lines a run of whitespace holds, capped at
+/// [`MAX_BLANK_LINES`]. A single newline ends a line without leaving one
+/// blank, so the count is one less than the newlines.
+fn blank_lines(whitespace: &str) -> usize {
+	whitespace.matches('\n').count().saturating_sub(1).min(MAX_BLANK_LINES)
+}
+
+/// How many blank lines the statement's own text begins with (before any
+/// comment or code).
+fn leading_blanks(original: &str) -> usize {
 	let leading: String =
 		original.chars().take_while(|c| c.is_whitespace()).collect();
-	leading.matches('\n').count() >= 2
+	blank_lines(&leading)
 }
 
 /// Verbatim passthrough of a statement, trimmed of the surrounding

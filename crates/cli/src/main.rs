@@ -52,9 +52,33 @@ Configuration: the nearest squill.toml or .config/squill.toml at or
 above each formatted file supplies defaults (keys: dialect, indent,
 indent-width, max-width, keyword-case, quote-idents, at-params, and
 ignore — an array of glob patterns relative to the config file).
-Explicit flags override the config. Directory recursion honors
+Explicit flags override the config. The search upward stops at a git
+repository root, a mount point, or a symlinked directory, so a config
+outside a checkout never reaches inside it. Directory recursion honors
 .gitignore and skips hidden files; explicitly listed files always
 format.
+
+A [rust], [go], [python], [javascript], [typescript], or [gleam]
+section takes the same keys (except ignore) and overrides them for SQL
+embedded in files of that language — so one config can ask for two
+spaces in JavaScript and tabs in Go:
+
+    indent = \"tab\"
+
+    [javascript]
+    indent = \"spaces\"
+    indent-width = 2
+
+One section can name several languages, comma separated. TOML has no
+bare comma in a table header, so quote the list:
+
+    [\"javascript, typescript\"]
+    indent = \"spaces\"
+    indent-width = 2
+
+Embedded SQL copies the host file's own indent character unless an
+indent style is configured, so a spaces-indented file never gains tabs
+by accident.
 ";
 
 struct Args {
@@ -179,21 +203,48 @@ fn load_partial(
 	Ok(partial)
 }
 
+/// Effective options for one file, plus where embedding should take its
+/// indent character from.
+struct Resolved {
+	options: Options,
+	indent: embed::Indent,
+}
+
 /// Resolve effective options for a file in `dir`: defaults, then the
-/// nearest config file (unless --no-config), then explicit flags.
+/// nearest config file's top-level keys (unless --no-config), then that
+/// file's `[<language>]` section for `host`, then explicit flags.
+///
+/// Embedded SQL normally copies the host file's own indent character.
+/// An indent style named anywhere in that chain is a deliberate choice,
+/// so it wins over the host file instead.
 fn resolve_options(
 	dir: &Path,
+	host: Option<embed::Host>,
 	args: &Args,
 	cache: &mut ConfigCache,
-) -> Result<Options, String> {
+) -> Result<Resolved, String> {
 	let mut options = Options::default();
+	let mut indent_set = args.overrides.indent_style.is_some();
 	if !args.no_config
 		&& let Some(config_path) = config::discover(dir)
 	{
-		load_partial(&config_path, cache)?.apply(&mut options);
+		let partial = load_partial(&config_path, cache)?;
+		partial.apply(&mut options);
+		indent_set |= partial.indent_style.is_some();
+		if let Some(section) =
+			host.map(config::language_key).and_then(|key| partial.for_language(key))
+		{
+			section.apply(&mut options);
+			indent_set |= section.indent_style.is_some();
+		}
 	}
 	args.overrides.apply(&mut options);
-	Ok(options)
+	let indent = if indent_set {
+		embed::Indent::Configured
+	} else {
+		embed::Indent::FromHost
+	};
+	Ok(Resolved { options, indent })
 }
 
 /// The embed host for a path, by extension.
@@ -409,14 +460,15 @@ fn main() -> ExitCode {
 		}
 		let mut cache = std::collections::HashMap::new();
 		let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-		let options = match resolve_options(&cwd, &args, &mut cache) {
-			Ok(options) => options,
+		// The stdin stream is always SQL, never a host file.
+		let resolved = match resolve_options(&cwd, None, &args, &mut cache) {
+			Ok(resolved) => resolved,
 			Err(message) => {
 				eprintln!("squill: {message}");
 				return ExitCode::from(2);
 			}
 		};
-		let outcome = format_source(&source, &options);
+		let outcome = format_source(&source, &resolved.options);
 		for diagnostic in &outcome.diagnostics {
 			eprintln!("<stdin>:{diagnostic}");
 		}
@@ -493,8 +545,8 @@ fn main() -> ExitCode {
 	let mut per_file_options = Vec::with_capacity(files.len());
 	for path in &files {
 		let dir = path.parent().unwrap_or_else(|| Path::new("."));
-		match resolve_options(dir, &args, &mut cache) {
-			Ok(options) => per_file_options.push(options),
+		match resolve_options(dir, host_for(path), &args, &mut cache) {
+			Ok(resolved) => per_file_options.push(resolved),
 			Err(message) => {
 				eprintln!("squill: {message}");
 				return ExitCode::from(2);
@@ -505,7 +557,7 @@ fn main() -> ExitCode {
 	let results: Vec<Result<FileResult, String>> = files
 		.par_iter()
 		.zip(per_file_options.par_iter())
-		.map(|(path, options)| {
+		.map(|(path, resolved)| {
 			let source = std::fs::read_to_string(path)
 				.map_err(|err| format!("{}: {err}", path.display()))?;
 			let outcome = match host_for(path) {
@@ -514,11 +566,17 @@ fn main() -> ExitCode {
 					// database/sql calls) via the tree-sitter engine.
 					let query =
 						args.embed_query.as_deref().unwrap_or_else(|| default_query(host));
-					let formatted = embed::format_embedded(&source, host, query, options)
-						.map_err(|err| format!("{}: {err}", path.display()))?;
+					let formatted = embed::format_embedded(
+						&source,
+						host,
+						query,
+						&resolved.options,
+						resolved.indent,
+					)
+					.map_err(|err| format!("{}: {err}", path.display()))?;
 					Outcome { formatted, diagnostics: Vec::new() }
 				}
-				None => format_source(&source, options),
+				None => format_source(&source, &resolved.options),
 			};
 			Ok(FileResult { path: path.clone(), source, outcome })
 		})

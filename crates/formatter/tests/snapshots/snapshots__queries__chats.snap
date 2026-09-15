@@ -2604,6 +2604,7 @@ where
 order by chats_expanded.created_at asc
 limit @limit_count::int;
 
+
 -- name: LockChatAndBumpSnapshotVersion :one
 -- Locks the chat row with FOR UPDATE and atomically increments its
 -- snapshot_version, returning the post-bump chat. This is the single
@@ -2957,6 +2958,7 @@ where
 -- Deletes all heartbeat rows for the chat. Used during ownership
 -- transitions that abandon a lease.
 delete from chat_heartbeats where chat_id = @chat_id::uuid;
+
 
 -- name: GetChatStreamSyncRows :many
 select

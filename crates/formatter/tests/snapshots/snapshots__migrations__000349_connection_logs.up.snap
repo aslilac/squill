@@ -42,6 +42,7 @@ create table connection_logs (
 	primary key (id)
 );
 
+
 comment on column connection_logs.code is 'Either the HTTP status code of the web request, or the exit code of an SSH connection. For non-web connections, this is Null until we receive a disconnect event for the same connection_id.';
 
 comment on column connection_logs.user_agent is 'Null for SSH events. For web connections, this is the User-Agent header from the request.';

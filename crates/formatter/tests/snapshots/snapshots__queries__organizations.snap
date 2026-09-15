@@ -73,6 +73,7 @@ select
 		where provisioner_keys.organization_id = $1
 	) as provisioner_key_count;
 
+
 -- name: InsertOrganization :one
 insert into organizations (
 	id,

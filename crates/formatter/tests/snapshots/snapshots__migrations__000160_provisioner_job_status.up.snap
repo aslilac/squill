@@ -44,4 +44,5 @@ alter table provisioner_jobs
 		-- Stored so we do not have to recompute it every time.
 	) stored;
 
+
 comment on column provisioner_jobs.job_status is 'Computed column to track the status of the job.';

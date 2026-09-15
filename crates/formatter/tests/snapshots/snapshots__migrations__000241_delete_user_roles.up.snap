@@ -29,10 +29,12 @@ begin
 end;
 $$;
 
+
 -- Attach the function to deleting the custom role
 create trigger remove_organization_member_custom_role
 	before delete on custom_roles
 	for each row
 	execute procedure remove_organization_member_role();
+
 
 comment on trigger remove_organization_member_custom_role on custom_roles is 'When a custom_role is deleted, this trigger removes the role from all organization members.';

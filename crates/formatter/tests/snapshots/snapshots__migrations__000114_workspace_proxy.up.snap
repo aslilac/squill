@@ -18,5 +18,6 @@ create table workspace_proxies (
 comment on column workspace_proxies.url is 'Full url including scheme of the proxy api url: https://us.example.com';
 comment on column workspace_proxies.wildcard_hostname is 'Hostname with the wildcard for subdomain based app hosting: *.us.example.com';
 
+
 -- Enforces no active proxies have the same name.
 create unique index on workspace_proxies (name) where deleted = false;

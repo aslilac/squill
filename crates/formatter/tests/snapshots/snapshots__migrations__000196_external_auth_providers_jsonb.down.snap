@@ -5,6 +5,7 @@ expression: formatted
 -- We cannot alter the column type while a view depends on it, so we drop it and recreate it.
 drop view template_version_with_user;
 
+
 -- Does the opposite of `migrate_external_auth_providers_to_jsonb`
 -- eg. `'[{"id": "github"}, {"id": "gitlab"}]'::jsonb` would become `'{github,gitlab}'::text[]`
 create or replace function revert_migrate_external_auth_providers_to_jsonb(
@@ -29,16 +30,19 @@ begin
 end;
 $$;
 
+
 -- Remove the non-null constraint and default
 alter table template_versions alter column external_auth_providers drop default;
 alter table template_versions
 	alter column external_auth_providers drop not null;
+
 
 -- Update the column type and migrate the values
 alter table template_versions
 	alter column external_auth_providers type text[] using revert_migrate_external_auth_providers_to_jsonb(
 		external_auth_providers
 	);
+
 
 -- Recreate `template_version_with_user` as described in dump.sql
 create view template_version_with_user as
@@ -63,6 +67,7 @@ from (
 );
 
 comment on view template_version_with_user is 'Joins in the username + avatar url of the created by user.';
+
 
 -- Cleanup
 drop function revert_migrate_external_auth_providers_to_jsonb;

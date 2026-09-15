@@ -34,12 +34,14 @@ begin
 end;
 $$;
 
+
 -- Update it to the new trigger
 create trigger trigger_update_users
 	after insert or update on users
 	for each row
 	when (NEW.deleted = true)
 	execute procedure delete_deleted_user_resources();
+
 
 -- Prevent adding new user_links for soft-deleted users
 create function insert_user_links_fail_if_user_deleted()

@@ -124,6 +124,7 @@ select lifecycle_state, started_at, ready_at
 from workspace_agents
 where id = $1;
 
+
 -- name: UpdateWorkspaceAgentLifecycleStateByID :exec
 update workspace_agents
 set lifecycle_state = $2, started_at = $3, ready_at = $4

@@ -121,4 +121,5 @@ comment on trigger workspace_agent_name_unique_trigger on workspace_agents is 'U
 the uniqueness requirement. A trigger allows us to enforce uniqueness going
 forward without requiring a migration to clean up historical data.';
 
+
 alter table workspace_agents drop column deleted;

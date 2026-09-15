@@ -1,5 +1,7 @@
 ## Building the docs site
 
+`nix develop` already provides the Wasi target and a C toolchain for the tree-sitter grammars, so `pnpm dev` and `pnpm build` work there with no further setup. The rest of this section is for building without nix.
+
 Add the Wasi target with `rustup`:
 
 ```sh

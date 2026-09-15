@@ -60,6 +60,7 @@ returning *;
 delete from organization_members
 where organization_id = @organization_id and user_id = @user_id;
 
+
 -- name: GetOrganizationIDsByMemberIDs :many
 select user_id, array_agg(organization_id)::uuid[] as "organization_IDs"
 from organization_members

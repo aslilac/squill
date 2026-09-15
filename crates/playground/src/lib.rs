@@ -123,8 +123,9 @@ fn format_host(
 	host: embed::Host,
 	query: &str,
 	options: &formatter::Options,
+	indent: embed::Indent,
 ) -> Response {
-	match embed::format_embedded(source, host, query, options) {
+	match embed::format_embedded(source, host, query, options, indent) {
 		Ok(output) => Response { output: Some(output), diagnostics: Vec::new() },
 		Err(err) => Response { output: None, diagnostics: vec![err.to_string()] },
 	}
@@ -138,7 +139,13 @@ pub fn format_request(json: &str) -> String {
 			if request.host == "sql" {
 				format_sql(&request.source, &options)
 			} else if let Some((host, query)) = embed_host(&request.host) {
-				format_host(&request.source, host, query, &options)
+				// Same rule as the CLI: an indent style the caller named
+				// wins, otherwise the host file's own indentation does.
+				let indent = match request.options.indent {
+					Some(_) => embed::Indent::Configured,
+					None => embed::Indent::FromHost,
+				};
+				format_host(&request.source, host, query, &options, indent)
 			} else {
 				Response {
 					output: None,

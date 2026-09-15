@@ -41,6 +41,7 @@ on conflict do nothing;
 insert into user_links (user_id, login_type, linked_id, oauth_access_token)
 values ('a0061a8e-7db7-4585-838c-3116a003dd21', 'github', '100', '');
 
+
 insert into users (
 	id,
 	email,
@@ -83,6 +84,7 @@ values ('fc1511ef-4fcf-4a3b-98a1-8df64160e35a', 'github', '100', '');
 insert into user_links (user_id, login_type, linked_id, oauth_access_token)
 values ('fc1511ef-4fcf-4a3b-98a1-8df64160e35a', 'oidc', 'foo', '');
 
+
 -- Lastly, make 2 other users who have the same user link.
 insert into users (
 	id,
@@ -120,6 +122,7 @@ values
 on conflict do nothing;
 insert into user_links (user_id, login_type, linked_id, oauth_access_token)
 values ('580ed397-727d-4aaf-950a-51f89f556c24', 'github', '500', '');
+
 
 insert into users (
 	id,

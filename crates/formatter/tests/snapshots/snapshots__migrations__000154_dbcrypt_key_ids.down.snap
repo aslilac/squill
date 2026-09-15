@@ -31,6 +31,7 @@ begin
 end
 $$;
 
+
 -- Drop the columns first.
 alter table git_auth_links
 	drop column if exists oauth_access_token_key_id,

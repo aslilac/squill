@@ -17,6 +17,7 @@ where
 	]
 	&& rbac_roles;
 
+
 update users
 set
 	-- Replace 'owner' with 'admin'

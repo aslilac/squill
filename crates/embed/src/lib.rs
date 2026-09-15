@@ -129,6 +129,18 @@ pub const GLEAM_SQL_QUERY: &str = r#"
  (#any-of? @_fn "query" "exec" "execute"))
 "#;
 
+/// Where an embedded snippet takes its indent character from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Indent {
+	/// Match the host file's own indentation, so a spaces-indented file
+	/// never gains tabs. The default when nothing is configured.
+	#[default]
+	FromHost,
+	/// Use `Options::indent_style` as given — the caller configured an
+	/// indent style explicitly and means it.
+	Configured,
+}
+
 #[derive(Debug)]
 pub enum EmbedError {
 	/// The host source did not parse with the tree-sitter grammar.
@@ -153,11 +165,14 @@ impl std::error::Error for EmbedError {}
 
 /// Format every SQL snippet the query captures in `source`, returning the
 /// rewritten host file. Unparsable or unsafe snippets stay byte-exact.
+/// `indent` decides whether `options.indent_style` applies or the host
+/// file's own indentation wins.
 pub fn format_embedded(
 	source: &str,
 	host: Host,
 	query_source: &str,
 	options: &Options,
+	indent: Indent,
 ) -> Result<String, EmbedError> {
 	// Reject regex predicates up front (the no-regex rule). The
 	// tree-sitter binding would happily evaluate them, so refuse by
@@ -213,6 +228,7 @@ pub fn format_embedded(
 				host,
 				dialect,
 				options,
+				indent,
 			) && replacement != literal
 			{
 				edits.push((node.byte_range(), replacement));
@@ -291,6 +307,7 @@ fn rewrite_literal(
 	host: Host,
 	dialect: Dialect,
 	options: &Options,
+	indent: Indent,
 ) -> Option<String> {
 	let decoded = decode(host, literal)?;
 	if decoded.content.trim().is_empty() {
@@ -312,8 +329,10 @@ fn rewrite_literal(
 		return None;
 	}
 
-	// Match the host file's indentation character so continuation lines
-	// don't mix tabs into a spaces-indented file (or vice versa).
+	// The host statement's own indentation: the anchor every SQL line
+	// hangs off, and — unless an indent style was configured — the
+	// indent character too, so continuation lines don't mix tabs into a
+	// spaces-indented file (or vice versa).
 	let host_indent = line_indent(source, literal_start);
 	let mut format_options = *options;
 	format_options.dialect = dialect;
@@ -325,11 +344,13 @@ fn rewrite_literal(
 	// The author chose a multi-line literal: keep statements
 	// clause-per-line, never collapsed onto one line.
 	format_options.always_break_statements = true;
-	format_options.indent_style = if host_indent.contains(' ') {
-		formatter::IndentStyle::Spaces
-	} else {
-		formatter::IndentStyle::Tab
-	};
+	if indent == Indent::FromHost {
+		format_options.indent_style = if host_indent.contains(' ') {
+			formatter::IndentStyle::Spaces
+		} else {
+			formatter::IndentStyle::Tab
+		};
+	}
 
 	let lex_options = format_options.lex_options();
 	let tokens = parser::lexer::lex_with(&decoded.content, dialect, lex_options);

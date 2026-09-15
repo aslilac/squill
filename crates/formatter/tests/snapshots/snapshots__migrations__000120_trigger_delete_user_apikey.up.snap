@@ -5,6 +5,7 @@ expression: formatted
 -- We need to delete all existing API keys for soft-deleted users.
 delete from api_keys where user_id in (select id from users where deleted);
 
+
 -- When we soft-delete a user, we also want to delete their API key.
 create function delete_deleted_user_api_keys()
 returns trigger
@@ -18,6 +19,7 @@ begin
 	return NEW;
 end;
 $$;
+
 
 create trigger trigger_update_users
 	after insert or update on users

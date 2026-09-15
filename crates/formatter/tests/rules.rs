@@ -108,8 +108,29 @@ fn trailing_comment_stays_trailing() {
 
 #[test]
 fn blank_lines_between_statements_survive() {
-	let out = format("select 1;\n\n\n\nselect 2;");
-	assert_eq!(out, "select 1;\n\nselect 2;\n");
+	// None, one, and two blank lines are the author's; anything past two
+	// collapses to two.
+	for (input, want) in [
+		("select 1;\nselect 2;", "select 1;\nselect 2;\n"),
+		("select 1;\n\nselect 2;", "select 1;\n\nselect 2;\n"),
+		("select 1;\n\n\nselect 2;", "select 1;\n\n\nselect 2;\n"),
+		("select 1;\n\n\n\nselect 2;", "select 1;\n\n\nselect 2;\n"),
+		("select 1;\n\n\n\n\n\nselect 2;", "select 1;\n\n\nselect 2;\n"),
+	] {
+		let out = format(input);
+		assert_eq!(out, want, "for {input:?}");
+		// And the shape is a fixed point.
+		assert_eq!(format(&out), out, "not idempotent for {input:?}");
+	}
+}
+
+#[test]
+fn blank_lines_around_standalone_comments_survive() {
+	// A comment separated from the next statement by a blank line is a
+	// standalone remark, not a caption: both gaps are the author's.
+	let out = format("select 1;\n\n\n-- a remark\n\nselect 2;");
+	assert_eq!(out, "select 1;\n\n\n-- a remark\nselect 2;\n");
+	assert_eq!(format(&out), out);
 }
 
 #[test]

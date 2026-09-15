@@ -13,4 +13,5 @@ set
 	)
 where created_by is null;
 
+
 alter table only templates alter column created_by set not null;

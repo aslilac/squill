@@ -91,6 +91,7 @@ with
 select id
 from deleted_task;
 
+
 -- name: UpdateTaskPrompt :one
 update tasks
 set prompt = @prompt::text

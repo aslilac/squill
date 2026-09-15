@@ -453,6 +453,7 @@ from app_insights
 where is_app is true
 group by template_id, slug_or_port, display_name;
 
+
 -- name: GetTemplateInsightsByInterval :many
 -- GetTemplateInsightsByInterval returns all intervals between start and end
 -- time, if end time is a partial interval, it will be included in the results and

@@ -10,11 +10,13 @@ create table if not exists user_configs (
 	foreign key (user_id) references users (id) on delete cascade
 );
 
+
 -- Copy "theme_preference" from "users" table
 insert into user_configs (user_id, key, value)
 select id, 'theme_preference', theme_preference
 from users
 where users.theme_preference is not null;
+
 
 -- Replace "group_members_expanded" without "theme_preference"
 drop view group_members_expanded;

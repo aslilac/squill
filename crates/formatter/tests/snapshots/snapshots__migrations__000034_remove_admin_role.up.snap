@@ -18,6 +18,7 @@ where
 		limit 1
 	);
 
+
 update users
 set
 	-- Replace 'admin' role with 'template-admin' and 'user-admin'

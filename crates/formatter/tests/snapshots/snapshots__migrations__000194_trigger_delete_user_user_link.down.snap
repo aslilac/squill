@@ -22,6 +22,7 @@ begin
 end;
 $$;
 
+
 create trigger trigger_update_users
 	after insert or update on users
 	for each row

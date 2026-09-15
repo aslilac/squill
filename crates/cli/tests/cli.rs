@@ -17,6 +17,10 @@ fn temp_dir(name: &str) -> std::path::PathBuf {
 		.join(format!("squill-cli-test-{name}-{}", std::process::id()));
 	let _ = std::fs::remove_dir_all(&dir);
 	std::fs::create_dir_all(&dir).expect("create temp dir");
+	// A repo-root marker, so config discovery stops here instead of
+	// walking into the real temp directory: a stray squill.toml up there
+	// would otherwise reconfigure every test at once.
+	std::fs::create_dir_all(dir.join(".git")).expect("create .git marker");
 	dir
 }
 
@@ -298,14 +302,14 @@ fn config_errors_are_hard_errors_with_location() {
 		"got: {stderr}"
 	);
 
-	// Syntax error with line number.
+	// A section that is not a known host language.
 	std::fs::write(dir.join("squill.toml"), "# fine\n[section]\n")
 		.expect("write");
 	let output = squill().arg("fmt").arg(&dir).output().expect("run");
 	assert_eq!(output.status.code(), Some(2));
 	let stderr = String::from_utf8_lossy(&output.stderr);
 	assert!(
-		stderr.contains("squill.toml:2:") && stderr.contains("sections"),
+		stderr.contains("squill.toml:2:") && stderr.contains("unknown section"),
 		"got: {stderr}"
 	);
 
@@ -677,5 +681,330 @@ fn check_large_diff_prints_replacement_hunk() {
 	);
 	assert!(stdout.contains("-SELECT   7;"), "old lines missing");
 	assert!(stdout.contains("+select 7;"), "new lines missing");
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// One config file, two host languages, two indent styles — and the
+/// section beats the host file's own indentation, which is what makes
+/// the setting worth having for a tab-indented language like Go.
+#[test]
+fn language_sections_configure_indent_per_host() {
+	let dir = temp_dir("langsections");
+	std::fs::write(
+		dir.join("squill.toml"),
+		"indent = \"tab\"\n\n[javascript]\nindent = \"spaces\"\nindent-width = 2\n\n[go]\nindent = \"tab\"\n",
+	)
+	.expect("write config");
+
+	let js = dir.join("q.js");
+	std::fs::write(
+		&js,
+		"function f(db) {\n  return db.query(`SELECT id,name,email,created_at,updated_at,deleted_at,organization_id,avatar_url FROM users WHERE org = $1`);\n}\n",
+	)
+	.expect("write js");
+	// A Go file indented with tabs; the SQL keeps tabs.
+	let go = dir.join("q.go");
+	std::fs::write(
+		&go,
+		"package main\n\nfunc f(db *sql.DB) {\n\tdb.QueryRow(`SELECT id,name,email,created_at,updated_at,deleted_at,organization_id,avatar_url FROM users WHERE org = $1`)\n}\n",
+	)
+	.expect("write go");
+
+	let status =
+		squill().args(["fmt", "--embedded"]).arg(&dir).status().expect("run");
+	assert!(status.success());
+
+	let js_out = std::fs::read_to_string(&js).expect("read js");
+	assert!(
+		js_out.contains("  select\n    id,\n    name,\n"),
+		"javascript section did not give two-space SQL: {js_out}"
+	);
+	let go_out = std::fs::read_to_string(&go).expect("read go");
+	assert!(
+		go_out.contains("\tselect\n\t\tid,\n\t\tname,\n"),
+		"go section did not give tab SQL: {go_out}"
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A section's indent wins over the host file's indentation even when
+/// the two disagree, and unset keys still fall through to the top level.
+#[test]
+fn language_section_overrides_host_indent_and_inherits_rest() {
+	let dir = temp_dir("langoverride");
+	std::fs::write(
+		dir.join("squill.toml"),
+		"keyword-case = \"upper\"\n\n[go]\nindent = \"spaces\"\nindent-width = 4\n",
+	)
+	.expect("write config");
+	let go = dir.join("q.go");
+	std::fs::write(
+		&go,
+		"package main\n\nfunc f(db *sql.DB) {\n\tdb.QueryRow(`SELECT id,name,email,created_at,updated_at,deleted_at,organization_id,avatar_url FROM users WHERE org = $1`)\n}\n",
+	)
+	.expect("write go");
+
+	let status = squill().arg("fmt").arg(&go).status().expect("run");
+	assert!(status.success());
+	let out = std::fs::read_to_string(&go).expect("read");
+	// Four-space SQL indent inside a tab-indented host file, and the
+	// top-level keyword-case still applies.
+	assert!(
+		out.contains("\tSELECT\n\t    id,\n\t    name,\n")
+			&& out.contains("\tFROM users\n"),
+		"section indent or inherited keyword-case missing: {out}"
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Sections apply only to their own language: a `[go]` section leaves
+/// plain .sql files (and other hosts) on the top-level settings.
+#[test]
+fn language_sections_do_not_leak_to_other_files() {
+	let dir = temp_dir("langscope");
+	std::fs::write(
+		dir.join("squill.toml"),
+		"indent = \"tab\"\n\n[go]\nindent = \"spaces\"\nindent-width = 4\nkeyword-case = \"upper\"\n",
+	)
+	.expect("write config");
+	std::fs::write(dir.join("a.sql"), "select id from (select 1 as id) t;\n")
+		.expect("write sql");
+	let status =
+		squill().arg("fmt").arg(dir.join("a.sql")).status().expect("run");
+	assert!(status.success());
+	let out = std::fs::read_to_string(dir.join("a.sql")).expect("read");
+	assert_eq!(
+		out, "select id from (select 1 as id) t;\n",
+		"the [go] section must not touch .sql files"
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Flags still beat a section, the same way they beat the top level.
+#[test]
+fn flags_override_language_sections() {
+	let dir = temp_dir("langflags");
+	std::fs::write(dir.join("squill.toml"), "[go]\nkeyword-case = \"upper\"\n")
+		.expect("write config");
+	let go = dir.join("q.go");
+	std::fs::write(
+		&go,
+		"package main\n\nfunc f(db *sql.DB) {\n\tdb.QueryRow(`SELECT id,name,email,created_at,updated_at,deleted_at,organization_id,avatar_url FROM users WHERE org = $1`)\n}\n",
+	)
+	.expect("write go");
+	let status = squill()
+		.args(["fmt", "--keyword-case", "lower"])
+		.arg(&go)
+		.status()
+		.expect("run");
+	assert!(status.success());
+	let out = std::fs::read_to_string(&go).expect("read");
+	assert!(
+		out.contains("\tselect\n\t\tid,"),
+		"flag did not override section: {out}"
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Bad sections are hard errors with a location, like any other config
+/// mistake.
+#[test]
+fn language_section_errors_have_locations() {
+	let dir = temp_dir("langbad");
+	std::fs::write(dir.join("f.sql"), "select 1;\n").expect("write");
+
+	let cases = [
+		("[ruby]\nindent = \"tab\"\n", 1, "unknown section `[ruby]`"),
+		("[go]\nignore = [\"x\"]\n", 2, "applies to the whole file"),
+		("[go]\nindent = \"elephant\"\n", 2, "unknown indent style"),
+		("[go]\nindent-width = 99\n", 2, "integer from 1 to 16"),
+		("[go]\nnope = 1\n", 2, "unknown key `nope`"),
+		("[go]\n[go.inner]\nindent = \"tab\"\n", 2, "do not nest"),
+		// Multi-language headers are validated name by name.
+		("[\"go, ruby\"]\nindent = \"tab\"\n", 1, "unknown section `[ruby]`"),
+		("[\"go,\"]\nindent = \"tab\"\n", 1, "empty language name"),
+		(
+			"[go]\nindent = \"tab\"\n\n[\"go, rust\"]\nindent = \"spaces\"\n",
+			4,
+			"`go` is configured by more than one section",
+		),
+		(
+			"[\"go, go\"]\nindent = \"tab\"\n",
+			1,
+			"`go` is configured by more than one section",
+		),
+	];
+	for (config, line, needle) in cases {
+		std::fs::write(dir.join("squill.toml"), config).expect("write config");
+		let output = squill().arg("fmt").arg(&dir).output().expect("run");
+		assert_eq!(output.status.code(), Some(2), "config accepted: {config}");
+		let stderr = String::from_utf8_lossy(&output.stderr);
+		assert!(
+			stderr.contains(&format!("squill.toml:{line}:"))
+				&& stderr.contains(needle),
+			"for {config:?} got: {stderr}"
+		);
+	}
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Discovery stops at a git repository root: a config above a checkout
+/// never reconfigures the code inside it.
+#[test]
+fn discovery_stops_at_a_git_repo_root() {
+	let dir = temp_dir("gitboundary");
+	std::fs::write(dir.join("squill.toml"), "keyword-case = \"upper\"\n")
+		.expect("write config");
+
+	// A checkout below it, with its own repo-root marker and no config.
+	std::fs::create_dir_all(dir.join("repo/.git")).expect("mkdir repo");
+	std::fs::write(dir.join("repo/a.sql"), "select 1;\n").expect("write");
+	// The same layout without the marker, as a control.
+	std::fs::create_dir_all(dir.join("plain")).expect("mkdir plain");
+	std::fs::write(dir.join("plain/b.sql"), "select 1;\n").expect("write");
+
+	let status = squill().arg("fmt").arg(&dir).status().expect("run");
+	assert!(status.success());
+	assert_eq!(
+		std::fs::read_to_string(dir.join("repo/a.sql")).expect("read"),
+		"select 1;\n",
+		"config leaked past the repo root"
+	);
+	assert_eq!(
+		std::fs::read_to_string(dir.join("plain/b.sql")).expect("read"),
+		"SELECT 1;\n",
+		"without a repo root the walk should reach the config"
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A `.git` file (worktrees and submodules) bounds the walk just like a
+/// `.git` directory.
+#[test]
+fn discovery_stops_at_a_git_worktree_file() {
+	let dir = temp_dir("gitfile");
+	std::fs::write(dir.join("squill.toml"), "keyword-case = \"upper\"\n")
+		.expect("write config");
+	std::fs::create_dir_all(dir.join("wt")).expect("mkdir");
+	std::fs::write(dir.join("wt/.git"), "gitdir: /elsewhere/.git/worktrees/wt\n")
+		.expect("write .git file");
+	std::fs::write(dir.join("wt/a.sql"), "select 1;\n").expect("write");
+
+	let status =
+		squill().arg("fmt").arg(dir.join("wt/a.sql")).status().expect("run");
+	assert!(status.success());
+	assert_eq!(
+		std::fs::read_to_string(dir.join("wt/a.sql")).expect("read"),
+		"select 1;\n",
+		"config leaked past a .git file"
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Discovery stops at a symlinked directory, whose lexical parent is not
+/// the tree it actually lives in.
+#[cfg(unix)]
+#[test]
+fn discovery_stops_at_a_symlinked_directory() {
+	let dir = temp_dir("symlinkboundary");
+	// The config sits beside both the real directory and the link, so
+	// the only difference between the two runs is how we got there.
+	std::fs::write(dir.join("squill.toml"), "keyword-case = \"upper\"\n")
+		.expect("write config");
+	std::fs::create_dir_all(dir.join("real")).expect("mkdir");
+	std::fs::write(dir.join("real/a.sql"), "select 1;\n").expect("write");
+	std::os::unix::fs::symlink(dir.join("real"), dir.join("link"))
+		.expect("symlink");
+
+	// Through the link: the walk stops at the link itself.
+	let status =
+		squill().arg("fmt").arg(dir.join("link/a.sql")).status().expect("run");
+	assert!(status.success());
+	assert_eq!(
+		std::fs::read_to_string(dir.join("real/a.sql")).expect("read"),
+		"select 1;\n",
+		"config leaked through a symlinked directory"
+	);
+
+	// Through the real path: the same file, now reconfigured.
+	let status =
+		squill().arg("fmt").arg(dir.join("real/a.sql")).status().expect("run");
+	assert!(status.success());
+	assert_eq!(
+		std::fs::read_to_string(dir.join("real/a.sql")).expect("read"),
+		"SELECT 1;\n",
+		"the real path should reach the config"
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A relative path argument walks up to the config the same way an
+/// absolute one does — `Path::parent` alone runs out at the working
+/// directory.
+#[test]
+fn relative_paths_find_a_config_above_the_working_directory() {
+	let dir = temp_dir("relativewalk");
+	std::fs::write(dir.join("squill.toml"), "keyword-case = \"upper\"\n")
+		.expect("write config");
+	std::fs::create_dir_all(dir.join("sub/deeper")).expect("mkdir");
+	std::fs::write(dir.join("sub/deeper/a.sql"), "select 1;\n").expect("write");
+
+	let status = squill()
+		.current_dir(dir.join("sub"))
+		.args(["fmt", "deeper/a.sql"])
+		.status()
+		.expect("run");
+	assert!(status.success());
+	assert_eq!(
+		std::fs::read_to_string(dir.join("sub/deeper/a.sql")).expect("read"),
+		"SELECT 1;\n",
+		"relative path did not reach the config two levels up"
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// One section can name several languages at once. TOML has no bare
+/// comma in a table header, so the name list is quoted.
+#[test]
+fn one_section_can_name_several_languages() {
+	let dir = temp_dir("multilang");
+	std::fs::write(
+		dir.join("squill.toml"),
+		"indent = \"tab\"\n\n[\"javascript, typescript\"]\nindent = \"spaces\"\nindent-width = 2\n",
+	)
+	.expect("write config");
+
+	let query = "SELECT id,name,email,created_at,updated_at,deleted_at,organization_id,avatar_url FROM users WHERE org = $1";
+	for name in ["q.js", "q.ts", "q.tsx"] {
+		std::fs::write(
+			dir.join(name),
+			format!("export function f(db) {{\n\treturn db.query(`{query}`);\n}}\n"),
+		)
+		.expect("write host file");
+	}
+	// Not named by the section: stays on the top-level tab indent.
+	std::fs::write(
+		dir.join("q.go"),
+		format!(
+			"package main\n\nfunc f(db *sql.DB) {{\n\tdb.QueryRow(`{query}`)\n}}\n"
+		),
+	)
+	.expect("write go");
+
+	let status =
+		squill().args(["fmt", "--embedded"]).arg(&dir).status().expect("run");
+	assert!(status.success());
+	for name in ["q.js", "q.ts", "q.tsx"] {
+		let out = std::fs::read_to_string(dir.join(name)).expect("read");
+		assert!(
+			out.contains("\tselect\n\t  id,\n\t  name,\n"),
+			"{name} did not take the shared section: {out}"
+		);
+	}
+	let go_out = std::fs::read_to_string(dir.join("q.go")).expect("read");
+	assert!(
+		go_out.contains("\tselect\n\t\tid,\n\t\tname,\n"),
+		"go should keep the top-level tab indent: {go_out}"
+	);
 	let _ = std::fs::remove_dir_all(&dir);
 }

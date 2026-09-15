@@ -744,6 +744,7 @@ order by model asc
 limit coalesce(nullif(@limit_::integer, 0), 100)
 offset @offset_;
 
+
 -- name: ListAIBridgeClients :many
 select coalesce(client, 'Unknown') as client
 from aibridge_interceptions

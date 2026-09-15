@@ -5,8 +5,10 @@ expression: formatted
 -- name: GetFileByID :one
 select * from files where id = $1 limit 1;
 
+
 -- name: GetFileByHashAndCreator :one
 select * from files where hash = $1 and created_by = $2 limit 1;
+
 
 -- name: InsertFile :one
 insert into files (id, hash, created_at, created_by, mimetype, "data")

@@ -503,6 +503,7 @@ returning *;
 -- name: UpdateUserLastSeenAt :one
 update users set last_seen_at = $2, updated_at = $3 where id = $1 returning *;
 
+
 -- name: GetAuthorizationUserRoles :one
 -- This function returns roles for authorization purposes. Implied member roles
 -- are included.
@@ -564,6 +565,7 @@ where users.id = @user_id;
 
 -- name: UpdateUserQuietHoursSchedule :one
 update users set quiet_hours_schedule = $2 where id = $1 returning *;
+
 
 -- name: UpdateInactiveUsersToDormant :many
 update users

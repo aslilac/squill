@@ -8,6 +8,7 @@
 use embed::GLEAM_SQL_QUERY;
 use embed::GO_DB_QUERY;
 use embed::Host;
+use embed::Indent;
 use embed::JS_SQL_QUERY;
 use embed::PYTHON_DB_QUERY;
 use embed::RUST_SQLX_QUERY;
@@ -29,9 +30,14 @@ fn rust_sqlx_fixture_formats_and_still_compiles() {
 	let fixture = fixture_dir();
 	let source =
 		std::fs::read_to_string(fixture.join("src/lib.rs")).expect("read fixture");
-	let formatted =
-		format_embedded(&source, Host::Rust, RUST_SQLX_QUERY, &options())
-			.expect("format");
+	let formatted = format_embedded(
+		&source,
+		Host::Rust,
+		RUST_SQLX_QUERY,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format");
 
 	// The multi-line query formats, quotes on their own lines.
 	assert!(
@@ -73,9 +79,14 @@ fn rust_sqlx_fixture_formats_and_still_compiles() {
 	}
 
 	// Idempotence at the host-file level.
-	let twice =
-		format_embedded(&formatted, Host::Rust, RUST_SQLX_QUERY, &options())
-			.expect("format");
+	let twice = format_embedded(
+		&formatted,
+		Host::Rust,
+		RUST_SQLX_QUERY,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format");
 	assert_eq!(twice, formatted, "host-file formatting must be idempotent");
 
 	// The formatted fixture still compiles: copy the crate, substitute
@@ -115,9 +126,14 @@ fn extract_rust_strings(source: &str) -> Vec<String> {
 fn single_line_plain_strings_stay_untouched() {
 	// Plain quoted strings never reformat.
 	let source = "fn main() {\n    let q = sqlx::query!(\"SELECT   id FROM t WHERE x = $1\");\n}\n";
-	let formatted =
-		format_embedded(source, Host::Rust, RUST_SQLX_QUERY, &options())
-			.expect("format");
+	let formatted = format_embedded(
+		source,
+		Host::Rust,
+		RUST_SQLX_QUERY,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format");
 	assert_eq!(formatted, source);
 }
 
@@ -126,26 +142,41 @@ fn single_line_raw_strings_reformat_vertically() {
 	// Raw strings are multiline-capable, so they always take the
 	// vertical shape — even when currently single-line.
 	let source = "fn main() {\n    let q = sqlx::query!(\n        r#\"delete from team_auto_add_rules where team_id = $1 and id = $2\"#\n    );\n}\n";
-	let formatted =
-		format_embedded(source, Host::Rust, RUST_SQLX_QUERY, &options())
-			.expect("format");
+	let formatted = format_embedded(
+		source,
+		Host::Rust,
+		RUST_SQLX_QUERY,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format");
 	assert_eq!(
 		formatted,
 		"fn main() {\n    let q = sqlx::query!(\n        r#\"\n        delete from team_auto_add_rules\n        where team_id = $1 and id = $2\n        \"#\n    );\n}\n"
 	);
 	// Idempotent.
-	let twice =
-		format_embedded(&formatted, Host::Rust, RUST_SQLX_QUERY, &options())
-			.expect("format");
+	let twice = format_embedded(
+		&formatted,
+		Host::Rust,
+		RUST_SQLX_QUERY,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format");
 	assert_eq!(twice, formatted);
 }
 
 #[test]
 fn multiline_literal_gets_quotes_on_own_lines() {
 	let source = "fn main() {\n    let q = sqlx::query!(\n        r#\"SELECT id,name FROM users\n        WHERE org = $1 ORDER BY name\"#\n    );\n}\n";
-	let formatted =
-		format_embedded(source, Host::Rust, RUST_SQLX_QUERY, &options())
-			.expect("format");
+	let formatted = format_embedded(
+		source,
+		Host::Rust,
+		RUST_SQLX_QUERY,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format");
 	// Multi-line literals stay clause-per-line even when the SQL would
 	// fit on one line.
 	assert_eq!(
@@ -154,9 +185,14 @@ fn multiline_literal_gets_quotes_on_own_lines() {
 	);
 	assert!(!formatted.contains('\t'), "no tabs in a spaces-indented file");
 	// Idempotent.
-	let twice =
-		format_embedded(&formatted, Host::Rust, RUST_SQLX_QUERY, &options())
-			.expect("format");
+	let twice = format_embedded(
+		&formatted,
+		Host::Rust,
+		RUST_SQLX_QUERY,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format");
 	assert_eq!(twice, formatted);
 }
 
@@ -165,17 +201,28 @@ fn plain_strings_never_reformat() {
 	// Plain `"..."` syntax is single-line-with-escapes territory: left
 	// byte-identical even when the content already spans lines.
 	let source = "fn f() { sqlx::query!(\"SELECT 'it''s' AS s, \\\"Weird\\\" FROM t\nWHERE x = $1\"); }";
-	let formatted =
-		format_embedded(source, Host::Rust, RUST_SQLX_QUERY, &options())
-			.expect("format");
+	let formatted = format_embedded(
+		source,
+		Host::Rust,
+		RUST_SQLX_QUERY,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format");
 	assert_eq!(formatted, source);
 }
 
 #[test]
 fn match_predicate_is_rejected() {
 	let query = r#"((identifier) @sql (#match? @sql "q.*"))"#;
-	let err =
-		format_embedded("fn main() {}", Host::Rust, query, &options()).unwrap_err();
+	let err = format_embedded(
+		"fn main() {}",
+		Host::Rust,
+		query,
+		&options(),
+		Indent::FromHost,
+	)
+	.unwrap_err();
 	assert!(err.to_string().contains("match"), "got: {err}");
 }
 
@@ -183,8 +230,14 @@ fn match_predicate_is_rejected() {
 fn go_smoke_test() {
 	let source = "package main\n\nfunc list(db *sql.DB) {\n\trows, _ := db.Query(`SELECT id,name FROM users\n\tWHERE active ORDER BY name`)\n\t_, _ = db.Exec(\"DELETE   FROM sessions WHERE expires_at < now()\")\n\tfmt.Println(\"SELECT   not touched\")\n}\n"
         .to_string();
-	let formatted = format_embedded(&source, Host::Go, GO_DB_QUERY, &options())
-		.expect("format");
+	let formatted = format_embedded(
+		&source,
+		Host::Go,
+		GO_DB_QUERY,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format");
 	assert!(
 		formatted.contains(
 			"`\n\tselect id, name\n\tfrom users\n\twhere active\n\torder by name\n\t`"
@@ -198,17 +251,28 @@ fn go_smoke_test() {
 	// Non-query call untouched.
 	assert!(formatted.contains("SELECT   not touched"));
 	// Idempotent.
-	let twice = format_embedded(&formatted, Host::Go, GO_DB_QUERY, &options())
-		.expect("format");
+	let twice = format_embedded(
+		&formatted,
+		Host::Go,
+		GO_DB_QUERY,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format");
 	assert_eq!(twice, formatted);
 }
 
 #[test]
 fn python_smoke_test() {
 	let source = "def load(cur, uid):\n    cur.execute(\"\"\"SELECT id,name FROM users WHERE org=%s AND status=%(status)s ORDER BY name\"\"\", args)\n    cur.execute(\"SELECT   1\")\n    cur.execute(f\"SELECT {tbl}\")\n    cur.execute(b\"SELECT 2\")\n";
-	let formatted =
-		format_embedded(source, Host::Python, PYTHON_DB_QUERY, &options())
-			.expect("format");
+	let formatted = format_embedded(
+		source,
+		Host::Python,
+		PYTHON_DB_QUERY,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format");
 	// Triple-quoted strings take the vertical shape; pyformat params
 	// survive byte-exact.
 	assert!(
@@ -222,18 +286,28 @@ fn python_smoke_test() {
 	assert!(formatted.contains("f\"SELECT {tbl}\""));
 	assert!(formatted.contains("b\"SELECT 2\""));
 	// Idempotent.
-	let twice =
-		format_embedded(&formatted, Host::Python, PYTHON_DB_QUERY, &options())
-			.expect("format");
+	let twice = format_embedded(
+		&formatted,
+		Host::Python,
+		PYTHON_DB_QUERY,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format");
 	assert_eq!(twice, formatted);
 }
 
 #[test]
 fn js_smoke_test() {
 	let source = "async function f(db, id) {\n  await db.query(`SELECT id,name FROM users WHERE org = $1 ORDER BY name`, [id]);\n  const r = await sql`SELECT count(*) FROM api_keys WHERE user_id = ${id}`;\n  const t = sql`SELECT   3`;\n  db.query('SELECT   2');\n}\n";
-	let formatted =
-		format_embedded(source, Host::JavaScript, JS_SQL_QUERY, &options())
-			.expect("format");
+	let formatted = format_embedded(
+		source,
+		Host::JavaScript,
+		JS_SQL_QUERY,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format");
 	// Template literals take the vertical shape.
 	assert!(
 		formatted.contains(
@@ -250,25 +324,36 @@ fn js_smoke_test() {
 	);
 	assert!(formatted.contains("'SELECT   2'"));
 	// Idempotent.
-	let twice =
-		format_embedded(&formatted, Host::JavaScript, JS_SQL_QUERY, &options())
-			.expect("format");
+	let twice = format_embedded(
+		&formatted,
+		Host::JavaScript,
+		JS_SQL_QUERY,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format");
 	assert_eq!(twice, formatted);
 }
 
 #[test]
 fn typescript_smoke_test() {
 	let source = "const f = async (db: Db): Promise<Row[]> =>\n  db.query(`SELECT id FROM t WHERE  x = $1`);\n";
-	let formatted =
-		format_embedded(source, Host::TypeScript, JS_SQL_QUERY, &options())
-			.expect("format");
+	let formatted = format_embedded(
+		source,
+		Host::TypeScript,
+		JS_SQL_QUERY,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format");
 	assert!(
 		formatted.contains("`\n  select id\n  from t\n  where x = $1\n  `"),
 		"ts template not formatted: {formatted}"
 	);
 	let tsx = "export const List = () => {\n  const rows = db.query(`SELECT id,name FROM t`);\n  return <ul>{rows.map((r) => <li key={r.id}>{r.name}</li>)}</ul>;\n};\n";
 	let formatted =
-		format_embedded(tsx, Host::Tsx, JS_SQL_QUERY, &options()).expect("format");
+		format_embedded(tsx, Host::Tsx, JS_SQL_QUERY, &options(), Indent::FromHost)
+			.expect("format");
 	assert!(
 		formatted.contains("`\n  select id, name\n  from t\n  `"),
 		"tsx template not formatted: {formatted}"
@@ -279,9 +364,14 @@ fn typescript_smoke_test() {
 #[test]
 fn gleam_smoke_test() {
 	let source = "pub fn list(db) {\n  sqlight.query(\"select id,name from users where org = ? order by name\", on: db, with: [])\n  pog.query(\"SELECT   1\")\n}\n";
-	let formatted =
-		format_embedded(source, Host::Gleam, GLEAM_SQL_QUERY, &options())
-			.expect("format");
+	let formatted = format_embedded(
+		source,
+		Host::Gleam,
+		GLEAM_SQL_QUERY,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format");
 	// sqlight is SQLite: `?` params lex; strings take the vertical shape.
 	assert!(
 		formatted.contains(
@@ -292,8 +382,13 @@ fn gleam_smoke_test() {
 	// pog goes through the session dialect (postgres by default).
 	assert!(formatted.contains("pog.query(\"\n  select 1\n  \")"), "{formatted}");
 	// Idempotent.
-	let twice =
-		format_embedded(&formatted, Host::Gleam, GLEAM_SQL_QUERY, &options())
-			.expect("format");
+	let twice = format_embedded(
+		&formatted,
+		Host::Gleam,
+		GLEAM_SQL_QUERY,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format");
 	assert_eq!(twice, formatted);
 }

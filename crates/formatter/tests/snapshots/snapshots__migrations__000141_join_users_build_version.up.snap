@@ -13,6 +13,7 @@ from workspace_builds
 
 comment on view workspace_build_with_user is 'Joins in the username + avatar url of the initiated by user.';
 
+
 -- If you need to update this view, put 'DROP VIEW template_version_with_user;' before this.
 create view template_version_with_user as
 select
