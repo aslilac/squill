@@ -6,9 +6,10 @@ license.workspace = true
 
 [lints]
 workspace = true
+
 [dependencies]
-formatter = { version = "0.1.0", path = "../formatter" }
-parser = { version = "0.1.0", path = "../parser" }
+formatter = { workspace = true }
+parser = { workspace = true }
 streaming-iterator = "0.1.9"
 tree-sitter = "0.26.11"
 tree-sitter-gleam = "1.0.0"
