@@ -17,14 +17,50 @@
         inherit system;
         overlays = [ rust-overlay.overlays.default ];
       }));
+
+      toolchainFor = pkgs: pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+
+      version =
+        (builtins.fromTOML (builtins.readFile ./Cargo.toml)).workspace.package.version;
     in
     {
+      packages = eachSystem (pkgs:
+        let
+          rust = toolchainFor pkgs;
+          rustPlatform = pkgs.makeRustPlatform {
+            cargo = rust;
+            rustc = rust;
+          };
+        in
+        rec {
+          default = squill;
+
+          squill = rustPlatform.buildRustPackage {
+            pname = "squill";
+            inherit version;
+            src = self;
+            cargoLock.lockFile = ./Cargo.lock;
+
+            cargoBuildFlags = [ "-p" "cli" ];
+
+            # The cli suite shells out to `git init` to check that
+            # directory recursion honors .gitignore.
+            nativeCheckInputs = [ pkgs.git ];
+
+            meta = {
+              description = "A SQL formatter for Postgres and SQLite";
+              homepage = "https://github.com/aslilac/squill";
+              license = pkgs.lib.licenses.mpl20;
+              mainProgram = "squill";
+            };
+          };
+        });
+
       devShells = eachSystem (pkgs:
         let
-          # The channel comes from rust-toolchain.toml, so nix and rustup
-          # users share a compiler; wasm32-wasip1 is the docs playground.
-          rust = (pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml).override {
+          rust = (toolchainFor pkgs).override {
             extensions = [ "rust-src" "rust-analyzer" ];
+	          # wasm32-wasip1 is needed for the docs playground.
             targets = [ "wasm32-wasip1" ];
           };
 
@@ -49,6 +85,7 @@
               CFLAGS_wasm32_wasip1 = "";
             };
           };
-        });
+        }
+      );
     };
 }

@@ -4,22 +4,36 @@ A SQL formatter for Postgres and SQLite.
 
 Get familiar with its code style in the [playground](https://mckayla.dev/squill/playground). The playground works in any modern browser, and your input stays on your machine.
 
-## Quickstart
+## Installation
 
-Build from source:
+### Mise
 
-```sh
-cargo install --git https://github.com/aslilac/squill.git cli --bin squill
-```
-
-Or download a prebuilt binary:
+You can use [mise](https://mise.jdx.dev) and the Github backend, which will download a precompiled binary from the latest Github release.
 
 ```sh
-curl -fsSLo squill https://github.com/aslilac/squill/releases/download/v0.1.0/squill-x86_64-linux
-chmod +x squill
-cp squill /usr/local/bin/
+mise use -g github:aslilac/squill
 squill fmt --check .
 ```
+
+### Nix
+
+A Nix flake is available if you're a Nix fan.
+
+```sh
+nix shell github:aslilac/squill
+```
+
+### Compile from source
+
+Cargo can clone the source, checkout the latest release tag, and install the binary in a single command. 
+
+```sh
+cargo install --git https://github.com/aslilac/squill.git --tag v0.1.1 cli --bin squill
+```
+
+Or download a [release](https://github.com/aslilac/squill/releases) archive directly. Builds are published for Linux and Windows on x86_64 and arm64, and macOS on arm64:
+
+## Usage
 
 Options (via the nearest squill.toml or .config/squill.toml, or flags — flags win; the search upward stops at a git repository root, a mount point, or a symlinked directory, so a config outside a checkout never reaches inside it): `--dialect postgres|sqlite`, `--indent tab|spaces`, `--indent-width N` (default 2), `--max-width N` (default 80), `--keyword-case lower|upper`, `--quote-idents as-needed|always`, `--at-params` for sqlc-style `@name` parameters, `--strict` to fail on statements that could not be parsed. Directory recursion honors `.gitignore` and skips hidden files; an `ignore = ["legacy", "*.gen.sql"]` array in config (or repeated `--ignore` flags) skips more, with `*`, `**`, `?`, `[abc]`, and `{a,b}` glob syntax. Explicitly listed files always format.
 

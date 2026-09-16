@@ -95,7 +95,7 @@ const baseHref = import.meta.env.BASE_URL;
 					</div>
 					<nav>
 						<a href="playground/">Playground</a>
-						<a href="https://tree.ht/birds/squill">Source</a>
+						<a href="https://github.com/aslilac/squill">Source</a>
 						<span class="badge">v0.1 · MPL-2.0</span>
 					</nav>
 				</div>
@@ -196,16 +196,28 @@ const baseHref = import.meta.env.BASE_URL;
 			<section>
 				<h2>Install</h2>
 				<pre
-					class="dark"><code>cargo install --git https://tree.ht/birds/squill.git cli --bin squill
+					class="dark"><code>cargo install --git https://github.com/aslilac/squill.git cli --bin squill
 
 squill fmt path/to/queries/</code></pre>
 				<p>
-					In CI, skip the Rust toolchain: every release ships a static Linux
-					binary you can pull and run directly.
+					In CI, skip the Rust toolchain.
+					<a href="https://mise.jdx.dev">mise</a> picks the release binary that
+					matches whatever the job is running on, so nothing has to know the
+					runner&rsquo;s os or architecture.
 				</p>
 				<pre
-					class="dark"><code>curl -fsSLo squill https://tree.ht/birds/squill/releases/download/v0.1.0/squill-x86_64-linux
-chmod +x squill
+					class="dark"><code>mise use -g ubi:aslilac/squill
+
+squill fmt --check .</code></pre>
+				<p>
+					Or pull an archive yourself — releases cover Linux and Windows on
+					x86_64 and arm64, and macOS on arm64. With
+					<a href="https://nixos.org">Nix</a>, <code
+						>nix run github:aslilac/squill</code
+					> needs no install step at all.
+				</p>
+				<pre
+					class="dark"><code>curl -fsSL https://github.com/aslilac/squill/releases/download/v0.1.1/squill-v0.1.1-x86_64-unknown-linux-gnu.tar.gz | tar xz
 ./squill fmt --check .</code></pre>
 			</section>
 
@@ -305,7 +317,7 @@ indent-width = 2</code></pre>
 			<footer>
 				<p>
 					Built by Kayla and her birds &middot; source at{" "}
-					<a href="https://tree.ht/birds/squill">tree.ht/birds/squill</a>
+					<a href="https://github.com/aslilac/squill">github.com/aslilac/squill</a>
 				</p>
 			</footer>
 		</main>
