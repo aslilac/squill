@@ -1,0 +1,213 @@
+---
+import Docs from "../../layouts/Docs.astro";
+---
+
+<Docs
+	page="configuration"
+	title="Configuration"
+	lede="Every option, where it comes from, and which layer wins."
+>
+	<section>
+		<h2>Where settings come from</h2>
+		<p>
+			squill reads the nearest <code>squill.toml</code> (or{" "}
+			<code>.config/squill.toml</code>) at or above each file it formats, and
+			flags override it. The defaults are the house style; everything is
+			optional, and a project with no config file is a supported setup.
+		</p>
+		<p>
+			The search upward stops at a git repository root, a mount point, or a
+			symlinked directory. A stray config in a scratch directory or a home
+			directory therefore never reaches inside a checkout &mdash; if a config
+			governs your file, it lives in your project.
+		</p>
+		<div class="note">
+			<p>
+				Layers, lowest first: built-in defaults, the config file&rsquo;s
+				top-level keys, its <code>[language]</code> section for the file being
+				formatted, then command-line flags.
+			</p>
+		</div>
+	</section>
+
+	<section>
+		<h2>Options</h2>
+		<p>
+			Every key has a matching flag. Keys are what you put in{" "}
+			<code>squill.toml</code>; flags win over both config layers.
+		</p>
+		<div class="scroll">
+			<table>
+				<thead>
+					<tr><th>key</th><th>flag</th><th>values</th><th>default</th></tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td><code>dialect</code></td>
+						<td><code>--dialect</code></td>
+						<td><code>postgres</code> | <code>sqlite</code></td>
+						<td><code>postgres</code></td>
+					</tr>
+					<tr>
+						<td><code>indent</code></td>
+						<td><code>--indent</code></td>
+						<td><code>tab</code> | <code>spaces</code></td>
+						<td><code>tab</code></td>
+					</tr>
+					<tr>
+						<td><code>indent-width</code></td>
+						<td><code>--indent-width</code></td>
+						<td>width of one level, and the measure of a tab; 1 to 16</td>
+						<td><code>2</code></td>
+					</tr>
+					<tr>
+						<td><code>max-width</code></td>
+						<td><code>--max-width</code></td>
+						<td>target line width, 20 to 500</td>
+						<td><code>80</code></td>
+					</tr>
+					<tr>
+						<td><code>keyword-case</code></td>
+						<td><code>--keyword-case</code></td>
+						<td><code>lower</code> | <code>upper</code></td>
+						<td><code>lower</code></td>
+					</tr>
+					<tr>
+						<td><code>quote-idents</code></td>
+						<td><code>--quote-idents</code></td>
+						<td><code>as-needed</code> | <code>always</code></td>
+						<td><code>as-needed</code></td>
+					</tr>
+					<tr>
+						<td><code>at-params</code></td>
+						<td><code>--at-params</code></td>
+						<td
+							>lex <a
+								href="https://docs.sqlc.dev/en/latest/howto/named_parameters.html"
+								>sqlc-style</a
+							> <code>@name</code> parameters</td
+						>
+						<td><code>false</code></td>
+					</tr>
+					<tr>
+						<td><code>ignore</code></td>
+						<td><code>--ignore</code></td>
+						<td>glob patterns to skip when recursing</td>
+						<td><code>[]</code></td>
+					</tr>
+					<tr>
+						<td><code>frozen</code></td>
+						<td><code>--frozen</code></td>
+						<td
+							>glob patterns that are immutable once on the baseline ref (see{" "}
+							<a href="docs/frozen/">frozen paths</a>)</td
+						>
+						<td><code>[]</code></td>
+					</tr>
+					<tr>
+						<td><code>frozen-ref</code></td>
+						<td><code>--frozen-ref</code></td>
+						<td>the baseline ref <code>frozen</code> compares against</td>
+						<td>discovered from the remote</td>
+					</tr>
+					<tr>
+						<td><code>frozen-fetch</code></td>
+						<td><code>--frozen-fetch</code></td>
+						<td>let <code>frozen</code> fetch the remote&rsquo;s HEAD</td>
+						<td><code>false</code></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+		<p>
+			Flags with no config key: <code>--check</code>, <code>--stdin</code> /
+			<code>--stdout</code>, <code>--strict</code>, <code>--no-config</code>,{" "}
+			<code>--embedded</code>, <code>--embedded-query</code>,{" "}
+			<code>--version</code>, and <code>--help</code>.
+		</p>
+	</section>
+
+	<section>
+		<h2>Skipping files</h2>
+		<p>
+			When recursing directories squill honors <code>.gitignore</code> and skips
+			hidden files. <code>ignore</code> skips more, with <code>*</code>,{" "}
+			<code>**</code>, <code>?</code>, <code>[abc]</code>, and{" "}
+			<code>&lbrace;a,b&rbrace;</code> glob syntax. Patterns are relative to the
+			config file that declares them.
+		</p>
+		<pre><code>ignore = ["legacy/**", "*.gen.sql"]</code></pre>
+		<p>
+			A file named explicitly on the command line always formats, ignore
+			patterns included &mdash; if you asked for that file by name, you meant
+			it. <a href="docs/frozen/">Frozen paths</a> are the deliberate exception.
+		</p>
+	</section>
+
+	<section>
+		<h2>Per-language sections</h2>
+		<p>
+			SQL embedded in host code copies that file&rsquo;s own indent character,
+			so a spaces-indented file never gains tabs. To choose deliberately, add a
+			section named for the host language. It takes the same keys as the top
+			level and overrides them for files of that language, so one config can
+			ask for two spaces in JavaScript and tabs in Go.
+		</p>
+		<pre><code>indent = "tab"
+
+[javascript]
+indent = "spaces"
+indent-width = 2
+
+[python]
+dialect = "sqlite"
+indent = "spaces"
+indent-width = 4</code></pre>
+		<p>Each section covers one host language:</p>
+		<div class="scroll">
+			<table>
+				<thead>
+					<tr><th>section</th><th>files</th></tr>
+				</thead>
+				<tbody>
+					<tr><td><code>[rust]</code></td><td><code>.rs</code></td></tr>
+					<tr><td><code>[go]</code></td><td><code>.go</code></td></tr>
+					<tr><td><code>[python]</code></td><td><code>.py</code></td></tr>
+					<tr>
+						<td><code>[javascript]</code></td>
+						<td>
+							<code>.js</code> <code>.jsx</code> <code>.mjs</code>{" "}
+							<code>.cjs</code>
+						</td>
+					</tr>
+					<tr>
+						<td><code>[typescript]</code></td>
+						<td>
+							<code>.ts</code> <code>.tsx</code> <code>.mts</code>{" "}
+							<code>.cts</code>
+						</td>
+					</tr>
+					<tr><td><code>[gleam]</code></td><td><code>.gleam</code></td></tr>
+				</tbody>
+			</table>
+		</div>
+		<p>
+			JavaScript and TypeScript are split only because they need different
+			grammars; each section covers its whole family.
+		</p>
+		<p>
+			One section can name several languages, comma separated. TOML has no bare
+			comma in a table header, so quote the list:
+		</p>
+		<pre><code>["javascript, typescript"]
+indent = "spaces"
+indent-width = 2</code></pre>
+		<p>
+			The path-scoped keys &mdash; <code>ignore</code>, <code>frozen</code>,{" "}
+			<code>frozen-ref</code>, and <code>frozen-fetch</code> &mdash; apply to
+			the whole config file, so they stay at the top level. Naming an unknown
+			language, or claiming one from two sections, is an error with a line
+			number rather than a silent surprise.
+		</p>
+	</section>
+</Docs>

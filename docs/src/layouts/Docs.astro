@@ -1,0 +1,59 @@
+---
+// The docs shell: the page shell plus a sidebar. One place to add a doc
+// page — the sidebar and the page order both come from this list.
+import Base from "./Base.astro";
+
+const { title, lede, page } = Astro.props;
+
+const groups = [
+	{
+		heading: "Getting started",
+		items: [
+			{ href: "docs/", label: "Overview", key: "overview" },
+			{ href: "docs/install/", label: "Install", key: "install" },
+		],
+	},
+	{
+		heading: "Reference",
+		items: [
+			{ href: "docs/configuration/", label: "Configuration", key: "configuration" },
+			{ href: "docs/embedded/", label: "Embedded SQL", key: "embedded" },
+			{ href: "docs/frozen/", label: "Frozen paths", key: "frozen" },
+		],
+	},
+];
+---
+
+<Base title={title} lede={lede} section="docs" wide>
+	<div class="docs-shell">
+		<aside class="sidebar">
+			<nav aria-label="Documentation">
+				{
+					groups.map((group) => (
+						<>
+							<h2>{group.heading}</h2>
+							<ul>
+								{group.items.map((item) => (
+									<li>
+										<a
+											href={item.href}
+											aria-current={item.key === page ? "page" : undefined}
+										>
+											{item.label}
+										</a>
+									</li>
+								))}
+							</ul>
+						</>
+					))
+				}
+			</nav>
+		</aside>
+
+		<article>
+			{title && <h1 class="page-title">{title}</h1>}
+			{lede && <p class="page-lede">{lede}</p>}
+			<slot />
+		</article>
+	</div>
+</Base>

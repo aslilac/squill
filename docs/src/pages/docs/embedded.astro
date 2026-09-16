@@ -1,0 +1,132 @@
+---
+import Docs from "../../layouts/Docs.astro";
+---
+
+<Docs
+	page="embedded"
+	title="Embedded SQL"
+	lede="How squill finds SQL inside host code, what it will and won't rewrite, and how to point it somewhere new."
+>
+	<section>
+		<h2>What gets formatted</h2>
+		<p>
+			<code>squill fmt src/queries.rs</code> parses the host file with a
+			tree-sitter grammar, runs an extraction query over it to find string
+			literals holding SQL, and reformats those in place. The rest of the file
+			is untouched &mdash; squill never reprints host code, only the string
+			contents it was pointed at.
+		</p>
+		<p>Out of the box:</p>
+		<ul>
+			<li>
+				<img style="height: 16px; vertical-align: -2px;" src="langs/rust.svg" alt="" />
+				<code class="boxed">sqlx::query!</code>, <code class="boxed"
+					>query_as!</code
+				>, <code class="boxed">query_scalar!</code>, <code class="boxed"
+					>query_unchecked!</code
+				>
+			</li>
+			<li>
+				<img style="height: 16px; vertical-align: -2px;" src="langs/go.svg" alt="" />
+				<code class="boxed">Query</code>, <code class="boxed">QueryRow</code>,{" "}
+				<code class="boxed">Exec</code> and their <code class="boxed"
+					>Context</code
+				> variants
+			</li>
+			<li>
+				<img style="height: 16px; vertical-align: -2px;" src="langs/python.svg" alt="" />
+				<code class="boxed">execute</code>-family methods and SQLAlchemy&rsquo;s{" "}
+				<code class="boxed">text(...)</code>
+			</li>
+			<li>
+				<img style="height: 16px; vertical-align: -2px;" src="langs/typescript.svg" alt="" />
+				<code class="boxed">.query</code>/<code class="boxed">.execute</code>/<code
+					class="boxed">.prepare</code
+				> calls and <code class="boxed">sql`&hellip;`</code> tagged templates
+			</li>
+			<li>
+				<img style="height: 16px; vertical-align: -2px;" src="langs/gleam.svg" alt="" />
+				<code class="boxed">sqlight</code> (as SQLite) and <code class="boxed"
+					>pog</code
+				> (as the session dialect)
+			</li>
+		</ul>
+		<p>
+			Directory recursion only visits host files when you pass{" "}
+			<code>--embedded</code>. A host file named explicitly on the command line
+			always formats.
+		</p>
+	</section>
+
+	<section>
+		<h2>Which strings are eligible</h2>
+		<p>
+			Only <em>multiline string syntaxes</em> are rewritten: Rust raw strings,
+			Go backticks, Python triple quotes, JS template literals, and Gleam
+			strings. Those already support a vertical layout, so squill puts the
+			quotes on their own lines and formats one clause per line.
+		</p>
+		<p>
+			A plain single-line string with escapes stays byte-identical even when
+			the query inside it is ugly, because rewriting it would mean inventing
+			escapes and line continuations in someone else&rsquo;s syntax.
+		</p>
+		<div class="note">
+			<p>
+				Strings with interpolation holes are never touched &mdash; Python
+				f-strings, and <code>$&lbrace;&hellip;&rbrace;</code> in JS templates.
+				SQL with a hole in it is not SQL squill can parse, so it leaves it
+				exactly as written.
+			</p>
+		</div>
+	</section>
+
+	<section>
+		<h2>Writing your own query</h2>
+		<p>
+			<code>--embedded-query custom.scm</code> replaces the built-in extraction
+			query with your own tree-sitter query. A capture named{" "}
+			<code>@sql</code> marks a node whose contents are SQL in the session
+			dialect; <code>@sql.postgres</code> and <code>@sql.sqlite</code> pin the
+			dialect regardless of the <code>dialect</code> setting.
+		</p>
+		<pre><code>((macro_invocation
+   macro: (identifier) @_name
+   (token_tree (raw_string_literal) @sql.postgres))
+ (#eq? @_name "my_sql"))</code></pre>
+		<p>
+			Captures whose names start with <code>_</code> are the usual tree-sitter
+			convention for "match this, but it isn't the thing I want" &mdash; squill
+			only rewrites <code>@sql</code> captures.
+		</p>
+		<h3>Supported predicates</h3>
+		<p>
+			<code>#eq?</code>, <code>#not-eq?</code>, and <code>#any-of?</code>.
+			Regex predicates (<code>#match?</code>, <code>#not-match?</code>) are
+			rejected up front, and so is any other custom predicate: a predicate the
+			engine does not evaluate would silently widen your query to match things
+			you never intended, so squill refuses the query instead of quietly
+			over-matching.
+		</p>
+		<div class="note">
+			<p>
+				<code>--embedded-query</code> applies to <em>every</em> host in the
+				run, and a query is parsed against each file&rsquo;s own grammar. A
+				query written against Rust node types will fail on a{" "}
+				<code>.go</code> file in the same invocation, so scope the run to one
+				language when you override it.
+			</p>
+		</div>
+	</section>
+
+	<section>
+		<h2>Indentation</h2>
+		<p>
+			Embedded SQL is anchored to the host statement&rsquo;s indentation and,
+			by default, copies that file&rsquo;s own indent character, so a
+			spaces-indented file never gains tabs. Set <code>indent</code> for a
+			language in <a href="docs/configuration/">a config section</a> to choose
+			deliberately instead.
+		</p>
+	</section>
+</Docs>

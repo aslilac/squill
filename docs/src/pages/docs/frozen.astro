@@ -1,0 +1,135 @@
+---
+import Docs from "../../layouts/Docs.astro";
+---
+
+<Docs
+	page="frozen"
+	title="Frozen paths"
+	lede="For files that can't be rewritten after they ship — formatted while new, never touched again."
+>
+	<section>
+		<h2>The problem</h2>
+		<p>
+			sqlx records a checksum of every migration it has run and refuses to
+			start when one of them changes. The checksum is over the bytes, so a
+			reformat that means exactly the same thing still breaks it. The same
+			shape shows up anywhere a file is hashed after the fact: applied
+			migrations, golden files, anything signed.
+		</p>
+		<p>
+			Ignoring the directory is the obvious move, and it is not good enough:
+		</p>
+		<ul>
+			<li>
+				New migrations should still be formatted. Ignoring{" "}
+				<code>migrations/</code> gives that up for the one case where it is
+				free.
+			</li>
+			<li>
+				Adopting squill on an existing codebase cannot start with rewriting
+				every migration that has already run.
+			</li>
+			<li>
+				Even if the whole directory were in squill&rsquo;s style today,
+				squill&rsquo;s style will change, and the next release would rewrite
+				files that shipped years ago.
+			</li>
+		</ul>
+	</section>
+
+	<section>
+		<h2>What frozen does</h2>
+		<p>
+			A <code>frozen</code> glob marks paths squill formats only while they are
+			new. A matching file is skipped once it exists in the baseline ref&rsquo;s
+			tree; files that don&rsquo;t exist there yet format normally.
+		</p>
+		<pre><code>frozen = ["migrations/**"]</code></pre>
+		<p>
+			So a migration is formatted on the branch that introduces it, and from
+			the moment it lands on the baseline it is never rewritten again &mdash;
+			not by a later run, and not when squill&rsquo;s own formatting changes
+			underneath it. Adopting squill on an old repository freezes every
+			already-shipped migration on day one, with no bulk rewrite.
+		</p>
+		<div class="note">
+			<p>
+				This is not <code>ignore</code>. A frozen file is skipped even when
+				you name it explicitly on the command line, because the point is that
+				it is never rewritten &mdash; and a pre-commit hook passes explicit
+				paths.
+			</p>
+		</div>
+	</section>
+
+	<section>
+		<h2>Finding the baseline</h2>
+		<p>
+			squill asks git what the baseline branch is rather than guessing from a
+			list of names, so it works whatever yours is called. In order:
+		</p>
+		<ul>
+			<li><code>frozen-ref</code>, if you set one.</li>
+			<li>
+				The remote&rsquo;s recorded HEAD
+				(<code>refs/remotes/&lt;remote&gt;/HEAD</code>), which{" "}
+				<code>git clone</code> sets and{" "}
+				<code>git remote set-head</code> refreshes.
+			</li>
+			<li>
+				The sole remote-tracking branch, when there is exactly one &mdash; the
+				shape a CI checkout that fetched one branch leaves behind.
+			</li>
+		</ul>
+		<p>
+			The remote is the only convention left, and only when there is more than
+			one: with a single remote squill uses it whatever it is named, falling
+			back to <code>origin</code> when several exist.
+		</p>
+		<p>
+			Reading the baseline is one <code>git ls-tree</code> per repository, and
+			only the ref&rsquo;s tip tree is needed, never its history. A CI checkout
+			at <code>fetch-depth: 1</code> is enough, as long as the base branch
+			itself was fetched.
+		</p>
+	</section>
+
+	<section>
+		<h2>When there is no baseline</h2>
+		<p>
+			Some workflows check out a pull request without fetching the base branch
+			at all. There squill stops with an error rather than guess, because a
+			wrong guess means quietly rewriting a shipped migration &mdash; the exact
+			failure the setting exists to prevent. It names three ways out:
+		</p>
+		<ul>
+			<li><code>git remote set-head &lt;remote&gt; --auto</code> to record it.</li>
+			<li><code>frozen-ref = "origin/your-branch"</code> to name it.</li>
+			<li>
+				<code>--frozen-fetch</code> (or <code>frozen-fetch = true</code>) to
+				let squill run a <code>--depth=1</code> fetch of the remote&rsquo;s
+				HEAD itself.
+			</li>
+		</ul>
+		<p>
+			Fetching is off by default. It is the only thing squill does that touches
+			the network, and a formatter that reaches out implicitly is one that
+			hangs on a slow link, fails in an offline build, and needs credentials it
+			may not have.
+		</p>
+	</section>
+
+	<section>
+		<h2>Reading the output</h2>
+		<p>
+			Skipped files are counted in the summary, so a frozen file is never a
+			silent one:
+		</p>
+		<pre
+			class="dark"><code>12 file(s) checked, 1 reformatted, 0 diagnostic(s), 34 frozen</code></pre>
+		<p>
+			<code>--check</code> ignores them too, so CI does not fail over a
+			migration that shipped before squill arrived.
+		</p>
+	</section>
+</Docs>

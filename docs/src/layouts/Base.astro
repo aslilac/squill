@@ -1,0 +1,473 @@
+---
+// The page shell: head, top bar, footer, and the site's styles. The top
+// bar is deliberately short — Docs is a section, not a list of pages.
+const { title, lede, section, wide } = Astro.props;
+const baseHref = import.meta.env.BASE_URL;
+
+const topNav = [
+	{ href: "docs/", label: "Docs", key: "docs" },
+	{ href: "playground/", label: "Playground", key: "playground" },
+];
+---
+
+<html lang="en">
+	<head>
+		<base href={baseHref} />
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{title ? `${title} — squill` : "squill, SQL formatter"}</title>
+		<meta
+			name="description"
+			content={lede ??
+				"A robust, friendly, and flexible SQL code formatter; even for queries embedded in your application code."}
+		/>
+		<link rel="icon" type="image/svg+xml" href="squill-fav.svg" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,500&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap"
+			rel="stylesheet"
+		/>
+	</head>
+	<body>
+		<main class={wide ? "wide" : undefined}>
+			<div class="site-header">
+				<a class="brand" href=".">
+					<img src="squill.svg" width="32" height="32" alt="" />
+					squill
+				</a>
+				<nav class="site-nav">
+					{
+						topNav.map((item) => (
+							<a
+								href={item.href}
+								aria-current={item.key === section ? "true" : undefined}
+							>
+								{item.label}
+							</a>
+						))
+					}
+					<a href="https://github.com/aslilac/squill">Source</a>
+				</nav>
+			</div>
+
+			<slot />
+
+			<footer>
+				<p>
+					Built by Kayla and her birds &middot; source at{" "}
+					<a href="https://github.com/aslilac/squill">github.com/aslilac/squill</a>
+				</p>
+			</footer>
+		</main>
+
+		<style is:global>
+		:root {
+			color-scheme: light dark;
+			--violet: light-dark(oklch(0.53 0.17 293), oklch(0.72 0.15 293));
+			--violet-deep: light-dark(oklch(0.44 0.16 293), oklch(0.8 0.12 293));
+			--ink: light-dark(#221d2b, #e6e1ee);
+			--paper: light-dark(#f4f1f8, #131019);
+			--edge: light-dark(#e7e2ee, #322b3e);
+			--muted: light-dark(#6f6878, #8a8296);
+			--inset: light-dark(#faf8fd, #191520);
+			--pane: #1c1824;
+			--pane-deep: #191520;
+			--pane-edge: #322b3e;
+			--pane-text: #cfc7db;
+			--green: oklch(0.68 0.13 155);
+		}
+		* {
+			box-sizing: border-box;
+		}
+		body {
+			margin: 0;
+			font:
+				16px/1.7 "IBM Plex Sans",
+				system-ui,
+				sans-serif;
+			color: var(--ink);
+			background: var(--paper);
+		}
+		main {
+			max-width: 64rem;
+			margin: 0 auto;
+			padding: 3rem 1.25rem 4rem;
+		}
+		/* Docs carry a sidebar, so they get the landing page's width plus
+		   the sidebar and its gutter — the prose column keeps the same
+		   measure instead of being squeezed by the nav beside it. */
+		main.wide {
+			max-width: 80rem;
+		}
+		@media (max-width: 720px) {
+			main.wide {
+				max-width: 64rem;
+			}
+		}
+		::selection {
+			background: light-dark(oklch(0.9 0.05 293), oklch(0.4 0.1 293));
+		}
+
+		header {
+			margin-bottom: 2.5rem;
+		}
+		.masthead {
+			display: flex;
+			align-items: center;
+			gap: 1.1rem;
+			margin: 12lvh 0;
+		}
+		h1 {
+			font-family: "Spectral", serif;
+			font-size: 2.8rem;
+			font-weight: 600;
+			letter-spacing: -0.02em;
+			margin: 0;
+			line-height: 1;
+		}
+		.tagline {
+			font-family: "Spectral", serif;
+			font-style: italic;
+			font-size: 1.15rem;
+			color: var(--violet);
+			margin: 0.4rem 0 0;
+		}
+		/* The masthead's own nav. Scoped on purpose: a bare `nav` rule also
+		   catches the docs sidebar, which is a column. */
+		.masthead nav {
+			margin-left: auto;
+			display: flex;
+			align-items: center;
+			gap: 1rem;
+			white-space: nowrap;
+		}
+		.badge {
+			font-family: "JetBrains Mono", monospace;
+			font-size: 0.7rem;
+			font-weight: 600;
+			background: light-dark(oklch(0.95 0.03 293), #241f2e);
+			color: var(--violet-deep);
+			padding: 0.3rem 0.7rem;
+			border-radius: 999px;
+		}
+		@media (max-width: 720px) {
+			.masthead {
+				flex-wrap: wrap;
+			}
+			.masthead nav {
+				margin-left: 0;
+				flex-basis: 100%;
+			}
+		}
+		.flower {
+			font-family: "Spectral", serif;
+			font-style: italic;
+			color: var(--muted);
+			font-size: 0.95rem;
+		}
+
+		h2 {
+			font-family: "Spectral", serif;
+			font-size: 1.5rem;
+			font-weight: 600;
+			letter-spacing: -0.01em;
+			margin: 0 0 0.75rem;
+		}
+		section {
+			margin-top: 2.75rem;
+		}
+
+		.pair {
+			display: grid;
+			grid-template-columns: 1fr;
+			border: 1px solid var(--pane-edge);
+			border-radius: 14px;
+			overflow: hidden;
+			background: var(--pane);
+		}
+		@media (min-width: 900px) {
+			.pair {
+				grid-template-columns: 1fr 1fr;
+			}
+		}
+		.pair figure {
+			margin: 0;
+			min-width: 0;
+			display: flex;
+			flex-direction: column;
+		}
+		.pair figure + figure {
+			background: var(--pane-deep);
+		}
+		@media (min-width: 900px) {
+			.pair figure:first-child {
+				border-right: 1px solid var(--pane-edge);
+			}
+		}
+		.pair figcaption {
+			font-family: "JetBrains Mono", monospace;
+			font-size: 0.65rem;
+			letter-spacing: 0.1em;
+			text-transform: uppercase;
+			color: #6f6878;
+			padding: 0.85rem 1.25rem 0.2rem;
+			display: flex;
+			justify-content: space-between;
+		}
+		.tidy {
+			color: var(--green);
+		}
+		/* The set:html wrapper and the pre both stretch so the scrollable
+		   area fills the pane, not just the lines of text. */
+		.pair figure > div {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			min-width: 0;
+		}
+		/* shiki emits the <pre> at build time, so it needs :global and a
+		   background override (the panes supply their own). */
+		.pair :global(pre) {
+			flex: 1;
+			margin: 0;
+			padding: 0.5rem 1.25rem 1.25rem;
+			overflow-x: auto;
+			background: transparent !important;
+			font-family: "JetBrains Mono", monospace;
+			font-size: 13px;
+			line-height: 1.7;
+			tab-size: 2;
+		}
+		code {
+			font-family: "JetBrains Mono", monospace;
+		}
+		/* Code blocks that aren't the dark hero style — the config snippets
+		   through the docs. Sized to match pre.dark, and sitting a hair
+		   above the inline `code` measure rather than browser-default 1em. */
+		pre:not(.dark):not(.shiki) {
+			background: var(--inset);
+			border: 1px solid var(--edge);
+			border-radius: 10px;
+			padding: 0.9rem 1.1rem;
+			overflow-x: auto;
+			font-size: 0.85rem;
+			line-height: 1.6;
+			tab-size: 2;
+		}
+		pre.dark {
+			background: var(--pane);
+			color: var(--pane-text);
+			border: 1px solid var(--pane-edge);
+			border-radius: 12px;
+			padding: 1rem 1.2rem;
+			overflow-x: auto;
+			font-size: 0.85rem;
+			line-height: 1.6;
+		}
+		p code,
+		td code,
+		code.boxed {
+			background: var(--inset);
+			border: 1px solid var(--edge);
+			border-radius: 5px;
+			padding: 0.05rem 0.35rem;
+			font-size: 0.85em;
+		}
+
+		table {
+			border-collapse: collapse;
+			width: 100%;
+		}
+		th,
+		td {
+			text-align: left;
+			padding: 0.5rem 0.75rem;
+			border-bottom: 1px solid var(--edge);
+		}
+		/* Option names shouldn't break at their hyphens; the table is in a
+		   .scroll wrapper, so it can grow sideways instead. */
+		td code {
+			white-space: nowrap;
+		}
+		th {
+			font-family: "JetBrains Mono", monospace;
+			font-size: 0.7rem;
+			text-transform: uppercase;
+			letter-spacing: 0.1em;
+			color: var(--muted);
+		}
+		ul li {
+			padding: 0.2em 0;
+		}
+		a {
+			color: var(--violet);
+			text-decoration: none;
+		}
+		a:hover {
+			color: var(--violet-deep);
+		}
+		footer {
+			margin-top: 3.5rem;
+			text-align: center;
+			color: var(--muted);
+		}
+
+		/* Site chrome shared by every page. */
+		.site-header {
+			display: flex;
+			align-items: center;
+			gap: 1rem;
+			flex-wrap: wrap;
+			padding-bottom: 1rem;
+			margin-bottom: 2rem;
+			border-bottom: 1px solid var(--edge);
+		}
+		.brand {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.5rem;
+			font-family: "Spectral", Georgia, serif;
+			font-size: 1.25rem;
+			font-weight: 600;
+			color: var(--ink);
+		}
+		.brand:hover {
+			color: var(--violet);
+		}
+		.site-nav {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.25rem 1rem;
+			margin-left: auto;
+			font-size: 0.9rem;
+		}
+		.site-nav a[aria-current] {
+			color: var(--ink);
+			font-weight: 600;
+			text-decoration: underline;
+			text-underline-offset: 4px;
+			text-decoration-color: var(--violet);
+		}
+		/* Sub-pages lead with their own title rather than the wordmark. */
+		.page-title {
+			font-size: 2rem;
+			margin: 0 0 0.35rem;
+		}
+		.page-lede {
+			color: var(--muted);
+			font-size: 1.05rem;
+			margin-top: 0;
+			margin-bottom: 2rem;
+		}
+		h3 {
+			font-family: "Spectral", Georgia, serif;
+			font-size: 1.15rem;
+			margin: 2rem 0 0.5rem;
+		}
+		/* Wide tables scroll rather than pushing the page sideways. */
+		.scroll {
+			overflow-x: auto;
+		}
+		.note {
+			border-left: 3px solid var(--violet);
+			background: var(--inset);
+			padding: 0.75rem 1rem;
+			margin: 1.5rem 0;
+			border-radius: 0 5px 5px 0;
+		}
+		.note > :first-child {
+			margin-top: 0;
+		}
+		.note > :last-child {
+			margin-bottom: 0;
+		}
+		/* Docs shell: sidebar beside content, stacked on narrow screens. */
+		.docs-shell {
+			display: grid;
+			grid-template-columns: 13rem minmax(0, 1fr);
+			gap: 3rem;
+			align-items: start;
+		}
+		@media (max-width: 720px) {
+			.docs-shell {
+				grid-template-columns: minmax(0, 1fr);
+				gap: 1.5rem;
+			}
+		}
+		.sidebar {
+			position: sticky;
+			top: 2rem;
+			font-size: 0.92rem;
+		}
+		@media (max-width: 720px) {
+			.sidebar {
+				position: static;
+				padding-bottom: 1rem;
+				border-bottom: 1px solid var(--edge);
+			}
+		}
+		.sidebar h2 {
+			font-family: "JetBrains Mono", monospace;
+			font-size: 0.68rem;
+			text-transform: uppercase;
+			letter-spacing: 0.1em;
+			color: var(--muted);
+			margin: 1.5rem 0 0.5rem;
+			border: none;
+			/* Line up with the item labels, past the bar gutter and the
+			   pill's own padding. */
+			padding: 0 0 0 1.45rem;
+		}
+		.sidebar h2:first-child {
+			margin-top: 0;
+		}
+		.sidebar nav {
+			display: block;
+		}
+		.sidebar ul {
+			list-style: none;
+			margin: 0 0 0.25rem;
+			/* Room to the left of the pills for the current-page bar. */
+			padding: 0 0 0 0.75rem;
+		}
+		.sidebar li {
+			position: relative;
+			padding: 0;
+		}
+		/* Adjacent pills need air: a hover background butted straight up
+		   against the current-page background reads as one lumpy shape. */
+		.sidebar li + li {
+			margin-top: 0.25rem;
+		}
+		.sidebar a {
+			display: block;
+			padding: 0.35rem 0.7rem;
+			border-radius: 6px;
+			color: var(--ink);
+		}
+		.sidebar a:hover {
+			background: var(--inset);
+			color: var(--violet);
+		}
+		.sidebar a[aria-current="page"] {
+			background: var(--inset);
+			color: var(--violet-deep);
+			font-weight: 600;
+		}
+		/* The marker sits outside the pill rather than inset into it: an
+		   inset shadow follows the border radius and tapers at the
+		   corners, which reads as a smudge rather than a bar. */
+		.sidebar a[aria-current="page"]::before {
+			content: "";
+			position: absolute;
+			left: -0.75rem;
+			top: 0.2rem;
+			bottom: 0.2rem;
+			width: 2px;
+			border-radius: 1px;
+			background: var(--violet);
+		}
+		</style>
+	</body>
+</html>

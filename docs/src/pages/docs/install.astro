@@ -1,0 +1,79 @@
+---
+import Docs from "../../layouts/Docs.astro";
+---
+
+<Docs
+	page="install"
+	title="Install"
+	lede="Four ways to get the binary, in rough order of how little you have to think about it."
+>
+	<section>
+		<h2>mise</h2>
+		<p>
+			<a href="https://mise.jdx.dev">mise</a> and its GitHub backend pull a
+			precompiled binary from the latest release, picking the one that matches
+			whatever it is running on. Nothing has to know the machine&rsquo;s os or
+			architecture, which is what makes it the easy one to drop into CI.
+		</p>
+		<pre class="dark"><code>mise use -g github:aslilac/squill
+
+squill fmt --check .</code></pre>
+		<p>
+			Pin a version with <code>github:aslilac/squill@0.2.0</code>. mise verifies
+			GitHub artifact attestations and SLSA provenance on install.
+		</p>
+	</section>
+
+	<section>
+		<h2>Nix</h2>
+		<p>
+			The flake exposes the binary as its default package, so there is no
+			install step at all if you only want to run it once.
+		</p>
+		<pre class="dark"><code>nix run github:aslilac/squill -- fmt --check .
+
+nix shell github:aslilac/squill</code></pre>
+		<p>
+			It builds from source, so it covers platforms the release matrix does
+			not.
+		</p>
+	</section>
+
+	<section>
+		<h2>Cargo</h2>
+		<p>
+			Cargo can clone the source, check out the release tag, and install the
+			binary in one command. This is the route that needs a Rust toolchain.
+		</p>
+		<pre
+			class="dark"><code>cargo install --git https://github.com/aslilac/squill.git --tag v0.2.0 cli --bin squill</code></pre>
+	</section>
+
+	<section>
+		<h2>Release archives</h2>
+		<p>
+			Every tag publishes archives to <a
+				href="https://github.com/aslilac/squill/releases">GitHub releases</a
+			>: Linux and Windows on x86_64 and arm64, and macOS on arm64.
+		</p>
+		<pre
+			class="dark"><code>curl -fsSL https://github.com/aslilac/squill/releases/download/v0.2.0/squill-v0.2.0-x86_64-unknown-linux-gnu.tar.gz | tar xz
+cp squill /usr/local/bin/
+squill fmt --check .</code></pre>
+	</section>
+
+	<section>
+		<h2>Checking, not writing</h2>
+		<p>
+			However you install it, CI usually wants <code>--check</code>: squill
+			writes nothing, prints a diff for anything that would change, and exits 1
+			if there is anything to report.
+		</p>
+		<pre class="dark"><code>squill fmt --check .</code></pre>
+		<p>
+			Add <code>--strict</code> to also fail when a statement could not be
+			parsed and was passed through verbatim &mdash; useful once you expect
+			squill to understand everything in the tree.
+		</p>
+	</section>
+</Docs>

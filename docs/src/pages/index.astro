@@ -1,5 +1,6 @@
 ---
 import { codeToHtml } from "shiki";
+import Base from "../layouts/Base.astro";
 import { colors, shikiTheme } from "../playground/theme.js";
 
 // The formatted pane is squill's real output for the input pane
@@ -60,490 +61,150 @@ const afterHtml = `<pre class="shiki squill-dark" style="color:${colors.fg}"><co
 ${body}
 ${tail}</code></pre>`;
 
-const baseHref = import.meta.env.BASE_URL;
 ---
 
-<html lang="en">
-	<head>
-		<base href={baseHref} />
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>squill, SQL formatter</title>
-		<meta
-			name="description"
-			content="A robust, friendly, and flexible SQL code formatter; even for queries embedded in your application code."
-		/>
-		<link rel="icon" type="image/svg+xml" href="squill-fav.svg" />
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link
-			href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,500&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap"
-			rel="stylesheet"
-		/>
-	</head>
-	<body>
-		<main>
-			<header>
-				<div class="masthead">
-					<img src="squill.svg" width="64" height="64" alt="" />
-					<div>
-						<h1>squill</h1>
-						<p class="tagline">
-							A robust, friendly, and flexible formatter for SQL code
-							everywhere.
-						</p>
-					</div>
-					<nav>
-						<a href="playground/">Playground</a>
-						<a href="https://github.com/aslilac/squill">Source</a>
-						<span class="badge">v0.2.0 · MPL-2.0</span>
-					</nav>
-				</div>
-				<p>
-					squill (/skwɪl/) is a formatter for SQL code that's built to reliably
-					format SQL wherever it may live. It uses Tree-sitter grammars to
-					locate your SQL code, even when it's embedded in another language. It
-					plucks your queries out surgically and formats them in-place without
-					disturbing your other code. It aims to support all features of
-					Postgres and SQLite, however you use them.
+<Base>
+	<header>
+		<div class="masthead">
+			<img src="squill.svg" width="64" height="64" alt="" />
+			<div>
+				<h1>squill</h1>
+				<p class="tagline">
+					A robust, friendly, and flexible formatter for SQL code everywhere.
 				</p>
-				<p>
-					Every statement squill rewrites is
-					<em>self-checked</em>: the output must re-lex to the same tokens —
-					allowing only named, verified transforms like keyword case and
-					pg_dump's clause order — and keep every comment, or squill emits your
-					original bytes untouched. Output is never less correct than input.
-				</p>
-				<p class="flower">
-					named for the <a href="https://en.wikipedia.org/wiki/Scilla_siberica"
-						>Siberian squill</a
-					>
-				</p>
-			</header>
-
-			<div class="pair">
-				<figure>
-					<figcaption>input <span>rust · sqlx</span></figcaption>
-					<div set:html={beforeHtml} />
-				</figure>
-				<figure>
-					<figcaption>
-						output <span class="tidy">✓ formatted</span>
-					</figcaption>
-					<div set:html={afterHtml} />
-				</figure>
 			</div>
+			<nav>
+				<span class="badge">v0.2.0 · MPL-2.0</span>
+			</nav>
+		</div>
+		<p>
+			squill (/skwɪl/) is a formatter for SQL code that's built to reliably
+			format SQL wherever it may live. It uses Tree-sitter grammars to locate
+			your SQL code, even when it's embedded in another language. It plucks
+			your queries out surgically and formats them in-place without disturbing
+			your other code. It aims to support all features of Postgres and SQLite,
+			however you use them.
+		</p>
+		<p>
+			Every statement squill rewrites is{" "}
+			<em>self-checked</em>: the output must re-lex to the same tokens —
+			allowing only named, verified transforms like keyword case and pg_dump's
+			clause order — and keep every comment, or squill emits your original
+			bytes untouched. Output is never less correct than input.
+		</p>
+		<p class="flower">
+			named for the <a href="https://en.wikipedia.org/wiki/Scilla_siberica"
+				>Siberian squill</a
+			>
+		</p>
+	</header>
 
-			<section>
-				<h2>SQL in your source code</h2>
+	<div class="pair">
+		<figure>
+			<figcaption>input <span>rust · sqlx</span></figcaption>
+			<div set:html={beforeHtml} />
+		</figure>
+		<figure>
+			<figcaption>
+				output <span class="tidy">✓ formatted</span>
+			</figcaption>
+			<div set:html={afterHtml} />
+		</figure>
+	</div>
 
-				<p>
-					squill also formats SQL embedded in host languages, located with
-					tree-sitter queries. Only multiline string syntaxes are rewritten;
-					anything with interpolation holes is never touched. Try it in the <a
-						href="playground/">playground</a
-					>.
-				</p>
+	<section>
+		<h2>Get started</h2>
+		<pre class="dark"><code>mise use -g github:aslilac/squill
 
-				<ul>
-					<li>
-						<div style="display: inline-flex; gap: 4px; align-items: center;">
-							<img style="height: 16px;" src="langs/rust.svg" />
-							<code class="boxed">sqlx::query!</code> and <code class="boxed"
-								>sqlx::query_as!</code
-							> in Rust
-						</div>
-					</li>
-					<li>
-						<div style="display: inline-flex; gap: 4px; align-items: center;">
-							<img style="height: 16px;" src="langs/go.svg" />
-							<code class="boxed">"database/sql"</code> in Go
-						</div>
-					</li>
-					<li>
-						<div style="display: inline-flex; gap: 4px; align-items: center;">
-							<img style="height: 16px;" src="langs/typescript.svg" />
-							<code class="boxed">sql`&hellip;`</code> templates in JavaScript/TypeScript
-						</div>
-					</li>
-					<li>
-						<div style="display: inline-flex; gap: 4px; align-items: center;">
-							<img style="height: 16px;" src="langs/gleam.svg" />
-							<code class="boxed">sqlight</code>/<code class="boxed">pog</code> in
-							Gleam
-						</div>
-					</li>
-					<li>
-						<div style="display: inline-flex; gap: 4px; align-items: center;">
-							<img style="height: 16px;" src="langs/python.svg" />
-							<code class="boxed">cursor.execute</code> in Python (<code
-								class="boxed">%s</code
-							> placeholders preserved)
-						</div>
-					</li>
-				</ul>
-			</section>
+squill fmt --check .</code></pre>
+		<p>
+			That is the short version; <a href="docs/install/">Install</a> covers Nix,
+			Cargo, and release archives, and what to run in CI.
+		</p>
+	</section>
 
-			<p>
-				It's quick, too: the entire SQL corpus of <a
-					href="https://github.com/coder/coder">coder/coder</a
-				> — 1,255 files, 36,000+ lines of migrations, queries, and fixtures — formats
-				in about <strong>215&nbsp;ms</strong>. A single 15,000-line file takes <strong
-					>94&nbsp;ms</strong
-				>. Fast enough for pre-commit, save-on-format, everything.
-			</p>
+	<section>
+		<h2>Where to go next</h2>
+		<ul>
+			<li>
+				<a href="docs/install/">Install</a> — mise, Nix, Cargo, release archives.
+			</li>
+			<li>
+				<a href="docs/configuration/">Configuration</a> — every option, where
+				settings come from, and per-language sections.
+			</li>
+			<li>
+				<a href="docs/embedded/">Embedded SQL</a> — the host languages squill
+				understands, which strings it will rewrite, and how to write your own
+				tree-sitter extraction query.
+			</li>
+			<li>
+				<a href="docs/frozen/">Frozen paths</a> — formatting new migrations without
+				ever rewriting the ones that already shipped.
+			</li>
+			<li>
+				<a href="playground/">Playground</a> — try it in the browser; your
+				input stays on your machine.
+			</li>
+		</ul>
+	</section>
 
-			<section>
-				<h2>Install</h2>
-				<p>
-					You can use <a href="https://mise.jdx.dev">mise</a> and its GitHub backend, which will download a precompiled binary from the latest Github release.
-				</p>
-				<pre
-					class="dark"><code>mise use -g github:aslilac/squill</code></pre>
-				<p>A <a href="https://nixos.org">Nix</a> flake is available too.</p>
-				<pre class="dark"><code>nix shell github:aslilac/squill</code></pre>
-				<p>
-					Cargo can clone the source, check out the latest release tag, and
-					install the binary in one command.
-				</p>
-				<pre
-					class="dark"><code>cargo install --git https://github.com/aslilac/squill.git --tag v0.2.0 cli --bin squill</code></pre>
-			</section>
+	<section>
+		<h2>SQL in your source code</h2>
+		<p>
+			squill also formats SQL embedded in host languages, located with
+			tree-sitter queries. Only multiline string syntaxes are rewritten;
+			anything with interpolation holes is never touched.
+		</p>
+		<ul>
+			<li>
+				<div style="display: inline-flex; gap: 4px; align-items: center;">
+					<img style="height: 16px;" src="langs/rust.svg" />
+					<code class="boxed">sqlx::query!</code> and <code class="boxed"
+						>sqlx::query_as!</code
+					> in Rust
+				</div>
+			</li>
+			<li>
+				<div style="display: inline-flex; gap: 4px; align-items: center;">
+					<img style="height: 16px;" src="langs/go.svg" />
+					<code class="boxed">"database/sql"</code> in Go
+				</div>
+			</li>
+			<li>
+				<div style="display: inline-flex; gap: 4px; align-items: center;">
+					<img style="height: 16px;" src="langs/typescript.svg" />
+					<code class="boxed">sql`&hellip;`</code> templates in JavaScript/TypeScript
+				</div>
+			</li>
+			<li>
+				<div style="display: inline-flex; gap: 4px; align-items: center;">
+					<img style="height: 16px;" src="langs/gleam.svg" />
+					<code class="boxed">sqlight</code>/<code class="boxed">pog</code> in
+					Gleam
+				</div>
+			</li>
+			<li>
+				<div style="display: inline-flex; gap: 4px; align-items: center;">
+					<img style="height: 16px;" src="langs/python.svg" />
+					<code class="boxed">cursor.execute</code> in Python (<code
+						class="boxed">%s</code
+					> placeholders preserved)
+				</div>
+			</li>
+		</ul>
+		<p>
+			<a href="docs/embedded/">How it works, and how to point it at your own APIs</a
+			>.
+		</p>
+	</section>
 
-			<section>
-				<h2>Configuration</h2>
-				<p>
-					Configured in the nearest <code>squill.toml</code> (or
-					<code>.config/squill.toml</code>), overridable with flags. The
-					search upward stops at a git repository root, a mount point, or a
-					symlinked directory, so a config outside a checkout never reaches
-					inside it. The defaults are the house style; everything is
-					optional. When
-					recursing directories, squill honors <code>.gitignore</code> and
-					skips hidden files; the <code>ignore</code> key and repeated
-					<code>--ignore</code> flags skip more.
-				</p>
-				<table>
-					<thead>
-						<tr><th>key</th><th>values</th><th>default</th></tr>
-					</thead>
-					<tbody>
-						<tr>
-							<td><code>dialect</code></td>
-							<td><code>postgres</code> | <code>sqlite</code></td>
-							<td><code>postgres</code></td>
-						</tr>
-						<tr>
-							<td><code>indent</code></td>
-							<td><code>tabs</code> | <code>spaces</code></td>
-							<td><code>tabs</code></td>
-						</tr>
-						<tr>
-							<td><code>indent-width</code></td>
-							<td>width of one level (and tab measure)</td>
-							<td><code>2</code></td>
-						</tr>
-						<tr>
-							<td><code>max-width</code></td>
-							<td>target line width, 20 to 500</td>
-							<td><code>80</code></td>
-						</tr>
-						<tr>
-							<td><code>keyword-case</code></td>
-							<td><code>lower</code> | <code>upper</code></td>
-							<td><code>lower</code></td>
-						</tr>
-						<tr>
-							<td><code>quote-idents</code></td>
-							<td><code>as-needed</code> | <code>always</code></td>
-							<td><code>as-needed</code></td>
-						</tr>
-						<tr>
-							<td><code>at-params</code></td>
-							<td
-								>lex <a
-									href="https://docs.sqlc.dev/en/latest/howto/named_parameters.html"
-									>sqlc-style</a
-								>
-								<code>@name</code> parameters</td
-							>
-							<td><code>false</code></td>
-						</tr>
-						<tr>
-							<td><code>ignore</code></td>
-							<td>array of glob patterns to skip when recursing</td>
-							<td><code>[]</code></td>
-						</tr>
-						<tr>
-							<td><code>frozen</code></td>
-							<td>array of glob patterns that are immutable once they exist on
-								the baseline ref</td>
-							<td><code>[]</code></td>
-						</tr>
-						<tr>
-							<td><code>frozen-ref</code></td>
-							<td>the baseline ref <code>frozen</code> compares against</td>
-							<td>discovered from the remote</td>
-						</tr>
-						<tr>
-							<td><code>frozen-fetch</code></td>
-							<td>let <code>frozen</code> fetch the remote&rsquo;s HEAD when no
-								baseline is available locally</td>
-							<td><code>false</code></td>
-						</tr>
-					</tbody>
-				</table>
-				<p>
-					SQL embedded in host code copies that file&rsquo;s own indent
-					character, so a spaces-indented file never gains tabs. To choose
-					deliberately &mdash; per language, from one config file &mdash; add
-					a section named for the host language. It takes the same keys as
-					the top level (all but the file-wide <code>ignore</code>,
-					<code>frozen</code>, and <code>frozen-ref</code>) and
-					overrides them for files of that language. <code>[javascript]</code>
-					covers <code>.js</code>/<code>.jsx</code>, and
-					<code>[typescript]</code> covers <code>.ts</code>/<code>.tsx</code>.
-				</p>
-				<p>
-					Some files cannot be rewritten after they ship, even into an
-					identical-meaning form &mdash; sqlx checksums every migration and
-					refuses to run when one changes. <code>frozen</code> marks paths
-					squill formats only while they are new, so a shipped migration keeps
-					the shape it shipped in even as squill&rsquo;s own style moves on. A
-					match is skipped once it exists in the baseline ref&rsquo;s tree;
-					new files under the same globs format normally.
-				</p>
-				<pre><code>frozen = ["migrations/**"]</code></pre>
-			</section>
-
-			<footer>
-				<p>
-					Built by Kayla and her birds &middot; source at{" "}
-					<a href="https://github.com/aslilac/squill">github.com/aslilac/squill</a>
-				</p>
-			</footer>
-		</main>
-
-		<style>
-			:root {
-				color-scheme: light dark;
-				--violet: light-dark(oklch(0.53 0.17 293), oklch(0.72 0.15 293));
-				--violet-deep: light-dark(oklch(0.44 0.16 293), oklch(0.8 0.12 293));
-				--ink: light-dark(#221d2b, #e6e1ee);
-				--paper: light-dark(#f4f1f8, #131019);
-				--edge: light-dark(#e7e2ee, #322b3e);
-				--muted: light-dark(#6f6878, #8a8296);
-				--inset: light-dark(#faf8fd, #191520);
-				--pane: #1c1824;
-				--pane-deep: #191520;
-				--pane-edge: #322b3e;
-				--pane-text: #cfc7db;
-				--green: oklch(0.68 0.13 155);
-			}
-			* {
-				box-sizing: border-box;
-			}
-			body {
-				margin: 0;
-				font:
-					16px/1.7 "IBM Plex Sans",
-					system-ui,
-					sans-serif;
-				color: var(--ink);
-				background: var(--paper);
-			}
-			main {
-				max-width: 64rem;
-				margin: 0 auto;
-				padding: 3rem 1.25rem 4rem;
-			}
-			::selection {
-				background: light-dark(oklch(0.9 0.05 293), oklch(0.4 0.1 293));
-			}
-
-			header {
-				margin-bottom: 2.5rem;
-			}
-			.masthead {
-				display: flex;
-				align-items: center;
-				gap: 1.1rem;
-				margin: 12lvh 0;
-			}
-			h1 {
-				font-family: "Spectral", serif;
-				font-size: 2.8rem;
-				font-weight: 600;
-				letter-spacing: -0.02em;
-				margin: 0;
-				line-height: 1;
-			}
-			.tagline {
-				font-family: "Spectral", serif;
-				font-style: italic;
-				font-size: 1.15rem;
-				color: var(--violet);
-				margin: 0.4rem 0 0;
-			}
-			nav {
-				margin-left: auto;
-				display: flex;
-				align-items: center;
-				gap: 1rem;
-				white-space: nowrap;
-			}
-			.badge {
-				font-family: "JetBrains Mono", monospace;
-				font-size: 0.7rem;
-				font-weight: 600;
-				background: light-dark(oklch(0.95 0.03 293), #241f2e);
-				color: var(--violet-deep);
-				padding: 0.3rem 0.7rem;
-				border-radius: 999px;
-			}
-			@media (max-width: 720px) {
-				.masthead {
-					flex-wrap: wrap;
-				}
-				nav {
-					margin-left: 0;
-					flex-basis: 100%;
-				}
-			}
-			.flower {
-				font-family: "Spectral", serif;
-				font-style: italic;
-				color: var(--muted);
-				font-size: 0.95rem;
-			}
-
-			h2 {
-				font-family: "Spectral", serif;
-				font-size: 1.5rem;
-				font-weight: 600;
-				letter-spacing: -0.01em;
-				margin: 0 0 0.75rem;
-			}
-			section {
-				margin-top: 2.75rem;
-			}
-
-			.pair {
-				display: grid;
-				grid-template-columns: 1fr;
-				border: 1px solid var(--pane-edge);
-				border-radius: 14px;
-				overflow: hidden;
-				background: var(--pane);
-			}
-			@media (min-width: 900px) {
-				.pair {
-					grid-template-columns: 1fr 1fr;
-				}
-			}
-			.pair figure {
-				margin: 0;
-				min-width: 0;
-				display: flex;
-				flex-direction: column;
-			}
-			.pair figure + figure {
-				background: var(--pane-deep);
-			}
-			@media (min-width: 900px) {
-				.pair figure:first-child {
-					border-right: 1px solid var(--pane-edge);
-				}
-			}
-			.pair figcaption {
-				font-family: "JetBrains Mono", monospace;
-				font-size: 0.65rem;
-				letter-spacing: 0.1em;
-				text-transform: uppercase;
-				color: #6f6878;
-				padding: 0.85rem 1.25rem 0.2rem;
-				display: flex;
-				justify-content: space-between;
-			}
-			.tidy {
-				color: var(--green);
-			}
-			/* The set:html wrapper and the pre both stretch so the scrollable
-			   area fills the pane, not just the lines of text. */
-			.pair figure > div {
-				flex: 1;
-				display: flex;
-				flex-direction: column;
-				min-width: 0;
-			}
-			/* shiki emits the <pre> at build time, so it needs :global and a
-			   background override (the panes supply their own). */
-			.pair :global(pre) {
-				flex: 1;
-				margin: 0;
-				padding: 0.5rem 1.25rem 1.25rem;
-				overflow-x: auto;
-				background: transparent !important;
-				font-family: "JetBrains Mono", monospace;
-				font-size: 13px;
-				line-height: 1.7;
-				tab-size: 2;
-			}
-			code {
-				font-family: "JetBrains Mono", monospace;
-			}
-			pre.dark {
-				background: var(--pane);
-				color: var(--pane-text);
-				border: 1px solid var(--pane-edge);
-				border-radius: 12px;
-				padding: 1rem 1.2rem;
-				overflow-x: auto;
-				font-size: 0.85rem;
-				line-height: 1.6;
-			}
-			p code,
-			td code,
-			code.boxed {
-				background: var(--inset);
-				border: 1px solid var(--edge);
-				border-radius: 5px;
-				padding: 0.05rem 0.35rem;
-				font-size: 0.85em;
-			}
-
-			table {
-				border-collapse: collapse;
-				width: 100%;
-			}
-			th,
-			td {
-				text-align: left;
-				padding: 0.5rem 0.75rem;
-				border-bottom: 1px solid var(--edge);
-			}
-			th {
-				font-family: "JetBrains Mono", monospace;
-				font-size: 0.7rem;
-				text-transform: uppercase;
-				letter-spacing: 0.1em;
-				color: var(--muted);
-			}
-			ul li {
-				padding: 0.2em 0;
-			}
-			a {
-				color: var(--violet);
-				text-decoration: none;
-			}
-			a:hover {
-				color: var(--violet-deep);
-			}
-			footer {
-				margin-top: 3.5rem;
-				text-align: center;
-				color: var(--muted);
-			}
-		</style>
-	</body>
-</html>
+	<p>
+		It's quick, too: the entire SQL corpus of <a
+			href="https://github.com/coder/coder">coder/coder</a
+		> — 1,255 files, 36,000+ lines of migrations, queries, and fixtures — formats
+		in about <strong>215&nbsp;ms</strong>. A single 15,000-line file takes <strong
+			>94&nbsp;ms</strong
+		>. Fast enough for pre-commit, save-on-format, everything.
+	</p>
+</Base>

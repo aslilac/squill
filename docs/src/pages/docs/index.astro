@@ -1,0 +1,56 @@
+---
+import Docs from "../../layouts/Docs.astro";
+---
+
+<Docs
+	page="overview"
+	title="Documentation"
+	lede="A SQL formatter for Postgres and SQLite, for queries in .sql files and queries embedded in host code."
+>
+	<section>
+		<h2>Start here</h2>
+		<p>
+			<a href="docs/install/">Install</a> covers mise, Nix, Cargo, and release
+			archives, plus what to run in CI. The short version:
+		</p>
+		<pre class="dark"><code>mise use -g github:aslilac/squill
+
+squill fmt --check .</code></pre>
+	</section>
+
+	<section>
+		<h2>Reference</h2>
+		<ul>
+			<li>
+				<a href="docs/configuration/">Configuration</a> — every option and its
+				flag, where settings come from and which layer wins, and per-language
+				sections.
+			</li>
+			<li>
+				<a href="docs/embedded/">Embedded SQL</a> — the host languages squill
+				understands, which strings it will and won&rsquo;t rewrite, and how to
+				write your own tree-sitter extraction query.
+			</li>
+			<li>
+				<a href="docs/frozen/">Frozen paths</a> — formatting new migrations
+				without ever rewriting the ones that already shipped.
+			</li>
+		</ul>
+	</section>
+
+	<section>
+		<h2>The one guarantee</h2>
+		<p>
+			Every statement squill rewrites is re-lexed and compared against its
+			input. The output must produce the same tokens — allowing only named,
+			verified transforms like keyword case — and must keep every comment. On
+			any mismatch squill emits your original bytes untouched.
+		</p>
+		<p>
+			So a statement squill does not fully understand is passed through rather
+			than mangled, and output is never less correct than input. Run with{" "}
+			<code>--strict</code> to turn those passthroughs into a failure once you
+			expect squill to understand everything in your tree.
+		</p>
+	</section>
+</Docs>
