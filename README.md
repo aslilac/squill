@@ -40,7 +40,7 @@ Set in the nearest `squill.toml` or `.config/squill.toml`, overridable with flag
 | key | flag | values | default |
 | --- | --- | --- | --- |
 | `dialect` | `--dialect` | `postgres` \| `sqlite` | `postgres` |
-| `indent` | `--indent` | `tab` \| `spaces` | `tab` |
+| `indent` | `--indent` | `tabs` \| `spaces` | `tabs` |
 | `indent-width` | `--indent-width` | width of one level (and tab measure) | `2` |
 | `max-width` | `--max-width` | target line width, 20 to 500 | `80` |
 | `keyword-case` | `--keyword-case` | `lower` \| `upper` | `lower` |
