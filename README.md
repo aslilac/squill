@@ -28,7 +28,7 @@ nix shell github:aslilac/squill
 Cargo can clone the source, checkout the latest release tag, and install the binary in a single command. 
 
 ```sh
-cargo install --git https://github.com/aslilac/squill.git --tag v0.2.1 cli --bin squill
+cargo install --git https://github.com/aslilac/squill.git --tag v0.2.2 cli --bin squill
 ```
 
 ## Usage
