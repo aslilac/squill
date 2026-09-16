@@ -14,7 +14,12 @@ use formatter::Options;
 use rayon::prelude::*;
 
 mod config;
+mod frozen;
 use config::PartialOptions;
+
+/// `squill <version>` — whatever cargo compiled this binary with, so it
+/// tracks the workspace manifest without a second place to bump.
+const VERSION: &str = concat!("squill ", env!("CARGO_PKG_VERSION"));
 
 const USAGE: &str = "\
 squill — a SQL formatter
@@ -42,16 +47,25 @@ Options:
   --quote-idents <MODE>   as-needed (default) | always
   --at-params             Treat sqlc-style @name as parameters (Postgres)
   --no-config             Ignore squill.toml files
+  --frozen <GLOB>         Treat matching paths as immutable once they
+                          exist on the baseline ref: format them while
+                          new, never rewrite them after (repeatable)
+  --frozen-ref <REF>      Baseline ref for --frozen (default: whatever
+                          the remote records as its HEAD)
+  --frozen-fetch          Let --frozen fetch the remote's HEAD when no
+                          baseline ref is available locally
   --embedded              Also format SQL embedded in host files (.rs,
                           .go, .py, .js/.ts/.tsx, .gleam) when recursing
                           directories (explicit host paths always format)
   --embedded-query <SCM>  Override the tree-sitter extraction query
+  -V, --version           Print the version and exit
   -h, --help              Show this help
 
 Configuration: the nearest squill.toml or .config/squill.toml at or
 above each formatted file supplies defaults (keys: dialect, indent,
-indent-width, max-width, keyword-case, quote-idents, at-params, and
-ignore — an array of glob patterns relative to the config file).
+indent-width, max-width, keyword-case, quote-idents, at-params, ignore
+and frozen — arrays of glob patterns relative to the config file — and
+frozen-ref).
 Explicit flags override the config. The search upward stops at a git
 repository root, a mount point, or a symlinked directory, so a config
 outside a checkout never reaches inside it. Directory recursion honors
@@ -79,6 +93,16 @@ bare comma in a table header, so quote the list:
 Embedded SQL copies the host file's own indent character unless an
 indent style is configured, so a spaces-indented file never gains tabs
 by accident.
+
+Frozen paths are for files that cannot change after they ship, such as
+sqlx migrations, whose checksums a reformat would break:
+
+    frozen = [\"migrations/**\"]
+
+A matching file is formatted while it is new and skipped once it exists
+on the baseline ref, so squill's own style can move on without ever
+rewriting one. Unlike ignore, this applies to files named explicitly on
+the command line too — the point is that they are never rewritten.
 ";
 
 struct Args {
@@ -91,17 +115,33 @@ struct Args {
 	embed: bool,
 	/// Override the tree-sitter extraction query (.scm source).
 	embed_query: Option<String>,
+	frozen: Vec<String>,
+	frozen_ref: Option<String>,
+	frozen_fetch: bool,
 	/// Glob patterns to skip when recursing (cwd-relative).
 	ignore: Vec<String>,
 	overrides: PartialOptions,
 	paths: Vec<PathBuf>,
 }
 
-fn parse_args() -> Result<Args, String> {
+/// What the command line asked for: work to do, or a message to print on
+/// the way out. `--help` and `--version` are requests that were answered,
+/// not errors, so they go to stdout and exit 0.
+enum Invocation {
+	Run(Box<Args>),
+	Print(String),
+}
+
+fn parse_args() -> Result<Invocation, String> {
 	let mut argv = std::env::args().skip(1).peekable();
 	match argv.next().as_deref() {
 		Some("fmt") => {}
-		Some("-h" | "--help") | None => return Err(USAGE.to_string()),
+		Some("-h" | "--help") => return Ok(Invocation::Print(USAGE.to_string())),
+		Some("-V" | "--version") => {
+			return Ok(Invocation::Print(VERSION.to_string()));
+		}
+		// A bare `squill` names no command: usage, but as a complaint.
+		None => return Err(USAGE.to_string()),
 		Some(other) => return Err(format!("unknown command `{other}`\n\n{USAGE}")),
 	}
 	let mut args = Args {
@@ -112,6 +152,9 @@ fn parse_args() -> Result<Args, String> {
 		no_config: false,
 		embed: false,
 		embed_query: None,
+		frozen: Vec::new(),
+		frozen_ref: None,
+		frozen_fetch: false,
 		ignore: Vec::new(),
 		overrides: PartialOptions::default(),
 		paths: Vec::new(),
@@ -135,6 +178,11 @@ fn parse_args() -> Result<Args, String> {
 				);
 			}
 			"--ignore" => args.ignore.push(value(&mut argv, "--ignore")?),
+			"--frozen" => args.frozen.push(value(&mut argv, "--frozen")?),
+			"--frozen-ref" => {
+				args.frozen_ref = Some(value(&mut argv, "--frozen-ref")?)
+			}
+			"--frozen-fetch" => args.frozen_fetch = true,
 			"--at-params" => args.overrides.at_params = Some(true),
 			"--dialect" => {
 				args.overrides.dialect =
@@ -170,7 +218,10 @@ fn parse_args() -> Result<Args, String> {
 				args.overrides.quoting =
 					Some(config::parse_quoting(&value(&mut argv, "--quote-idents")?)?)
 			}
-			"-h" | "--help" => return Err(USAGE.to_string()),
+			"-h" | "--help" => return Ok(Invocation::Print(USAGE.to_string())),
+			"-V" | "--version" => {
+				return Ok(Invocation::Print(VERSION.to_string()));
+			}
 			flag if flag.starts_with('-') => {
 				return Err(format!("unknown flag `{flag}`\n\n{USAGE}"));
 			}
@@ -183,7 +234,7 @@ fn parse_args() -> Result<Args, String> {
 	if !args.stdin_mode && args.paths.is_empty() {
 		return Err(format!("no input files\n\n{USAGE}"));
 	}
-	Ok(args)
+	Ok(Invocation::Run(Box::new(args)))
 }
 
 type ConfigCache = std::collections::HashMap<PathBuf, PartialOptions>;
@@ -272,6 +323,109 @@ fn default_query(host: embed::Host) -> &'static str {
 		}
 		embed::Host::Gleam => embed::GLEAM_SQL_QUERY,
 	}
+}
+
+/// `, N frozen` when any were skipped, and nothing at all when none
+/// were — the note should only appear when it explains something.
+fn frozen_note(count: usize) -> String {
+	match count {
+		0 => String::new(),
+		n => format!(", {n} frozen"),
+	}
+}
+
+/// Remove files that a `frozen` glob claims and the baseline ref already
+/// carries, returning how many were dropped.
+///
+/// Patterns come from the nearest config for each file (anchored at that
+/// config) and from `--frozen` (anchored at the working directory), so a
+/// file is judged by the config that governs it. The baseline is read
+/// once per repository, only when something actually matches.
+fn drop_frozen(
+	files: &mut Vec<PathBuf>,
+	args: &Args,
+	cwd: &Path,
+	cache: &mut ConfigCache,
+) -> Result<usize, String> {
+	let flag_globs = if args.frozen.is_empty() {
+		None
+	} else {
+		Some(build_ignore_set(&args.frozen, cwd)?)
+	};
+	if flag_globs.is_none() && args.no_config {
+		return Ok(0);
+	}
+
+	// Lazily built, since most runs configure no frozen paths at all.
+	let mut config_globs: std::collections::HashMap<PathBuf, Option<IgnoreSet>> =
+		std::collections::HashMap::new();
+	let mut baselines: std::collections::HashMap<PathBuf, frozen::Baseline> =
+		std::collections::HashMap::new();
+
+	let mut dropped = 0;
+	let mut kept = Vec::with_capacity(files.len());
+	for path in std::mem::take(files) {
+		let dir = path.parent().unwrap_or_else(|| Path::new("."));
+		let mut claimed = flag_globs.as_ref().is_some_and(|globs| {
+			globs.matches(std::path::absolute(&path).ok().as_deref(), &path)
+		});
+		let mut frozen_ref = args.frozen_ref.clone();
+		let mut frozen_fetch = args.frozen_fetch;
+
+		if !args.no_config
+			&& let Some(config_path) = config::discover(dir)
+		{
+			let partial = load_partial(&config_path, cache)?;
+			if frozen_ref.is_none() {
+				frozen_ref = partial.frozen_ref.clone();
+			}
+			frozen_fetch |= partial.frozen_fetch.unwrap_or(false);
+			let globs = match config_globs.get(&config_path) {
+				Some(globs) => globs,
+				None => {
+					let built = if partial.frozen.is_empty() {
+						None
+					} else {
+						Some(build_ignore_set(
+							&partial.frozen,
+							config::anchor_dir(&config_path),
+						)?)
+					};
+					config_globs.entry(config_path.clone()).or_insert(built)
+				}
+			};
+			claimed |= globs.as_ref().is_some_and(|globs| {
+				globs.matches(std::path::absolute(&path).ok().as_deref(), &path)
+			});
+		}
+
+		if !claimed {
+			kept.push(path);
+			continue;
+		}
+
+		let Some(root) = frozen::repo_root(dir) else {
+			return Err(format!(
+				"{} matches a `frozen` pattern but is not in a git repository, so \
+				 there is no baseline to compare against",
+				path.display()
+			));
+		};
+		let baseline = match baselines.get(&root) {
+			Some(baseline) => baseline,
+			None => {
+				let loaded = frozen::load(&root, frozen_ref.as_deref(), frozen_fetch)?;
+				baselines.entry(root.clone()).or_insert(loaded)
+			}
+		};
+		if baseline.contains(&path) {
+			dropped += 1;
+		} else {
+			kept.push(path);
+		}
+	}
+	*files = kept;
+	Ok(dropped)
 }
 
 /// One formatted source, with human-readable diagnostics.
@@ -445,7 +599,11 @@ fn estimated_edits(before: &str, after: &str) -> usize {
 
 fn main() -> ExitCode {
 	let args = match parse_args() {
-		Ok(args) => args,
+		Ok(Invocation::Run(args)) => *args,
+		Ok(Invocation::Print(message)) => {
+			println!("{message}");
+			return ExitCode::SUCCESS;
+		}
 		Err(message) => {
 			eprintln!("{message}");
 			return ExitCode::from(2);
@@ -534,6 +692,16 @@ fn main() -> ExitCode {
 	files.sort();
 	files.dedup();
 
+	// Drop files the baseline already carries. Before any formatting, so
+	// a frozen file is never read, diffed, or counted.
+	let frozen_count = match drop_frozen(&mut files, &args, &cwd, &mut cache) {
+		Ok(count) => count,
+		Err(message) => {
+			eprintln!("squill: {message}");
+			return ExitCode::from(2);
+		}
+	};
+
 	struct FileResult {
 		path: PathBuf,
 		source: String,
@@ -621,13 +789,15 @@ fn main() -> ExitCode {
 
 	if args.check {
 		eprintln!(
-			"{} file(s) checked, {changed} would be reformatted, {diagnostics} diagnostic(s)",
-			files.len()
+			"{} file(s) checked, {changed} would be reformatted, {diagnostics} diagnostic(s){}",
+			files.len(),
+			frozen_note(frozen_count)
 		);
 	} else if !args.stdout_mode {
 		eprintln!(
-			"{} file(s) checked, {changed} reformatted, {diagnostics} diagnostic(s)",
-			files.len()
+			"{} file(s) checked, {changed} reformatted, {diagnostics} diagnostic(s){}",
+			files.len(),
+			frozen_note(frozen_count)
 		);
 	}
 

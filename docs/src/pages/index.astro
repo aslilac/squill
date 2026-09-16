@@ -274,6 +274,23 @@ const baseHref = import.meta.env.BASE_URL;
 							<td>array of glob patterns to skip when recursing</td>
 							<td><code>[]</code></td>
 						</tr>
+						<tr>
+							<td><code>frozen</code></td>
+							<td>array of glob patterns that are immutable once they exist on
+								the baseline ref</td>
+							<td><code>[]</code></td>
+						</tr>
+						<tr>
+							<td><code>frozen-ref</code></td>
+							<td>the baseline ref <code>frozen</code> compares against</td>
+							<td>discovered from the remote</td>
+						</tr>
+						<tr>
+							<td><code>frozen-fetch</code></td>
+							<td>let <code>frozen</code> fetch the remote&rsquo;s HEAD when no
+								baseline is available locally</td>
+							<td><code>false</code></td>
+						</tr>
 					</tbody>
 				</table>
 				<p>
@@ -281,11 +298,22 @@ const baseHref = import.meta.env.BASE_URL;
 					character, so a spaces-indented file never gains tabs. To choose
 					deliberately &mdash; per language, from one config file &mdash; add
 					a section named for the host language. It takes the same keys as
-					the top level (all but <code>ignore</code>, which is file-wide) and
+					the top level (all but the file-wide <code>ignore</code>,
+					<code>frozen</code>, and <code>frozen-ref</code>) and
 					overrides them for files of that language. <code>[javascript]</code>
 					covers <code>.js</code>/<code>.jsx</code>, and
 					<code>[typescript]</code> covers <code>.ts</code>/<code>.tsx</code>.
 				</p>
+				<p>
+					Some files cannot be rewritten after they ship, even into an
+					identical-meaning form &mdash; sqlx checksums every migration and
+					refuses to run when one changes. <code>frozen</code> marks paths
+					squill formats only while they are new, so a shipped migration keeps
+					the shape it shipped in even as squill&rsquo;s own style moves on. A
+					match is skipped once it exists in the baseline ref&rsquo;s tree;
+					new files under the same globs format normally.
+				</p>
+				<pre><code>frozen = ["migrations/**"]</code></pre>
 			</section>
 
 			<footer>

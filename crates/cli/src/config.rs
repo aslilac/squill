@@ -5,8 +5,8 @@
 //! spanned API. The shape is one flat top-level table plus one optional
 //! section per embedded host language (`[go]`, `[javascript]`, …), which
 //! accepts the same keys and overrides them for files of that language.
-//! Sections do not nest, and `ignore` is file-wide, so it stays top
-//! level. Unknown keys and type mismatches are hard errors with
+//! Sections do not nest, and the path-scoped keys (`ignore`, `frozen`,
+//! `frozen-ref`) are file-wide, so they stay top level. Unknown keys and type mismatches are hard errors with
 //! file:line.
 
 use std::collections::BTreeMap;
@@ -34,6 +34,17 @@ pub struct PartialOptions {
 	/// relative to the config file's directory. File-wide: a language
 	/// section never carries one.
 	pub ignore: Vec<String>,
+	/// Glob patterns for paths that are immutable once they reach the
+	/// baseline branch: formatted while new, never rewritten after.
+	/// File-wide, like [`ignore`](Self::ignore).
+	pub frozen: Vec<String>,
+	/// The ref `frozen` compares against. `None` discovers it from the
+	/// remote's recorded HEAD.
+	pub frozen_ref: Option<String>,
+	/// Let squill fetch the remote's HEAD when no baseline ref is
+	/// available locally. Off by default: formatting should not depend
+	/// on the network unless asked.
+	pub frozen_fetch: Option<bool>,
 	/// Per-language overrides, keyed by section name (see
 	/// [`language_key`]). Each layers on top of the top-level keys.
 	pub languages: BTreeMap<String, PartialOptions>,
@@ -327,33 +338,65 @@ fn apply_key(
 			DeValue::Boolean(flag) => options.at_params = Some(*flag),
 			_ => return Err(err("`at-params` expects true or false".into())),
 		},
-		"ignore" if scope == Scope::Language => {
+		"frozen-fetch" if scope == Scope::Language => {
 			return Err(err(
-				"`ignore` applies to the whole file; put it at the top level".into(),
+				"`frozen-fetch` applies to the whole file; put it at the top level"
+					.into(),
 			));
 		}
-		"ignore" => {
+		"frozen-fetch" => match value.get_ref() {
+			DeValue::Boolean(flag) => options.frozen_fetch = Some(*flag),
+			_ => return Err(err("`frozen-fetch` expects true or false".into())),
+		},
+		"frozen-ref" if scope == Scope::Language => {
+			return Err(err(
+				"`frozen-ref` applies to the whole file; put it at the top level"
+					.into(),
+			));
+		}
+		"frozen-ref" => {
+			let DeValue::String(raw) = value.get_ref() else {
+				return Err(err("`frozen-ref` expects a quoted string".into()));
+			};
+			let raw: &str = raw.as_ref();
+			if raw.trim().is_empty() {
+				return Err(err("`frozen-ref` expects a ref name".into()));
+			}
+			options.frozen_ref = Some(raw.to_string());
+		}
+		"ignore" | "frozen" if scope == Scope::Language => {
+			return Err(err(format!(
+				"`{key_name}` applies to the whole file; put it at the top level"
+			)));
+		}
+		"ignore" | "frozen" => {
 			let DeValue::Array(items) = value.get_ref() else {
-				return Err(err("`ignore` expects an array of strings".into()));
+				return Err(err(format!("`{key_name}` expects an array of strings")));
 			};
 			let mut patterns = Vec::new();
 			for item in items.iter() {
 				let item_err = |message: String| located(item.span().start, &message);
 				let DeValue::String(pattern) = item.get_ref() else {
-					return Err(item_err(
-						"`ignore` expects an array of quoted strings".into(),
-					));
+					return Err(item_err(format!(
+						"`{key_name}` expects an array of quoted strings"
+					)));
 				};
 				let pattern: &str = pattern.as_ref();
 				if pattern.is_empty() {
-					return Err(item_err("empty ignore pattern".into()));
+					return Err(item_err(format!("empty {key_name} pattern")));
 				}
 				globset::Glob::new(pattern).map_err(|glob_err| {
-					item_err(format!("invalid ignore pattern `{pattern}`: {glob_err}"))
+					item_err(format!(
+						"invalid {key_name} pattern `{pattern}`: {glob_err}"
+					))
 				})?;
 				patterns.push(pattern.to_string());
 			}
-			options.ignore = patterns;
+			if key_name == "ignore" {
+				options.ignore = patterns;
+			} else {
+				options.frozen = patterns;
+			}
 		}
 		other => {
 			if matches!(value.get_ref(), DeValue::Table(_)) {

@@ -30,7 +30,7 @@ Pipeline: **lex → parse (CST) → doc IR → render → safety check**, one cr
   - **`syntax.def` is the source of truth for all token/node kinds.** `build.rs` code-gens the `SyntaxKind` enum and the typed AST accessor layer (`src/ast.rs`) from it. To add a node kind or accessor, edit `syntax.def`, not the generated code. The format is documented at the top of that file.
 - **`crates/formatter`** — Wadler/Prettier-style doc IR (`doc.rs`), renderer (`printer.rs`), CST→doc rules (`rules.rs`), vendored keyword tables (`keywords.rs`), identifier-quoting transform (`quoting.rs`), and the safety check (`check.rs`).
 - **`crates/embed`** — formats SQL embedded in host source (Rust sqlx macros, Go, Python, JS/TS, Gleam) located via tree-sitter queries. Only multiline string syntaxes are rewritten; interpolated strings (f-strings, `${}` templates) are never touched.
-- **`crates/cli`** — the `squill` binary (config resolution: nearest `squill.toml` or `.config/squill.toml`, then its `[<host-language>]` section for embedded files, then flags; directory recursion respects `.gitignore` plus `ignore` globs from config/`--ignore`).
+- **`crates/cli`** — the `squill` binary (config resolution: nearest `squill.toml` or `.config/squill.toml`, then its `[<host-language>]` section for embedded files, then flags; directory recursion respects `.gitignore` plus `ignore` globs from config/`--ignore`; `frozen` globs skip files already present in a baseline git ref, via `frozen.rs`).
 - **`crates/corpus-report`** — the corpus coverage harness (CI-only, kept out of `cargo install`).
 - **`crates/playground`** — wasm module for the docs-site playground (built with the `wasm-release` profile).
 

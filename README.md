@@ -47,10 +47,33 @@ Set in the nearest `squill.toml` or `.config/squill.toml`, overridable with flag
 | `quote-idents` | `--quote-idents` | `as-needed` \| `always` | `as-needed` |
 | `at-params` | `--at-params` | lex [sqlc-style](https://docs.sqlc.dev/en/latest/howto/named_parameters.html) `@name` parameters | `false` |
 | `ignore` | `--ignore` | glob patterns to skip when recursing | `[]` |
+| `frozen` | `--frozen` | glob patterns that are immutable once on the baseline ref | `[]` |
+| `frozen-ref` | `--frozen-ref` | the baseline ref `frozen` compares against | discovered from the remote |
+| `frozen-fetch` | `--frozen-fetch` | let `frozen` fetch the remote's HEAD when no baseline is available locally | `false` |
 
-Flags with no config key: `--check` (print diffs and exit 1 if any file would change), `--stdin` / `--stdout`, `--strict` (fail on statements that could not be parsed), `--no-config`, `--embedded`, and `--embedded-query`.
+Flags with no config key: `--check` (print diffs and exit 1 if any file would change), `--stdin` / `--stdout`, `--strict` (fail on statements that could not be parsed), `--no-config`, `--embedded`, `--embedded-query`, `--version` / `-V`, and `--help` / `-h`.
 
 When recursing directories, squill honors `.gitignore` and skips hidden files; the `ignore` key and repeated `--ignore` flags skip more, with `*`, `**`, `?`, `[abc]`, and `{a,b}` glob syntax. Explicitly listed files always format.
+
+### Frozen paths
+
+Some files can't be rewritten after they ship, even into an identical-meaning form. sqlx records a checksum of every migration and refuses to run when one changes — but a *new* migration should still be formatted, and ignoring the whole directory gives that up.
+
+`frozen` marks paths that squill formats only while they are new:
+
+```toml
+frozen = ["migrations/**"]
+```
+
+A matching file is skipped once it exists in the baseline ref's tree, so the shape it shipped in is the shape it keeps — including when squill's own style changes later, and including when you adopt squill on a codebase whose existing migrations were never formatted. New files under the same globs format normally.
+
+This is not `ignore`: it applies to files named explicitly on the command line too, since the point is that they are never rewritten. If a frozen path can't be checked — no git repository, or a baseline ref that doesn't resolve — squill stops with an error rather than guess, because guessing wrong is the failure the setting exists to prevent.
+
+The baseline is read with one `git ls-tree` per repository, and only the ref's tip is needed — so a CI checkout at `fetch-depth: 1` is enough.
+
+The ref is discovered from the remote rather than guessed from a list of branch names: squill reads what the remote records as its HEAD (`refs/remotes/<remote>/HEAD`, which `git clone` sets), and failing that uses the sole remote-tracking branch, which is the shape a CI checkout that fetched one branch leaves behind. Whatever your default branch is called, it just works.
+
+When neither is available — a checkout that fetched nothing, as some pull-request workflows do — squill stops and tells you the three ways out: `git remote set-head <remote> --auto`, naming a ref with `frozen-ref`, or `--frozen-fetch` to let squill run a `--depth=1` fetch of the remote's HEAD itself. Fetching is opt-in because formatting shouldn't depend on the network unless you ask it to.
 
 ### SQL in your source code
 

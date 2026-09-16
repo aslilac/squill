@@ -1008,3 +1008,327 @@ fn one_section_can_name_several_languages() {
 	);
 	let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// `--version` is a request that was answered: the version on stdout,
+/// exit 0. Accepted before the subcommand and after it, long and short.
+#[test]
+fn version_flag_prints_version() {
+	let want = format!("squill {}\n", env!("CARGO_PKG_VERSION"));
+	for args in
+		[vec!["--version"], vec!["-V"], vec!["fmt", "--version"], vec!["fmt", "-V"]]
+	{
+		let output = squill().args(&args).output().expect("run squill");
+		assert_eq!(output.status.code(), Some(0), "for {args:?}");
+		assert_eq!(String::from_utf8_lossy(&output.stdout), want, "for {args:?}");
+		assert!(output.stderr.is_empty(), "for {args:?}: stderr not empty");
+	}
+}
+
+/// `--help` is the same kind of request, so it goes to stdout and exits
+/// 0 — while the usage text printed *because* of a mistake stays on
+/// stderr with a failing status.
+#[test]
+fn help_succeeds_but_misuse_does_not() {
+	for args in [vec!["--help"], vec!["-h"], vec!["fmt", "--help"]] {
+		let output = squill().args(&args).output().expect("run squill");
+		assert_eq!(output.status.code(), Some(0), "for {args:?}");
+		assert!(
+			String::from_utf8_lossy(&output.stdout).contains("Usage: squill fmt"),
+			"usage missing from stdout for {args:?}"
+		);
+		assert!(output.stderr.is_empty(), "for {args:?}: stderr not empty");
+	}
+	for args in [vec![], vec!["fmt"], vec!["fmt", "--nope"], vec!["frobnicate"]] {
+		let output = squill().args(&args).output().expect("run squill");
+		assert_eq!(output.status.code(), Some(2), "for {args:?}");
+		assert!(output.stdout.is_empty(), "for {args:?}: stdout not empty");
+		assert!(
+			String::from_utf8_lossy(&output.stderr).contains("Usage: squill fmt"),
+			"usage missing from stderr for {args:?}"
+		);
+	}
+}
+
+/// Run git in `dir`, with signing and identity pinned so the test does
+/// not depend on (or trip over) the developer's global config.
+fn git(dir: &std::path::Path, args: &[&str]) {
+	let output = Command::new("git")
+		.current_dir(dir)
+		.args([
+			"-c",
+			"commit.gpgsign=false",
+			"-c",
+			"user.name=t",
+			"-c",
+			"user.email=t@example.invalid",
+			"-c",
+			"tag.gpgsign=false",
+		])
+		.args(args)
+		.output()
+		.expect("run git");
+	assert!(
+		output.status.success(),
+		"git {args:?} failed: {}",
+		String::from_utf8_lossy(&output.stderr)
+	);
+}
+
+/// An upstream repo with one shipped migration, plus a clone of it.
+/// Returns (upstream, work).
+fn frozen_fixture(
+	name: &str,
+	config: &str,
+) -> (std::path::PathBuf, std::path::PathBuf) {
+	let dir = temp_dir(name);
+	let upstream = dir.join("upstream");
+	std::fs::create_dir_all(upstream.join("migrations")).expect("mkdir");
+	std::fs::create_dir_all(upstream.join("queries")).expect("mkdir");
+	std::fs::write(upstream.join("squill.toml"), config).expect("write config");
+	std::fs::write(
+		upstream.join("migrations/001_old.sql"),
+		"SELECT   id,name FROM users;\n",
+	)
+	.expect("write");
+	std::fs::write(upstream.join("queries/q.sql"), "SELECT   id FROM t;\n")
+		.expect("write");
+	git(&upstream, &["init", "-q", "--initial-branch=banana", "."]);
+	git(&upstream, &["add", "-A"]);
+	git(&upstream, &["commit", "-qm", "base"]);
+
+	let work = dir.join("work");
+	git(&dir, &["clone", "-q", upstream.to_str().expect("utf8"), "work"]);
+	(upstream, work)
+}
+
+/// The sqlx case: a migration is formatted while it is new, and never
+/// rewritten once it exists on the baseline — not by a later run, and
+/// not when squill's own style changes underneath it.
+#[test]
+fn frozen_paths_format_while_new_and_never_after() {
+	let (upstream, work) =
+		frozen_fixture("frozen", "frozen = [\"migrations/**\"]\n");
+	let shipped = "SELECT   id,name FROM users;\n";
+	std::fs::write(
+		work.join("migrations/002_new.sql"),
+		"SELECT   a,b FROM t2;\n",
+	)
+	.expect("write");
+
+	let output = squill().arg("fmt").arg(&work).output().expect("run");
+	assert!(output.status.success());
+	assert!(
+		String::from_utf8_lossy(&output.stderr).contains("1 frozen"),
+		"skip not reported: {}",
+		String::from_utf8_lossy(&output.stderr)
+	);
+	// The shipped migration is byte-identical; the new one is formatted.
+	assert_eq!(
+		std::fs::read_to_string(work.join("migrations/001_old.sql")).expect("read"),
+		shipped
+	);
+	assert_eq!(
+		std::fs::read_to_string(work.join("migrations/002_new.sql")).expect("read"),
+		"select a, b from t2;\n"
+	);
+	// A file outside the frozen globs formats as usual, baseline or not.
+	assert_eq!(
+		std::fs::read_to_string(work.join("queries/q.sql")).expect("read"),
+		"select id from t;\n"
+	);
+
+	// Once the new migration ships, a later style change must not touch
+	// either of them.
+	std::fs::copy(
+		work.join("migrations/002_new.sql"),
+		upstream.join("migrations/002_new.sql"),
+	)
+	.expect("copy");
+	git(&upstream, &["add", "-A"]);
+	git(&upstream, &["commit", "-qm", "ship 002"]);
+	git(&work, &["fetch", "-q", "origin"]);
+
+	let before =
+		std::fs::read_to_string(work.join("migrations/002_new.sql")).expect("read");
+	let output = squill()
+		.args(["fmt", "--keyword-case", "upper"])
+		.arg(&work)
+		.output()
+		.expect("run");
+	assert!(output.status.success());
+	assert!(
+		String::from_utf8_lossy(&output.stderr).contains("2 frozen"),
+		"both migrations should be frozen now: {}",
+		String::from_utf8_lossy(&output.stderr)
+	);
+	assert_eq!(
+		std::fs::read_to_string(work.join("migrations/001_old.sql")).expect("read"),
+		shipped
+	);
+	assert_eq!(
+		std::fs::read_to_string(work.join("migrations/002_new.sql")).expect("read"),
+		before,
+		"a style change rewrote a shipped migration"
+	);
+	let _ = std::fs::remove_dir_all(work.parent().expect("parent"));
+}
+
+/// Naming a frozen file explicitly does not override the freeze — the
+/// whole point is that it is never rewritten.
+#[test]
+fn frozen_applies_to_explicitly_named_files() {
+	let (_upstream, work) =
+		frozen_fixture("frozenexplicit", "frozen = [\"migrations/**\"]\n");
+	let shipped = "SELECT   id,name FROM users;\n";
+
+	let output = squill()
+		.arg("fmt")
+		.arg(work.join("migrations/001_old.sql"))
+		.output()
+		.expect("run");
+	assert!(output.status.success());
+	assert_eq!(
+		std::fs::read_to_string(work.join("migrations/001_old.sql")).expect("read"),
+		shipped
+	);
+	// And --check does not report it as needing a reformat.
+	let output = squill()
+		.args(["fmt", "--check"])
+		.arg(work.join("migrations/001_old.sql"))
+		.output()
+		.expect("run");
+	assert_eq!(output.status.code(), Some(0), "frozen file failed --check");
+	let _ = std::fs::remove_dir_all(work.parent().expect("parent"));
+}
+
+/// An explicit `frozen-ref` is honored, which is how CI names a base
+/// branch when origin/HEAD was never set.
+#[test]
+fn frozen_ref_can_be_named_explicitly() {
+	let (_upstream, work) =
+		frozen_fixture("frozenref", "frozen = [\"migrations/**\"]\n");
+	let output = squill()
+		.args(["fmt", "--frozen-ref", "origin/banana"])
+		.arg(&work)
+		.output()
+		.expect("run");
+	assert!(output.status.success());
+	assert!(
+		String::from_utf8_lossy(&output.stderr).contains("1 frozen"),
+		"explicit ref not used: {}",
+		String::from_utf8_lossy(&output.stderr)
+	);
+	let _ = std::fs::remove_dir_all(work.parent().expect("parent"));
+}
+
+/// Rather than quietly formatting a file it cannot vouch for, squill
+/// stops: a missing baseline is exactly when a wrong answer does damage.
+#[test]
+fn frozen_without_a_baseline_is_a_hard_error() {
+	let (_upstream, work) =
+		frozen_fixture("frozenbad", "frozen = [\"migrations/**\"]\n");
+	let output = squill()
+		.args(["fmt", "--frozen-ref", "origin/nonesuch"])
+		.arg(&work)
+		.output()
+		.expect("run");
+	assert_eq!(output.status.code(), Some(2));
+	assert!(
+		String::from_utf8_lossy(&output.stderr).contains("does not resolve"),
+		"got: {}",
+		String::from_utf8_lossy(&output.stderr)
+	);
+
+	// Same for a frozen pattern outside any repository.
+	let plain = temp_dir("frozennorepo");
+	std::fs::create_dir_all(plain.join("migrations")).expect("mkdir");
+	std::fs::write(plain.join("squill.toml"), "frozen = [\"migrations/**\"]\n")
+		.expect("write");
+	std::fs::write(plain.join("migrations/a.sql"), "SELECT  1;\n")
+		.expect("write");
+	// temp_dir() leaves a bare .git marker; a real git call must not
+	// mistake it for a repository.
+	let _ = std::fs::remove_dir_all(plain.join(".git"));
+	let output = squill().arg("fmt").arg(&plain).output().expect("run");
+	assert_eq!(output.status.code(), Some(2));
+	assert!(
+		String::from_utf8_lossy(&output.stderr).contains("not in a git repository"),
+		"got: {}",
+		String::from_utf8_lossy(&output.stderr)
+	);
+	let _ = std::fs::remove_dir_all(&plain);
+	let _ = std::fs::remove_dir_all(work.parent().expect("parent"));
+}
+
+/// The baseline ref is discovered from the remote, not guessed from a
+/// list of branch names — so a repo whose default branch is called
+/// something unusual works, and so does the CI shape where
+/// `refs/remotes/origin/HEAD` was never recorded.
+#[test]
+fn baseline_ref_is_discovered_not_guessed() {
+	let (upstream, work) =
+		frozen_fixture("frozendiscover", "frozen = [\"migrations/**\"]\n");
+	let shipped = "SELECT   id,name FROM users;\n";
+	std::fs::write(
+		work.join("migrations/002_new.sql"),
+		"SELECT   a,b FROM t2;\n",
+	)
+	.expect("write");
+
+	// A normal clone records the remote's HEAD, whatever it is called.
+	assert_eq!(
+		String::from_utf8_lossy(
+			&Command::new("git")
+				.current_dir(&work)
+				.args(["symbolic-ref", "--short", "refs/remotes/origin/HEAD"])
+				.output()
+				.expect("git")
+				.stdout
+		)
+		.trim(),
+		"origin/banana",
+		"fixture should use an unconventional default branch"
+	);
+	let output = squill().arg("fmt").arg(&work).output().expect("run");
+	assert!(output.status.success());
+	assert!(String::from_utf8_lossy(&output.stderr).contains("1 frozen"));
+	assert_eq!(
+		std::fs::read_to_string(work.join("migrations/001_old.sql")).expect("read"),
+		shipped
+	);
+
+	// Now the CI shape: no recorded HEAD, one fetched branch.
+	let ci = work.parent().expect("parent").join("ci");
+	std::fs::create_dir_all(&ci).expect("mkdir");
+	git(&ci, &["init", "-q", "."]);
+	git(&ci, &["remote", "add", "origin", upstream.to_str().expect("utf8")]);
+	git(
+		&ci,
+		&[
+			"fetch",
+			"-q",
+			"--depth=1",
+			"origin",
+			"+refs/heads/banana:refs/remotes/origin/banana",
+		],
+	);
+	git(&ci, &["checkout", "-q", "-b", "banana", "FETCH_HEAD"]);
+	assert!(
+		!ci.join(".git/refs/remotes/origin/HEAD").exists(),
+		"this shape should have no recorded remote HEAD"
+	);
+	std::fs::write(ci.join("migrations/002_new.sql"), "SELECT   a,b FROM t2;\n")
+		.expect("write");
+	let output = squill().arg("fmt").arg(&ci).output().expect("run");
+	assert!(output.status.success());
+	assert!(
+		String::from_utf8_lossy(&output.stderr).contains("1 frozen"),
+		"sole remote-tracking branch was not used: {}",
+		String::from_utf8_lossy(&output.stderr)
+	);
+	assert_eq!(
+		std::fs::read_to_string(ci.join("migrations/001_old.sql")).expect("read"),
+		shipped
+	);
+	let _ = std::fs::remove_dir_all(work.parent().expect("parent"));
+}
