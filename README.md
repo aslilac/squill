@@ -49,7 +49,7 @@ Set in the nearest `squill.toml` or `.config/squill.toml`, overridable with flag
 | `ignore` | `--ignore` | glob patterns to skip when recursing | `[]` |
 | `frozen` | `--frozen` | glob patterns that are immutable once on the baseline ref | `[]` |
 | `frozen-ref` | `--frozen-ref` | the baseline ref `frozen` compares against | discovered from the remote |
-| `frozen-fetch` | `--frozen-fetch` | let `frozen` fetch the remote's HEAD when no baseline is available locally | `false` |
+| `frozen-fetch` | `--frozen-fetch` / `--no-frozen-fetch` | let `frozen` ask the remote for its HEAD when it isn't recorded locally | `true` |
 
 Flags with no config key: `--check` (print diffs and exit 1 if any file would change), `--stdin` / `--stdout`, `--strict` (fail on statements that could not be parsed), `--no-config`, `--embedded`, `--embedded-query`, `--version` / `-V`, and `--help` / `-h`.
 
@@ -71,9 +71,11 @@ This is not `ignore`: it applies to files named explicitly on the command line t
 
 The baseline is read with one `git ls-tree` per repository, and only the ref's tip is needed — so a CI checkout at `fetch-depth: 1` is enough.
 
-The ref is discovered from the remote rather than guessed from a list of branch names: squill reads what the remote records as its HEAD (`refs/remotes/<remote>/HEAD`, which `git clone` sets), and failing that uses the sole remote-tracking branch, which is the shape a CI checkout that fetched one branch leaves behind. Whatever your default branch is called, it just works.
+Every baseline comes from the remote, never from a guess about which branch is which. In order: `frozen-ref` if you set one; then `refs/remotes/<remote>/HEAD`, which `git clone` records; then a `--depth=1` fetch of the remote's HEAD. Whatever your default branch is called, it just works.
 
-When neither is available — a checkout that fetched nothing, as some pull-request workflows do — squill stops and tells you the three ways out: `git remote set-head <remote> --auto`, naming a ref with `frozen-ref`, or `--frozen-fetch` to let squill run a `--depth=1` fetch of the remote's HEAD itself. Fetching is opt-in because formatting shouldn't depend on the network unless you ask it to.
+That last step is why CI works unchanged. A `pull_request` checkout has no base-branch ref at all, and a push build of a topic branch has exactly one remote-tracking ref which is the *topic* branch — taking it as the baseline would freeze migrations that never shipped. Only the remote can tell those apart.
+
+`--no-frozen-fetch` (or `frozen-fetch = false`) keeps squill off the network, for an offline or air-gapped build. A normal clone still works, because `git clone` already recorded the remote's HEAD. When nothing authoritative is available, squill stops and asks for `frozen-ref` rather than inferring one.
 
 ### SQL in your source code
 

@@ -41,9 +41,10 @@ pub struct PartialOptions {
 	/// The ref `frozen` compares against. `None` discovers it from the
 	/// remote's recorded HEAD.
 	pub frozen_ref: Option<String>,
-	/// Let squill fetch the remote's HEAD when no baseline ref is
-	/// available locally. Off by default: formatting should not depend
-	/// on the network unless asked.
+	/// Let squill fetch the remote's HEAD when the baseline is not
+	/// already recorded locally. On by default — a CI checkout usually
+	/// has nothing else to go on — and `false` restricts squill to the
+	/// refs already present.
 	pub frozen_fetch: Option<bool>,
 	/// Per-language overrides, keyed by section name (see
 	/// [`language_key`]). Each layers on top of the top-level keys.

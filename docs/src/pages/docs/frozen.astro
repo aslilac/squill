@@ -77,10 +77,17 @@ import Docs from "../../layouts/Docs.astro";
 				<code>git remote set-head</code> refreshes.
 			</li>
 			<li>
-				The sole remote-tracking branch, when there is exactly one &mdash; the
-				shape a CI checkout that fetched one branch leaves behind.
+				A <code>--depth=1</code> fetch of the remote&rsquo;s HEAD.
 			</li>
 		</ul>
+		<p>
+			That last step is why CI works with no extra configuration, and it is
+			doing more than filling a gap. A <code>pull_request</code> checkout has
+			no base-branch ref at all. A push build of a topic branch has exactly one
+			remote-tracking ref and it is the <em>topic</em> branch &mdash; taking it
+			as the baseline would freeze migrations that never shipped. Only the
+			remote can tell those two apart.
+		</p>
 		<p>
 			The remote is the only convention left, and only when there is more than
 			one: with a single remote squill uses it whatever it is named, falling
@@ -95,27 +102,29 @@ import Docs from "../../layouts/Docs.astro";
 	</section>
 
 	<section>
-		<h2>When there is no baseline</h2>
+		<h2>Staying off the network</h2>
 		<p>
-			Some workflows check out a pull request without fetching the base branch
-			at all. There squill stops with an error rather than guess, because a
-			wrong guess means quietly rewriting a shipped migration &mdash; the exact
-			failure the setting exists to prevent. It names three ways out:
+			The fetch is the only thing squill does that touches the network, and it
+			only runs when the baseline is not already recorded locally &mdash; a
+			normal clone never reaches it.
+			<code>--no-frozen-fetch</code> (or <code>frozen-fetch = false</code>)
+			turns it off entirely, for an offline or air-gapped build.
 		</p>
-		<ul>
-			<li><code>git remote set-head &lt;remote&gt; --auto</code> to record it.</li>
-			<li><code>frozen-ref = "origin/your-branch"</code> to name it.</li>
-			<li>
-				<code>--frozen-fetch</code> (or <code>frozen-fetch = true</code>) to
-				let squill run a <code>--depth=1</code> fetch of the remote&rsquo;s
-				HEAD itself.
-			</li>
-		</ul>
 		<p>
-			Fetching is off by default. It is the only thing squill does that touches
-			the network, and a formatter that reaches out implicitly is one that
-			hangs on a slow link, fails in an offline build, and needs credentials it
-			may not have.
+			A normal clone still works with fetching off, because{" "}
+			<code>git clone</code> already recorded the remote&rsquo;s HEAD. What
+			squill will not do is fall back to a guess: if exactly one branch
+			happens to be present it could call that the baseline, but a push build
+			of a topic branch has exactly one and it is the topic branch. So when
+			nothing authoritative is available it stops and asks for{" "}
+			<code>frozen-ref</code>.
+		</p>
+		<p>
+			When squill stops, it names the ways out:{" "}
+			<code>git remote set-head &lt;remote&gt; --auto</code> to record the
+			baseline, <code>frozen-ref</code> to name one, or allowing the fetch.
+			Stopping is deliberate &mdash; a wrong guess means quietly rewriting a
+			shipped migration, the exact failure the setting exists to prevent.
 		</p>
 	</section>
 

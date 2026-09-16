@@ -52,8 +52,8 @@ Options:
                           new, never rewrite them after (repeatable)
   --frozen-ref <REF>      Baseline ref for --frozen (default: whatever
                           the remote records as its HEAD)
-  --frozen-fetch          Let --frozen fetch the remote's HEAD when no
-                          baseline ref is available locally
+  --no-frozen-fetch       Don't let --frozen ask the remote for its HEAD.
+                          Needs a recorded remote HEAD or --frozen-ref
   --embedded              Also format SQL embedded in host files (.rs,
                           .go, .py, .js/.ts/.tsx, .gleam) when recursing
                           directories (explicit host paths always format)
@@ -117,7 +117,7 @@ struct Args {
 	embed_query: Option<String>,
 	frozen: Vec<String>,
 	frozen_ref: Option<String>,
-	frozen_fetch: bool,
+	frozen_fetch: Option<bool>,
 	/// Glob patterns to skip when recursing (cwd-relative).
 	ignore: Vec<String>,
 	overrides: PartialOptions,
@@ -154,7 +154,7 @@ fn parse_args() -> Result<Invocation, String> {
 		embed_query: None,
 		frozen: Vec::new(),
 		frozen_ref: None,
-		frozen_fetch: false,
+		frozen_fetch: None,
 		ignore: Vec::new(),
 		overrides: PartialOptions::default(),
 		paths: Vec::new(),
@@ -182,7 +182,8 @@ fn parse_args() -> Result<Invocation, String> {
 			"--frozen-ref" => {
 				args.frozen_ref = Some(value(&mut argv, "--frozen-ref")?)
 			}
-			"--frozen-fetch" => args.frozen_fetch = true,
+			"--frozen-fetch" => args.frozen_fetch = Some(true),
+			"--no-frozen-fetch" => args.frozen_fetch = Some(false),
 			"--at-params" => args.overrides.at_params = Some(true),
 			"--dialect" => {
 				args.overrides.dialect =
@@ -370,6 +371,7 @@ fn drop_frozen(
 			globs.matches(std::path::absolute(&path).ok().as_deref(), &path)
 		});
 		let mut frozen_ref = args.frozen_ref.clone();
+		// Flag, then config, then the default: fetch when we have to.
 		let mut frozen_fetch = args.frozen_fetch;
 
 		if !args.no_config
@@ -379,7 +381,7 @@ fn drop_frozen(
 			if frozen_ref.is_none() {
 				frozen_ref = partial.frozen_ref.clone();
 			}
-			frozen_fetch |= partial.frozen_fetch.unwrap_or(false);
+			frozen_fetch = frozen_fetch.or(partial.frozen_fetch);
 			let globs = match config_globs.get(&config_path) {
 				Some(globs) => globs,
 				None => {
@@ -414,7 +416,11 @@ fn drop_frozen(
 		let baseline = match baselines.get(&root) {
 			Some(baseline) => baseline,
 			None => {
-				let loaded = frozen::load(&root, frozen_ref.as_deref(), frozen_fetch)?;
+				let loaded = frozen::load(
+					&root,
+					frozen_ref.as_deref(),
+					frozen_fetch.unwrap_or(true),
+				)?;
 				baselines.entry(root.clone()).or_insert(loaded)
 			}
 		};

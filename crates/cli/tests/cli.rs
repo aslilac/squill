@@ -1323,12 +1323,180 @@ fn baseline_ref_is_discovered_not_guessed() {
 	assert!(output.status.success());
 	assert!(
 		String::from_utf8_lossy(&output.stderr).contains("1 frozen"),
-		"sole remote-tracking branch was not used: {}",
+		"the remote's HEAD was not consulted: {}",
 		String::from_utf8_lossy(&output.stderr)
 	);
 	assert_eq!(
 		std::fs::read_to_string(ci.join("migrations/001_old.sql")).expect("read"),
 		shipped
 	);
+
+	// With no recorded HEAD and no fetching there is nothing
+	// authoritative left, so squill refuses rather than infer a baseline
+	// from whichever branches happen to be present.
+	let output =
+		squill().args(["fmt", "--no-frozen-fetch"]).arg(&ci).output().expect("run");
+	assert_eq!(output.status.code(), Some(2));
+	assert!(
+		String::from_utf8_lossy(&output.stderr)
+			.contains("--no-frozen-fetch is in effect"),
+		"got: {}",
+		String::from_utf8_lossy(&output.stderr)
+	);
 	let _ = std::fs::remove_dir_all(work.parent().expect("parent"));
+}
+
+/// Fetching is on by default, and the remote's own HEAD beats the local
+/// refs. Both matter in CI: a pull-request checkout has no base branch
+/// ref at all, and a push build of a topic branch has one that is *not*
+/// the baseline — trusting it would freeze files that never shipped.
+#[test]
+fn frozen_fetch_defaults_on_and_prefers_the_remote_head() {
+	let dir = temp_dir("frozenfetch");
+	let upstream = dir.join("upstream");
+	std::fs::create_dir_all(upstream.join("migrations")).expect("mkdir");
+	git(&upstream, &["init", "-q", "--initial-branch=main", "."]);
+	std::fs::write(
+		upstream.join("squill.toml"),
+		"frozen = [\"migrations/**\"]\n",
+	)
+	.expect("write");
+	std::fs::write(upstream.join("migrations/001_main.sql"), "SELECT   1;\n")
+		.expect("write");
+	git(&upstream, &["add", "-A"]);
+	git(&upstream, &["commit", "-qm", "base"]);
+
+	// A topic branch adds a migration that has not reached main.
+	git(&upstream, &["checkout", "-q", "-b", "topic"]);
+	std::fs::write(
+		upstream.join("migrations/002_topic.sql"),
+		"SELECT   2,3 FROM t;\n",
+	)
+	.expect("write");
+	git(&upstream, &["add", "-A"]);
+	git(&upstream, &["commit", "-qm", "topic"]);
+	// The remote's HEAD must be main, as it would be on a real forge.
+	git(&upstream, &["checkout", "-q", "main"]);
+	let topic = String::from_utf8(
+		Command::new("git")
+			.current_dir(&upstream)
+			.args(["rev-parse", "topic"])
+			.output()
+			.expect("git")
+			.stdout,
+	)
+	.expect("utf8");
+	let topic = topic.trim().to_string();
+
+	// A push build of the topic branch: one remote-tracking ref, and it
+	// is the topic branch, not the baseline.
+	let build = |name: &str| -> std::path::PathBuf {
+		let work = dir.join(name);
+		std::fs::create_dir_all(&work).expect("mkdir");
+		git(&work, &["init", "-q", "."]);
+		git(&work, &["remote", "add", "origin", upstream.to_str().expect("utf8")]);
+		git(
+			&work,
+			&[
+				"fetch",
+				"-q",
+				"--no-tags",
+				"--depth=1",
+				"origin",
+				&format!("+{topic}:refs/remotes/origin/topic"),
+			],
+		);
+		git(&work, &["checkout", "-q", "-b", "work", "FETCH_HEAD"]);
+		work
+	};
+
+	let shipped = "SELECT   2,3 FROM t;\n";
+
+	// Default: the remote says HEAD is main, so only 001 is frozen and
+	// the topic branch's own migration still formats.
+	let work = build("bydefault");
+	let output = squill().arg("fmt").arg(&work).output().expect("run");
+	assert!(output.status.success());
+	assert!(
+		String::from_utf8_lossy(&output.stderr).contains("1 frozen"),
+		"expected only the main-branch migration frozen: {}",
+		String::from_utf8_lossy(&output.stderr)
+	);
+	assert_eq!(
+		std::fs::read_to_string(work.join("migrations/002_topic.sql"))
+			.expect("read"),
+		"select 2, 3 from t;\n",
+		"a migration that never reached the baseline should still format"
+	);
+
+	// --no-frozen-fetch has nothing authoritative to fall back on here, so
+	// it refuses. The tempting guess — the one remote-tracking ref — is
+	// the topic branch, and taking it would freeze 002.
+	let work = build("nofetch");
+	let output = squill()
+		.args(["fmt", "--no-frozen-fetch"])
+		.arg(&work)
+		.output()
+		.expect("run");
+	assert_eq!(output.status.code(), Some(2));
+	assert!(
+		String::from_utf8_lossy(&output.stderr)
+			.contains("--no-frozen-fetch is in effect"),
+		"got: {}",
+		String::from_utf8_lossy(&output.stderr)
+	);
+	assert_eq!(
+		std::fs::read_to_string(work.join("migrations/002_topic.sql"))
+			.expect("read"),
+		shipped,
+		"a refused run must not rewrite anything"
+	);
+
+	// Naming the ref explicitly is the supported way through.
+	let output = squill()
+		.args(["fmt", "--no-frozen-fetch", "--frozen-ref", "origin/topic"])
+		.arg(&work)
+		.output()
+		.expect("run");
+	assert!(
+		output.status.success(),
+		"{}",
+		String::from_utf8_lossy(&output.stderr)
+	);
+
+	// A pull-request checkout has nothing under refs/remotes/<remote>/.
+	let pr = dir.join("pr");
+	std::fs::create_dir_all(&pr).expect("mkdir");
+	git(&pr, &["init", "-q", "."]);
+	git(&pr, &["remote", "add", "origin", upstream.to_str().expect("utf8")]);
+	git(
+		&pr,
+		&[
+			"fetch",
+			"-q",
+			"--no-tags",
+			"--depth=1",
+			"origin",
+			&format!("+{topic}:refs/remotes/pull/7/merge"),
+		],
+	);
+	git(&pr, &["checkout", "-q", "-b", "work", "FETCH_HEAD"]);
+	let output = squill().arg("fmt").arg(&pr).output().expect("run");
+	assert!(
+		output.status.success(),
+		"a pull-request checkout should work without extra flags: {}",
+		String::from_utf8_lossy(&output.stderr)
+	);
+	assert!(String::from_utf8_lossy(&output.stderr).contains("1 frozen"));
+	// And with fetching off there is genuinely nothing to go on.
+	let output =
+		squill().args(["fmt", "--no-frozen-fetch"]).arg(&pr).output().expect("run");
+	assert_eq!(output.status.code(), Some(2));
+	assert!(
+		String::from_utf8_lossy(&output.stderr)
+			.contains("--no-frozen-fetch is in effect"),
+		"got: {}",
+		String::from_utf8_lossy(&output.stderr)
+	);
+	let _ = std::fs::remove_dir_all(&dir);
 }

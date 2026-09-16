@@ -12,8 +12,9 @@
 //!
 //! The lookup is one `git ls-tree` per repository. Only the baseline
 //! tip's tree is needed, never its history, so a depth-1 CI clone is
-//! enough as long as the ref itself was fetched. The ref is discovered
-//! from the remote rather than guessed from a list of branch names.
+//! enough as long as the ref itself was fetched. The ref always comes
+//! from the remote — recorded locally by `git clone`, or asked for —
+//! never inferred from a list of branch names.
 
 use std::collections::HashSet;
 use std::path::Path;
@@ -136,11 +137,9 @@ fn remote(root: &Path) -> Option<String> {
 /// called.
 ///
 /// In order: the remote's recorded HEAD, which `git clone` sets and
-/// `git remote set-head` refreshes; then the sole remote-tracking
-/// branch, if there is exactly one — the shape a CI checkout that
-/// fetched one branch leaves behind. Only with `fetch` does squill go to
-/// the network, because a formatter that quietly makes network calls is
-/// one that hangs on a bad link or fails in an offline build.
+/// `git remote set-head` refreshes; then, unless `fetch` is off, the
+/// remote itself. Every source here is authoritative — squill will not
+/// infer a baseline from which branches happen to be lying around.
 fn discover_ref(root: &Path, fetch: bool) -> Result<String, String> {
 	let Some(remote) = remote(root) else {
 		return Err(format!(
@@ -150,17 +149,19 @@ fn discover_ref(root: &Path, fetch: bool) -> Result<String, String> {
 		));
 	};
 
+	// What the remote said its HEAD was, recorded locally by `git clone`.
+	// Free and authoritative when it is there.
 	let head = format!("refs/remotes/{remote}/HEAD");
 	if let Some(target) = symbolic_ref(root, &head) {
 		return Ok(target);
 	}
 
-	let branches = remote_branches(root, &remote);
-	if let [only] = branches.as_slice() {
-		return Ok(only.clone());
-	}
-
 	if fetch {
+		// Ask the remote. This is the only way to tell a base branch from
+		// a topic branch in a CI checkout: a push build fetches the branch
+		// it is building, so the one ref lying around is just as likely to
+		// be the feature branch as the baseline.
+		//
 		// --depth=1: the tip tree is all a baseline needs.
 		let out = Command::new("git")
 			.arg("-C")
@@ -172,7 +173,9 @@ fn discover_ref(root: &Path, fetch: bool) -> Result<String, String> {
 			})?;
 		if !out.status.success() {
 			return Err(format!(
-				"git fetch {remote} HEAD failed in {}: {}",
+				"git fetch {remote} HEAD failed in {}: {}\nPass --no-frozen-fetch \
+				 to fall back to the local refs instead, or name a ref with \
+				 `frozen-ref`.",
 				root.display(),
 				String::from_utf8_lossy(&out.stderr).trim()
 			));
@@ -180,13 +183,17 @@ fn discover_ref(root: &Path, fetch: bool) -> Result<String, String> {
 		return Ok("FETCH_HEAD".to_string());
 	}
 
+	// Nothing trustworthy is left. There is a tempting guess here — if
+	// exactly one branch was fetched, call it the baseline — but a push
+	// build of a topic branch has exactly one, and it is the topic
+	// branch. Freezing against it would freeze migrations that never
+	// shipped, silently, which is the failure this whole feature exists
+	// to prevent. Better to say so.
 	Err(format!(
 		"`frozen` is set but no baseline ref is available in {}: `{head}` is unset \
-		 and {} remote-tracking branches were found. Record it with `git remote \
-		 set-head {remote} --auto`, name one with `frozen-ref`, or pass \
-		 --frozen-fetch to let squill fetch {remote}/HEAD itself",
-		root.display(),
-		branches.len()
+		 and --no-frozen-fetch is in effect. Name one with `frozen-ref`, record it \
+		 with `git remote set-head {remote} --auto`, or allow the fetch.",
+		root.display()
 	))
 }
 
@@ -204,32 +211,6 @@ fn symbolic_ref(root: &Path, name: &str) -> Option<String> {
 	let target = String::from_utf8(out.stdout).ok()?;
 	let target = target.trim();
 	(!target.is_empty()).then(|| target.to_string())
-}
-
-/// Remote-tracking branches under `refs/remotes/<remote>/`, minus HEAD.
-fn remote_branches(root: &Path, remote: &str) -> Vec<String> {
-	let Ok(out) = Command::new("git")
-		.arg("-C")
-		.arg(root)
-		.args([
-			"for-each-ref",
-			"--format=%(refname:short)",
-			&format!("refs/remotes/{remote}/"),
-		])
-		.output()
-	else {
-		return Vec::new();
-	};
-	String::from_utf8(out.stdout)
-		.map(|text| {
-			text
-				.lines()
-				.map(str::trim)
-				.filter(|name| !name.is_empty() && !name.ends_with("/HEAD"))
-				.map(str::to_string)
-				.collect()
-		})
-		.unwrap_or_default()
 }
 
 fn ref_exists(root: &Path, name: &str) -> bool {
