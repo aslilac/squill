@@ -100,7 +100,7 @@ create table chat_providers (
 		check (
 			provider
 			= any(
-				array [
+				array[
 					'anthropic'::text,
 					'azure'::text,
 					'bedrock'::text,

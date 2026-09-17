@@ -13,7 +13,7 @@ create table inbox_notifications (
 	user_id UUID not null references users (id) on delete cascade,
 	template_id UUID not null references notification_templates (id)
 		on delete cascade,
-	targets UUID [],
+	targets UUID[],
 	title text not null,
 	content text not null,
 	icon text not null,

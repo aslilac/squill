@@ -2,7 +2,7 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table workspace_agents add column shutdown_script varchar (65534);
+alter table workspace_agents add column shutdown_script varchar(65534);
 
 comment on column workspace_agents.shutdown_script is 'Script that is executed before the agent is stopped.';
 

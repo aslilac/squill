@@ -4,8 +4,8 @@ expression: formatted
 ---
 create table if not exists workspace_resource_metadata (
 	workspace_resource_id uuid not null,
-	key varchar (1024) not null,
-	value varchar (65536),
+	key varchar(1024) not null,
+	value varchar(65536),
 	sensitive boolean not null,
 	primary key (workspace_resource_id, key),
 	foreign key (workspace_resource_id) references workspace_resources (id)

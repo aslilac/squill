@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 create type resource_type as enum (
@@ -24,7 +23,7 @@ create table audit_logs (
 	user_id uuid not null,
 	organization_id uuid not null,
 	ip inet not null,
-	user_agent varchar (256) not null,
+	user_agent varchar(256) not null,
 	resource_type resource_type not null,
 	resource_id uuid not null,
 	-- resource_target is the name of the resource that `resource_id` points to.

@@ -221,3 +221,73 @@ fn keyword_case_spares_names_and_types() {
 		"create table Foo (\n\tName text\n);\n"
 	);
 }
+
+#[test]
+fn array_types_and_modifiers_glue_to_the_type() {
+	// `text[]`, not `text []` — and the same in every type position,
+	// including the ones DDL parses as a plain token soup.
+	assert_eq!(
+		format("create table t (a text[], b int[3], c numeric(10,2)[]);"),
+		"create table t (\n\ta text[],\n\tb int[3],\n\tc numeric(10, 2)[]\n);\n"
+	);
+	assert_eq!(
+		format(
+			"create table t (a character varying(64), b timestamp(6) with time zone);"
+		),
+		"create table t (\n\ta character varying(64),\n\tb timestamp(6) with time zone\n);\n"
+	);
+	assert_eq!(
+		format("alter table t add column c varchar(4096) not null;"),
+		"alter table t add column c varchar(4096) not null;\n"
+	);
+	assert_eq!(
+		format("alter table t alter column c type character varying(64);"),
+		"alter table t alter column c type character varying(64);\n"
+	);
+	assert_eq!(
+		format("create domain d as varchar(64);"),
+		"create domain d as varchar(64);\n"
+	);
+	// Extension types are typed the same way, and are recognized by not
+	// being keywords.
+	assert_eq!(
+		format("create table t (embedding vector(1536));"),
+		"create table t (\n\tembedding vector(1536)\n);\n"
+	);
+	// Casts already glued; they must stay that way.
+	assert_eq!(format("select a::varchar(64)[];"), "select a::varchar(64)[];\n");
+}
+
+#[test]
+fn parens_that_are_not_type_modifiers_keep_their_space() {
+	// A numeric paren group is only a type modifier when the word before
+	// it is a type — `values (1, 2)` and `in (1, 2)` are not.
+	assert_eq!(
+		format("insert into t values (1, 2);"),
+		"insert into t values (1, 2);\n"
+	);
+	assert_eq!(
+		format(
+			"create table t (a int, primary key (a), foreign key (a) references o (id));"
+		),
+		"create table t (\n\ta int,\n\tprimary key (a),\n\tforeign key (a) references o (id)\n);\n"
+	);
+	assert_eq!(
+		format("create table t (a int) with (fillfactor = 70);"),
+		"create table t (\n\ta int\n) with (fillfactor = 70);\n"
+	);
+}
+
+#[test]
+fn array_constructor_glues_to_its_bracket() {
+	assert_eq!(
+		format("select array [1, 2], array []::text[];"),
+		"select array[1, 2], array[]::text[];\n"
+	);
+	assert_eq!(
+		format("select 1 where x = any (array ['a']);"),
+		"select 1 where x = any(array['a']);\n"
+	);
+	// `array(subquery)` is the other spelling, and keeps its own shape.
+	assert_eq!(format("select array (select 1);"), "select array (select 1);\n");
+}

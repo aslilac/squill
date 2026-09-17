@@ -9,8 +9,8 @@ create table if not exists provisioner_daemons (
 	organization_id uuid,
 	-- Name is generated for ease of differentiation.
 	-- eg. WowBananas16
-	name varchar (64) not null unique,
-	provisioners provisioner_type [] not null,
+	name varchar(64) not null unique,
+	provisioners provisioner_type[] not null,
 	primary key (id)
 );
 
@@ -62,8 +62,8 @@ create table if not exists provisioner_job_logs (
 	created_at timestamptz not null,
 	source log_source not null,
 	level log_level not null,
-	stage varchar (128) not null,
-	output varchar (1024) not null,
+	stage varchar(128) not null,
+	output varchar(1024) not null,
 	primary key (id)
 );
 
@@ -72,8 +72,8 @@ create table workspace_resources (
 	created_at timestamptz not null,
 	job_id uuid not null references provisioner_jobs (id) on delete cascade,
 	transition workspace_transition not null,
-	type varchar (192) not null,
-	name varchar (64) not null,
+	type varchar(192) not null,
+	name varchar(64) not null,
 	primary key (id)
 );
 
@@ -81,18 +81,18 @@ create table workspace_agents (
 	id uuid not null,
 	created_at timestamptz not null,
 	updated_at timestamptz not null,
-	name varchar (64) not null,
+	name varchar(64) not null,
 	first_connected_at timestamptz,
 	last_connected_at timestamptz,
 	disconnected_at timestamptz,
 	resource_id uuid not null references workspace_resources (id)
 		on delete cascade,
 	auth_token uuid not null,
-	auth_instance_id varchar (64),
-	architecture varchar (64) not null,
+	auth_instance_id varchar(64),
+	architecture varchar(64) not null,
 	environment_variables jsonb,
-	operating_system varchar (64) not null,
-	startup_script varchar (65534),
+	operating_system varchar(64) not null,
+	startup_script varchar(65534),
 	instance_metadata jsonb,
 	resource_metadata jsonb,
 	primary key (id)
@@ -138,8 +138,8 @@ create table parameter_schemas (
 	id uuid not null,
 	created_at timestamptz not null,
 	job_id uuid not null references provisioner_jobs (id) on delete cascade,
-	name varchar (64) not null,
-	description varchar (8192) not null default '',
+	name varchar(64) not null,
+	description varchar(8192) not null default '',
 	default_source_scheme parameter_source_scheme,
 	default_source_value text not null,
 	-- Allows the user to override the source.
@@ -151,10 +151,10 @@ create table parameter_schemas (
 	-- Whether the consumer can view the source and destinations.
 	redisplay_value boolean not null,
 	-- This error would appear in the UI if the condition is not met.
-	validation_error varchar (256) not null,
-	validation_condition varchar (512) not null,
+	validation_error varchar(256) not null,
+	validation_condition varchar(512) not null,
 	validation_type_system parameter_type_system not null,
-	validation_value_type varchar (64) not null,
+	validation_value_type varchar(64) not null,
 	primary key (id),
 	unique(job_id, name)
 );
@@ -166,7 +166,7 @@ create table parameter_values (
 	updated_at timestamptz not null,
 	scope parameter_scope not null,
 	scope_id uuid not null,
-	name varchar (64) not null,
+	name varchar(64) not null,
 	source_scheme parameter_source_scheme not null,
 	source_value text not null,
 	destination_scheme parameter_destination_scheme not null,
@@ -182,7 +182,7 @@ create table workspace_builds (
 	workspace_id uuid not null references workspaces (id) on delete cascade,
 	template_version_id uuid not null references template_versions (id)
 		on delete cascade,
-	name varchar (64) not null,
+	name varchar(64) not null,
 	build_number integer not null,
 	transition workspace_transition not null,
 	initiator_id uuid not null,

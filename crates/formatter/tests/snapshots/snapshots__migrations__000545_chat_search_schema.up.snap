@@ -37,7 +37,7 @@ create index idx_chat_messages_search_tsv
 			and (
 				visibility
 				= any(
-					array [
+					array[
 						'user'::chat_message_visibility,
 						'both'::chat_message_visibility
 					]
@@ -45,7 +45,7 @@ create index idx_chat_messages_search_tsv
 			)
 			and (
 				role
-				= any(array ['user'::chat_message_role, 'assistant'::chat_message_role])
+				= any(array['user'::chat_message_role, 'assistant'::chat_message_role])
 			)
 		);
 
@@ -61,7 +61,7 @@ create index idx_chat_messages_search_tsv_pending
 			and (
 				visibility
 				= any(
-					array [
+					array[
 						'user'::chat_message_visibility,
 						'both'::chat_message_visibility
 					]
@@ -69,7 +69,7 @@ create index idx_chat_messages_search_tsv_pending
 			)
 			and (
 				role
-				= any(array ['user'::chat_message_role, 'assistant'::chat_message_role])
+				= any(array['user'::chat_message_role, 'assistant'::chat_message_role])
 			)
 		);
 

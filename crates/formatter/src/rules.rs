@@ -26,6 +26,9 @@ use crate::doc::soft_line_or_space;
 use crate::doc::space;
 use crate::doc::text;
 use crate::doc::verbatim;
+use crate::keywords::PgKeywordCategory;
+use crate::keywords::is_sqlite_keyword;
+use crate::keywords::pg_keyword_category;
 use parser::syntax::SyntaxElement;
 use parser::syntax::SyntaxKind;
 use parser::syntax::SyntaxNode;
@@ -35,6 +38,74 @@ use parser::syntax::SyntaxToken;
 /// definition (the one `column_def` item shape with no leading name).
 const CONSTRAINT_HEADS: &[&str] =
 	&["check", "constraint", "exclude", "foreign", "like", "primary", "unique"];
+
+/// Is this paren group a type modifier glued to the word before it?
+///
+/// DDL parses as a tolerant token soup, so the type in `c varchar(64)` is
+/// not a `TypeName` node — position alone cannot tell `varchar(64)` from
+/// `values (1, 2)` or `for values in (1, 2)`. Two signals together do:
+/// the group holds nothing but numeric literals, and the word before it
+/// is either a known parameterized type or not a keyword at all.
+fn is_type_modifier(prev_word: Option<&str>, node: &SyntaxNode) -> bool {
+	let Some(word) = prev_word else {
+		return false;
+	};
+	if node.kind() != SyntaxKind::ElementList {
+		return false;
+	}
+	is_type_word(&word.to_ascii_lowercase()) && holds_only_numbers(node)
+}
+
+/// Is this lowercase word a type name?
+///
+/// Postgres files the parameterized built-in types (`varchar`, `numeric`,
+/// `timestamp`, ...) under `ColName`, its "cannot be a function or type
+/// name" bucket, which is all but exactly the set wanted here: the
+/// function-like members (`coalesce`, `substring`, `xml...`) parse as
+/// calls rather than element lists and never reach this, leaving `values`
+/// as the one member that heads a clause. `varying` is the type word
+/// Postgres files as unreserved instead. Anything that is no keyword at
+/// all is a user-defined or extension type (`vector(1536)`).
+fn is_type_word(word: &str) -> bool {
+	match pg_keyword_category(word) {
+		Some(PgKeywordCategory::ColName) => word != "values",
+		Some(_) => word == "varying",
+		None => !is_sqlite_keyword(word),
+	}
+}
+
+/// `( 64 )` / `( 10 , 2 )` and nothing else — the shape of a type
+/// modifier, as opposed to a column list or an option list.
+fn holds_only_numbers(node: &SyntaxNode) -> bool {
+	let mut count = 0;
+	for element in node.children_with_tokens() {
+		match element {
+			SyntaxElement::Token(token) if token.kind().is_trivia() => {}
+			SyntaxElement::Token(token) => {
+				if !matches!(
+					token.kind(),
+					SyntaxKind::LParen | SyntaxKind::RParen | SyntaxKind::Comma
+				) {
+					return false;
+				}
+			}
+			SyntaxElement::Node(child) => {
+				if child.kind() != SyntaxKind::Literal {
+					return false;
+				}
+				let numeric = child
+					.children_with_tokens()
+					.filter(|element| !element.kind().is_trivia())
+					.all(|element| element.kind() == SyntaxKind::Number);
+				if !numeric {
+					return false;
+				}
+				count += 1;
+			}
+		}
+	}
+	count > 0
+}
 
 /// Does this node's first non-trivia token open a paren group?
 fn starts_with_lparen(node: &SyntaxNode) -> bool {
@@ -621,6 +692,7 @@ impl Lowerer {
 		let mut tight = false;
 		let mut semicolon = false;
 		let mut pending_segment = false;
+		let mut prev_word: Option<String> = None;
 		for element in node.children_with_tokens() {
 			// Transitions first, so the borrow below targets the right vec.
 			if let SyntaxElement::Token(token) = element
@@ -637,6 +709,7 @@ impl Lowerer {
 				} else if !segments.is_empty() && token.kind() == SyntaxKind::Comma {
 					let current = segments.last_mut().expect("segment open");
 					self.push(current, text(","));
+					prev_word = None;
 					// Start the next segment lazily so a trailing comment
 					// after the comma stays with this action.
 					pending_segment = true;
@@ -684,6 +757,8 @@ impl Lowerer {
 						}
 						_ => token_leaf(token),
 					};
+					prev_word = (token.kind() == SyntaxKind::Ident)
+						.then(|| token.text().to_owned());
 					self.push(current, leaf);
 					if segments.is_empty() {
 						head_tokens += 1;
@@ -696,9 +771,13 @@ impl Lowerer {
 						if !first {
 							current.push(soft_line_or_space());
 						}
-					} else if !first && !tight {
+					} else if !first
+						&& !tight
+						&& !is_type_modifier(prev_word.as_deref(), child)
+					{
 						current.push(space());
 					}
+					prev_word = None;
 					tight = false;
 					let doc = self.node(child);
 					self.push(current, doc);
@@ -757,6 +836,7 @@ impl Lowerer {
 		let mut pending_sls = false;
 		let mut tight = false;
 		let mut prev_name = false;
+		let mut prev_word: Option<String> = None;
 		let mut after_no = false;
 		for &element in elements {
 			match element {
@@ -770,6 +850,7 @@ impl Lowerer {
 				}
 				SyntaxElement::Token(token) if token.kind() == SyntaxKind::Comma => {
 					self.push(docs, text(","));
+					prev_word = None;
 					pending_sls = true;
 				}
 				SyntaxElement::Token(token) => {
@@ -814,6 +895,8 @@ impl Lowerer {
 					);
 					prev_name =
 						matches!(token.kind(), SyntaxKind::Ident | SyntaxKind::QuotedIdent);
+					prev_word = (token.kind() == SyntaxKind::Ident)
+						.then(|| token.text().to_owned());
 					after_no = token.kind() == SyntaxKind::Ident
 						&& token.text().eq_ignore_ascii_case("no");
 					let leaf = match token.kind() {
@@ -830,8 +913,10 @@ impl Lowerer {
 					// A paren group in call position glues to the name
 					// before it (`create function f(...)`).
 					let call_parens =
-						tight_call_parens && prev_name && starts_with_lparen(child);
+						(tight_call_parens && prev_name && starts_with_lparen(child))
+							|| is_type_modifier(prev_word.as_deref(), child);
 					prev_name = false;
+					prev_word = None;
 					if clause {
 						if !first {
 							docs.push(soft_line_or_space());
@@ -1430,7 +1515,10 @@ impl Lowerer {
 		let attach = if head_content
 			&& !matches!(
 				node.kind(),
-				SyntaxKind::ArgList | SyntaxKind::RowExpr | SyntaxKind::QuantifiedExpr
+				SyntaxKind::ArgList
+					| SyntaxKind::ArrayExpr
+					| SyntaxKind::RowExpr
+					| SyntaxKind::QuantifiedExpr
 			) {
 			space()
 		} else {
@@ -2006,6 +2094,7 @@ impl Lowerer {
 		let mut segments: Vec<Vec<Doc>> = vec![Vec::new()];
 		let mut tight = false;
 		let mut first = true;
+		let mut prev_word: Option<String> = None;
 		for (at, &element) in elements.iter().enumerate().skip(start) {
 			if segment_starts.contains(&at) {
 				segments.push(Vec::new());
@@ -2024,6 +2113,7 @@ impl Lowerer {
 							SyntaxKind::Dot
 								| SyntaxKind::Comma
 								| SyntaxKind::RParen
+								| SyntaxKind::LBracket
 								| SyntaxKind::RBracket
 								| SyntaxKind::ColonColon
 								| SyntaxKind::Semicolon
@@ -2056,13 +2146,17 @@ impl Lowerer {
 						}
 						_ => token_leaf(token),
 					};
+					prev_word = (token.kind() == SyntaxKind::Ident)
+						.then(|| token.text().to_owned());
 					self.push(docs, leaf);
 					first = false;
 				}
 				SyntaxElement::Node(child) => {
-					if !first && !tight {
+					if !first && !tight && !is_type_modifier(prev_word.as_deref(), child)
+					{
 						docs.push(space());
 					}
+					prev_word = None;
 					tight = false;
 					let doc = self.node(child);
 					self.push(docs, doc);
@@ -2089,6 +2183,7 @@ impl Lowerer {
 		let mut docs = Vec::new();
 		let mut tight = false;
 		let mut first = true;
+		let mut prev_word: Option<String> = None;
 		for element in node.children_with_tokens() {
 			match element {
 				SyntaxElement::Token(token) if token.kind().is_trivia() => {
@@ -2101,6 +2196,7 @@ impl Lowerer {
 							SyntaxKind::Dot
 								| SyntaxKind::Comma
 								| SyntaxKind::RParen
+								| SyntaxKind::LBracket
 								| SyntaxKind::RBracket
 								| SyntaxKind::ColonColon
 								| SyntaxKind::Semicolon
@@ -2119,13 +2215,17 @@ impl Lowerer {
 						SyntaxKind::QuotedIdent => name_leaf(token, pos),
 						_ => token_leaf(token),
 					};
+					prev_word = (token.kind() == SyntaxKind::Ident)
+						.then(|| token.text().to_owned());
 					self.push(&mut docs, leaf);
 					first = false;
 				}
 				SyntaxElement::Node(child) => {
-					if !first && !tight {
+					if !first && !tight && !is_type_modifier(prev_word.as_deref(), child)
+					{
 						docs.push(space());
 					}
+					prev_word = None;
 					tight = false;
 					let doc = self.node(child);
 					self.push(&mut docs, doc);

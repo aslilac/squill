@@ -4,7 +4,7 @@ expression: formatted
 ---
 create table if not exists user_configs (
 	user_id uuid not null,
-	key varchar (256) not null,
+	key varchar(256) not null,
 	value text not null,
 	primary key (user_id, key),
 	foreign key (user_id) references users (id) on delete cascade

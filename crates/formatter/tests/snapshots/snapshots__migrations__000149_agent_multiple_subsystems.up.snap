@@ -18,7 +18,7 @@ alter table workspace_agents
 -- Update all existing workspace_agents to have subsystems = [subsystem] unless
 -- the subsystem is 'none'.
 update workspace_agents
-set subsystems = array [subsystem]
+set subsystems = array[subsystem]
 where subsystem != 'none';
 
 -- Drop the subsystem column from workspace_agents.

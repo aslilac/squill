@@ -2,6 +2,6 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table templates add column display_name varchar (64) not null default '';
+alter table templates add column display_name varchar(64) not null default '';
 
 comment on column templates.display_name is 'Display name is a custom, human-friendly template name that user can set.';

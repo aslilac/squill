@@ -165,7 +165,7 @@ alter table api_keys add column allow_list text[];
 
 -- Backfill existing rows for compatibility
 update api_keys
-set scopes = array [scope::api_key_scope], allow_list = array ['*:*'];
+set scopes = array[scope::api_key_scope], allow_list = array['*:*'];
 
 -- Enforce NOT NULL
 alter table api_keys alter column scopes set not null;

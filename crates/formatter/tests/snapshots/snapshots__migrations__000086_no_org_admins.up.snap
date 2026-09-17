@@ -3,5 +3,5 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 update organization_members
-set roles = array []::text[]
+set roles = array[]::text[]
 where 'organization-admin:' || organization_id = any(roles);

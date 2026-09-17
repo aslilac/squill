@@ -111,7 +111,7 @@ from user_links
 where
 	-- IDP sync only supports string and array (of string) types
 	jsonb_typeof(claims -> 'merged_claims' -> sqlc.arg('claim_field')::text)
-	= any(array ['string', 'array'])
+	= any(array['string', 'array'])
 	and login_type = 'oidc'
 	and case
 		when @organization_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid

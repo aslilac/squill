@@ -7,11 +7,11 @@ expression: formatted
 -- give us a ~70% improvement in write throughput.
 create unlogged table workspace_agent_metadata (
 	workspace_agent_id uuid not null,
-	display_name varchar (127) not null,
-	key varchar (127) not null,
-	script varchar (65535) not null,
-	value varchar (65535) not null default '',
-	error varchar (65535) not null default '',
+	display_name varchar(127) not null,
+	key varchar(127) not null,
+	script varchar(65535) not null,
+	value varchar(65535) not null default '',
+	error varchar(65535) not null default '',
 	timeout bigint not null,
 	interval bigint not null,
 	collected_at timestamp with time zone not null

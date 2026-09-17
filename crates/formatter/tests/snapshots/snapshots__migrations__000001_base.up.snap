@@ -52,7 +52,7 @@ create table if not exists organization_members (
 	organization_id uuid not null,
 	created_at timestamp with time zone not null,
 	updated_at timestamp with time zone not null,
-	roles text [] default '{organization-member}'::text[] not null,
+	roles text[] default '{organization-member}'::text[] not null,
 	primary key (organization_id, user_id)
 );
 

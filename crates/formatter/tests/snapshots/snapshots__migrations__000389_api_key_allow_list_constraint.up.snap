@@ -5,8 +5,8 @@ expression: formatted
 -- Defensively update any API keys with empty allow_list to have default '*:*'
 -- This ensures all existing keys have at least one entry before adding the constraint
 update api_keys
-set allow_list = array ['*:*']
-where allow_list = array []::text[] or array_length(allow_list, 1) is null;
+set allow_list = array['*:*']
+where allow_list = array[]::text[] or array_length(allow_list, 1) is null;
 
 -- Add CHECK constraint to ensure allow_list array is never empty
 alter table api_keys

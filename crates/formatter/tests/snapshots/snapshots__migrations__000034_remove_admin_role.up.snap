@@ -24,7 +24,7 @@ set
 	-- Replace 'admin' role with 'template-admin' and 'user-admin'
 	rbac_roles = array_cat(
 		array_remove(rbac_roles, 'admin'),
-		array ['template-admin', 'user-admin']
+		array['template-admin', 'user-admin']
 	)
 where
 	-- Only on existing admins

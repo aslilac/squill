@@ -38,8 +38,8 @@ create table mcp_server_configs (
 	custom_headers_key_id text references dbcrypt_keys (active_key_digest),
 
 	-- Tool governance
-	tool_allow_list text [] not null default '{}',
-	tool_deny_list text [] not null default '{}',
+	tool_allow_list text[] not null default '{}',
+	tool_deny_list text[] not null default '{}',
 
 	-- Availability policy
 	availability text not null default 'default_off'

@@ -3,4 +3,4 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 alter table workspace_builds
-	add column name character varying (64) not null default '';
+	add column name character varying(64) not null default '';

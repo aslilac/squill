@@ -3,6 +3,6 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 alter table workspace_apps
-	add column if not exists tooltip varchar (2048) not null default '';
+	add column if not exists tooltip varchar(2048) not null default '';
 
 comment on column workspace_apps.tooltip is 'Markdown text that is displayed when hovering over workspace apps.';

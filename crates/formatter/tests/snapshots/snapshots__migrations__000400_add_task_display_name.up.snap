@@ -3,7 +3,7 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 -- Add display_name column to tasks table
-alter table tasks add column display_name varchar (127) not null default '';
+alter table tasks add column display_name varchar(127) not null default '';
 comment on column tasks.display_name is 'Display name is a custom, human-friendly task name.';
 
 -- Backfill existing tasks with truncated prompt as display name

@@ -6,7 +6,7 @@ create table ai_gateway_keys (
 	id uuid primary key,
 	created_at timestamptz not null,
 	name text not null,
-	secret_prefix varchar (11) not null,
+	secret_prefix varchar(11) not null,
 	hashed_secret bytea not null,
 	last_used_at timestamptz null,
 	constraint ai_gateway_keys_name_check

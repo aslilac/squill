@@ -6,8 +6,8 @@ create table oauth2_provider_apps (
 	id uuid not null,
 	created_at timestamp with time zone not null,
 	updated_at timestamp with time zone not null,
-	name varchar (64) not null,
-	icon varchar (256) not null,
+	name varchar(64) not null,
+	icon varchar(256) not null,
 	callback_url text not null,
 	primary key (id),
 	unique(name)

@@ -40,7 +40,7 @@ create table notification_messages (
 	created_by text not null,
 	payload jsonb not null,
 	attempt_count int default 0,
-	targets uuid [],
+	targets uuid[],
 	created_at timestamp with time zone not null default CURRENT_TIMESTAMP,
 	updated_at timestamp with time zone,
 	leased_until timestamp with time zone,

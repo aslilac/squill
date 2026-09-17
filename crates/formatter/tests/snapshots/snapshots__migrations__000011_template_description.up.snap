@@ -2,4 +2,4 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table templates add column description varchar (128) not null default '';
+alter table templates add column description varchar(128) not null default '';

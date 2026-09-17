@@ -11,7 +11,7 @@ set
 	)
 where
 	-- Only on existing admins. If they have either role, make them an admin
-	array [
+	array[
 		'template-admin',
 		'user-admin'
 	]

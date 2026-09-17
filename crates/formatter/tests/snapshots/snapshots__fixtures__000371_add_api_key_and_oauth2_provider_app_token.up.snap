@@ -32,8 +32,8 @@ values
 		86400,
 		'0.0.0.0',
 		'fixture-api-key',
-		array ['workspace:read']::api_key_scope[],
-		array ['*:*']
+		array['workspace:read']::api_key_scope[],
+		array['*:*']
 	)
 on conflict (id) do nothing;
 

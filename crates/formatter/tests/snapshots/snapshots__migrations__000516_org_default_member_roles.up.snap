@@ -5,7 +5,7 @@ expression: formatted
 alter table organizations add column default_org_member_roles text[];
 
 update organizations
-set default_org_member_roles = array ['organization-workspace-access']::text[];
+set default_org_member_roles = array['organization-workspace-access']::text[];
 
 alter table organizations alter column default_org_member_roles set not null;
 

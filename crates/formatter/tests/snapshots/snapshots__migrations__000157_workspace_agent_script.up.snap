@@ -7,7 +7,7 @@ create table workspace_agent_log_sources (
 		on delete cascade,
 	id uuid not null,
 	created_at timestamptz not null,
-	display_name varchar (127) not null,
+	display_name varchar(127) not null,
 	icon text not null,
 	primary key (workspace_agent_id, id)
 );

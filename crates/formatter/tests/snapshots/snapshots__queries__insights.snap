@@ -858,7 +858,7 @@ select
 from unique_template_params utp
 	join workspace_build_parameters wbp
 		on (
-			utp.workspace_build_ids @> array [wbp.workspace_build_id]
+			utp.workspace_build_ids @> array[wbp.workspace_build_id]
 			and utp.name = wbp.name
 		)
 group by

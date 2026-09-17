@@ -5,7 +5,7 @@ expression: formatted
 create table if not exists workspace_agent_startup_logs (
 	agent_id uuid not null references workspace_agents (id) on delete cascade,
 	created_at timestamptz not null,
-	output varchar (1024) not null,
+	output varchar(1024) not null,
 	id BIGSERIAL primary key
 );
 create index workspace_agent_startup_logs_id_agent_id_idx

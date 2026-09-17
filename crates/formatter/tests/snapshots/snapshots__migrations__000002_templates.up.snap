@@ -4,11 +4,11 @@ expression: formatted
 ---
 -- Store arbitrary data like template source code or avatars.
 create table files (
-	hash varchar (64) not null,
+	hash varchar(64) not null,
 	created_at timestamptz not null,
 	-- foreign key?
 	created_by uuid not null,
-	mimetype varchar (64) not null,
+	mimetype varchar(64) not null,
 	data bytea not null,
 	primary key (hash)
 );
@@ -27,7 +27,7 @@ create table templates (
 	-- Templates must be scoped to an organization.
 	organization_id uuid not null references organizations (id) on delete cascade,
 	deleted boolean not null default false,
-	name varchar (64) not null,
+	name varchar(64) not null,
 	provisioner provisioner_type not null,
 	-- Target's a Template Version to use for Workspaces.
 	-- If a Workspace doesn't match this version, it will be prompted to rebuild.
@@ -56,10 +56,10 @@ create table template_versions (
 	updated_at timestamptz not null,
 	-- Name is generated for ease of differentiation.
 	-- eg. TheCozyRabbit16
-	name varchar (64) not null,
+	name varchar(64) not null,
 	-- Extracted from a README.md on import.
 	-- Maximum of 1MB.
-	description varchar (1048576) not null,
+	description varchar(1048576) not null,
 	-- The job ID for building the template version.
 	job_id uuid not null,
 	primary key (id),

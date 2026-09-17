@@ -4,4 +4,4 @@ expression: formatted
 ---
 alter table only workspace_agents
 	-- UNIX paths are a maximum length of 4096.
-	add column if not exists directory varchar (4096) default '' not null;
+	add column if not exists directory varchar(4096) default '' not null;
