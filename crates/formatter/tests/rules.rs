@@ -369,3 +369,92 @@ fn index_elements_are_not_column_definitions() {
 		"create view v (a, b) as select 1, 2;\n"
 	);
 }
+
+#[test]
+fn column_constraints_land_in_canonical_order() {
+	// collate, not null, primary key, unique, references, check, then
+	// the default or generated value last.
+	assert_eq!(
+		format("create table t (a text default '' not null);"),
+		"create table t (\n\ta text not null default ''\n);\n"
+	);
+	assert_eq!(
+		format("create table t (a uuid default gen_random_uuid() primary key);"),
+		"create table t (\n\ta uuid primary key default gen_random_uuid()\n);\n"
+	);
+	assert_eq!(
+		format("create table t (a int unique not null default 0);"),
+		"create table t (\n\ta int not null unique default 0\n);\n"
+	);
+	assert_eq!(
+		format("create table t (a text collate \"C\" not null);"),
+		"create table t (\n\ta text collate \"C\" not null\n);\n"
+	);
+	// A named constraint sorts as the constraint it names, name and all.
+	assert_eq!(
+		format("create table t (a int constraint ck check (a > 0) not null);"),
+		"create table t (\n\ta int not null constraint ck check (a > 0)\n);\n"
+	);
+	// Qualifiers travel with the constraint they qualify.
+	assert_eq!(
+		format(
+			"create table t (a uuid references o (id) on delete cascade not null);"
+		),
+		"create table t (\n\ta uuid not null references o (id) on delete cascade\n);\n"
+	);
+	assert_eq!(
+		format(
+			"create table t (a int unique deferrable initially deferred not null);"
+		),
+		"create table t (\n\ta int not null unique deferrable initially deferred\n);\n"
+	);
+	// Already canonical, and table constraints, are left alone.
+	assert_eq!(
+		format("create table t (a int not null default 0, primary key (a));"),
+		"create table t (\n\ta int not null default 0,\n\tprimary key (a)\n);\n"
+	);
+}
+
+#[test]
+fn constraint_words_inside_a_clause_do_not_move() {
+	// `null` and `default` also end referential actions and default
+	// expressions, where they are not constraints of their own.
+	assert_eq!(
+		format(
+			"create table t (a uuid references o (id) on delete set null not null);"
+		),
+		"create table t (\n\ta uuid not null references o (id) on delete set null\n);\n"
+	);
+	assert_eq!(
+		format(
+			"create table t (a uuid references o (id) on delete set default not null);"
+		),
+		"create table t (\n\ta uuid not null references o (id) on delete set default\n);\n"
+	);
+	assert_eq!(
+		format("create table t (a jsonb default null not null);"),
+		"create table t (\n\ta jsonb not null default null\n);\n"
+	);
+	assert_eq!(
+		format("create table t (a int default -1 not null);"),
+		"create table t (\n\ta int not null default -1\n);\n"
+	);
+	// A default expression is still a real expression elsewhere.
+	assert_eq!(
+		format("alter table t alter column c set default now();"),
+		"alter table t alter column c set default now();\n"
+	);
+}
+
+#[test]
+fn reordering_stops_at_a_comment() {
+	// Comment order is oracle-checked byte for byte, so a column whose
+	// constraints carry one formats unmoved rather than falling back to
+	// verbatim for the whole statement.
+	let out =
+		format("create table t (a text default '' /* why */ not null, b int);");
+	assert_eq!(
+		out,
+		"create table t (\n\ta text default '' /* why */ not null,\n\tb int\n);\n"
+	);
+}

@@ -16,7 +16,7 @@ create type login_type as enum (
 create table if not exists users (
 	id uuid not null,
 	email text not null,
-	username text default ''::text not null,
+	username text not null default ''::text,
 	hashed_password bytea not null,
 	created_at timestamp with time zone not null,
 	updated_at timestamp with time zone not null,
@@ -52,7 +52,7 @@ create table if not exists organization_members (
 	organization_id uuid not null,
 	created_at timestamp with time zone not null,
 	updated_at timestamp with time zone not null,
-	roles text[] default '{organization-member}'::text[] not null,
+	roles text[] not null default '{organization-member}'::text[],
 	primary key (organization_id, user_id)
 );
 
@@ -81,11 +81,11 @@ create table if not exists api_keys (
 	created_at timestamp with time zone not null,
 	updated_at timestamp with time zone not null,
 	login_type login_type not null,
-	oauth_access_token text default ''::text not null,
-	oauth_refresh_token text default ''::text not null,
-	oauth_id_token text default ''::text not null,
-	oauth_expiry timestamp with time zone
-		default '0001-01-01 00:00:00+00'::timestamp with time zone not null,
+	oauth_access_token text not null default ''::text,
+	oauth_refresh_token text not null default ''::text,
+	oauth_id_token text not null default ''::text,
+	oauth_expiry timestamp with time zone not null
+		default '0001-01-01 00:00:00+00'::timestamp with time zone,
 	primary key (id)
 );
 

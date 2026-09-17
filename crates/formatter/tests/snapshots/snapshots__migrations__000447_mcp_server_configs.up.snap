@@ -12,13 +12,14 @@ create table mcp_server_configs (
 	icon_url text not null default '',
 
 	-- Connection
-	transport text not null default 'streamable_http'
-		check (transport in ('streamable_http', 'sse')),
+	transport text not null check (transport in ('streamable_http', 'sse'))
+		default 'streamable_http',
 	url text not null,
 
 	-- Authentication
-	auth_type text not null default 'none'
-		check (auth_type in ('none', 'oauth2', 'api_key', 'custom_headers')),
+	auth_type text not null
+		check (auth_type in ('none', 'oauth2', 'api_key', 'custom_headers'))
+		default 'none',
 
 	-- OAuth2 config (when auth_type = 'oauth2')
 	oauth2_client_id text not null default '',
@@ -42,8 +43,9 @@ create table mcp_server_configs (
 	tool_deny_list text[] not null default '{}',
 
 	-- Availability policy
-	availability text not null default 'default_off'
-		check (availability in ('force_on', 'default_on', 'default_off')),
+	availability text not null
+		check (availability in ('force_on', 'default_on', 'default_off'))
+		default 'default_off',
 
 	-- Lifecycle
 	enabled boolean not null default false,

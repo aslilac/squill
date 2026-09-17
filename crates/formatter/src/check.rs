@@ -6,6 +6,7 @@
 //! corpus-wide oracle tests in CI.
 
 use crate::attr_order;
+use crate::col_order;
 use parser::Dialect;
 use parser::lexer::LexOptions;
 use parser::lexer::lex_with;
@@ -80,7 +81,147 @@ fn canonical_token_order<'a, 'src>(
 		}
 		chunk = i + 1;
 	}
+	canonical_column_order(&out)
+}
+
+/// Words between a statement's verb and the object it acts on.
+const OBJECT_MODIFIERS: &[&str] = &[
+	"or",
+	"replace",
+	"global",
+	"local",
+	"temp",
+	"temporary",
+	"unlogged",
+	"foreign",
+	"materialized",
+	"recursive",
+	"unique",
+	"concurrently",
+	"if",
+	"not",
+	"exists",
+];
+
+/// Reorder each column definition's tokens into canonical constraint
+/// order, the same way the lowerer does, so a sanctioned reordering
+/// compares as equal.
+///
+/// A column definition is one comma-separated chunk of a column-bearing
+/// statement's first parenthesized group — the shape the lowerer sees as
+/// a `ColumnDef` inside an `ElementList`.
+fn canonical_column_order<'a, 'src>(
+	tokens: &[&'a parser::lexer::Token<'src>],
+) -> Vec<&'a parser::lexer::Token<'src>> {
+	let mut out: Vec<_> = tokens.to_vec();
+	let mut at = 0usize;
+	while at < tokens.len() {
+		let (statement_end, columns) = statement_span(tokens, at);
+		if columns
+			&& let Some((open, close)) = first_group(tokens, at, statement_end)
+		{
+			permute_chunks(tokens, &mut out, open + 1, close);
+		}
+		at = statement_end + 1;
+	}
 	out
+}
+
+/// Where the statement starting at `at` ends, and whether its first
+/// parenthesized group holds column definitions.
+fn statement_span(
+	tokens: &[&parser::lexer::Token<'_>],
+	at: usize,
+) -> (usize, bool) {
+	let end = (at..tokens.len())
+		.find(|&i| tokens[i].kind == SyntaxKind::Semicolon)
+		.unwrap_or(tokens.len());
+	let word = |i: usize| {
+		tokens
+			.get(i)
+			.filter(|t| t.kind == SyntaxKind::Ident && i < end)
+			.map(|t| t.text.to_ascii_lowercase())
+	};
+	if !matches!(word(at).as_deref(), Some("create" | "alter")) {
+		return (end, false);
+	}
+	let mut i = at + 1;
+	let object = loop {
+		let Some(next) = word(i) else {
+			return (end, false);
+		};
+		i += 1;
+		if !OBJECT_MODIFIERS.contains(&next.as_str()) {
+			break next;
+		}
+	};
+	(end, matches!(object.as_str(), "table" | "type"))
+}
+
+/// The first balanced `(...)` between `at` and `end`, if any.
+fn first_group(
+	tokens: &[&parser::lexer::Token<'_>],
+	at: usize,
+	end: usize,
+) -> Option<(usize, usize)> {
+	let open = (at..end).find(|&i| tokens[i].kind == SyntaxKind::LParen)?;
+	let mut depth = 0usize;
+	for (i, token) in tokens.iter().enumerate().take(end).skip(open) {
+		match token.kind {
+			SyntaxKind::LParen => depth += 1,
+			SyntaxKind::RParen => {
+				depth -= 1;
+				if depth == 0 {
+					return Some((open, i));
+				}
+			}
+			_ => {}
+		}
+	}
+	None
+}
+
+/// Apply the canonical order to each top-level comma-separated chunk of
+/// `open..close`.
+fn permute_chunks<'a, 'src>(
+	tokens: &[&'a parser::lexer::Token<'src>],
+	out: &mut [&'a parser::lexer::Token<'src>],
+	open: usize,
+	close: usize,
+) {
+	let mut depth = 0usize;
+	let mut chunk = open;
+	for i in open..=close {
+		let split = match tokens.get(i).map(|t| t.kind) {
+			Some(SyntaxKind::LParen) => {
+				depth += 1;
+				false
+			}
+			Some(SyntaxKind::RParen) => {
+				if depth == 0 {
+					true
+				} else {
+					depth -= 1;
+					false
+				}
+			}
+			Some(SyntaxKind::Comma) => depth == 0,
+			_ => false,
+		};
+		if !split {
+			continue;
+		}
+		let words: Vec<attr_order::W> = tokens[chunk..i]
+			.iter()
+			.map(|t| attr_order::classify(t.kind, t.text))
+			.collect();
+		if let Some(perm) = col_order::canonical_order(&words) {
+			for (to, &from) in perm.iter().enumerate() {
+				out[chunk + to] = tokens[chunk + from];
+			}
+		}
+		chunk = i + 1;
+	}
 }
 
 fn token_equivalent(

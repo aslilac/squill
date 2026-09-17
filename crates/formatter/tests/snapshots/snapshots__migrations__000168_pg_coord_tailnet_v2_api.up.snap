@@ -12,7 +12,7 @@ create table tailnet_peers (
 	coordinator_id uuid not null,
 	updated_at timestamp with time zone not null,
 	node bytea not null,
-	status tailnet_status default 'ok'::tailnet_status not null,
+	status tailnet_status not null default 'ok'::tailnet_status,
 	primary key (id, coordinator_id),
 	foreign key (coordinator_id) references tailnet_coordinators (id)
 		on delete cascade

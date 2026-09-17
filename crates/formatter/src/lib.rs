@@ -3,6 +3,7 @@
 
 mod attr_order;
 pub mod check;
+mod col_order;
 pub mod doc;
 pub mod keywords;
 mod printer;

@@ -3,7 +3,7 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 create table template_version_presets (
-	id uuid primary key not null,
+	id uuid not null primary key,
 	template_version_id uuid not null,
 	name text not null,
 	created_at timestamp with time zone not null default CURRENT_TIMESTAMP,
@@ -12,7 +12,7 @@ create table template_version_presets (
 );
 
 create table template_version_preset_parameters (
-	id uuid primary key not null,
+	id uuid not null primary key,
 	template_version_preset_id uuid not null,
 	name text not null,
 	value text not null,

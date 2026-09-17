@@ -157,6 +157,7 @@ fn ddl_tokens_inner(p: &mut Parser<'_>, stop: Stop, ctx: Ctx) -> PResult {
 	// `CREATE DOMAIN` — both only to tell apart the positions where a
 	// type name is grammatical from the ones where the same word is not.
 	let mut prev = String::new();
+	let mut prev2 = String::new();
 	loop {
 		if p.dialect() == crate::dialect::Dialect::Sqlite && stop == Stop::Semicolon
 		{
@@ -223,7 +224,13 @@ fn ddl_tokens_inner(p: &mut Parser<'_>, stop: Stop, ctx: Ctx) -> PResult {
 							query_body(p)?;
 						}
 					}
-					"default" => {
+					// `ON DELETE SET DEFAULT` names a referential action;
+					// the word is not introducing a default expression,
+					// and reading one swallows the constraints after it.
+					"default"
+						if !(prev == "set"
+							&& matches!(prev2.as_str(), "delete" | "update")) =>
+					{
 						p.bump();
 						if can_start_expr(p) && !p.at_kw("values") {
 							expr(p, 0)?;
@@ -243,7 +250,7 @@ fn ddl_tokens_inner(p: &mut Parser<'_>, stop: Stop, ctx: Ctx) -> PResult {
 					}
 					_ => p.bump(),
 				}
-				prev = word;
+				prev2 = std::mem::replace(&mut prev, word);
 			}
 			Some(_) => p.bump(),
 		}

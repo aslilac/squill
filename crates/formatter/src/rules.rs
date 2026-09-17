@@ -9,6 +9,7 @@
 //! never be dropped, duplicated, or reordered.
 
 use crate::attr_order;
+use crate::col_order;
 use crate::doc::Doc;
 use crate::doc::IdentPos;
 use crate::doc::break_parent;
@@ -1967,7 +1968,30 @@ impl Lowerer {
 			"not",
 			"on",
 		];
-		let elements: Vec<SyntaxElement> = node.children_with_tokens().collect();
+		let mut elements: Vec<SyntaxElement> =
+			node.children_with_tokens().collect();
+		// Constraints land in canonical order: COLLATE, NOT NULL, the
+		// key constraints, then DEFAULT or GENERATED. Skipped when a
+		// comment would move with a segment — comment order is
+		// oracle-checked and must survive byte-for-byte.
+		let words: Vec<attr_order::W> = elements
+			.iter()
+			.map(|element| match element {
+				SyntaxElement::Token(token) => {
+					attr_order::classify(token.kind(), token.text())
+				}
+				SyntaxElement::Node(_) => attr_order::W::Other,
+			})
+			.collect();
+		if let Some(perm) = col_order::canonical_order(&words) {
+			let moves_comment = perm
+				.iter()
+				.enumerate()
+				.any(|(at, &from)| at != from && element_has_comment(elements[from]));
+			if !moves_comment {
+				elements = perm.iter().map(|&from| elements[from]).collect();
+			}
+		}
 		// Significant words, for the look-around guards.
 		let words: Vec<(usize, String)> = elements
 			.iter()
