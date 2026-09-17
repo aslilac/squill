@@ -3,4 +3,4 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 alter table only workspace_builds
-	add column deadline TIMESTAMPTZ not null default TIMESTAMPTZ '0001-01-01 00:00:00+00:00';
+	add column deadline timestamptz not null default TIMESTAMPTZ '0001-01-01 00:00:00+00:00';

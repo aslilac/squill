@@ -4,4 +4,4 @@ expression: formatted
 ---
 alter type chat_status add value if not exists 'requires_action';
 
-alter table chats add column dynamic_tools JSONB default null;
+alter table chats add column dynamic_tools jsonb default null;

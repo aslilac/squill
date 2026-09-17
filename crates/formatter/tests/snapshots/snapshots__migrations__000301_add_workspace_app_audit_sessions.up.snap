@@ -5,9 +5,9 @@ expression: formatted
 -- Keep all unique fields as non-null because `UNIQUE NULLS NOT DISTINCT`
 -- requires PostgreSQL 15+.
 create unlogged table workspace_app_audit_sessions (
-	agent_id UUID not null,
-	app_id UUID not null, -- Can be NULL, but must be uuid.Nil.
-	user_id UUID not null, -- Can be NULL, but must be uuid.Nil.
+	agent_id uuid not null,
+	app_id uuid not null, -- Can be NULL, but must be uuid.Nil.
+	user_id uuid not null, -- Can be NULL, but must be uuid.Nil.
 	ip text not null,
 	user_agent text not null,
 	slug_or_port text not null,

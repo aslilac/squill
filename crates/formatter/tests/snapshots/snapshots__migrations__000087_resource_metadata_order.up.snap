@@ -5,7 +5,7 @@ expression: formatted
 alter table workspace_resource_metadata
 	drop constraint workspace_resource_metadata_pkey;
 
-alter table workspace_resource_metadata add column id BIGSERIAL primary key;
+alter table workspace_resource_metadata add column id bigserial primary key;
 
 alter table workspace_resource_metadata
 	add constraint workspace_resource_metadata_name unique (

@@ -5,7 +5,7 @@ expression: formatted
 -- Default to `false`. Users will have to manually opt back into the classic parameter flow.
 -- We want the new experience to be tried first.
 alter table templates
-	add column use_classic_parameter_flow BOOL not null default false;
+	add column use_classic_parameter_flow bool not null default false;
 
 comment on column templates.use_classic_parameter_flow is 'Determines whether to default to the dynamic parameter creation flow for this template ' 'or continue using the legacy classic parameter creation flow.' 'This is a template wide setting, the template admin can revert to the classic flow if there are any issues. ' 'An escape hatch is required, as workspace creation is a core workflow and cannot break. ' 'This column will be removed when the dynamic parameter creation flow is stable.';
 

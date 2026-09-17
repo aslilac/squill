@@ -24,8 +24,8 @@ where
 		)
 	)
 	and (
-		@created_at_opt::TIMESTAMPTZ = '0001-01-01 00:00:00Z'
-		or created_at < @created_at_opt::TIMESTAMPTZ
+		@created_at_opt::timestamptz = '0001-01-01 00:00:00Z'
+		or created_at < @created_at_opt::timestamptz
 	)
 order by created_at desc
 limit (coalesce(nullif(@limit_opt::int, 0), 25));
@@ -42,8 +42,8 @@ select *
 from inbox_notifications
 where
 	user_id = @user_id
-	and (@templates::UUID[] is null or template_id = any(@templates::UUID[]))
-	and (@targets::UUID[] is null or targets @> @targets::UUID[])
+	and (@templates::uuid[] is null or template_id = any(@templates::uuid[]))
+	and (@targets::uuid[] is null or targets @> @targets::uuid[])
 	and (
 		@read_status::inbox_notification_read_status = 'all'
 		or (
@@ -56,8 +56,8 @@ where
 		)
 	)
 	and (
-		@created_at_opt::TIMESTAMPTZ = '0001-01-01 00:00:00Z'
-		or created_at < @created_at_opt::TIMESTAMPTZ
+		@created_at_opt::timestamptz = '0001-01-01 00:00:00Z'
+		or created_at < @created_at_opt::timestamptz
 	)
 order by created_at desc
 limit (coalesce(nullif(@limit_opt::int, 0), 25));

@@ -3,31 +3,31 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 create table chat_debug_runs (
-	id UUID primary key default gen_random_uuid(),
-	chat_id UUID not null references chats (id) on delete cascade,
+	id uuid primary key default gen_random_uuid(),
+	chat_id uuid not null references chats (id) on delete cascade,
 	-- root_chat_id and parent_chat_id are intentionally NOT
 	-- foreign-keyed to chats(id). They are snapshot values that
 	-- record the subchat hierarchy at run time. The referenced
 	-- chat may be archived or deleted independently, and we want
 	-- to preserve the historical lineage in debug rows rather
 	-- than cascade-delete them.
-	root_chat_id UUID,
-	parent_chat_id UUID,
+	root_chat_id uuid,
+	parent_chat_id uuid,
 	-- model_config_id follows the same snapshot rationale as
 	-- root_chat_id / parent_chat_id above: it records the model
 	-- configuration in effect at run time and must survive if
 	-- the referenced config is later deleted or rotated.
-	model_config_id UUID,
+	model_config_id uuid,
 	trigger_message_id bigint,
 	history_tip_message_id bigint,
 	kind text not null,
 	status text not null,
 	provider text,
 	model text,
-	summary JSONB not null default '{}'::jsonb,
-	started_at TIMESTAMPTZ not null default now(),
-	updated_at TIMESTAMPTZ not null default now(),
-	finished_at TIMESTAMPTZ
+	summary jsonb not null default '{}'::jsonb,
+	started_at timestamptz not null default now(),
+	updated_at timestamptz not null default now(),
+	finished_at timestamptz
 );
 
 create unique index idx_chat_debug_runs_id_chat
@@ -36,23 +36,23 @@ create index idx_chat_debug_runs_chat_started
 	on chat_debug_runs (chat_id, started_at desc);
 
 create table chat_debug_steps (
-	id UUID primary key default gen_random_uuid(),
-	run_id UUID not null,
-	chat_id UUID not null references chats (id) on delete cascade,
+	id uuid primary key default gen_random_uuid(),
+	run_id uuid not null,
+	chat_id uuid not null references chats (id) on delete cascade,
 	step_number int not null,
 	operation text not null,
 	status text not null,
 	history_tip_message_id bigint,
 	assistant_message_id bigint,
-	normalized_request JSONB not null,
-	normalized_response JSONB,
-	usage JSONB,
-	attempts JSONB not null default '[]'::jsonb,
-	error JSONB,
-	metadata JSONB not null default '{}'::jsonb,
-	started_at TIMESTAMPTZ not null default now(),
-	updated_at TIMESTAMPTZ not null default now(),
-	finished_at TIMESTAMPTZ,
+	normalized_request jsonb not null,
+	normalized_response jsonb,
+	usage jsonb,
+	attempts jsonb not null default '[]'::jsonb,
+	error jsonb,
+	metadata jsonb not null default '{}'::jsonb,
+	started_at timestamptz not null default now(),
+	updated_at timestamptz not null default now(),
+	finished_at timestamptz,
 	constraint fk_chat_debug_steps_run_chat foreign key (run_id, chat_id)
 		references chat_debug_runs (id, chat_id) on delete cascade
 );

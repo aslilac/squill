@@ -197,9 +197,11 @@ fn function_attributes_reorder_even_with_empty_parens() {
 
 #[test]
 fn keyword_case_spares_names_and_types() {
-	// Only real keywords respond to keyword-case; table, column, and
-	// type names keep the author's spelling in both directions — even
-	// a column named after a keyword, like `name`.
+	// Only real keywords respond to keyword-case; table and column
+	// names keep the author's spelling in both directions — even a
+	// column named after a keyword, like `name`. Type names are always
+	// lowercased, so `text` matches `uuid` instead of tracking whether
+	// Postgres happens to list it as a keyword.
 	let options = Options {
 		keyword_case: formatter::KeywordCase::Upper,
 		..Options::default()
@@ -213,7 +215,7 @@ fn keyword_case_spares_names_and_types() {
 	let out = format_cst(&parse.cst, &options).text;
 	assert_eq!(
 		out,
-		"CREATE TABLE Foo_Bar (\n\tid uuid NOT NULL,\n\tname TEXT NOT NULL,\n\tPRIMARY KEY (id)\n);\n"
+		"CREATE TABLE Foo_Bar (\n\tid uuid NOT NULL,\n\tname text NOT NULL,\n\tPRIMARY KEY (id)\n);\n"
 	);
 	// And lower mode leaves deliberately-cased names alone.
 	assert_eq!(
@@ -290,4 +292,80 @@ fn array_constructor_glues_to_its_bracket() {
 	);
 	// `array(subquery)` is the other spelling, and keeps its own shape.
 	assert_eq!(format("select array (select 1);"), "select array (select 1);\n");
+}
+
+#[test]
+fn type_names_lowercase_in_every_position() {
+	// `uuid` and `timestamptz` are not in `kwlist.h` and `text` is, so
+	// keyword-casing types would case them differently for no reason
+	// the author can see. They are lowercased instead, everywhere a
+	// type is grammatical — including the DDL positions the parser has
+	// to recognize on its own.
+	let upper = Options {
+		keyword_case: formatter::KeywordCase::Upper,
+		..Options::default()
+	};
+	let format_upper = |source: &str| {
+		let tokens = lex_with(source, Dialect::Postgres, upper.lex_options());
+		let parse = parser::parser::parse(&tokens, Dialect::Postgres);
+		format_cst(&parse.cst, &upper).text
+	};
+	assert_eq!(
+		format_upper("create table t (a TEXT, b UUID, c TIMESTAMPTZ);"),
+		"CREATE TABLE t (\n\ta text,\n\tb uuid,\n\tc timestamptz\n);\n"
+	);
+	assert_eq!(
+		format_upper("alter table t add column d TEXT not null;"),
+		"ALTER TABLE t ADD COLUMN d text NOT NULL;\n"
+	);
+	assert_eq!(
+		format_upper("alter table t alter column d type CHARACTER VARYING(64);"),
+		"ALTER TABLE t ALTER COLUMN d TYPE character varying(64);\n"
+	);
+	assert_eq!(
+		format_upper("create domain dd as TEXT;"),
+		"CREATE DOMAIN dd AS text;\n"
+	);
+	assert_eq!(
+		format_upper(
+			"create function f() returns TRIGGER language plpgsql as 'x';"
+		),
+		"CREATE FUNCTION f()\nRETURNS trigger\nLANGUAGE plpgsql\nAS 'x';\n"
+	);
+	assert_eq!(
+		format_upper("select a::UUID from t;"),
+		"SELECT a::uuid FROM t;\n"
+	);
+	// Lower mode agrees, rather than leaving the author's uppercase.
+	assert_eq!(
+		format("create table t (a TEXT, b UUID);"),
+		"create table t (\n\ta text,\n\tb uuid\n);\n"
+	);
+	// A quoted type name is an identifier, and stays exactly as written.
+	assert_eq!(format_upper("select a::\"MyType\";"), "SELECT a::\"MyType\";\n");
+}
+
+#[test]
+fn index_elements_are_not_column_definitions() {
+	// `id desc` has the same shape as `id uuid`; only the statement
+	// says which, so a sort direction must not be read as a type.
+	let upper = Options {
+		keyword_case: formatter::KeywordCase::Upper,
+		..Options::default()
+	};
+	let tokens = lex_with(
+		"create index i on t using btree (chat_id, id desc);",
+		Dialect::Postgres,
+		upper.lex_options(),
+	);
+	let parse = parser::parser::parse(&tokens, Dialect::Postgres);
+	assert_eq!(
+		format_cst(&parse.cst, &upper).text,
+		"CREATE INDEX i ON t USING btree (chat_id, id DESC);\n"
+	);
+	// A view's column list names columns without typing them.
+	assert_eq!(
+		format("create view v (a, b) as select 1, 2;"),
+		"create view v (a, b) as select 1, 2;\n"
+	);
 }

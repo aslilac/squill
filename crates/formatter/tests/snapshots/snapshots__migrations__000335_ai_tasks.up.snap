@@ -9,7 +9,7 @@ alter table workspace_builds
 
 -- The app that is displayed in the ai tasks sidebar.
 alter table workspace_builds
-	add column ai_tasks_sidebar_app_id UUID default null;
+	add column ai_tasks_sidebar_app_id uuid default null;
 
 alter table workspace_builds
 	add constraint workspace_builds_ai_tasks_sidebar_app_id_fkey foreign key (

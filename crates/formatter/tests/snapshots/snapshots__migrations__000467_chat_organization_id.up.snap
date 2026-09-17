@@ -4,7 +4,7 @@ expression: formatted
 ---
 -- Step 1: Add nullable column with FK.
 alter table chats
-	add column organization_id UUID references organizations (
+	add column organization_id uuid references organizations (
 		id
 	) on delete cascade;
 

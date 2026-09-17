@@ -2,4 +2,4 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table aibridge_interceptions add column metadata JSONB default null;
+alter table aibridge_interceptions add column metadata jsonb default null;

@@ -64,13 +64,13 @@ from tasks_with_status tws
 where
 	tws.deleted_at is null
 	and case
-		when @owner_id::UUID != '00000000-0000-0000-0000-000000000000'
-			then tws.owner_id = @owner_id::UUID
+		when @owner_id::uuid != '00000000-0000-0000-0000-000000000000'
+			then tws.owner_id = @owner_id::uuid
 		else true
 	end
 	and case
-		when @organization_id::UUID != '00000000-0000-0000-0000-000000000000'
-			then tws.organization_id = @organization_id::UUID
+		when @organization_id::uuid != '00000000-0000-0000-0000-000000000000'
+			then tws.organization_id = @organization_id::uuid
 		else true
 	end
 	and case

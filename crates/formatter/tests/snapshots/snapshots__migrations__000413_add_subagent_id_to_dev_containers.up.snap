@@ -3,6 +3,6 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 alter table workspace_agent_devcontainers
-	add column subagent_id UUID references workspace_agents (
+	add column subagent_id uuid references workspace_agents (
 		id
 	) on delete cascade;

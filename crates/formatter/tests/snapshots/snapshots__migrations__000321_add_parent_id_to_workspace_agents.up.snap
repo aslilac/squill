@@ -3,4 +3,4 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 alter table workspace_agents
-	add column parent_id UUID references workspace_agents (id) on delete cascade;
+	add column parent_id uuid references workspace_agents (id) on delete cascade;

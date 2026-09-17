@@ -4,5 +4,5 @@ expression: formatted
 ---
 -- Add column with default to fix existing rows.
 alter table workspace_app_audit_sessions
-	add column id UUID primary key default gen_random_uuid();
+	add column id uuid primary key default gen_random_uuid();
 alter table workspace_app_audit_sessions alter column id drop default;

@@ -3,7 +3,7 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 create table workspace_app_stats (
-	id BIGSERIAL primary key,
+	id bigserial primary key,
 	user_id uuid not null references users (id),
 	workspace_id uuid not null references workspaces (id),
 	agent_id uuid not null references workspace_agents (id),

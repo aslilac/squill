@@ -28,12 +28,12 @@ create type workspace_agent_context_resource_status as enum (
 -- Latest workspace agent context snapshot, one row per agent.
 -- Overwritten on each PushContextState; no history.
 create table workspace_agent_context_snapshots (
-	workspace_agent_id UUID primary key references workspace_agents (id)
+	workspace_agent_id uuid primary key references workspace_agents (id)
 		on delete cascade,
 	version bigint not null,
-	aggregate_hash BYTEA not null,
+	aggregate_hash bytea not null,
 	snapshot_error text not null default '',
-	received_at TIMESTAMPTZ not null default now()
+	received_at timestamptz not null default now()
 );
 
 comment on table workspace_agent_context_snapshots is 'Latest workspace agent context snapshot received via PushContextState. One row per workspace agent, overwritten in place.';
@@ -47,18 +47,18 @@ comment on column workspace_agent_context_snapshots.received_at is 'Time at whic
 -- deletes any sources absent from the latest push in the same
 -- transaction.
 create table workspace_agent_context_resources (
-	workspace_agent_id UUID not null references workspace_agents (id)
+	workspace_agent_id uuid not null references workspace_agents (id)
 		on delete cascade,
 	source text not null,
 	body_kind workspace_agent_context_body_kind not null,
-	body JSONB not null,
-	content_hash BYTEA not null,
+	body jsonb not null,
+	content_hash bytea not null,
 	size_bytes bigint not null,
 	status workspace_agent_context_resource_status not null,
 	error text not null default '',
 	source_path text not null default '',
-	created_at TIMESTAMPTZ not null default now(),
-	updated_at TIMESTAMPTZ not null default now(),
+	created_at timestamptz not null default now(),
+	updated_at timestamptz not null default now(),
 	primary key (workspace_agent_id, source)
 );
 

@@ -3,8 +3,8 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 create table template_version_presets (
-	id UUID primary key not null,
-	template_version_id UUID not null,
+	id uuid primary key not null,
+	template_version_id uuid not null,
 	name text not null,
 	created_at timestamp with time zone not null default CURRENT_TIMESTAMP,
 	foreign key (template_version_id) references template_versions (id)
@@ -12,15 +12,15 @@ create table template_version_presets (
 );
 
 create table template_version_preset_parameters (
-	id UUID primary key not null,
-	template_version_preset_id UUID not null,
+	id uuid primary key not null,
+	template_version_preset_id uuid not null,
 	name text not null,
 	value text not null,
 	foreign key (template_version_preset_id)
 		references template_version_presets (id) on delete cascade
 );
 
-alter table workspace_builds add column template_version_preset_id UUID null;
+alter table workspace_builds add column template_version_preset_id uuid null;
 
 alter table workspace_builds
 	add constraint workspace_builds_template_version_preset_id_fkey foreign key (

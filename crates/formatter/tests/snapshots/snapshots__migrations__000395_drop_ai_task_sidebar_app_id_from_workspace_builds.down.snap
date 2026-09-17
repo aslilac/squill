@@ -2,7 +2,7 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table workspace_builds add column ai_task_sidebar_app_id UUID;
+alter table workspace_builds add column ai_task_sidebar_app_id uuid;
 alter table workspace_builds
 	add constraint workspace_builds_ai_task_sidebar_app_id_fkey foreign key (
 		ai_task_sidebar_app_id

@@ -18,20 +18,20 @@ create type chat_message_visibility as enum (
 );
 
 create table chats (
-	id UUID primary key default gen_random_uuid(),
-	owner_id UUID not null references users (id) on delete cascade,
-	workspace_id UUID references workspaces (id) on delete set null,
-	workspace_agent_id UUID references workspace_agents (id) on delete set null,
+	id uuid primary key default gen_random_uuid(),
+	owner_id uuid not null references users (id) on delete cascade,
+	workspace_id uuid references workspaces (id) on delete set null,
+	workspace_agent_id uuid references workspace_agents (id) on delete set null,
 	title text not null default 'New Chat',
 	status chat_status not null default 'waiting',
-	worker_id UUID,
-	started_at TIMESTAMPTZ,
-	heartbeat_at TIMESTAMPTZ,
-	created_at TIMESTAMPTZ not null default now(),
-	updated_at TIMESTAMPTZ not null default now(),
-	parent_chat_id UUID references chats (id) on delete set null,
-	root_chat_id UUID references chats (id) on delete set null,
-	last_model_config_id UUID not null
+	worker_id uuid,
+	started_at timestamptz,
+	heartbeat_at timestamptz,
+	created_at timestamptz not null default now(),
+	updated_at timestamptz not null default now(),
+	parent_chat_id uuid references chats (id) on delete set null,
+	root_chat_id uuid references chats (id) on delete set null,
+	last_model_config_id uuid not null
 );
 
 create index idx_chats_owner on chats (owner_id);
@@ -42,12 +42,12 @@ create index idx_chats_root_chat_id on chats (root_chat_id);
 create index idx_chats_last_model_config_id on chats (last_model_config_id);
 
 create table chat_messages (
-	id BIGSERIAL primary key,
-	chat_id UUID not null references chats (id) on delete cascade,
-	model_config_id UUID,
-	created_at TIMESTAMPTZ not null default now(),
+	id bigserial primary key,
+	chat_id uuid not null references chats (id) on delete cascade,
+	model_config_id uuid,
+	created_at timestamptz not null default now(),
 	role text not null,
-	content JSONB,
+	content jsonb,
 	visibility chat_message_visibility not null default 'both',
 	input_tokens bigint,
 	output_tokens bigint,
@@ -68,17 +68,17 @@ create index idx_chat_messages_compressed_summary_boundary
 		compressed = true and role = 'system' and visibility in ('model', 'both');
 
 create table chat_diff_statuses (
-	chat_id UUID primary key references chats (id) on delete cascade,
+	chat_id uuid primary key references chats (id) on delete cascade,
 	url text,
 	pull_request_state text,
 	changes_requested boolean not null default false,
 	additions integer not null default 0,
 	deletions integer not null default 0,
 	changed_files integer not null default 0,
-	refreshed_at TIMESTAMPTZ,
-	stale_at TIMESTAMPTZ not null default now(),
-	created_at TIMESTAMPTZ not null default now(),
-	updated_at TIMESTAMPTZ not null default now(),
+	refreshed_at timestamptz,
+	stale_at timestamptz not null default now(),
+	created_at timestamptz not null default now(),
+	updated_at timestamptz not null default now(),
 	git_branch text not null default '',
 	git_remote_origin text not null default ''
 );
@@ -86,15 +86,15 @@ create table chat_diff_statuses (
 create index idx_chat_diff_statuses_stale_at on chat_diff_statuses (stale_at);
 
 create table chat_providers (
-	id UUID primary key default gen_random_uuid(),
+	id uuid primary key default gen_random_uuid(),
 	provider text not null unique,
 	display_name text not null default '',
 	api_key text not null default '',
 	api_key_key_id text references dbcrypt_keys (active_key_digest),
-	created_by UUID references users (id),
+	created_by uuid references users (id),
 	enabled boolean not null default true,
-	created_at TIMESTAMPTZ not null default now(),
-	updated_at TIMESTAMPTZ not null default now(),
+	created_at timestamptz not null default now(),
+	updated_at timestamptz not null default now(),
 	base_url text not null default '',
 	constraint chat_providers_provider_check
 		check (
@@ -119,21 +119,21 @@ comment on column chat_providers.api_key_key_id is 'The ID of the key used to en
 create index idx_chat_providers_enabled on chat_providers (enabled);
 
 create table chat_model_configs (
-	id UUID primary key default gen_random_uuid(),
+	id uuid primary key default gen_random_uuid(),
 	provider text not null references chat_providers (provider) on delete cascade,
 	model text not null,
 	display_name text not null default '',
-	created_by UUID references users (id),
-	updated_by UUID references users (id),
+	created_by uuid references users (id),
+	updated_by uuid references users (id),
 	enabled boolean not null default true,
 	is_default boolean not null default false,
 	deleted boolean not null default false,
-	deleted_at TIMESTAMPTZ,
-	created_at TIMESTAMPTZ not null default now(),
-	updated_at TIMESTAMPTZ not null default now(),
+	deleted_at timestamptz,
+	created_at timestamptz not null default now(),
+	updated_at timestamptz not null default now(),
 	context_limit bigint not null,
 	compression_threshold integer not null,
-	options JSONB not null default '{}'::jsonb,
+	options jsonb not null default '{}'::jsonb,
 	constraint chat_model_configs_context_limit_check check (context_limit > 0),
 	constraint chat_model_configs_compression_threshold_check
 		check (compression_threshold >= 0 and compression_threshold <= 100)
@@ -158,10 +158,10 @@ alter table chats
 	) references chat_model_configs (id);
 
 create table chat_queued_messages (
-	id BIGSERIAL primary key,
-	chat_id UUID not null references chats (id) on delete cascade,
-	content JSONB not null,
-	created_at TIMESTAMPTZ not null default now()
+	id bigserial primary key,
+	chat_id uuid not null references chats (id) on delete cascade,
+	content jsonb not null,
+	created_at timestamptz not null default now()
 );
 
 create index idx_chat_queued_messages_chat_id on chat_queued_messages (chat_id);

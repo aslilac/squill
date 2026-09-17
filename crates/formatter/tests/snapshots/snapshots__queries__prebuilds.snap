@@ -97,7 +97,7 @@ with
 			workspace_latest_builds.transition = 'start'::workspace_transition
 			and workspace_latest_builds.job_status
 			= 'succeeded'::provisioner_job_status
-			and workspaces.owner_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID
+			and workspaces.owner_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid
 			and not workspaces.deleted
 	),
 	workspace_latest_presets as (

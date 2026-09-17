@@ -102,7 +102,7 @@ where
 	-- Prebuilt workspaces (identified by having the prebuilds system user as owner_id)
 	-- are managed by the reconciliation loop, not the lifecycle executor which handles
 	-- deadline and max_deadline
-	and workspaces.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::UUID;
+	and workspaces.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid;
 
 -- name: UpdateWorkspaceBuildProvisionerStateByID :exec
 update workspace_builds

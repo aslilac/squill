@@ -194,6 +194,15 @@ impl Parser<'_> {
 		})
 	}
 
+	/// The nth bare word from here, lowercased; `None` at anything else.
+	pub(crate) fn nth_word(&self, n: usize) -> Option<String> {
+		self
+			.toks
+			.get(self.pos + n)
+			.filter(|t| t.kind == SyntaxKind::Ident)
+			.map(|t| t.text.to_ascii_lowercase())
+	}
+
 	pub(crate) fn at_any_kw(&self, kws: &[&str]) -> bool {
 		kws.iter().any(|kw| self.at_kw(kw))
 	}

@@ -6,7 +6,7 @@ expression: formatted
 -- before the session row exists, since Agent Firewall log delivery is async.
 -- agent_firewall_session_id is a soft reference resolved at query time.
 alter table aibridge_interceptions
-	add column agent_firewall_session_id UUID null,
+	add column agent_firewall_session_id uuid null,
 	add column agent_firewall_sequence_number int null;
 
 comment on column aibridge_interceptions.agent_firewall_session_id is 'The Agent Firewall session ID, linking this Bridge interception to an Agent Firewall confinement session.';

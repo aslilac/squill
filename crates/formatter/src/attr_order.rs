@@ -180,6 +180,11 @@ pub(crate) fn canonical_order(words: &[W]) -> Option<Vec<usize>> {
 					}
 				}
 			}
+			// A clause's force-consumed argument is one word in the
+			// oracle's token view but can be a single node in the
+			// lowerer's element view (`returns <TypeName>`). Counting it
+			// either way keeps the two views in step.
+			W::Other if depth == 0 && skip_words > 0 => skip_words -= 1,
 			_ => {}
 		}
 		after_separator = false;

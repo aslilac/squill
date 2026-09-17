@@ -3,11 +3,11 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 create table boundary_sessions (
-	id UUID primary key,
-	workspace_agent_id UUID not null references workspace_agents (id),
+	id uuid primary key,
+	workspace_agent_id uuid not null references workspace_agents (id),
 	confined_process_name text not null,
-	started_at TIMESTAMPTZ not null,
-	updated_at TIMESTAMPTZ not null
+	started_at timestamptz not null,
+	updated_at timestamptz not null
 );
 
 comment on table boundary_sessions is 'Boundary session metadata. Each row represents a single invocation of a Boundary process wrapping a confined agent.';
@@ -18,11 +18,11 @@ comment on column boundary_sessions.started_at is 'Time when the first log for t
 comment on column boundary_sessions.updated_at is 'Time when the session was last updated.';
 
 create table boundary_logs (
-	id UUID not null,
-	session_id UUID not null references boundary_sessions (id) on delete cascade,
+	id uuid not null,
+	session_id uuid not null references boundary_sessions (id) on delete cascade,
 	sequence_number int not null check (sequence_number >= 0),
-	captured_at TIMESTAMPTZ not null,
-	created_at TIMESTAMPTZ not null,
+	captured_at timestamptz not null,
+	created_at timestamptz not null,
 	proto text not null default '',
 	method text not null default '',
 	detail text not null default '',

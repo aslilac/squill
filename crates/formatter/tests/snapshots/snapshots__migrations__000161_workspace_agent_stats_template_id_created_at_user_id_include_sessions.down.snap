@@ -1,6 +1,5 @@
 ---
 source: crates/formatter/tests/snapshots.rs
-assertion_line: 30
 expression: formatted
 ---
 drop index workspace_agent_stats_template_id_created_at_user_id_idx;
