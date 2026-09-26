@@ -276,3 +276,15 @@ fn plpgsql_queries_stay_on_one_line_when_they_fit() {
 		"do $$\ndeclare\n\tc cursor for select * from t;\nbegin\n\tfor r in select * from t where id = 1 loop\n\t\tnull;\n\tend loop;\nend\n$$;\n"
 	);
 }
+
+/// Trailing comments inside PL/pgSQL stay on their statement's line,
+/// without leaving a blank line behind.
+#[test]
+fn plpgsql_trailing_comments() {
+	assert_eq!(
+		format(
+			"do $$ declare n int := 0; -- count\nbegin\n if n > 0 then -- positive\n  perform 1; -- one\n else\n  perform 2; -- two\n end if; -- done\nend $$;"
+		),
+		"do $$\ndeclare\n\tn int := 0; -- count\nbegin\n\tif n > 0 then -- positive\n\t\tperform 1; -- one\n\telse\n\t\tperform 2; -- two\n\tend if; -- done\nend\n$$;\n"
+	);
+}

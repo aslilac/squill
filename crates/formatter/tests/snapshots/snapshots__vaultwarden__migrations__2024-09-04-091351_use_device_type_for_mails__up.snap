@@ -3,5 +3,4 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 alter table twofactor_incomplete
-	add column device_type integer not null default 14 -- 14 = Unknown Browser
-	;
+	add column device_type integer not null default 14; -- 14 = Unknown Browser

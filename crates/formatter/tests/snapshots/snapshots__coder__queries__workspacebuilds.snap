@@ -62,10 +62,7 @@ limit 1;
 select distinct on (workspace_id) *
 from workspace_build_with_user as workspace_builds
 where workspace_id = any(@ids::uuid[])
-order by
-	workspace_id,
-	build_number desc -- latest first
-	;
+order by workspace_id, build_number desc; -- latest first
 
 -- name: InsertWorkspaceBuild :exec
 insert into workspace_builds (

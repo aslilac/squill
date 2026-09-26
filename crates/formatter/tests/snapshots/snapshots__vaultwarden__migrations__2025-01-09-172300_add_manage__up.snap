@@ -2,10 +2,6 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table users_collections
-	add column manage boolean not null default 0 -- FALSE
-	;
+alter table users_collections add column manage boolean not null default 0; -- FALSE
 
-alter table collections_groups
-	add column manage boolean not null default 0 -- FALSE
-	;
+alter table collections_groups add column manage boolean not null default 0; -- FALSE

@@ -46,7 +46,6 @@ begin
 		and workspace_agents.deleted
 		= false; -- Ensure we only count non-deleted agents.
 
-
 	-- If there's already an agent with this name, raise an error
 	if agents_with_name > 0 then
 		raise exception 'workspace agent name "%" already exists in this workspace build',

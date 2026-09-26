@@ -22,7 +22,5 @@ create table user_reports (
 	user_id text not null,
 	reason text not null
 );
-create index user_reports_target_user_id
-	on user_reports (target_user_id); -- for lookups
-create index user_reports_user_id
-	on user_reports (user_id); -- for lookups
+create index user_reports_target_user_id on user_reports (target_user_id); -- for lookups
+create index user_reports_user_id on user_reports (user_id); -- for lookups

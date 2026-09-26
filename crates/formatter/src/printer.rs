@@ -172,6 +172,7 @@ impl Printer<'_> {
 			},
 			Doc::HardLine => self.newline(indent),
 			Doc::FreshLine => self.reindent_or_newline(indent),
+			Doc::LineSuffix(text) => self.push_text(text),
 			Doc::BreakParent => {}
 			Doc::IfBreak { broken, flat } => {
 				let chosen = match mode {
@@ -399,6 +400,8 @@ impl Printer<'_> {
 				Doc::FreshLine => {
 					return mode == Mode::Break;
 				}
+				// Nothing can follow it on its line, and it doesn't count.
+				Doc::LineSuffix(_) => return true,
 				Doc::IfBreak { broken, flat } => {
 					let chosen = match mode {
 						Mode::Break => broken,

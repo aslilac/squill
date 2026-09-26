@@ -158,20 +158,18 @@ fn format_cst_at(cst: &Cst, options: &Options, depth: u32) -> Formatted {
 	let mut fallbacks = 0;
 	let mut pending_blank = 0usize;
 	// The last statement, whose `;` is `trailing_semicolons`' to settle.
-	// Not inside procedural bodies, and never an unparsable one.
-	let last = cst
-		.root()
-		.children()
-		.last()
-		.filter(|node| depth == 0 && node.kind() != SyntaxKind::ErrorStatement);
+	let last = cst.root().children().last();
 
 	for element in cst.root().children_with_tokens() {
 		match element {
 			parser::syntax::SyntaxElement::Node(node) => {
-				let (settled, original) = match last {
-					Some(last) if last == node => settle_semicolon(node.clone(), options),
-					_ => (node.clone(), node.to_string()),
-				};
+				// Not inside procedural bodies, and never an unparsable one.
+				let (settled, original) =
+					if depth == 0 && node.kind() != SyntaxKind::ErrorStatement {
+						settle_semicolon(node.clone(), options, last == Some(node))
+					} else {
+						(node.clone(), node.to_string())
+					};
 				let node = &settled;
 				let blank = pending_blank.max(leading_blanks(&original));
 				pending_blank = 0;
@@ -263,36 +261,61 @@ fn format_cst_at(cst: &Cst, options: &Options, depth: u32) -> Formatted {
 	Formatted { text: out, fallback_statements: fallbacks, body_diagnostics }
 }
 
-/// The last statement with its `;` added (before any trailing comment)
-/// or dropped, per `trailing_semicolons`, re-parsed so layout measures
-/// the statement as it will be printed. Unchanged if it already agrees,
-/// or if the adjusted text doesn't parse as one statement of the same
-/// kind.
+/// A statement with its `;` where it belongs: moved up past any line
+/// comment that pushed it onto a line of its own, and — for the last
+/// statement — added (before any trailing comment) or dropped, per
+/// `trailing_semicolons`. Re-parsed, so layout measures the statement as
+/// it will be printed. Unchanged if it already agrees, or if the adjusted
+/// text doesn't parse as one statement of the same kind.
 fn settle_semicolon(
 	node: parser::syntax::SyntaxNode,
 	options: &Options,
+	last: bool,
 ) -> (parser::syntax::SyntaxNode, String) {
 	let original = node.to_string();
 	let tokens =
 		parser::lexer::lex_with(&original, options.dialect, options.lex_options());
 	let mut offset = 0;
 	let mut last_code = None;
+	let mut before_last = None;
+	let mut comment_since = false;
 	for token in &tokens {
 		if !token.kind.is_trivia() {
-			last_code = Some((offset, token));
+			before_last = last_code.map(|(at, token, _)| (at, token));
+			last_code = Some((offset, token, comment_since));
+			comment_since = false;
+		} else if token.kind == SyntaxKind::LineComment {
+			comment_since = true;
 		}
 		offset += token.text.len();
 	}
-	let Some((at, token)) = last_code else {
+	let Some((at, token, after_comment)) = last_code else {
 		return (node, original);
 	};
 	let is_semicolon = token.kind == SyntaxKind::Semicolon;
-	let adjusted = match options.trailing_semicolons {
-		TrailingSemicolons::Always if !is_semicolon => {
+	let adjusted = match (last, options.trailing_semicolons) {
+		// A `;` a line comment pushed onto a line of its own moves back up
+		// to the code it ends: `select 1 -- one` then `;` on its own line
+		// becomes `select 1; -- one`.
+		(_, TrailingSemicolons::Always) | (false, _)
+			if is_semicolon && after_comment =>
+		{
+			let Some((prev_at, prev)) = before_last else {
+				return (node, original);
+			};
+			let end = prev_at + prev.text.len();
+			format!(
+				"{};{}{}",
+				&original[..end],
+				&original[end..at],
+				&original[at + 1..]
+			)
+		}
+		(true, TrailingSemicolons::Always) if !is_semicolon => {
 			let end = at + token.text.len();
 			format!("{};{}", &original[..end], &original[end..])
 		}
-		TrailingSemicolons::None if is_semicolon => {
+		(true, TrailingSemicolons::None) if is_semicolon => {
 			format!("{}{}", &original[..at], &original[at + 1..])
 		}
 		_ => return (node, original),
@@ -302,8 +325,12 @@ fn settle_semicolon(
 	let parse = parser::parser::parse(&tokens, options.dialect);
 	let mut nodes = parse.cst.root().children();
 	match (nodes.next(), nodes.next()) {
+		// The whole text must stay in the one statement: a comment the
+		// move leaves on a line of its own would parse outside it.
 		(Some(settled), None)
-			if settled.kind() == node.kind() && parse.diagnostics.is_empty() =>
+			if settled.kind() == node.kind()
+				&& parse.diagnostics.is_empty()
+				&& settled.to_string().trim_end() == adjusted.trim_end() =>
 		{
 			(settled.clone(), adjusted)
 		}

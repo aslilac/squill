@@ -17,6 +17,4 @@ select lower(hex(randomblob(16))), uuid, 0, 1, u.totp_secret
 from users u
 where u.totp_secret is not null;
 
-update users
-set
-	totp_secret = null; -- Instead of recreating the table, just leave the columns empty
+update users set totp_secret = null; -- Instead of recreating the table, just leave the columns empty

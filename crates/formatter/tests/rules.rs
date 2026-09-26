@@ -55,7 +55,7 @@ fn boolean_chain_breaks_operator_leading() {
 #[test]
 fn keyword_case_never_touches_identifiers_or_comments() {
 	let out = format("SELECT Total AS Sum FROM T; -- keep CASE of This");
-	assert_eq!(out, "select Total as Sum\nfrom T; -- keep CASE of This\n");
+	assert_eq!(out, "select Total as Sum from T; -- keep CASE of This\n");
 }
 
 #[test]
@@ -567,5 +567,30 @@ fn in_list_parameter() {
 	assert_eq!(
 		format("select * from t where id IN @ids and a=@a and b not in @bs;"),
 		"select * from t where id in @ids and a = @a and b not in @bs;\n"
+	);
+}
+
+/// A statement's trailing line comment stays on the line it was written
+/// on, and doesn't make the code before it break — with or without a
+/// `;`, and however long it is. A `;` it pushed onto a line of its own
+/// moves back up.
+#[test]
+fn trailing_comments_stay_put() {
+	assert_eq!(format("select a from t -- note"), "select a from t; -- note\n");
+	assert_eq!(format("select a from t; -- note"), "select a from t; -- note\n");
+	assert_eq!(
+		format("select a from t -- note\n;\nselect 2 -- two\n;"),
+		"select a from t; -- note\nselect 2; -- two\n"
+	);
+	assert_eq!(
+		format(
+			"alter table users add column kdf integer not null default 0 -- a comment long enough to overflow the line by itself\n;"
+		),
+		"alter table users add column kdf integer not null default 0; -- a comment long enough to overflow the line by itself\n"
+	);
+	// A comment with code after it still ends its line.
+	assert_eq!(
+		format("select a, -- first\n b from t;"),
+		"select\n\ta, -- first\n\tb\nfrom t;\n"
 	);
 }

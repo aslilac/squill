@@ -48,6 +48,10 @@ pub enum Doc {
 	/// Forces enclosing groups to break. Used before leading comments,
 	/// which must begin on their own line wherever they get flushed.
 	FreshLine,
+	/// Text at the end of a line that doesn't count toward its width: a
+	/// statement's trailing line comment, which should neither move nor
+	/// make the code before it break.
+	LineSuffix(String),
 	/// `broken` when the enclosing group breaks, `flat` otherwise.
 	IfBreak { broken: Box<Doc>, flat: Box<Doc> },
 	/// Alternating content and separator documents; separators break
@@ -111,6 +115,10 @@ pub fn break_parent() -> Doc {
 
 pub fn fresh_line() -> Doc {
 	Doc::FreshLine
+}
+
+pub fn line_suffix(text: impl Into<String>) -> Doc {
+	Doc::LineSuffix(text.into())
 }
 
 pub fn if_break(broken: Doc, flat: Doc) -> Doc {

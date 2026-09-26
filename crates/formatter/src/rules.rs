@@ -21,6 +21,7 @@ use crate::doc::hard_line;
 use crate::doc::ident;
 use crate::doc::indent;
 use crate::doc::keyword;
+use crate::doc::line_suffix;
 use crate::doc::nil;
 use crate::doc::soft_line;
 use crate::doc::soft_line_or_space;
@@ -139,6 +140,12 @@ pub(crate) fn lower_statement(
 				pending_blank: false,
 				emitted_any: false,
 				skip_trivia,
+				code_end: stmt
+					.descendants_with_tokens()
+					.filter_map(|el| el.into_token())
+					.filter(|token| !token.kind().is_trivia())
+					.last()
+					.map_or(0, |token| u32::from(token.text_range().end())),
 				force_first_element_list: false,
 			};
 			let mut docs = Vec::new();
@@ -181,6 +188,9 @@ struct Lowerer {
 	emitted_any: bool,
 	/// Statement-leading trivia already emitted by `lower_statement`.
 	skip_trivia: usize,
+	/// Where the statement's last code token ends: a line comment past
+	/// it trails the whole statement.
+	code_end: u32,
 	/// The next `ElementList` renders always-broken (CREATE TABLE column
 	/// lists, CREATE TYPE ... AS ENUM variants).
 	force_first_element_list: bool,
@@ -207,6 +217,12 @@ impl Lowerer {
 			SyntaxKind::LineComment => {
 				if self.at_line_start {
 					self.buffer_leading(text(token.text()));
+				} else if u32::from(token.text_range().start()) >= self.code_end {
+					// The statement's trailing comment: nothing follows it,
+					// so nothing needs to break for it — it stays at the end
+					// of the line it was written on.
+					docs.push(space());
+					docs.push(line_suffix(token.text()));
 				} else {
 					docs.push(space());
 					docs.push(text(token.text()));
@@ -644,6 +660,7 @@ impl Lowerer {
 		let mut first = true;
 		let mut tight = false;
 		let mut semicolon = false;
+		let mut after_semicolon: Vec<&SyntaxToken> = Vec::new();
 		let mut pending_segment = false;
 		// Commas separate actions — except in a GRANT / REVOKE action,
 		// where they separate privileges.
@@ -683,6 +700,13 @@ impl Lowerer {
 			}
 			let current = segments.last_mut().unwrap_or(&mut head);
 			match element {
+				// Trivia after the `;` (a trailing comment) waits for it:
+				// the `;` is placed last, below.
+				SyntaxElement::Token(token)
+					if token.kind().is_trivia() && semicolon =>
+				{
+					after_semicolon.push(token);
+				}
 				SyntaxElement::Token(token) if token.kind().is_trivia() => {
 					self.trivia(current, token)
 				}
@@ -754,6 +778,9 @@ impl Lowerer {
 		}
 		if semicolon {
 			self.push(docs, text(";"));
+		}
+		for token in after_semicolon {
+			self.trivia(docs, token);
 		}
 	}
 
@@ -1921,7 +1948,9 @@ impl Lowerer {
 					if let Some(separator) = label.before(token) {
 						docs.push(separator);
 					} else if section && !first {
-						docs.push(hard_line());
+						// `fresh_line` throughout: a statement's trailing
+						// comment may already have ended the line.
+						docs.push(fresh_line());
 					} else if !first && token.kind() != SyntaxKind::Semicolon {
 						docs.push(space());
 					}
@@ -1931,11 +1960,11 @@ impl Lowerer {
 				SyntaxElement::Node(child) => {
 					let doc = self.node(child);
 					if child.kind() == SyntaxKind::PlException {
-						docs.push(hard_line());
+						docs.push(fresh_line());
 						self.push(&mut docs, doc);
 					} else {
 						// Declarations and statements: indented lines.
-						self.push(&mut docs, indent(concat([hard_line(), doc])));
+						self.push(&mut docs, indent(concat([fresh_line(), doc])));
 					}
 					first = false;
 				}
@@ -1978,7 +2007,9 @@ impl Lowerer {
 						docs.push(separator);
 					} else if lower == "end" {
 						seen_end = true;
-						docs.push(hard_line());
+						// `fresh_line`: a trailing comment on the statement
+						// before already ended the line.
+						docs.push(fresh_line());
 					} else if token.kind() != SyntaxKind::Semicolon && !first && !tight {
 						docs.push(space());
 					}
@@ -2007,14 +2038,16 @@ impl Lowerer {
 						}
 						self.push(&mut query, doc);
 					} else if arm {
+						// `fresh_line`, like the statements': a trailing
+						// comment may already have ended the line.
 						if indent_arms {
-							self.push(&mut docs, indent(concat([hard_line(), doc])));
+							self.push(&mut docs, indent(concat([fresh_line(), doc])));
 						} else {
-							docs.push(hard_line());
+							docs.push(fresh_line());
 							self.push(&mut docs, doc);
 						}
 					} else if statement && !seen_end {
-						self.push(&mut docs, indent(concat([hard_line(), doc])));
+						self.push(&mut docs, indent(concat([fresh_line(), doc])));
 					} else {
 						// Range bounds after `..` attach tight.
 						if !first && !tight_dot {

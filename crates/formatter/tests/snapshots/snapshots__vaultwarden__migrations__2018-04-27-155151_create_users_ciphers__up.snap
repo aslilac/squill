@@ -60,6 +60,4 @@ where folder_uuid is not null;
 
 drop table oldCiphers;
 
-alter table users_collections
-	add column read_only boolean not null default 0 -- False
-	;
+alter table users_collections add column read_only boolean not null default 0; -- False

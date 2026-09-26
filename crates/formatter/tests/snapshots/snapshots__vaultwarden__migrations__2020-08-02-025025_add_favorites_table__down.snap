@@ -2,9 +2,7 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table ciphers
-	add column favorite boolean not null default 0 -- FALSE
-	;
+alter table ciphers add column favorite boolean not null default 0; -- FALSE
 
 -- Transfer favorite status for user-owned ciphers.
 update ciphers

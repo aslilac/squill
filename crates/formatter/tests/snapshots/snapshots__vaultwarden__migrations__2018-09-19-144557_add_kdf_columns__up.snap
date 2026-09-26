@@ -2,8 +2,6 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-alter table users
-	add column client_kdf_type integer not null default 0 -- PBKDF2
-	;
+alter table users add column client_kdf_type integer not null default 0; -- PBKDF2
 
 alter table users add column client_kdf_iter integer not null default 100000;
