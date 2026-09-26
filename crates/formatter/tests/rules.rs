@@ -471,3 +471,15 @@ fn files_end_with_exactly_one_newline() {
 	assert_eq!(format(""), "");
 	assert_eq!(format("\n\n  \n"), "");
 }
+
+/// `ALTER DEFAULT PRIVILEGES` breaks before its GRANT / REVOKE, whose
+/// commas list privileges rather than separating actions.
+#[test]
+fn alter_default_privileges_breaks_before_the_grant() {
+	assert_eq!(
+		format(
+			"ALTER DEFAULT PRIVILEGES FOR ROLE app_owner IN SCHEMA app, audit GRANT SELECT, INSERT, UPDATE ON TABLES TO app_reader;"
+		),
+		"alter default privileges for role app_owner in schema app, audit\n\tgrant select, insert, update on tables to app_reader;\n"
+	);
+}

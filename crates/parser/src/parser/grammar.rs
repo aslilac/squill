@@ -435,8 +435,11 @@ fn table_primary_inner(p: &mut Parser<'_>) -> PResult {
 		}
 	} else {
 		p.eat_kw("only");
+		let json_table = p.at_kw("json_table") && p.nth_at(1, SyntaxKind::LParen);
 		qualified_name(p)?;
-		if p.at(SyntaxKind::LParen) {
+		if json_table {
+			json_table_args(p)?;
+		} else if p.at(SyntaxKind::LParen) {
 			// Table function call: name(args).
 			arg_list(p)?;
 			if p.at_kw("with") && p.nth_at_kw(1, "ordinality") {
@@ -455,6 +458,40 @@ fn table_primary_inner(p: &mut Parser<'_>) -> PResult {
 		}
 	}
 	index_hint(p)?;
+	p.finish();
+	Ok(())
+}
+
+/// `JSON_TABLE`'s arguments: `(context, path [AS name] [PASSING value
+/// AS name, ...] COLUMNS (...) [behavior ON ERROR])`. The column list
+/// takes column definitions, nested `NESTED PATH ... COLUMNS (...)`
+/// included, as tolerant `ColumnDef`s.
+fn json_table_args(p: &mut Parser<'_>) -> PResult {
+	p.start(SyntaxKind::ArgList);
+	p.expect(SyntaxKind::LParen, "`(`")?;
+	expr(p, 0)?;
+	p.expect(SyntaxKind::Comma, "`,`")?;
+	expr(p, 0)?;
+	if p.eat_kw("as") {
+		ident(p, "a path name")?;
+	}
+	if p.eat_kw("passing") {
+		loop {
+			expr(p, 0)?;
+			p.expect_kw("as")?;
+			ident(p, "a path name")?;
+			if !p.eat(SyntaxKind::Comma) {
+				break;
+			}
+		}
+	}
+	p.expect_kw("columns")?;
+	super::ddl::column_list(p)?;
+	// `ERROR ON ERROR`, `EMPTY [ARRAY] ON ERROR`.
+	while p.at(SyntaxKind::Ident) {
+		p.bump();
+	}
+	p.expect(SyntaxKind::RParen, "`)`")?;
 	p.finish();
 	Ok(())
 }

@@ -354,3 +354,20 @@ fn sqlite_operators_and_clauses() {
 	let cst = parse_ok("SELECT a glob, b regexp, c match FROM t;");
 	assert_eq!(top_level_kinds(&cst), [SyntaxKind::SelectStmt]);
 }
+
+#[test]
+fn json_table_and_default_privileges() {
+	for sql in [
+		"SELECT * FROM json_table(j, '$[*]' COLUMNS (a int PATH '$.a', \
+		 ord FOR ORDINALITY, NESTED PATH '$.c[*]' COLUMNS (c int PATH '$'))) AS jt;",
+		"SELECT * FROM t, json_table(t.doc, 'strict $.items[*]' AS items \
+		 PASSING 3 AS n COLUMNS (id int PATH '$.id' DEFAULT 0 ON EMPTY, \
+		 ok boolean EXISTS PATH '$.ok') ERROR ON ERROR) jt;",
+		"ALTER DEFAULT PRIVILEGES IN SCHEMA s GRANT SELECT ON TABLES TO r;",
+		"ALTER DEFAULT PRIVILEGES FOR ROLE a IN SCHEMA s, t \
+		 REVOKE ALL ON FUNCTIONS FROM PUBLIC;",
+	] {
+		let cst = parse_ok(sql);
+		assert_eq!(top_level_kinds(&cst).len(), 1, "{sql}");
+	}
+}

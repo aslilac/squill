@@ -227,9 +227,11 @@ fn ddl_tokens_inner(p: &mut Parser<'_>, stop: Stop, ctx: Ctx) -> PResult {
 					// `ON DELETE SET DEFAULT` names a referential action;
 					// the word is not introducing a default expression,
 					// and reading one swallows the constraints after it.
+					// Nor is it in `ALTER DEFAULT PRIVILEGES`.
 					"default"
 						if !(prev == "set"
-							&& matches!(prev2.as_str(), "delete" | "update")) =>
+							&& matches!(prev2.as_str(), "delete" | "update"))
+							&& !p.nth_at_kw(1, "privileges") =>
 					{
 						p.bump();
 						if can_start_expr(p) && !p.at_kw("values") {
@@ -284,6 +286,12 @@ fn column_action(p: &mut Parser<'_>, verb: &str) {
 	if p.eat_kw("type") {
 		opt_type_name(p);
 	}
+}
+
+/// A `( name type ..., ... )` list of column definitions outside DDL:
+/// `JSON_TABLE(... COLUMNS (...))`.
+pub(crate) fn column_list(p: &mut Parser<'_>) -> PResult {
+	element_list(p, Ctx { columns: true, domain: false })
 }
 
 /// `( element, element, ... )` — each element an expression when it fully

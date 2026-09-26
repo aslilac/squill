@@ -614,6 +614,8 @@ impl Lowerer {
 			"add", "drop", "alter", "rename", "validate", "owner", "set", "reset",
 			"enable", "disable", "attach", "detach", "cluster", "replica", "inherit",
 			"force", "no",
+			// `ALTER DEFAULT PRIVILEGES ... GRANT | REVOKE ...`
+			"grant", "revoke",
 		];
 		let mut head: Vec<Doc> = Vec::new();
 		let mut segments: Vec<Vec<Doc>> = Vec::new();
@@ -622,6 +624,9 @@ impl Lowerer {
 		let mut tight = false;
 		let mut semicolon = false;
 		let mut pending_segment = false;
+		// Commas separate actions — except in a GRANT / REVOKE action,
+		// where they separate privileges.
+		let mut comma_splits = true;
 		for element in node.children_with_tokens() {
 			// Transitions first, so the borrow below targets the right vec.
 			if let SyntaxElement::Token(token) = element
@@ -632,10 +637,16 @@ impl Lowerer {
 					&& head_tokens >= 2
 					&& ACTION_KWS.iter().any(|kw| token.text().eq_ignore_ascii_case(kw))
 				{
+					comma_splits = !["grant", "revoke"]
+						.iter()
+						.any(|kw| token.text().eq_ignore_ascii_case(kw));
 					segments.push(Vec::new());
 					first = true;
 					tight = false;
-				} else if !segments.is_empty() && token.kind() == SyntaxKind::Comma {
+				} else if !segments.is_empty()
+					&& comma_splits
+					&& token.kind() == SyntaxKind::Comma
+				{
 					let current = segments.last_mut().expect("segment open");
 					self.push(current, text(","));
 					// Start the next segment lazily so a trailing comment
@@ -664,6 +675,7 @@ impl Lowerer {
 						|| matches!(
 							token.kind(),
 							SyntaxKind::RParen
+								| SyntaxKind::Comma
 								| SyntaxKind::RBracket
 								| SyntaxKind::LBracket
 								| SyntaxKind::Dot
