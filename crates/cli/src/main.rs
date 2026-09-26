@@ -3,7 +3,7 @@
 //! Thin CLI over the formatter library, suitable for pre-commit and CI.
 //! `squill fmt <paths...>` writes in place; `--check` diffs and exits 1;
 //! `--stdin`/`--stdout` stream. Options come from the nearest
-//! squill.toml (see `config`), overridden by explicit flags.
+//! squill.toml or squill.yaml (see `config`), overridden by explicit flags.
 
 use std::io::Read;
 use std::path::Path;
@@ -85,7 +85,7 @@ Options:
                           by default for java and kotlin grammars)
   --pyformat-params       Treat Python DB-API %s / %(name)s as
                           parameters (on by default for python grammars)
-  --no-config             Ignore squill.toml files
+  --no-config             Ignore config files
   --frozen <GLOB>         Treat matching paths as immutable once they
                           exist on the baseline ref: format them while
                           new, never rewrite them after (repeatable)
@@ -96,8 +96,9 @@ Options:
   -V, --version           Print the version and exit
   -h, --help              Show this help
 
-Configuration: the nearest squill.toml or .config/squill.toml at or
-above each formatted file supplies defaults. Top-level keys: dialect,
+Configuration: the nearest squill.toml or .config/squill.toml (or
+squill.yaml / squill.yml, same keys) at or above each formatted file
+supplies defaults. Top-level keys: dialect,
 indent, indent-width, max-width, keyword-case, quote-idents, at-params,
 question-params, pyformat-params, ignore and frozen (arrays of glob
 patterns), frozen-ref, and frozen-fetch. Explicit flags override the
@@ -328,7 +329,7 @@ struct Loaded {
 #[derive(Default)]
 struct Caches {
 	configs: HashMap<PathBuf, Arc<Loaded>>,
-	nearest: HashMap<PathBuf, Option<PathBuf>>,
+	nearest: HashMap<PathBuf, Result<Option<PathBuf>, String>>,
 	/// Loaded wasm grammars, by path or URL.
 	#[cfg(feature = "external-grammars")]
 	grammars: HashMap<String, Arc<embed::Grammar>>,
@@ -347,7 +348,7 @@ impl Caches {
 	}
 
 	/// The nearest config at or above `dir`.
-	fn discover(&mut self, dir: &Path) -> Option<PathBuf> {
+	fn discover(&mut self, dir: &Path) -> Result<Option<PathBuf>, String> {
 		self
 			.nearest
 			.entry(dir.to_path_buf())
@@ -399,7 +400,7 @@ impl Caches {
 		if args.no_config {
 			return Ok(None);
 		}
-		match self.discover(dir) {
+		match self.discover(dir)? {
 			Some(config_path) => self.load(&config_path).map(Some),
 			None => Ok(None),
 		}
@@ -632,11 +633,11 @@ fn resolve_explicit(
 		embed::Host::ALL.iter().find(|host| host.extensions().contains(&extension))
 	{
 		let dir = parent_dir(path);
-		let config = if args.no_config { None } else { caches.discover(dir) };
+		let config = if args.no_config { None } else { caches.discover(dir)? };
 		return Err(match config {
 			// No config yet: the wizard writes one, rule included.
 			None if !args.no_config => format!(
-				"{}: no squill.toml covers this file; run `squill init` to set one \
+				"{}: no squill config covers this file; run `squill init` to set one \
 				 up, and it will offer to format the SQL embedded in {} files",
 				path.display(),
 				host.name()
@@ -675,7 +676,7 @@ fn stdin_as(
 	let absolute = std::path::absolute(path).ok();
 	let mut ignores = vec![build_ignore_set(&args.ignore, cwd)?];
 	if !args.no_config
-		&& let Some(config_path) = caches.discover(dir)
+		&& let Some(config_path) = caches.discover(dir)?
 	{
 		let loaded = caches.load(&config_path)?;
 		if !loaded.config.ignore.is_empty() {
@@ -770,7 +771,7 @@ fn drop_frozen(
 		let mut frozen_fetch = args.frozen_fetch;
 
 		if !args.no_config
-			&& let Some(config_path) = caches.discover(dir)
+			&& let Some(config_path) = caches.discover(dir)?
 		{
 			let loaded = caches.load(&config_path)?;
 			let partial = &loaded.config;
@@ -1146,9 +1147,16 @@ fn main() -> ExitCode {
 			continue;
 		}
 		let mut ignores = vec![cli_ignores.clone()];
-		if !args.no_config
-			&& let Some(config_path) = caches.discover(path)
-		{
+		let discovered =
+			if args.no_config { Ok(None) } else { caches.discover(path) };
+		let discovered = match discovered {
+			Ok(discovered) => discovered,
+			Err(message) => {
+				eprintln!("squill: {message}");
+				return ExitCode::from(2);
+			}
+		};
+		if let Some(config_path) = discovered {
 			let loaded = match caches.load(&config_path) {
 				Ok(loaded) => loaded,
 				Err(message) => {

@@ -1,4 +1,5 @@
-//! `squill init`: write a starter squill.toml for the project in the
+//! `squill init`: write a starter squill.toml (or, with `--yaml`,
+//! squill.yaml) for the project in the
 //! working directory.
 //!
 //! The wizard lists every built-in grammar as a checkbox, pre-checking
@@ -26,13 +27,15 @@ use rayon::prelude::*;
 pub const USAGE: &str = "\
 Usage: squill init [OPTIONS]
 
-Writes a squill.toml for the project in the working directory. squill
+Writes a squill.toml (or squill.yaml) for the project in the working
+directory. squill
 lists the languages it has grammars for — checking the ones where it
 finds SQL already — and asks which to format, and in which dialect.
 
 Options:
   --dialect <D>   postgres (default) | sqlite: the dialect every answer
                   starts from
+  --yaml          Write squill.yaml instead of squill.toml
   -y, --yes       Take every default without asking (also what happens
                   without a terminal)
   -h, --help      Show this help
@@ -41,15 +44,18 @@ Options:
 pub struct InitArgs {
 	yes: bool,
 	dialect: Dialect,
+	yaml: bool,
 }
 
 pub fn parse(
 	mut argv: impl Iterator<Item = String>,
 ) -> Result<InitArgs, String> {
-	let mut args = InitArgs { yes: false, dialect: Dialect::Postgres };
+	let mut args =
+		InitArgs { yes: false, dialect: Dialect::Postgres, yaml: false };
 	while let Some(arg) = argv.next() {
 		match arg.as_str() {
 			"-y" | "--yes" => args.yes = true,
+			"--yaml" => args.yaml = true,
 			"--dialect" => {
 				let value =
 					argv.next().ok_or_else(|| "--dialect needs a value".to_string())?;
@@ -237,6 +243,30 @@ fn ask(
 	Ok(Some(Answers { dialect, hosts }))
 }
 
+/// The config file text for the answers given, as YAML.
+fn render_yaml(answers: &Answers) -> String {
+	let mut out = String::from(
+		"# squill configuration: https://mckayla.dev/squill/docs/configuration/\n\n",
+	);
+	out.push_str(&format!("dialect: {}\n", dialect_name(answers.dialect)));
+	if !answers.hosts.is_empty() {
+		out.push_str("\nembedded:\n");
+	}
+	for &(host, dialect) in &answers.hosts {
+		let include: Vec<String> =
+			host.extensions().iter().map(|ext| format!("\"**/*.{ext}\"")).collect();
+		out.push_str(&format!(
+			"  - include: [{}]\n    grammar: {}\n",
+			include.join(", "),
+			host.name()
+		));
+		if dialect != answers.dialect {
+			out.push_str(&format!("    dialect: {}\n", dialect_name(dialect)));
+		}
+	}
+	out
+}
+
 /// The config file text for the answers given. A rule names its dialect
 /// only when it differs from the top level.
 fn render(answers: &Answers) -> String {
@@ -261,7 +291,11 @@ fn render(answers: &Answers) -> String {
 
 pub fn run(args: InitArgs) -> ExitCode {
 	let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-	for existing in [cwd.join("squill.toml"), cwd.join(".config/squill.toml")] {
+	let existing =
+		[cwd.clone(), cwd.join(".config")].into_iter().flat_map(|dir| {
+			crate::config::CONFIG_NAMES.iter().map(move |name| dir.join(name))
+		});
+	for existing in existing {
 		if existing.exists() {
 			eprintln!(
 				"squill: {} already exists; edit it instead (see `squill fmt --help`)",
@@ -303,13 +337,18 @@ pub fn run(args: InitArgs) -> ExitCode {
 		answers
 	};
 
-	let path = cwd.join("squill.toml");
-	if let Err(err) = std::fs::write(&path, render(&answers)) {
+	let (name, text) = if args.yaml {
+		("squill.yaml", render_yaml(&answers))
+	} else {
+		("squill.toml", render(&answers))
+	};
+	let path = cwd.join(name);
+	if let Err(err) = std::fs::write(&path, text) {
 		eprintln!("squill: {}: {err}", path.display());
 		return ExitCode::from(2);
 	}
 	eprintln!(
-		"Wrote squill.toml. Run `squill fmt --check .` to see what would change."
+		"Wrote {name}. Run `squill fmt --check .` to see what would change."
 	);
 	ExitCode::SUCCESS
 }

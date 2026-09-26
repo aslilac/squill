@@ -46,7 +46,7 @@ squill fmt --check .
 
 ### Options
 
-Set in the nearest `squill.toml` or `.config/squill.toml`, overridable with flags. The search upward stops at a git repository root, a mount point, or a symlinked directory, so a config outside a checkout never reaches inside it. The defaults are the house style; everything is optional.
+Set in the nearest `squill.toml` or `.config/squill.toml` (or `squill.yaml` / `squill.yml`, with the same keys; `squill init --yaml` writes one), overridable with flags. The search upward stops at a git repository root, a mount point, or a symlinked directory, so a config outside a checkout never reaches inside it. The defaults are the house style; everything is optional.
 
 | key | flag | values | default |
 | --- | --- | --- | --- |

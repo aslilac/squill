@@ -107,8 +107,8 @@ impl Lock {
 
 	fn write(&self, path: &Path) -> Result<(), String> {
 		let mut out = String::from(
-			"# Written by squill: the SHA-256 of each grammar squill.toml\n\
-			 # downloads, which later downloads must match. Commit it.\n\n\
+			"# Written by squill: the SHA-256 of each grammar the squill\n\
+			 # config downloads, which later downloads must match. Commit it.\n\n\
 			 [grammars]\n",
 		);
 		for (url, hash) in &self.grammars {

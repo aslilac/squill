@@ -1,4 +1,4 @@
-//! squill.toml discovery and parsing.
+//! squill.toml (or squill.yaml) discovery and parsing.
 //!
 //! The shape: formatting keys at the top level set the defaults for
 //! every file; `ignore` and `frozen` pick paths out; and two kinds of
@@ -166,45 +166,68 @@ pub fn parse_quoting(value: &str) -> Result<IdentQuoting, String> {
 	}
 }
 
-/// Find the nearest config at or above `dir`: `squill.toml`, or
-/// `.config/squill.toml` when the bare file is absent at that level.
+/// The names a config file can have: TOML, the default, or YAML.
+pub const CONFIG_NAMES: [&str; 3] =
+	["squill.toml", "squill.yaml", "squill.yml"];
+
+/// Find the nearest config at or above `dir`: one of [`CONFIG_NAMES`],
+/// or the same under `.config/` when none is at that level. More than
+/// one at a level is an error.
 ///
 /// The walk stops at the boundaries a config file has no business
 /// crossing, checking each directory before deciding whether to leave
 /// it: a git repository root, a mount point, and a symlinked directory
 /// (whose lexical parent is not where it actually lives).
-pub fn discover(dir: &Path) -> Option<PathBuf> {
+pub fn discover(dir: &Path) -> Result<Option<PathBuf>, String> {
 	// Absolute first: `Path::parent` on a relative path runs out at the
 	// working directory, which would cut the walk short of the repo
 	// root. Lexical, not canonical — resolving symlinks here would erase
 	// the very boundary we mean to stop at.
-	let start = std::path::absolute(dir).ok()?;
+	let Ok(start) = std::path::absolute(dir) else {
+		return Ok(None);
+	};
 	let mut current = start.as_path();
 	loop {
-		for candidate in
-			[current.join("squill.toml"), current.join(".config/squill.toml")]
-		{
-			if candidate.is_file() {
-				return Some(candidate);
+		// The directory itself, then its `.config/`. Two configs in one
+		// place is a mistake to point out, not a precedence to guess.
+		for place in [current.to_path_buf(), current.join(".config")] {
+			let found: Vec<PathBuf> = CONFIG_NAMES
+				.iter()
+				.map(|name| place.join(name))
+				.filter(|candidate| candidate.is_file())
+				.collect();
+			match found.as_slice() {
+				[] => {}
+				[only] => return Ok(Some(only.clone())),
+				several => {
+					let names: Vec<String> =
+						several.iter().map(|path| path.display().to_string()).collect();
+					return Err(format!(
+						"{} are both configs for the same directory; keep one",
+						names.join(" and ")
+					));
+				}
 			}
 		}
 		// A repository root: `.git` is a directory in a normal checkout
 		// and a file in a worktree or submodule.
 		if current.join(".git").exists() {
-			return None;
+			return Ok(None);
 		}
 		// A symlinked directory: `parent()` would walk the path we came
 		// in by, not the tree this directory really sits in.
 		if std::fs::symlink_metadata(current)
 			.is_ok_and(|meta| meta.file_type().is_symlink())
 		{
-			return None;
+			return Ok(None);
 		}
-		let parent = current.parent()?;
+		let Some(parent) = current.parent() else {
+			return Ok(None);
+		};
 		// A directory that doesn't exist yet (an unsaved editor buffer's,
 		// via --stdin-filepath) is no mount point: walk on up.
 		if current.exists() && !same_device(current, parent) {
-			return None;
+			return Ok(None);
 		}
 		current = parent;
 	}
@@ -228,7 +251,8 @@ fn same_device(_a: &Path, _b: &Path) -> bool {
 }
 
 /// The directory `ignore` patterns in `config_path` are relative to:
-/// the config file's directory, or its parent for `.config/squill.toml`.
+/// the config file's directory, or its parent for `.config/squill.toml`
+/// (or `.yaml`).
 pub fn anchor_dir(config_path: &Path) -> &Path {
 	let dir = config_path.parent().unwrap_or(Path::new("."));
 	if dir.file_name().is_some_and(|name| name == ".config") {
@@ -238,56 +262,235 @@ pub fn anchor_dir(config_path: &Path) -> &Path {
 	}
 }
 
-/// Parse a config file. Errors carry `path:line:` prefixes.
+/// Parse a config file, TOML or (by its `.yaml` / `.yml` extension)
+/// YAML. Errors carry `path:line:` prefixes.
 pub fn parse_config(text: &str, path: &Path) -> Result<Config, String> {
-	let located = |offset: usize, message: &str| {
-		let (line, _) = crate::line_col(text, offset);
+	let syntax = Syntax::of(path);
+	let located = |line: usize, message: &str| {
 		format!("{}:{line}: {message}", path.display())
 	};
-	let table = DeTable::parse(text).map_err(|parse_err| {
-		let offset = parse_err.span().map_or(text.len(), |span| span.start);
-		located(offset, parse_err.message())
-	})?;
+	let root = match syntax {
+		Syntax::Toml => toml_tree(text, &located)?,
+		Syntax::Yaml => yaml_tree(text, &located)?,
+	};
 	let anchor = anchor_dir(path);
+	let context = Context { syntax, anchor, located: &located };
 	let mut config = Config::default();
-	for (key, value) in table.get_ref() {
-		let key_name: &str = key.get_ref().as_ref();
-		let offset = key.span().start;
-		match key_name {
+	for (key, value) in &root {
+		match key.name.as_str() {
 			"files" | "embedded" => {
-				let DeValue::Array(items) = value.get_ref() else {
-					return Err(located(
-						offset,
+				let rules_hint = || {
+					located(
+						key.line,
 						&format!(
-							"`{key_name}` is a list of rules; write each as `[[{key_name}]]`"
+							"`{}` is a list of rules; {}",
+							key.name,
+							syntax.list_hint(&key.name)
 						),
-					));
+					)
 				};
-				for item in items.iter() {
-					let item_offset = item.span().start;
-					let DeValue::Table(rule) = item.get_ref() else {
-						return Err(located(
-							item_offset,
-							&format!(
-								"`{key_name}` is a list of rules; write each as `[[{key_name}]]`"
-							),
-						));
+				let Value::Array(items) = &value.value else {
+					return Err(rules_hint());
+				};
+				for item in items {
+					let Value::Table(rule) = &item.value else {
+						return Err(rules_hint());
 					};
-					let kind =
-						if key_name == "files" { Scope::Files } else { Scope::Embedded };
-					let parsed = parse_rule(rule, kind, item_offset, anchor, &located)?;
-					match parsed {
+					let scope =
+						if key.name == "files" { Scope::Files } else { Scope::Embedded };
+					match parse_rule(rule, scope, item.line, &context)? {
 						Rule::Files(rule) => config.files.push(rule),
 						Rule::Embedded(rule) => config.embedded.push(rule),
 					}
 				}
 			}
-			_ => {
-				apply_key(&mut config, None, key_name, offset, value, anchor, &located)?
-			}
+			_ => apply_key(&mut config, None, key, value, &context)?,
 		}
 	}
 	Ok(config)
+}
+
+/// The two config formats.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Syntax {
+	Toml,
+	Yaml,
+}
+
+impl Syntax {
+	fn of(path: &Path) -> Syntax {
+		match path.extension().and_then(|ext| ext.to_str()) {
+			Some("yaml" | "yml") => Syntax::Yaml,
+			_ => Syntax::Toml,
+		}
+	}
+
+	/// A rule of `kind`, the way this format writes one.
+	fn rule(self, kind: &str) -> String {
+		match self {
+			Syntax::Toml => format!("[[{kind}]]"),
+			Syntax::Yaml => format!("a `{kind}` rule"),
+		}
+	}
+
+	/// The name of a `kind` rule, the way this format writes it.
+	fn name(self, kind: &str) -> String {
+		match self {
+			Syntax::Toml => format!("[[{kind}]]"),
+			Syntax::Yaml => format!("`{kind}`"),
+		}
+	}
+
+	/// How to write a list of `kind` rules.
+	fn list_hint(self, kind: &str) -> String {
+		match self {
+			Syntax::Toml => format!("write each as `[[{kind}]]`"),
+			Syntax::Yaml => {
+				format!("write them as a list under `{kind}:`, each `- include: [...]`")
+			}
+		}
+	}
+}
+
+/// What the key checks need besides the value: the format (for the
+/// wording of errors), the directory paths are relative to, and how to
+/// locate an error.
+struct Context<'a> {
+	syntax: Syntax,
+	anchor: &'a Path,
+	located: &'a dyn Fn(usize, &str) -> String,
+}
+
+/// A config value from either format, with the line it's on.
+struct Node {
+	line: usize,
+	value: Value,
+}
+
+enum Value {
+	String(String),
+	Bool(bool),
+	Integer(i64),
+	Array(Vec<Node>),
+	Table(Vec<(Key, Node)>),
+	/// Anything else (a float, a date, a null): only ever a type error.
+	Other,
+}
+
+struct Key {
+	name: String,
+	line: usize,
+}
+
+/// A TOML document as a tree of [`Node`]s.
+fn toml_tree(
+	text: &str,
+	located: &dyn Fn(usize, &str) -> String,
+) -> Result<Vec<(Key, Node)>, String> {
+	let line = |offset: usize| crate::line_col(text, offset).0;
+	let table = DeTable::parse(text).map_err(|parse_err| {
+		let offset = parse_err.span().map_or(text.len(), |span| span.start);
+		located(line(offset), parse_err.message())
+	})?;
+	fn table_of(
+		table: &DeTable<'_>,
+		line: &dyn Fn(usize) -> usize,
+	) -> Vec<(Key, Node)> {
+		table
+			.iter()
+			.map(|(key, value)| {
+				let key =
+					Key { name: key.get_ref().to_string(), line: line(key.span().start) };
+				(key, node_of(value, line))
+			})
+			.collect()
+	}
+	fn node_of(
+		value: &toml::Spanned<DeValue<'_>>,
+		line: &dyn Fn(usize) -> usize,
+	) -> Node {
+		let value_of = match value.get_ref() {
+			DeValue::String(text) => Value::String(text.to_string()),
+			DeValue::Boolean(flag) => Value::Bool(*flag),
+			DeValue::Integer(n) => i64::from_str_radix(n.as_str(), n.radix())
+				.map_or(Value::Other, Value::Integer),
+			DeValue::Array(items) => {
+				Value::Array(items.iter().map(|item| node_of(item, line)).collect())
+			}
+			DeValue::Table(table) => Value::Table(table_of(table, line)),
+			_ => Value::Other,
+		};
+		Node { line: line(value.span().start), value: value_of }
+	}
+	Ok(table_of(table.get_ref(), &line))
+}
+
+/// A YAML document as a tree of [`Node`]s. The top level must be a
+/// mapping (an empty document is an empty config).
+fn yaml_tree(
+	text: &str,
+	located: &dyn Fn(usize, &str) -> String,
+) -> Result<Vec<(Key, Node)>, String> {
+	use saphyr::LoadableYamlNode;
+	use saphyr::MarkedYaml;
+	use saphyr::Scalar;
+	use saphyr::YamlData;
+	let documents = MarkedYaml::load_from_str(text)
+		.map_err(|err| located(err.marker().line(), err.info()))?;
+	if documents.len() > 1 {
+		return Err(located(
+			documents[1].span.start.line(),
+			"a config file holds one YAML document",
+		));
+	}
+	fn node_of(
+		yaml: &MarkedYaml<'_>,
+		located: &dyn Fn(usize, &str) -> String,
+	) -> Result<Node, String> {
+		let line = yaml.span.start.line();
+		let value = match &yaml.data {
+			YamlData::Value(Scalar::String(text)) => Value::String(text.to_string()),
+			YamlData::Value(Scalar::Boolean(flag)) => Value::Bool(*flag),
+			YamlData::Value(Scalar::Integer(n)) => Value::Integer(*n),
+			YamlData::Representation(text, ..) => Value::String(text.to_string()),
+			YamlData::Sequence(items) => Value::Array(
+				items
+					.iter()
+					.map(|item| node_of(item, located))
+					.collect::<Result<_, _>>()?,
+			),
+			YamlData::Mapping(entries) => {
+				let mut table = Vec::new();
+				for (key, value) in entries {
+					let name = match &key.data {
+						YamlData::Value(Scalar::String(name)) => name.to_string(),
+						YamlData::Representation(name, ..) => name.to_string(),
+						_ => {
+							return Err(located(
+								key.span.start.line(),
+								"keys must be strings",
+							));
+						}
+					};
+					let key = Key { name, line: key.span.start.line() };
+					table.push((key, node_of(value, located)?));
+				}
+				Value::Table(table)
+			}
+			_ => Value::Other,
+		};
+		Ok(Node { line, value })
+	}
+	let Some(document) = documents.first() else {
+		return Ok(Vec::new());
+	};
+	match node_of(document, located)?.value {
+		Value::Table(table) => Ok(table),
+		_ => Err(located(
+			document.span.start.line(),
+			"the top level must be a mapping of keys",
+		)),
+	}
 }
 
 /// Which table a key was found in.
@@ -312,31 +515,22 @@ struct RuleParts {
 }
 
 fn parse_rule(
-	table: &DeTable<'_>,
+	table: &[(Key, Node)],
 	scope: Scope,
-	offset: usize,
-	anchor: &Path,
-	located: &dyn Fn(usize, &str) -> String,
+	line: usize,
+	context: &Context<'_>,
 ) -> Result<Rule, String> {
 	let mut target = Config::default();
 	let mut parts = RuleParts::default();
 	for (key, value) in table {
-		let key_name: &str = key.get_ref().as_ref();
-		let key_offset = key.span().start;
-		apply_key(
-			&mut target,
-			Some((scope, &mut parts)),
-			key_name,
-			key_offset,
-			value,
-			anchor,
-			located,
-		)?;
+		apply_key(&mut target, Some((scope, &mut parts)), key, value, context)?;
 	}
-	let section =
-		if scope == Scope::Files { "[[files]]" } else { "[[embedded]]" };
+	let kind = if scope == Scope::Files { "files" } else { "embedded" };
 	let include = parts.include.ok_or_else(|| {
-		located(offset, &format!("{section} needs an `include` list"))
+		(context.located)(
+			line,
+			&format!("{} needs an `include` list", context.syntax.rule(kind)),
+		)
 	})?;
 	Ok(match scope {
 		Scope::Files => Rule::Files(FileRule { include, options: target.options }),
@@ -349,25 +543,36 @@ fn parse_rule(
 	})
 }
 
-/// Apply one `key = value` pair: to the config's top level, or (with
+/// Apply one key and its value: to the config's top level, or (with
 /// `rule`) to a rule being built.
 fn apply_key(
 	config: &mut Config,
 	mut rule: Option<(Scope, &mut RuleParts)>,
-	key_name: &str,
-	offset: usize,
-	value: &toml::Spanned<DeValue<'_>>,
-	anchor: &Path,
-	located: &dyn Fn(usize, &str) -> String,
+	key: &Key,
+	value: &Node,
+	context: &Context<'_>,
 ) -> Result<(), String> {
-	let err = |message: String| located(offset, &message);
+	let key_name = key.name.as_str();
+	let err = |message: String| (context.located)(key.line, &message);
 	let scope = rule.as_ref().map_or(Scope::TopLevel, |(scope, _)| *scope);
+	let anchor = context.anchor;
+	let syntax = context.syntax;
 	let options = &mut config.options;
 	let string = |what: &str| -> Result<String, String> {
-		match value.get_ref() {
-			DeValue::String(raw) => Ok(raw.to_string()),
-			_ => Err(err(format!("`{what}` expects a quoted string"))),
+		match &value.value {
+			Value::String(raw) => Ok(raw.clone()),
+			_ => Err(err(format!("`{what}` expects a string"))),
 		}
+	};
+	let boolean = |what: &str| -> Result<bool, String> {
+		match &value.value {
+			Value::Bool(flag) => Ok(*flag),
+			_ => Err(err(format!("`{what}` expects true or false"))),
+		}
+	};
+	let integer = || match &value.value {
+		Value::Integer(n) => Some(*n),
+		_ => None,
 	};
 	match key_name {
 		"dialect" => {
@@ -384,7 +589,7 @@ fn apply_key(
 		"quote-idents" => {
 			options.quoting = Some(parse_quoting(&string(key_name)?).map_err(&err)?)
 		}
-		"indent-width" => match as_integer(value.get_ref()) {
+		"indent-width" => match integer() {
 			Some(n) if (1..=16).contains(&n) => {
 				options.indent_width = Some(n as u8);
 			}
@@ -394,7 +599,7 @@ fn apply_key(
 				));
 			}
 		},
-		"max-width" => match as_integer(value.get_ref()) {
+		"max-width" => match integer() {
 			Some(n) if (20..=500).contains(&n) => {
 				options.max_width = Some(n as u16);
 			}
@@ -404,24 +609,11 @@ fn apply_key(
 				));
 			}
 		},
-		"at-params" => match value.get_ref() {
-			DeValue::Boolean(flag) => options.at_params = Some(*flag),
-			_ => return Err(err("`at-params` expects true or false".into())),
-		},
-		"pyformat-params" => match value.get_ref() {
-			DeValue::Boolean(flag) => options.pyformat_params = Some(*flag),
-			_ => {
-				return Err(err("`pyformat-params` expects true or false".into()));
-			}
-		},
-		"question-params" => match value.get_ref() {
-			DeValue::Boolean(flag) => options.question_params = Some(*flag),
-			_ => {
-				return Err(err("`question-params` expects true or false".into()));
-			}
-		},
+		"at-params" => options.at_params = Some(boolean(key_name)?),
+		"pyformat-params" => options.pyformat_params = Some(boolean(key_name)?),
+		"question-params" => options.question_params = Some(boolean(key_name)?),
 		"include" if scope != Scope::TopLevel => {
-			let patterns = glob_list(key_name, value, located)?;
+			let patterns = glob_list(key_name, value, context)?;
 			if patterns.is_empty() {
 				return Err(err("`include` needs at least one pattern".into()));
 			}
@@ -447,12 +639,16 @@ fn apply_key(
 		}
 		"grammar" | "query" if scope == Scope::Files => {
 			return Err(err(format!(
-				"`{key_name}` belongs in an [[embedded]] rule; [[files]] rules are plain SQL"
+				"`{key_name}` belongs in an {} rule; {} rules are plain SQL",
+				syntax.name("embedded"),
+				syntax.name("files"),
 			)));
 		}
 		"include" | "grammar" | "query" => {
 			return Err(err(format!(
-				"`{key_name}` belongs in a [[files]] or [[embedded]] rule"
+				"`{key_name}` belongs in a {} or {} rule",
+				syntax.name("files"),
+				syntax.name("embedded")
 			)));
 		}
 		"ignore" | "frozen" | "frozen-ref" | "frozen-fetch"
@@ -462,10 +658,7 @@ fn apply_key(
 				"`{key_name}` applies to the whole file; put it at the top level"
 			)));
 		}
-		"frozen-fetch" => match value.get_ref() {
-			DeValue::Boolean(flag) => config.frozen_fetch = Some(*flag),
-			_ => return Err(err("`frozen-fetch` expects true or false".into())),
-		},
+		"frozen-fetch" => config.frozen_fetch = Some(boolean(key_name)?),
 		"frozen-ref" => {
 			let raw = string(key_name)?;
 			if raw.trim().is_empty() {
@@ -473,14 +666,18 @@ fn apply_key(
 			}
 			config.frozen_ref = Some(raw);
 		}
-		"ignore" => config.ignore = glob_list(key_name, value, located)?,
-		"frozen" => config.frozen = glob_list(key_name, value, located)?,
+		"ignore" => config.ignore = glob_list(key_name, value, context)?,
+		"frozen" => config.frozen = glob_list(key_name, value, context)?,
 		other => {
-			if matches!(value.get_ref(), DeValue::Table(_)) {
-				return Err(err(match scope {
-					Scope::TopLevel => format!(
+			if matches!(value.value, Value::Table(_)) {
+				return Err(err(match (scope, syntax) {
+					(Scope::TopLevel, Syntax::Toml) => format!(
 						"unknown section `[{other}]`; path-scoped settings go in \
 						 [[files]] or [[embedded]] rules"
+					),
+					(Scope::TopLevel, Syntax::Yaml) => format!(
+						"unknown section `{other}`; path-scoped settings go in \
+						 `files` or `embedded` rules"
 					),
 					_ => "rules do not nest".to_string(),
 				}));
@@ -538,39 +735,30 @@ pub fn url_file_name(url: &str) -> Option<&str> {
 /// An array of glob patterns, each checked to compile.
 fn glob_list(
 	key_name: &str,
-	value: &toml::Spanned<DeValue<'_>>,
-	located: &dyn Fn(usize, &str) -> String,
+	value: &Node,
+	context: &Context<'_>,
 ) -> Result<Vec<String>, String> {
-	let DeValue::Array(items) = value.get_ref() else {
-		return Err(located(
-			value.span().start,
+	let Value::Array(items) = &value.value else {
+		return Err((context.located)(
+			value.line,
 			&format!("`{key_name}` expects an array of strings"),
 		));
 	};
 	let mut patterns = Vec::new();
-	for item in items.iter() {
-		let item_err = |message: String| located(item.span().start, &message);
-		let DeValue::String(pattern) = item.get_ref() else {
+	for item in items {
+		let item_err = |message: String| (context.located)(item.line, &message);
+		let Value::String(pattern) = &item.value else {
 			return Err(item_err(format!(
-				"`{key_name}` expects an array of quoted strings"
+				"`{key_name}` expects an array of strings"
 			)));
 		};
-		let pattern: &str = pattern.as_ref();
 		if pattern.is_empty() {
 			return Err(item_err(format!("empty {key_name} pattern")));
 		}
 		globset::Glob::new(pattern).map_err(|glob_err| {
 			item_err(format!("invalid {key_name} pattern `{pattern}`: {glob_err}"))
 		})?;
-		patterns.push(pattern.to_string());
+		patterns.push(pattern.clone());
 	}
 	Ok(patterns)
-}
-
-/// The integer value, if the TOML value is an in-range integer.
-fn as_integer(value: &DeValue) -> Option<i64> {
-	match value {
-		DeValue::Integer(n) => i64::from_str_radix(n.as_str(), n.radix()).ok(),
-		_ => None,
-	}
 }

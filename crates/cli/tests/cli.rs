@@ -1732,3 +1732,92 @@ fn unparsable_function_bodies_are_diagnostics() {
 	assert_eq!(status.code(), Some(1));
 	let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// squill.yaml (or .yml) works like squill.toml: the same keys and
+/// rules, and errors with line numbers.
+#[test]
+fn yaml_configs() {
+	let dir = temp_dir("yaml");
+	std::fs::write(
+		dir.join("squill.yaml"),
+		"keyword-case: upper\nfiles:\n  - include: [\"*.sql.sqlite\"]\n    dialect: sqlite\n",
+	)
+	.expect("write config");
+	std::fs::write(dir.join("q.sql.sqlite"), "select a from t where b = ?1;\n")
+		.expect("write");
+	let status =
+		squill().args(["fmt", "--strict"]).arg(&dir).status().expect("run");
+	assert!(status.success());
+	assert_eq!(
+		std::fs::read_to_string(dir.join("q.sql.sqlite")).expect("read"),
+		"SELECT a FROM t WHERE b = ?1;\n"
+	);
+
+	std::fs::write(dir.join("a.sql"), "select 1;\n").expect("write");
+	let cases = [
+		("nope: 1\n", 1, "unknown key `nope`"),
+		("indent-width: 99\n", 1, "integer from 1 to 16"),
+		(
+			"files:\n  - dialect: sqlite\n",
+			2,
+			"a `files` rule needs an `include` list",
+		),
+		("files:\n  include: [\"x\"]\n", 1, "write them as a list under `files:`"),
+		("- a\n- b\n", 1, "the top level must be a mapping"),
+		("dialect: postgres\n  oops: 1\n", 2, "mapping values are not allowed"),
+	];
+	for (config, line, needle) in cases {
+		std::fs::write(dir.join("squill.yaml"), config).expect("write config");
+		let output =
+			squill().arg("fmt").arg(dir.join("a.sql")).output().expect("run");
+		assert_eq!(output.status.code(), Some(2), "config accepted: {config}");
+		let stderr = String::from_utf8_lossy(&output.stderr);
+		assert!(
+			stderr.contains(&format!("squill.yaml:{line}:"))
+				&& stderr.contains(needle),
+			"for {config:?} got: {stderr}"
+		);
+	}
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Two configs in one place is an error, not a guess.
+#[test]
+fn two_configs_in_one_directory_are_refused() {
+	let dir = temp_dir("twoconfigs");
+	std::fs::write(dir.join("squill.toml"), "dialect = \"postgres\"\n")
+		.expect("write");
+	std::fs::write(dir.join("squill.yml"), "dialect: sqlite\n").expect("write");
+	std::fs::write(dir.join("a.sql"), "select 1;\n").expect("write");
+	let output = squill().arg("fmt").arg(&dir).output().expect("run");
+	assert_eq!(output.status.code(), Some(2));
+	let stderr = String::from_utf8_lossy(&output.stderr);
+	assert!(
+		stderr.contains("squill.toml and")
+			&& stderr.contains("squill.yml are both configs"),
+		"{stderr}"
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn init_writes_yaml_on_request() {
+	let dir = temp_dir("inityaml");
+	std::fs::write(dir.join("q.rs"), RS_FIXTURE).expect("write");
+	let (code, stderr) = init_in(&dir, &["--yaml", "--dialect", "sqlite"]);
+	assert_eq!(code, Some(0), "{stderr}");
+	assert!(!dir.join("squill.toml").exists());
+	assert_eq!(
+		std::fs::read_to_string(dir.join("squill.yaml")).expect("read"),
+		"# squill configuration: https://mckayla.dev/squill/docs/configuration/\n\n\
+		 dialect: sqlite\n\nembedded:\n  - include: [\"**/*.rs\"]\n    grammar: rust\n"
+	);
+	// fmt reads it back.
+	let status = squill().arg("fmt").arg(&dir).status().expect("run");
+	assert!(status.success());
+	// And init won't write a second config beside it.
+	let (code, stderr) = init_in(&dir, &[]);
+	assert_eq!(code, Some(2));
+	assert!(stderr.contains("squill.yaml already exists"), "{stderr}");
+	let _ = std::fs::remove_dir_all(&dir);
+}
