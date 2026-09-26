@@ -84,8 +84,14 @@ const kind = (path) =>
 				<span class="tab-tools">
 					{
 						lang !== "sql" && (
-							<button type="button" class="sql-toggle" aria-pressed="true">
-								highlight sql
+							<button
+								type="button"
+								class="sql-toggle"
+								role="switch"
+								aria-checked="true"
+							>
+								<span class="switch" aria-hidden="true" />
+								sql highlighting
 							</button>
 						)
 					}
@@ -111,7 +117,7 @@ const kind = (path) =>
 	const setPlain = (plain: boolean) => {
 		root.classList.toggle("plain-sql", plain);
 		for (const button of document.querySelectorAll(".sql-toggle")) {
-			button.setAttribute("aria-pressed", String(!plain));
+			button.setAttribute("aria-checked", String(!plain));
 		}
 	};
 	try {
