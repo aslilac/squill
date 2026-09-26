@@ -1,0 +1,4 @@
+{"path":"after.rb","start":86,"end":416,"line":4,"column":25,"end_line":16,"end_column":1,"dialect":"sqlite"}
+{"path":"after.rb","start":468,"end":596,"line":19,"column":28,"end_line":24,"end_column":3,"dialect":"sqlite"}
+{"path":"before.rb","start":86,"end":402,"line":4,"column":25,"end_line":7,"end_column":1,"dialect":"sqlite"}
+{"path":"before.rb","start":454,"end":578,"line":10,"column":28,"end_line":12,"end_column":3,"dialect":"sqlite"}

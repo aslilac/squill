@@ -825,6 +825,73 @@ pub fn count_sql(
 	})
 }
 
+/// One string the query captured as SQL: where its contents are (inside
+/// the delimiters), and which dialect they're in.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Located {
+	pub range: std::ops::Range<usize>,
+	pub dialect: Dialect,
+}
+
+/// Every SQL string the query captures in `source`, in order, whether or
+/// not squill would rewrite it — for tools that want to know where the
+/// SQL is (`squill locate`) rather than change it.
+pub fn locate_sql(
+	source: &str,
+	grammar: &Grammar,
+	query_source: &str,
+	default_dialect: Dialect,
+) -> Result<Vec<Located>, EmbedError> {
+	grammar.with_parser(|ts, language| {
+		let query = compile_query(language, query_source)?;
+		let tree = ts.parse(source, None).ok_or(EmbedError::HostParse)?;
+		let codec = grammar.codec();
+		let extraction = Extraction { query: &query, default_dialect, codec };
+		let mut found: Vec<Located> = extraction
+			.captures(&tree, source)
+			.into_iter()
+			.map(|(range, dialect)| {
+				let range = match codec {
+					Codec::Literal => {
+						let inner = literal_content(&source[range.clone()]);
+						range.start + inner.start..range.start + inner.end
+					}
+					Codec::Content { .. } => range,
+				};
+				Located { range, dialect }
+			})
+			.collect();
+		found.sort_by_key(|located| (located.range.start, located.range.end));
+		found.dedup_by(|a, b| a.range == b.range);
+		Ok(found)
+	})
+}
+
+/// Where a whole literal's contents are: past its prefix letters (`r`,
+/// `b`, Python's `rb`…), raw-string hashes, and opening quotes, and
+/// before the matching close. A shape it doesn't recognize is all
+/// content.
+fn literal_content(literal: &str) -> std::ops::Range<usize> {
+	let bytes = literal.as_bytes();
+	let mut open = bytes.iter().take_while(|b| b.is_ascii_alphabetic()).count();
+	let hashes = bytes[open..].iter().take_while(|&&b| b == b'#').count();
+	open += hashes;
+	let Some(&quote) =
+		bytes.get(open).filter(|b| matches!(b, b'"' | b'\'' | b'`'))
+	else {
+		return 0..literal.len();
+	};
+	let mut quotes =
+		bytes[open..].iter().take(3).take_while(|&&b| b == quote).count();
+	// `""` is an empty string, not an unclosed triple quote.
+	if quotes == 2 {
+		quotes = 1;
+	}
+	let start = open + quotes;
+	let end = literal.len().saturating_sub(quotes + hashes).max(start);
+	start..end
+}
+
 /// Format every SQL snippet the query captures in `source`, returning the
 /// rewritten host file. Unparsable or unsafe snippets stay byte-exact
 /// and come back as warnings. `indent` decides whether

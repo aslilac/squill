@@ -4,6 +4,10 @@
 //! written, so this keeps them honest: `after` must be exactly what
 //! squill makes of `before`, and must itself be left alone.
 //!
+//! `spans.jsonl` is `squill locate --json` for both: where the SQL is,
+//! so the site can highlight exactly that. It's checked the same way;
+//! run with `SQUILL_RECIPES_UPDATE=1` to rewrite it.
+//!
 //! Recipes whose grammar is an https URL need the network, so they run
 //! only with `--ignored`; the rest run with every `cargo test`.
 
@@ -98,6 +102,24 @@ fn check(recipe: &Path) {
 		"{name}: squill would change {after}: {}",
 		String::from_utf8_lossy(&again.stdout)
 	);
+
+	let located = run(&["locate", "--locked", "--json", &before, &after]);
+	assert!(
+		located.status.success(),
+		"{name}: squill locate failed: {}",
+		String::from_utf8_lossy(&located.stderr)
+	);
+	let spans = String::from_utf8_lossy(&located.stdout);
+	let spans_path = recipe.join("spans.jsonl");
+	if std::env::var_os("SQUILL_RECIPES_UPDATE").is_some() {
+		std::fs::write(&spans_path, spans.as_bytes()).expect("write spans");
+	} else {
+		let expected = std::fs::read_to_string(&spans_path).unwrap_or_default();
+		assert_eq!(
+			spans, expected,
+			"{name}: spans.jsonl is stale; rerun with SQUILL_RECIPES_UPDATE=1"
+		);
+	}
 	let _ = std::fs::remove_dir_all(&dir);
 }
 

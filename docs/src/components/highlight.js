@@ -49,11 +49,11 @@ export async function highlight(code, lang) {
 
 // Host code with SQL in its strings, twice over: once with the SQL
 // highlighted as SQL, once with it colored as the plain string it is.
-// Host grammars disagree — shiki's Ruby and C++ inject SQL by delimiter
-// name, the rest never do — so both are built the same way here: a string
-// body is SQL when a grammar already said so, or when it starts like a
-// statement.
-export async function highlightHost(code, lang) {
+// `spans` are where the SQL is — squill's own answer, from `squill
+// locate` — as [start, end) offsets into `code`. Inside one, everything
+// but an interpolation hole is SQL; outside, nothing is, even where a
+// host grammar (shiki's Ruby and C++) would inject SQL colors itself.
+export async function highlightHost(code, lang, spans) {
 	const h = await loaded(lang);
 	const { tokens } = h.codeToTokens(code, {
 		lang,
@@ -61,88 +61,94 @@ export async function highlightHost(code, lang) {
 		includeExplanation: true,
 	});
 
-	// Flatten to scoped pieces, keeping line breaks as pieces of their own.
+	// Scoped pieces with their offsets, line breaks included.
 	const pieces = [];
+	let offset = 0;
 	tokens.forEach((line, i) => {
-		if (i > 0) pieces.push({ text: "\n", newline: true });
+		if (i > 0) {
+			pieces.push({ text: "\n", offset, kind: "host" });
+			offset += 1;
+		}
 		// Ruby's grammar starts a heredoc's SQL right after `<<~SQL`, but
-		// the rest of that line is still the call: the body starts below.
+		// the rest of that line is still the call: plain host code.
 		let heredocOpened = false;
 		for (const token of line) {
 			for (const part of token.explanation ?? [{ content: token.content }]) {
 				const scopes = (part.scopes ?? []).map((s) => s.scopeName);
-				let kind = classify(scopes, part.content);
-				if (heredocOpened) kind = "host";
-				heredocOpened ||= scopes.some((s) =>
-					s.startsWith("string.definition.begin"),
-				);
-				pieces.push({
+				const piece = {
 					text: part.content,
+					offset,
 					color: token.color,
 					fontStyle: token.fontStyle,
-					kind,
-				});
+					kind: classify(scopes),
+				};
+				if (heredocOpened) {
+					Object.assign(piece, { kind: "host", color: colors.fg, fontStyle: 0 });
+				}
+				heredocOpened ||= scopes.some((s) => s.startsWith("string.definition.begin"));
+				pieces.push(piece);
+				offset += part.content.length;
 			}
 		}
 	});
 
-	// Runs of string body (newlines between them included) are candidates.
-	const segments = [];
-	let run = null;
-	const flush = () => {
-		if (!run) return;
-		// A run may end in newlines that belong to the host again.
-		const trailing = [];
-		while (run.pieces.at(-1)?.newline) trailing.unshift(run.pieces.pop());
-		const text = run.pieces.map((p) => p.text).join("");
-		if (run.embedded || STATEMENT.test(text)) {
-			segments.push({ sql: text });
-		} else {
-			segments.push(...run.pieces);
-		}
-		segments.push(...trailing);
-		run = null;
-	};
-	for (const piece of pieces) {
-		if (piece.kind === "sql" || piece.kind === "string") {
-			run ??= { pieces: [], embedded: false };
-			run.pieces.push(piece);
-			run.embedded ||= piece.kind === "sql";
-		} else if (piece.newline && run) {
-			run.pieces.push(piece);
-		} else {
-			flush();
-			segments.push(piece);
-		}
-	}
-	flush();
+	// Cut pieces at span edges, so each lies wholly inside or outside.
+	const edges = [...new Set(spans.flat())].sort((a, b) => a - b);
+	const cut = pieces.flatMap((piece) => {
+		const end = piece.offset + piece.text.length;
+		const inner = edges.filter((edge) => edge > piece.offset && edge < end);
+		let from = piece.offset;
+		return [...inner, end].map((to) => {
+			const part = {
+				...piece,
+				text: piece.text.slice(from - piece.offset, to - piece.offset),
+				offset: from,
+			};
+			from = to;
+			return part;
+		});
+	});
+	const spanAt = (at) => spans.findIndex(([start, end]) => at >= start && at < end);
 
 	const sql = [];
 	const plain = [];
-	for (const segment of segments) {
-		if (segment.sql === undefined) {
-			sql.push(segment);
-			plain.push(segment);
-			continue;
-		}
-		plain.push({ text: segment.sql, color: colors.string });
-		const lines = h.codeToTokens(segment.sql, {
+	let run = null;
+	const flush = () => {
+		if (!run) return;
+		plain.push({ text: run.text, color: colors.string });
+		const lines = h.codeToTokens(run.text, {
 			lang: "sql",
 			theme: shikiTheme.name,
 		}).tokens;
 		lines.forEach((line, i) => {
 			if (i > 0) sql.push({ text: "\n" });
-			sql.push(...line.map((t) => ({ text: t.content, ...t })));
+			sql.push(...line.map((t) => ({ ...t, text: t.content })));
 		});
+		run = null;
+	};
+	for (const piece of cut) {
+		const span = spanAt(piece.offset);
+		if (span >= 0 && piece.kind !== "hole") {
+			if (run && run.span !== span) flush();
+			run ??= { span, text: "" };
+			run.text += piece.text;
+			continue;
+		}
+		flush();
+		// SQL a host grammar injected where squill finds none is, to
+		// squill, just a string.
+		const shown =
+			piece.kind === "injected"
+				? { text: piece.text, color: colors.string }
+				: piece;
+		sql.push(shown);
+		plain.push(shown);
 	}
+	flush();
 	return { sql: render(sql), plain: render(plain) };
 }
 
-// Where a statement starts: what makes a string body worth reading as SQL.
-const STATEMENT =
-	/^\s*(select|insert|update|delete|with|create|alter|drop|pragma|begin|merge|values|explain|truncate|grant|revoke|do|call|copy|vacuum|analyze)\b/i;
-
-function classify(scopes, text) {
+function classify(scopes) {
 	const any = (test) => scopes.some(test);
 	// An interpolation hole is host code, even inside a string.
 	if (
@@ -155,27 +161,12 @@ function classify(scopes, text) {
 				s.startsWith("punctuation.definition.template-expression"),
 		)
 	) {
-		return "host";
+		return "hole";
 	}
-	// A heredoc's opener and terminator (`<<~SQL`, `SQL`), which Ruby's
-	// grammar scopes inside the SQL it injects.
-	if (any((s) => s.startsWith("string.definition"))) return "host";
-	// The SQL grammar's own tokens, where a host grammar injected it —
-	// quotes of SQL string literals included.
-	if (any((s) => s === "source.sql" || s.endsWith(".sql"))) return "sql";
-	// The host string's own delimiters. Some grammars (Gleam's, Kotlin's)
-	// scope their quotes as the string itself, so a piece that is nothing
-	// but quotes counts too.
-	if (
-		any((s) => s.startsWith("punctuation.definition.string")) ||
-		(/^["'`]+$/.test(text) &&
-			!any((s) => s.startsWith("constant.character.escape")))
-	) {
-		return "host";
+	if (any((s) => s === "source.sql" || /\.sql(\.|$)/.test(s))) {
+		return "injected";
 	}
-	// C++ marks the whole of an `R"sql(…)sql"` string as `….raw.sql.cpp`.
-	if (any((s) => /\.sql\./.test(s))) return "sql";
-	return any((s) => s.startsWith("string.")) ? "string" : "host";
+	return "host";
 }
 
 const escape = (text) =>

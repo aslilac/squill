@@ -1862,3 +1862,55 @@ fn csharp_defaults_to_at_params() {
 	);
 	let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// `squill locate` lists what a rule's query captures, formattable or
+/// not, and a plain SQL file whole — as lines, or as JSON.
+#[test]
+fn locate_lists_the_sql() {
+	let dir = temp_dir("locate");
+	std::fs::write(
+		dir.join("squill.toml"),
+		"[[embedded]]\ninclude = [\"*.rs\"]\ngrammar = \"rust\"\n",
+	)
+	.expect("write config");
+	std::fs::write(
+		dir.join("db.rs"),
+		"fn f() {\n    sqlx::query(r#\"SELECT 1\"#);\n    sqlx::query(\"frobnicate\");\n}\n",
+	)
+	.expect("write");
+	std::fs::write(dir.join("a.sql"), "select 1;\n").expect("write");
+	let run = |args: &[&str]| {
+		let output = squill().current_dir(&dir).args(args).output().expect("run");
+		assert!(
+			output.status.success(),
+			"{}",
+			String::from_utf8_lossy(&output.stderr)
+		);
+		String::from_utf8_lossy(&output.stdout).into_owned()
+	};
+	assert_eq!(
+		run(&["locate", "db.rs", "a.sql"]),
+		"a.sql:1:1-2:1 postgres  select 1;\n\
+		 db.rs:2:20-2:28 postgres  SELECT 1\n\
+		 db.rs:3:18-3:28 postgres  frobnicate\n"
+	);
+	assert_eq!(
+		run(&["locate", "--json", "db.rs"]),
+		"{\"path\":\"db.rs\",\"start\":28,\"end\":36,\"line\":2,\"column\":20,\"end_line\":2,\"end_column\":28,\"dialect\":\"postgres\"}\n\
+		 {\"path\":\"db.rs\",\"start\":58,\"end\":68,\"line\":3,\"column\":18,\"end_line\":3,\"end_column\":28,\"dialect\":\"postgres\"}\n"
+	);
+	// Nothing is written.
+	assert!(
+		std::fs::read_to_string(dir.join("db.rs"))
+			.expect("read")
+			.contains("SELECT 1")
+	);
+	// Formatting flags aren't for locate.
+	let output = squill()
+		.current_dir(&dir)
+		.args(["locate", "--check", "db.rs"])
+		.output()
+		.expect("run");
+	assert_eq!(output.status.code(), Some(2));
+	let _ = std::fs::remove_dir_all(&dir);
+}

@@ -1,0 +1,6 @@
+{"path":"after.rb","start":84,"end":342,"line":3,"column":19,"end_line":11,"end_column":5,"dialect":"postgres"}
+{"path":"after.rb","start":446,"end":571,"line":17,"column":32,"end_line":22,"end_column":5,"dialect":"postgres"}
+{"path":"after.rb","start":649,"end":801,"line":26,"column":42,"end_line":32,"end_column":5,"dialect":"postgres"}
+{"path":"before.rb","start":84,"end":313,"line":3,"column":19,"end_line":6,"end_column":5,"dialect":"postgres"}
+{"path":"before.rb","start":417,"end":532,"line":12,"column":32,"end_line":14,"end_column":5,"dialect":"postgres"}
+{"path":"before.rb","start":610,"end":748,"line":18,"column":42,"end_line":20,"end_column":5,"dialect":"postgres"}

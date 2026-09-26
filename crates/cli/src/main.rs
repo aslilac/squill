@@ -41,12 +41,18 @@ const USAGE: &str = "\
 squill — a SQL formatter
 
 Usage: squill fmt [OPTIONS] [PATHS...]
+       squill locate [--json] [OPTIONS] [PATHS...]
        squill init [--dialect <D>] [--yaml] [--yes]
        squill language-server start
 
 `squill language-server start` runs a language server on stdin/stdout,
 for editors: document formatting, and diagnostics for what squill
 leaves alone.
+
+`squill locate` lists the SQL squill finds, without formatting it: each
+string an [[embedded]] rule's query captures (formatted or not), and
+each whole plain SQL file. Run it on a file to check what a custom
+query matches. See `squill locate --help`.
 
 `squill init` writes a starter squill.toml (or, with --yaml,
 squill.yaml) for the project in the working directory: pick the
@@ -153,8 +159,36 @@ rewriting one. Unlike ignore, this applies to files named explicitly on
 the command line too — the point is that they are never rewritten.
 ";
 
+const LOCATE_USAGE: &str = "\
+Usage: squill locate [OPTIONS] [PATHS...]
+
+Lists the SQL squill finds in the given files (directories are searched
+as `squill fmt` searches them), without formatting anything: every
+string an [[embedded]] rule's query captures, whether or not squill
+would rewrite it, and every plain SQL file whole. One line each:
+
+    src/db.rs:12:9-17:9 postgres  select m.id, m.name…
+
+giving where the string's contents start and end (lines and columns,
+1-based, end exclusive), and the dialect they're read in.
+
+Options:
+  --json                  One JSON object per line instead: path, start
+                          and end (byte offsets, end exclusive), line,
+                          column, end_line, end_column, and dialect
+  --stdin-filepath <PATH> Read stdin as the file at PATH
+  --locked, --no-config, --ignore <GLOB>, --dialect <D>, --at-params,
+  --question-params, --pyformat-params
+                          As for `squill fmt`
+  -h, --help              Show this help
+";
+
 #[derive(Default)]
 struct Args {
+	/// `squill locate`: list where the SQL is instead of formatting it.
+	locate: bool,
+	/// `squill locate --json`.
+	json: bool,
 	check: bool,
 	stdout_mode: bool,
 	stdin_mode: bool,
@@ -188,8 +222,10 @@ enum Invocation {
 
 fn parse_args() -> Result<Invocation, String> {
 	let mut argv = std::env::args().skip(1).peekable();
+	let mut locate = false;
 	match argv.next().as_deref() {
 		Some("fmt") => {}
+		Some("locate") => locate = true,
 		#[cfg(feature = "lsp")]
 		Some("language-server") => {
 			return match (argv.next().as_deref(), argv.next()) {
@@ -220,7 +256,10 @@ fn parse_args() -> Result<Invocation, String> {
 		None => return Err(USAGE.to_string()),
 		Some(other) => return Err(format!("unknown command `{other}`\n\n{USAGE}")),
 	}
+	let usage = if locate { LOCATE_USAGE } else { USAGE };
 	let mut args = Args {
+		locate,
+		json: false,
 		check: false,
 		stdout_mode: false,
 		stdin_mode: false,
@@ -240,6 +279,10 @@ fn parse_args() -> Result<Invocation, String> {
 	};
 	while let Some(arg) = argv.next() {
 		match arg.as_str() {
+			"--json" if locate => args.json = true,
+			"--check" | "--stdout" | "--strict" if locate => {
+				return Err(format!("`squill locate` doesn't take {arg}"));
+			}
 			"--check" => args.check = true,
 			"--stdout" => args.stdout_mode = true,
 			// `-` as a path is stdin, by the usual convention.
@@ -298,12 +341,12 @@ fn parse_args() -> Result<Invocation, String> {
 				args.overrides.quoting =
 					Some(config::parse_quoting(&value(&mut argv, "--quote-idents")?)?)
 			}
-			"-h" | "--help" => return Ok(Invocation::Print(USAGE.to_string())),
+			"-h" | "--help" => return Ok(Invocation::Print(usage.to_string())),
 			"-V" | "--version" => {
 				return Ok(Invocation::Print(VERSION.to_string()));
 			}
 			flag if flag.starts_with('-') => {
-				return Err(format!("unknown flag `{flag}`\n\n{USAGE}"));
+				return Err(format!("unknown flag `{flag}`\n\n{usage}"));
 			}
 			path => args.paths.push(PathBuf::from(path)),
 		}
@@ -315,7 +358,7 @@ fn parse_args() -> Result<Invocation, String> {
 		);
 	}
 	if !args.stdin_mode && args.paths.is_empty() {
-		return Err(format!("no input files\n\n{USAGE}"));
+		return Err(format!("no input files\n\n{usage}"));
 	}
 	Ok(Invocation::Run(Box::new(args)))
 }
@@ -904,6 +947,71 @@ fn format_source(source: &str, options: &Options) -> Outcome {
 	Outcome { formatted: result.text, diagnostics }
 }
 
+/// Where the SQL in one source is, the way its resolution reads it: every
+/// string a host file's query captures, or a SQL file whole.
+fn locate_resolved(
+	source: &str,
+	resolved: &Resolved,
+) -> Result<Vec<embed::Located>, String> {
+	match &resolved.kind {
+		Kind::Embedded { grammar, query } => {
+			embed::locate_sql(source, grammar, query, resolved.options.dialect)
+				.map_err(|err| err.to_string())
+		}
+		Kind::Sql => Ok(vec![embed::Located {
+			range: 0..source.len(),
+			dialect: resolved.options.dialect,
+		}]),
+	}
+}
+
+/// Print `squill locate`'s lines for one source.
+fn print_located(
+	label: &str,
+	source: &str,
+	found: &[embed::Located],
+	json: bool,
+) {
+	for located in found {
+		let (line, column) = line_col(source, located.range.start);
+		let (end_line, end_column) = line_col(source, located.range.end);
+		let dialect = match located.dialect {
+			parser::Dialect::Postgres => "postgres",
+			parser::Dialect::Sqlite => "sqlite",
+		};
+		if json {
+			println!(
+				"{{\"path\":{},\"start\":{},\"end\":{},\"line\":{line},\"column\":{column},\"end_line\":{end_line},\"end_column\":{end_column},\"dialect\":\"{dialect}\"}}",
+				json_string(label),
+				located.range.start,
+				located.range.end,
+			);
+		} else {
+			let text = source[located.range.clone()].trim();
+			let first = text.lines().next().unwrap_or("");
+			let more = if first.len() < text.len() { "…" } else { "" };
+			println!(
+				"{label}:{line}:{column}-{end_line}:{end_column} {dialect}  {first}{more}"
+			);
+		}
+	}
+}
+
+/// A JSON string literal.
+fn json_string(text: &str) -> String {
+	let mut out = String::from("\"");
+	for c in text.chars() {
+		match c {
+			'"' => out.push_str("\\\""),
+			'\\' => out.push_str("\\\\"),
+			c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+			c => out.push(c),
+		}
+	}
+	out.push('"');
+	out
+}
+
 /// Format one source the way its resolution says: SQL, or a host file
 /// whose embedded SQL the rule's grammar and query find.
 fn format_resolved(
@@ -1104,6 +1212,7 @@ fn main() -> ExitCode {
 		};
 		let resolved = match resolved {
 			Ok(Some(resolved)) => resolved,
+			Ok(None) if args.locate => return ExitCode::SUCCESS,
 			Ok(None) => {
 				// Not ours to touch: hand the buffer back as it came.
 				if !args.check {
@@ -1120,6 +1229,18 @@ fn main() -> ExitCode {
 			.stdin_path
 			.as_ref()
 			.map_or_else(|| "<stdin>".to_string(), |path| path.display().to_string());
+		if args.locate {
+			return match locate_resolved(&source, &resolved) {
+				Ok(found) => {
+					print_located(&label, &source, &found, args.json);
+					ExitCode::SUCCESS
+				}
+				Err(message) => {
+					eprintln!("squill: {label}: {message}");
+					ExitCode::from(2)
+				}
+			};
+		}
 		let outcome = match format_resolved(&source, &resolved) {
 			Ok(outcome) => outcome,
 			Err(message) => {
@@ -1203,7 +1324,13 @@ fn main() -> ExitCode {
 
 	// Drop files the baseline already carries. Before any formatting, so
 	// a frozen file is never read, diffed, or counted.
-	let frozen_count = match drop_frozen(&mut files, &args, &cwd, &mut caches) {
+	// (Locating reads without writing, so frozen files are fair game.)
+	let frozen = if args.locate {
+		Ok(0)
+	} else {
+		drop_frozen(&mut files, &args, &cwd, &mut caches)
+	};
+	let frozen_count = match frozen {
 		Ok(count) => count,
 		Err(message) => {
 			eprintln!("squill: {message}");
@@ -1234,6 +1361,28 @@ fn main() -> ExitCode {
 				return ExitCode::from(2);
 			}
 		}
+	}
+
+	if args.locate {
+		let mut failed = false;
+		for (path, resolved) in files.iter().zip(&per_file_options) {
+			let label = path.display().to_string();
+			let found = std::fs::read_to_string(path)
+				.map_err(|err| err.to_string())
+				.and_then(|source| {
+					locate_resolved(&source, resolved).map(|found| (source, found))
+				});
+			match found {
+				Ok((source, found)) => {
+					print_located(&label, &source, &found, args.json)
+				}
+				Err(message) => {
+					eprintln!("squill: {label}: {message}");
+					failed = true;
+				}
+			}
+		}
+		return if failed { ExitCode::from(2) } else { ExitCode::SUCCESS };
 	}
 
 	let results: Vec<Result<FileResult, String>> = files

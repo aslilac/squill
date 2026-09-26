@@ -40,7 +40,21 @@ const host = async (file) => {
 		const html = await highlight(read(file));
 		return { sql: html, plain: html };
 	}
-	return highlightHost(read(file).trimEnd(), lang);
+	const code = read(file).trimEnd();
+	return highlightHost(code, lang, spans(file, code));
+};
+// Where squill finds SQL in a file: spans.jsonl is `squill locate --json`
+// for the recipe, byte offsets that become string offsets here.
+const located = read("spans.jsonl")
+	.split("\n")
+	.filter(Boolean)
+	.map((line) => JSON.parse(line));
+const spans = (file, code) => {
+	const bytes = Buffer.from(code);
+	const at = (byte) => bytes.subarray(0, byte).toString().length;
+	return located
+		.filter((span) => span.path === file)
+		.map((span) => [at(span.start), at(span.end)]);
 };
 const panes = [
 	{ tab: "before", ...(await host(before)) },

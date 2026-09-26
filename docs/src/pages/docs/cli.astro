@@ -11,11 +11,17 @@ import Docs from "../../layouts/Docs.astro";
 	<section>
 		<h2>Commands</h2>
 		<Code lang="text" code={`squill fmt [OPTIONS] [PATHS...]
+squill locate [--json] [OPTIONS] [PATHS...]
 squill init [--dialect <D>] [--yaml] [--yes]
 squill language-server start`} />
 		<ul>
 			<li>
 				<code>squill fmt</code> formats files, below.
+			</li>
+			<li>
+				<code>squill locate</code> lists where the SQL is, <a
+					href="docs/cli/#locate">below</a
+				>.
 			</li>
 			<li>
 				<code>squill init</code> writes a starter config &mdash; see{" "}
@@ -158,6 +164,32 @@ squill language-server start`} />
 				</tbody>
 			</table>
 		</div>
+	</section>
+
+	<section id="locate">
+		<h2>Finding the SQL</h2>
+		<p>
+			<code>squill locate</code> takes the same paths and finds the same
+			files as <code>fmt</code>, but formats nothing: it lists every string
+			a rule&rsquo;s query captures, whether or not squill would rewrite
+			it, and every plain SQL file whole. Each line says where the
+			string&rsquo;s contents start and end, which dialect they&rsquo;re
+			read in, and how they begin:
+		</p>
+		<Code lang="text" code={`$ squill locate src/db.rs
+src/db.rs:12:9-17:9 postgres  select m.id, m.name…
+src/db.rs:24:26-24:68 postgres  SELECT count(*) FROM members`} />
+		<p>
+			It&rsquo;s the quick way to check a{" "}
+			<a href="docs/embedded/#queries">query of your own</a>: a string
+			missing from the list is one the query doesn&rsquo;t match. With{" "}
+			<code>--json</code>, each line is an object instead &mdash;{" "}
+			<code>path</code>, <code>start</code> and <code>end</code> (byte
+			offsets), <code>line</code>, <code>column</code>,{" "}
+			<code>end_line</code>, <code>end_column</code>, and{" "}
+			<code>dialect</code> &mdash; for tools that want to know where the SQL
+			is; these docs highlight the SQL in their recipes with it.
+		</p>
 	</section>
 
 	<section>
