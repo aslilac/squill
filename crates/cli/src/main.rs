@@ -88,6 +88,10 @@ Options:
   --max-width <N>         Target line width (20 to 500), default 80
   --keyword-case <CASE>   lower (default) | upper
   --quote-idents <MODE>   as-needed (default) | always
+  --trailing-semicolons <MODE>
+                          always | none: whether the last statement ends
+                          in `;` (default always for SQL files, none for
+                          embedded SQL)
   --at-params             Treat sqlc- and ADO.NET-style @name as
                           parameters (Postgres; on by default for the
                           csharp grammar)
@@ -109,9 +113,9 @@ Options:
 Configuration: the nearest squill.toml or .config/squill.toml (or
 squill.yaml / squill.yml, same keys) at or above each formatted file
 supplies defaults. Top-level keys: dialect, indent, indent-width,
-max-width, keyword-case, quote-idents, at-params, question-params,
-pyformat-params, ignore and frozen (arrays of glob patterns),
-frozen-ref, and frozen-fetch. Explicit flags override the
+max-width, keyword-case, quote-idents, trailing-semicolons, at-params,
+question-params, pyformat-params, ignore and frozen (arrays of glob
+patterns), frozen-ref, and frozen-fetch. Explicit flags override the
 config. The search upward stops at a git repository root, a mount
 point, or a symlinked directory, so a config outside a checkout never
 reaches inside it. Directory recursion honors .gitignore and skips
@@ -336,6 +340,13 @@ fn parse_args() -> Result<Invocation, String> {
 					&mut argv,
 					"--keyword-case",
 				)?)?)
+			}
+			"--trailing-semicolons" => {
+				args.overrides.trailing_semicolons =
+					Some(config::parse_trailing_semicolons(&value(
+						&mut argv,
+						"--trailing-semicolons",
+					)?)?)
 			}
 			"--quote-idents" => {
 				args.overrides.quoting =
@@ -628,6 +639,9 @@ fn resolve(
 			// ADO.NET's `@name` in C#.
 			let mut at_set = config.options.at_params.is_some()
 				|| args.overrides.at_params.is_some();
+			// And embedded SQL goes without a final `;` unless configured.
+			let mut semicolons_set = config.options.trailing_semicolons.is_some()
+				|| args.overrides.trailing_semicolons.is_some();
 			let mut question_set = config.options.question_params.is_some()
 				|| args.overrides.question_params.is_some();
 			let mut pyformat_set = config.options.pyformat_params.is_some()
@@ -636,8 +650,12 @@ fn resolve(
 				rule.options.apply(&mut options);
 				indent_set |= rule.options.indent_style.is_some();
 				at_set |= rule.options.at_params.is_some();
+				semicolons_set |= rule.options.trailing_semicolons.is_some();
 				question_set |= rule.options.question_params.is_some();
 				pyformat_set |= rule.options.pyformat_params.is_some();
+			}
+			if !semicolons_set {
+				options.trailing_semicolons = formatter::TrailingSemicolons::None;
 			}
 			if let config::GrammarSpec::Builtin(host) = spec {
 				if !at_set {

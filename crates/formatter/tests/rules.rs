@@ -463,7 +463,7 @@ fn reordering_stops_at_a_comment() {
 /// ended; an empty (or blank) file stays empty.
 #[test]
 fn files_end_with_exactly_one_newline() {
-	assert_eq!(format("SELECT 1"), "select 1\n");
+	assert_eq!(format("SELECT 1"), "select 1;\n");
 	assert_eq!(format("SELECT 1;"), "select 1;\n");
 	assert_eq!(format("SELECT 1;\n\n\n"), "select 1;\n");
 	assert_eq!(format("-- only a comment"), "-- only a comment\n");

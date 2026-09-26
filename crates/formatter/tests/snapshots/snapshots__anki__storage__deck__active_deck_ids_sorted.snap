@@ -2,4 +2,4 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-select id from decks where id in (select id from active_decks) order by name
+select id from decks where id in (select id from active_decks) order by name;

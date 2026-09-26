@@ -13,7 +13,7 @@ def migrate(db: sqlite3.Connection) -> None:
       bookmark_id integer not null references bookmarks (id) on delete cascade,
       tag text not null,
       primary key (bookmark_id, tag)
-    );
+    )
     """)
 
 

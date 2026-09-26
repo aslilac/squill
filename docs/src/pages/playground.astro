@@ -91,6 +91,14 @@ const baseHref = import.meta.env.BASE_URL;
 							<option value="always">always</option>
 						</select>
 					</label>
+					<label
+						>trailing-semicolons
+						<select data-opt="trailing_semicolons">
+							<option value="">by language</option>
+							<option value="always">always</option>
+							<option value="none">none</option>
+						</select>
+					</label>
 					<label class="row">
 						<input data-opt="at_params" type="checkbox" />
 						at-params
@@ -363,7 +371,9 @@ const baseHref = import.meta.env.BASE_URL;
 							? control.checked
 							: control.type === "number"
 								? Number(control.value)
-								: control.value;
+								: // An empty choice ("by language") sends nothing,
+									// leaving the host's default.
+									control.value || undefined;
 					applyIndentWidth();
 					render();
 				});

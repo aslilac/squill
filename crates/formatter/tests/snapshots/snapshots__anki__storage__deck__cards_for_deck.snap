@@ -2,4 +2,4 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-select id from cards where did = ?1 or (odid != 0 and odid = ?1)
+select id from cards where did = ?1 or (odid != 0 and odid = ?1);

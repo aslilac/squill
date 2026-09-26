@@ -12,4 +12,4 @@ set
 	-- object, a string replace is much simpler and easier to understand.
 	-- Both pieces of text are JSON arrays, so this safe to do.
 	group_acl = replace(group_acl::text, '["read"]', '["read", "use"]')::jsonb,
-	user_acl = replace(user_acl::text, '["read"]', '["read", "use"]')::jsonb
+	user_acl = replace(user_acl::text, '["read"]', '["read", "use"]')::jsonb;

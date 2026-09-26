@@ -2,4 +2,4 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-delete from graves where oid = ? and type = ?
+delete from graves where oid = ? and type = ?;

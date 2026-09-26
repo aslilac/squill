@@ -7,4 +7,4 @@ select
 	count(distinct r.cid) as cnt
 from revlog as r join cards as c on r.cid = c.id
 where r.id > ? and r.ease > 0 and (r.type < 3 or r.factor != 0)
-group by original_did
+group by original_did;

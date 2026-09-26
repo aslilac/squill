@@ -38,6 +38,17 @@ pub enum IdentQuoting {
 	AlwaysQuoted,
 }
 
+/// Whether the last statement ends in a `;`. Only the last: the ones
+/// between statements are what separate them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TrailingSemicolons {
+	/// Add one where it's missing: the norm for SQL files.
+	#[default]
+	Always,
+	/// Drop it: the norm for SQL embedded in host code.
+	None,
+}
+
 /// The complete configuration surface of the renderer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Options {
@@ -52,6 +63,8 @@ pub struct Options {
 	pub max_width: u16,
 	pub keyword_case: KeywordCase,
 	pub quoting: IdentQuoting,
+	/// Whether the last statement ends in a `;`.
+	pub trailing_semicolons: TrailingSemicolons,
 	/// Governs the identifier-quoting safety rules.
 	pub dialect: Dialect,
 	/// sqlc-style `@name` parameters (see [`LexOptions::at_params`]);
@@ -80,6 +93,7 @@ impl Default for Options {
 			max_width: 80,
 			keyword_case: KeywordCase::default(),
 			quoting: IdentQuoting::default(),
+			trailing_semicolons: TrailingSemicolons::default(),
 			dialect: Dialect::default(),
 			at_params: false,
 			pyformat_params: false,
@@ -143,11 +157,22 @@ fn format_cst_at(cst: &Cst, options: &Options, depth: u32) -> Formatted {
 	let mut pieces: Vec<(usize, String)> = Vec::new();
 	let mut fallbacks = 0;
 	let mut pending_blank = 0usize;
+	// The last statement, whose `;` is `trailing_semicolons`' to settle.
+	// Not inside procedural bodies, and never an unparsable one.
+	let last = cst
+		.root()
+		.children()
+		.last()
+		.filter(|node| depth == 0 && node.kind() != SyntaxKind::ErrorStatement);
 
 	for element in cst.root().children_with_tokens() {
 		match element {
 			parser::syntax::SyntaxElement::Node(node) => {
-				let original = node.to_string();
+				let (settled, original) = match last {
+					Some(last) if last == node => settle_semicolon(node.clone(), options),
+					_ => (node.clone(), node.to_string()),
+				};
+				let node = &settled;
 				let blank = pending_blank.max(leading_blanks(&original));
 				pending_blank = 0;
 				match rules::lower_statement(node, options.always_break_statements) {
@@ -236,6 +261,54 @@ fn format_cst_at(cst: &Cst, options: &Options, depth: u32) -> Formatted {
 		}
 	}
 	Formatted { text: out, fallback_statements: fallbacks, body_diagnostics }
+}
+
+/// The last statement with its `;` added (before any trailing comment)
+/// or dropped, per `trailing_semicolons`, re-parsed so layout measures
+/// the statement as it will be printed. Unchanged if it already agrees,
+/// or if the adjusted text doesn't parse as one statement of the same
+/// kind.
+fn settle_semicolon(
+	node: parser::syntax::SyntaxNode,
+	options: &Options,
+) -> (parser::syntax::SyntaxNode, String) {
+	let original = node.to_string();
+	let tokens =
+		parser::lexer::lex_with(&original, options.dialect, options.lex_options());
+	let mut offset = 0;
+	let mut last_code = None;
+	for token in &tokens {
+		if !token.kind.is_trivia() {
+			last_code = Some((offset, token));
+		}
+		offset += token.text.len();
+	}
+	let Some((at, token)) = last_code else {
+		return (node, original);
+	};
+	let is_semicolon = token.kind == SyntaxKind::Semicolon;
+	let adjusted = match options.trailing_semicolons {
+		TrailingSemicolons::Always if !is_semicolon => {
+			let end = at + token.text.len();
+			format!("{};{}", &original[..end], &original[end..])
+		}
+		TrailingSemicolons::None if is_semicolon => {
+			format!("{}{}", &original[..at], &original[at + 1..])
+		}
+		_ => return (node, original),
+	};
+	let tokens =
+		parser::lexer::lex_with(&adjusted, options.dialect, options.lex_options());
+	let parse = parser::parser::parse(&tokens, options.dialect);
+	let mut nodes = parse.cst.root().children();
+	match (nodes.next(), nodes.next()) {
+		(Some(settled), None)
+			if settled.kind() == node.kind() && parse.diagnostics.is_empty() =>
+		{
+			(settled.clone(), adjusted)
+		}
+		_ => (node, original),
+	}
 }
 
 /// The most blank lines squill will keep between two top-level pieces.

@@ -4,4 +4,4 @@ expression: formatted
 ---
 update cards
 set ord = max(0, min(30000, ord)), mod = ?1, usn = ?2
-where ord != max(0, min(30000, ord))
+where ord != max(0, min(30000, ord));

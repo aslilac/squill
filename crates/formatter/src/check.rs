@@ -17,7 +17,7 @@ use parser::syntax::SyntaxKind;
 const MAX_BODY_DEPTH: u32 = 4;
 
 /// Are the two sources token-identical modulo trivia, keyword case,
-/// sanctioned identifier-quote changes, and whitespace inside procedural
+/// sanctioned identifier-quote changes, a final `;`, and whitespace inside procedural
 /// bodies — the dollar-quoted strings of a `LANGUAGE sql` / `LANGUAGE
 /// plpgsql` statement or a `DO` block, which the formatter reformats and
 /// which are compared recursively? Any other dollar-quoted string is a
@@ -40,8 +40,17 @@ fn tokens_equivalent_at(
 ) -> bool {
 	let a = lex_with(input, dialect, lex_options);
 	let b = lex_with(output, dialect, lex_options);
-	let a: Vec<_> = a.iter().filter(|t| !t.kind.is_trivia()).collect();
-	let b: Vec<_> = b.iter().filter(|t| !t.kind.is_trivia()).collect();
+	let mut a: Vec<_> = a.iter().filter(|t| !t.kind.is_trivia()).collect();
+	let mut b: Vec<_> = b.iter().filter(|t| !t.kind.is_trivia()).collect();
+	// The one `;` that may come or go: the last statement's, which the
+	// `trailing_semicolons` option settles. Not inside bodies.
+	if depth == 0 {
+		for tokens in [&mut a, &mut b] {
+			if tokens.last().is_some_and(|t| t.kind == SyntaxKind::Semicolon) {
+				tokens.pop();
+			}
+		}
+	}
 	// Which of the input's dollar-quoted strings are procedural bodies,
 	// by statement, before canonical ordering moves tokens around.
 	let bodies = procedural_bodies(&a);

@@ -230,4 +230,16 @@ query = ".config/squill/lua.scm"`} />
 			lines are data, and are never re-indented.
 		</p>
 	</section>
+
+	<section id="semicolons">
+		<h2>Semicolons</h2>
+		<p>
+			A query in host code usually goes without a final <code>;</code>, so
+			embedded SQL loses its last one, where a <code>.sql</code> file gains
+			one. Only the last: the <code>;</code> between statements in a
+			multi-statement string are what separate them. Set{" "}
+			<code>trailing-semicolons = "always"</code> in the rule to keep them
+			instead.
+		</p>
+	</section>
 </Docs>

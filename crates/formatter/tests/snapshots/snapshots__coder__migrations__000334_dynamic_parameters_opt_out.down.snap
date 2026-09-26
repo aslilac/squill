@@ -4,4 +4,4 @@ expression: formatted
 ---
 alter table templates alter column use_classic_parameter_flow set default false;
 
-update templates set use_classic_parameter_flow = false
+update templates set use_classic_parameter_flow = false;

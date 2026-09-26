@@ -29,6 +29,7 @@ use std::path::PathBuf;
 use formatter::IdentQuoting;
 use formatter::IndentStyle;
 use formatter::KeywordCase;
+use formatter::TrailingSemicolons;
 use parser::Dialect;
 use toml::de::DeTable;
 use toml::de::DeValue;
@@ -43,6 +44,7 @@ pub struct PartialOptions {
 	pub max_width: Option<u16>,
 	pub keyword_case: Option<KeywordCase>,
 	pub quoting: Option<IdentQuoting>,
+	pub trailing_semicolons: Option<TrailingSemicolons>,
 	pub at_params: Option<bool>,
 	pub question_params: Option<bool>,
 	pub pyformat_params: Option<bool>,
@@ -67,6 +69,9 @@ impl PartialOptions {
 		}
 		if let Some(value) = self.quoting {
 			options.quoting = value;
+		}
+		if let Some(value) = self.trailing_semicolons {
+			options.trailing_semicolons = value;
 		}
 		if let Some(value) = self.at_params {
 			options.at_params = value;
@@ -155,6 +160,16 @@ pub fn parse_keyword_case(value: &str) -> Result<KeywordCase, String> {
 		"lower" => Ok(KeywordCase::Lower),
 		"upper" => Ok(KeywordCase::Upper),
 		other => Err(format!("unknown keyword case `{other}`")),
+	}
+}
+
+pub fn parse_trailing_semicolons(
+	value: &str,
+) -> Result<TrailingSemicolons, String> {
+	match value {
+		"always" => Ok(TrailingSemicolons::Always),
+		"none" => Ok(TrailingSemicolons::None),
+		other => Err(format!("unknown trailing-semicolons mode `{other}`")),
 	}
 }
 
@@ -588,6 +603,10 @@ fn apply_key(
 		}
 		"quote-idents" => {
 			options.quoting = Some(parse_quoting(&string(key_name)?).map_err(&err)?)
+		}
+		"trailing-semicolons" => {
+			options.trailing_semicolons =
+				Some(parse_trailing_semicolons(&string(key_name)?).map_err(&err)?)
 		}
 		"indent-width" => match integer() {
 			Some(n) if (1..=16).contains(&n) => {

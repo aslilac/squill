@@ -37,8 +37,12 @@ use formatter::Options;
 use parser::lexer::LexOptions;
 use std::path::Path;
 
+/// The CLI's options for embedded SQL: defaults, and no final `;`.
 fn options() -> Options {
-	Options::default()
+	Options {
+		trailing_semicolons: formatter::TrailingSemicolons::None,
+		..Options::default()
+	}
 }
 
 fn fixture_dir() -> std::path::PathBuf {
@@ -602,7 +606,7 @@ fn csharp_raw_strings() {
 	let formatted = format_host(Host::CSharp, CSHARP_SQL_QUERY, source);
 	assert!(
 		formatted.text.contains(
-			"b.Sql(\"\"\"\n        update BaseItems\n        set OwnerId = null\n        where OwnerId not in (select Id from BaseItems);\n        \"\"\");"
+			"b.Sql(\"\"\"\n        update BaseItems\n        set OwnerId = null\n        where OwnerId not in (select Id from BaseItems)\n        \"\"\");"
 		),
 		"{}",
 		formatted.text
@@ -699,7 +703,7 @@ fn procedural_bodies_anchor_but_their_strings_do_not() {
 	let formatted = format_host(Host::Rust, RUST_SQLX_QUERY, source);
 	assert!(
 		formatted.text.contains(
-			"    as $$\n    begin\n      raise notice 'one\ntwo';\n    end\n    $$;\n"
+			"    as $$\n    begin\n      raise notice 'one\ntwo';\n    end\n    $$\n"
 		),
 		"{}",
 		formatted.text

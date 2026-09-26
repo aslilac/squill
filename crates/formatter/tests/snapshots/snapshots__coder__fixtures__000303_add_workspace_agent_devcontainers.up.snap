@@ -16,4 +16,4 @@ values
 		'489c0a1d-387d-41f0-be55-63aa7c5d7b14',
 		'/workspace',
 		'/workspace/.devcontainer/devcontainer.json'
-	)
+	);

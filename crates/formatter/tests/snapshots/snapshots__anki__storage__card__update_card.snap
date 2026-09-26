@@ -21,4 +21,4 @@ set
 	odid = ?,
 	flags = ?,
 	data = ?
-where id = ?
+where id = ?;

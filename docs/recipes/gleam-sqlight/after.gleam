@@ -30,7 +30,7 @@ pub fn migrate(db: sqlight.Connection) {
       subject text not null,
       sent_at integer not null,
       read_at integer
-    );
+    )
     ",
     db,
   )

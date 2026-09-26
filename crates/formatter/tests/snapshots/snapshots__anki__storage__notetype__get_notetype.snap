@@ -2,4 +2,4 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-select id, name, mtime_secs, usn, config from notetypes
+select id, name, mtime_secs, usn, config from notetypes;

@@ -25,6 +25,7 @@ struct RequestOptions {
 	max_width: Option<u16>,
 	keyword_case: Option<String>,
 	quote_idents: Option<String>,
+	trailing_semicolons: Option<String>,
 	at_params: Option<bool>,
 }
 
@@ -67,6 +68,12 @@ fn build_options(req: &RequestOptions) -> formatter::Options {
 		options.quoting = match quoting {
 			"always" => formatter::IdentQuoting::AlwaysQuoted,
 			_ => formatter::IdentQuoting::UnquotedWhenSafe,
+		};
+	}
+	if let Some(mode) = req.trailing_semicolons.as_deref() {
+		options.trailing_semicolons = match mode {
+			"none" => formatter::TrailingSemicolons::None,
+			_ => formatter::TrailingSemicolons::Always,
 		};
 	}
 	if let Some(at_params) = req.at_params {
@@ -151,8 +158,14 @@ pub fn format_request(json: &str) -> String {
 					Some(_) => embed::Indent::Configured,
 					None => embed::Indent::FromHost,
 				};
-				// And the CLI's host-conventional placeholders.
+				// And the CLI's host-conventional placeholders, and no
+				// final `;` unless asked for.
+				let trailing_semicolons = match request.options.trailing_semicolons {
+					Some(_) => options.trailing_semicolons,
+					None => formatter::TrailingSemicolons::None,
+				};
 				let options = formatter::Options {
+					trailing_semicolons,
 					at_params: host.uses_at_params(),
 					pyformat_params: host.uses_pyformat_params(),
 					question_params: host.uses_question_params(),

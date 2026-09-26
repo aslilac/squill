@@ -54,4 +54,4 @@ create index account_validity_email_sent_idx
 		email_sent,
 		expiration_ts_ms
 	) create unique index account_validity_renewal_string_idx
-	on account_validity (renewal_token)
+	on account_validity (renewal_token);

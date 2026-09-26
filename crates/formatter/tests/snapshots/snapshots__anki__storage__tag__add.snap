@@ -2,4 +2,4 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-insert or replace into tags (tag, usn, collapsed) values (?, ?, ?)
+insert or replace into tags (tag, usn, collapsed) values (?, ?, ?);

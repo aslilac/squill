@@ -2,4 +2,4 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-update cards set mod = cast (mod as integer) where mod != cast (mod as integer)
+update cards set mod = cast (mod as integer) where mod != cast (mod as integer);

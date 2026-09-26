@@ -1422,7 +1422,7 @@ fn stdin_filepath_resolves_rules_against_the_path() {
 		&["--strict"],
 	);
 	assert_eq!(code, Some(0), "{err}");
-	assert_eq!(out, "select a from t where b = ?1\n");
+	assert_eq!(out, "select a from t where b = ?1;\n");
 
 	// Diagnostics carry the path.
 	let (_, _, err) = stdin_as(
@@ -1541,7 +1541,7 @@ fn language_server_formats_and_reports() {
 	);
 	assert_eq!(reply(1)["result"]["serverInfo"]["name"], "squill");
 	let edits = &reply(2)["result"];
-	assert_eq!(edits[0]["newText"], "select 1\n", "{edits}");
+	assert_eq!(edits[0]["newText"], "select 1;\n", "{edits}");
 	assert_eq!(edits[0]["range"]["end"], json!({"line": 0, "character": 10}));
 
 	let published: Vec<_> = replies
@@ -1912,5 +1912,43 @@ fn locate_lists_the_sql() {
 		.output()
 		.expect("run");
 	assert_eq!(output.status.code(), Some(2));
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A SQL file's last statement gains its `;`, embedded SQL's loses it,
+/// and a rule (or the flag) can choose otherwise.
+#[test]
+fn trailing_semicolons_by_kind() {
+	let dir = temp_dir("semicolons");
+	std::fs::write(
+		dir.join("squill.toml"),
+		"[[embedded]]\ninclude = [\"*.rs\"]\ngrammar = \"rust\"\n\n\
+		 [[embedded]]\ninclude = [\"keep.rs\"]\ntrailing-semicolons = \"always\"\n",
+	)
+	.expect("write config");
+	let rust = "fn f() {\n    sqlx::query(r\"select 1;\");\n}\n";
+	std::fs::write(dir.join("db.rs"), rust).expect("write");
+	std::fs::write(dir.join("keep.rs"), rust).expect("write");
+	std::fs::write(dir.join("a.sql"), "select 1; select 2\n").expect("write");
+	let run = |args: &[&str]| {
+		let output = squill().current_dir(&dir).args(args).output().expect("run");
+		assert!(
+			output.status.success(),
+			"{}",
+			String::from_utf8_lossy(&output.stderr)
+		);
+		String::from_utf8_lossy(&output.stdout).into_owned()
+	};
+	assert_eq!(run(&["fmt", "--stdout", "a.sql"]), "select 1;\nselect 2;\n");
+	assert_eq!(
+		run(&["fmt", "--stdout", "--trailing-semicolons", "none", "a.sql"]),
+		"select 1;\nselect 2\n"
+	);
+	assert!(
+		run(&["fmt", "--stdout", "db.rs"]).contains("r\"\n    select 1\n    \"")
+	);
+	assert!(
+		run(&["fmt", "--stdout", "keep.rs"]).contains("r\"\n    select 1;\n    \"")
+	);
 	let _ = std::fs::remove_dir_all(&dir);
 }

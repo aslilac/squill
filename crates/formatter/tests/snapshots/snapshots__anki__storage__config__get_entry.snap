@@ -2,4 +2,4 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-select val, usn, mtime_secs from config where KEY = ?
+select val, usn, mtime_secs from config where KEY = ?;

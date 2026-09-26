@@ -4,4 +4,4 @@ expression: formatted
 ---
 update decks
 set name = ?, mtime_secs = ?, usn = ?, common = ?, kind = ?
-where id = ?
+where id = ?;

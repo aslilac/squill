@@ -9,4 +9,7 @@ create temporary table sort_order (
 	ord integer not null,
 	unique(ntid, ord)
 );
-insert into sort_order (ntid, ord) select ntid, ord from templates order by name
+insert into sort_order (ntid, ord)
+select ntid, ord
+from templates
+order by name;

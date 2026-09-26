@@ -2,4 +2,4 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-select id, mod, usn, tags from notes
+select id, mod, usn, tags from notes;

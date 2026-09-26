@@ -17,4 +17,4 @@ select
 			else null
 		end
 	)
-from cards c
+from cards c;

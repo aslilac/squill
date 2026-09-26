@@ -4,4 +4,4 @@ expression: formatted
 ---
 select id, nid, ord, cast (mod as integer), did, odid
 from cards
-where did in (select id from active_decks) and queue = 0
+where did in (select id from active_decks) and queue = 0;

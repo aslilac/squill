@@ -12,4 +12,6 @@ where
 	ivl != min(max(round(ivl), -2147483648), 2147483647)
 	or lastIvl != min(max(round(lastIvl), -2147483648), 2147483647)
 	or time != min(max(round(time), 0), 2147483647)
-	or type != (case when type = 0 and time = 0 and ease = 0 then 5 else type end)
+	or type != (
+		case when type = 0 and time = 0 and ease = 0 then 5 else type end
+	);

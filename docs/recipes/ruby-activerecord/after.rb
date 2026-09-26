@@ -7,7 +7,7 @@ class AddSearchToArticles < ActiveRecord::Migration[7.2]
       ) stored;
     create index articles_search
       on articles
-      using gin(search);
+      using gin(search)
     SQL
   end
 end

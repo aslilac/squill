@@ -19,4 +19,4 @@ select
 	),
 	-- total
 	count(1)
-from cards
+from cards;

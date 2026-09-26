@@ -9,4 +9,4 @@ where id in cids
 union
 select odid
 from cards
-where odid != 0 and id in cids
+where odid != 0 and id in cids;

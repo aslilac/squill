@@ -18,4 +18,4 @@ set
 -- Give the first user created the admin role
 update users
 set rbac_roles = rbac_roles || array['admin']
-where id = (select id from users order by created_at asc limit 1)
+where id = (select id from users order by created_at asc limit 1);

@@ -12,4 +12,4 @@ select
 	factor,
 	time,
 	type
-from revlog
+from revlog;

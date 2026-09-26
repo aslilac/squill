@@ -5,4 +5,4 @@ expression: formatted
 select fname, usn, (case when size > 0 then lower(hex(csum)) else '' end)
 from media
 where usn > ?
-limit 1000
+limit 1000;

@@ -5,4 +5,4 @@ expression: formatted
 select
 	id, nid, due, cast (ivl as integer), cast (mod as integer), did, odid, reps
 from cards
-where did in (select id from active_decks) and (queue = ? and due <= ?)
+where did in (select id from active_decks) and (queue = ? and due <= ?);

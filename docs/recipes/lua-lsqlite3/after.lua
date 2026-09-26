@@ -12,7 +12,7 @@ function M.open(path)
     played_at integer not null default (unixepoch())
   );
   create index if not exists scores_by_points
-    on scores (points desc);
+    on scores (points desc)
   ]]
   return db
 end

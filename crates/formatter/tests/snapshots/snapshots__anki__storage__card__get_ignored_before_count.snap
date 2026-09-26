@@ -4,4 +4,4 @@ expression: formatted
 ---
 select count(distinct cid)
 from revlog
-where id > ? and type == 0 and cid in search_cids
+where id > ? and type == 0 and cid in search_cids;

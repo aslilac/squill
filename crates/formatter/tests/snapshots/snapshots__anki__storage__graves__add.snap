@@ -2,4 +2,4 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-insert or ignore into graves (usn, oid, type) values (?, ?, ?)
+insert or ignore into graves (usn, oid, type) values (?, ?, ?);

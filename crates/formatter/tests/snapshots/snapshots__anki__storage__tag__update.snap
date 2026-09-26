@@ -2,4 +2,4 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-update tags set tag = ?1, usn = ?, collapsed = ? where tag = ?1
+update tags set tag = ?1, usn = ?, collapsed = ? where tag = ?1;

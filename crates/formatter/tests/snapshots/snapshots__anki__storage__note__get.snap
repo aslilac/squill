@@ -2,4 +2,5 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-select id, guid, mid, mod, usn, tags, flds, cast (sfld as text), csum from notes
+select id, guid, mid, mod, usn, tags, flds, cast (sfld as text), csum
+from notes;

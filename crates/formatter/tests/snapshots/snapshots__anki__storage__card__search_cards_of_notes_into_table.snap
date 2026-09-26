@@ -5,4 +5,4 @@ expression: formatted
 insert into search_cids
 select id
 from cards
-where nid in (select nid from search_nids)
+where nid in (select nid from search_nids);

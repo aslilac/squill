@@ -7,4 +7,4 @@ select distinct
 	notes.mid,
 	notes.csum,
 	case when cards.odid = 0 then cards.did else cards.odid end as did
-from notes join cards on notes.id = cards.nid
+from notes join cards on notes.id = cards.nid;

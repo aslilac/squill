@@ -21,4 +21,4 @@ select
 	odid,
 	flags,
 	data
-from cards
+from cards;

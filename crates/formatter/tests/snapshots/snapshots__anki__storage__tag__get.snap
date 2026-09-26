@@ -2,4 +2,4 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-select tag, usn, collapsed from tags
+select tag, usn, collapsed from tags;

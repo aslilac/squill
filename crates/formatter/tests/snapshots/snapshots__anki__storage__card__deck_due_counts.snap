@@ -8,4 +8,4 @@ select
 	count() as COUNT
 from cards
 where type = 2 and queue != -1
-group by original_did, true_due
+group by original_did, true_due;

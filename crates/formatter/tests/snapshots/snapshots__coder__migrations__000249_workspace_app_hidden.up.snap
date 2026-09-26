@@ -4,4 +4,4 @@ expression: formatted
 ---
 alter table workspace_apps add column hidden boolean not null default false;
 
-comment on column workspace_apps.hidden is 'Determines if the app is not shown in user interfaces.'
+comment on column workspace_apps.hidden is 'Determines if the app is not shown in user interfaces.';

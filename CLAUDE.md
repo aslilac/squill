@@ -45,7 +45,7 @@ Pipeline: **lex → parse (CST) → doc IR → render → safety check**, one cr
 Every formatted statement is re-lexed and compared against its input; on any mismatch the original text passes through verbatim — output must never be less correct than input. Tests enforce this corpus-wide (`crates/formatter/tests/oracle.rs`) over every vendored corpus under `corpus/`, each file in its own dialect:
 
 1. **Idempotence** — `format(format(x)) == format(x)`
-2. **Token equivalence** — non-trivia token stream unchanged, modulo keyword case and sanctioned quote changes
+2. **Token equivalence** — non-trivia token stream unchanged, modulo keyword case, sanctioned quote changes, and the final `;` (the `trailing-semicolons` option's to add or drop)
 3. **Comment conservation** — never dropped, duplicated, or reordered
 
 Any change to lexer, parser, or formatter rules must keep the oracle green; don't weaken `check.rs` to make a formatting change pass.

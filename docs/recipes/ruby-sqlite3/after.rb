@@ -12,7 +12,7 @@ create table if not exists tags (
   bookmark_id integer not null references bookmarks (id) on delete cascade,
   name text not null,
   primary key (bookmark_id, name)
-);
+)
 SQL
 
 def tagged(db, tag)
