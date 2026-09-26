@@ -33,6 +33,11 @@ cargo install --git https://github.com/aslilac/squill.git --tag v0.2.3 cli --bin
 
 ## Usage
 
+```sh
+squill init         # write a starter squill.toml: pick languages to format embedded SQL in, and dialects
+squill fmt --check .
+```
+
 ### Options
 
 Set in the nearest `squill.toml` or `.config/squill.toml`, overridable with flags. The search upward stops at a git repository root, a mount point, or a symlinked directory, so a config outside a checkout never reaches inside it. The defaults are the house style; everything is optional.
@@ -46,12 +51,13 @@ Set in the nearest `squill.toml` or `.config/squill.toml`, overridable with flag
 | `keyword-case` | `--keyword-case` | `lower` \| `upper` | `lower` |
 | `quote-idents` | `--quote-idents` | `as-needed` \| `always` | `as-needed` |
 | `at-params` | `--at-params` | lex [sqlc-style](https://docs.sqlc.dev/en/latest/howto/named_parameters.html) `@name` parameters | `false` |
+| `question-params` | `--question-params` | lex JDBC-style `?` parameters in Postgres | `false` (`true` for `java` and `kotlin` grammars) |
 | `ignore` | `--ignore` | glob patterns to skip when recursing | `[]` |
 | `frozen` | `--frozen` | glob patterns that are immutable once on the baseline ref | `[]` |
 | `frozen-ref` | `--frozen-ref` | the baseline ref `frozen` compares against | discovered from the remote |
 | `frozen-fetch` | `--frozen-fetch` / `--no-frozen-fetch` | let `frozen` ask the remote for its HEAD when it isn't recorded locally | `true` |
 
-Flags with no config key: `--check` (print diffs and exit 1 if any file would change), `--stdin` / `--stdout`, `--strict` (fail on statements that could not be parsed), `--no-config`, `--embedded`, `--embedded-query`, `--version` / `-V`, and `--help` / `-h`.
+Flags with no config key: `--check` (print diffs and exit 1 if any file would change), `--stdin` (or `-` as the path) / `--stdout`, `--strict` (fail when anything was left unformatted), `--no-config`, `--version` / `-V`, and `--help` / `-h`.
 
 When recursing directories, squill honors `.gitignore` and skips hidden files; the `ignore` key and repeated `--ignore` flags skip more, with `*`, `**`, `?`, `[abc]`, and `{a,b}` glob syntax. Explicitly listed files always format.
 
@@ -77,42 +83,55 @@ That last step is why CI works unchanged. A `pull_request` checkout has no base-
 
 `--no-frozen-fetch` (or `frozen-fetch = false`) keeps squill off the network, for an offline or air-gapped build. A normal clone still works, because `git clone` already recorded the remote's HEAD. When nothing authoritative is available, squill stops and asks for `frozen-ref` rather than inferring one.
 
+### Rules
+
+Rules scope settings to paths. Each needs an `include` list of globs (relative to the config, like `ignore`); every rule whose `include` matches a file applies, in file order, later rules winning key by key.
+
+`[[files]]` rules cover plain SQL. `*.sql` files always format; a rule sets options for the files it matches and brings in files by other names, so a mixed-dialect tree needs one config:
+
+```toml
+dialect = "postgres"
+
+[[files]]
+include = ["**/*.sql.sqlite", "storage/sqlite/**"]
+dialect = "sqlite"
+```
+
 ### SQL in your source code
 
-SQL embedded in host code formats too: `squill fmt src/queries.rs` rewrites the string literals inside `sqlx::query!`-family macros, with built-in support for Rust, Go (`database/sql` calls), Python (`.execute`-family and `text(...)`, with `%s` / `%(name)s` params preserved), JavaScript/TypeScript/TSX (`.query`/`.execute`/`.prepare` and `sql`-tagged templates), and Gleam (`sqlight.query` as SQLite, `pog.query` etc. as the session dialect). Only multiline string syntaxes — raw strings, backticks, triple quotes, templates, Gleam strings — are reformatted, always into a vertical block: quotes on their own lines, one clause per line. Plain single-line strings stay byte-identical, and so do Python f-strings and `${}`-interpolated templates (SQL with holes is never touched). Directories include host files with `--embedded`; `--embedded-query custom.scm` swaps the tree-sitter extraction query.
-
-### Per-language configuration
-
-Embedded SQL copies the host file's own indent character, so a spaces-indented file never gains tabs. To set it deliberately — per language, from one config file — add a `[rust]`, `[go]`, `[python]`, `[javascript]`, `[typescript]`, or `[gleam]` section. A section takes the same keys as the top level (all but `ignore`, which is file-wide) and overrides them for files of that language:
+`[[embedded]]` rules format SQL embedded in host code. A rule names the tree-sitter `grammar` that parses the file and, optionally, a `query` that finds the SQL strings in it:
 
 ```toml
-indent = "tabs"
-
-[javascript]
-indent = "spaces"
-indent-width = 2
-
-[python]
+[[embedded]]
+include = ["**/*.rs"]
+grammar = "rust"
 dialect = "sqlite"
-indent = "spaces"
-indent-width = 4
-```
 
-`[javascript]` covers `.js`/`.jsx` and `[typescript]` covers `.ts`/`.tsx`. Flags still win over both layers.
-
-One section can name several languages, comma separated — TOML has no bare comma in a table header, so quote the list:
-
-```toml
-["javascript, typescript"]
+[[embedded]]
+include = ["web/**/*.ts"]
+grammar = "typescript"
 indent = "spaces"
 indent-width = 2
 ```
+
+Built-in grammars, each with a default query: `rust` (sqlx's `query!`-family macros and `query`/`query_as`/`query_scalar` functions), `go` (`database/sql` calls), `python` (`.execute`-family and `text(...)`, with `%s` / `%(name)s` params preserved), `javascript`/`typescript`/`tsx` (`.query`/`.execute`/`.prepare` and `sql`-tagged templates), `gleam` (`sqlight.query` as SQLite, `pog.query` etc. as the configured dialect), `cpp` (raw strings passed to sqlite3, libpq, and libpqxx), `csharp` (raw strings in EF Core migrations, raw-SQL and Dapper calls, and `CommandText`), and `java`/`kotlin` (text blocks and raw strings passed to JDBC, JPA, Spring, and Exposed calls, with `?` placeholders preserved).
+
+Any other language works with a grammar compiled to wasm (`tree-sitter build --wasm`, or the `.wasm` many grammars publish with each release) and a query of your own:
+
+```toml
+[[embedded]]
+include = ["**/*.lua"]
+grammar = ".config/squill/tree-sitter-lua.wasm"
+query = ".config/squill/lua.scm"
+```
+
+Only multiline string syntaxes are reformatted — raw strings, backticks, triple quotes, templates, text blocks, Gleam strings — always into a vertical block: quotes on their own lines, one clause per line. A plain Rust or Go string that already spans lines is rewritten as a raw string; a single-line one stays byte-identical, and so do Python f-strings and interpolated templates (SQL with holes is never touched). Every rewrite is checked by re-parsing the host file, and a string squill declines to touch is reported as a diagnostic. Embedded SQL copies the host file's own indent character unless an indent style is configured, so a spaces-indented file never gains tabs.
 
 ## Design
 
 - **`crates/parser`** — hand-written dual-dialect lexer (lossless: every byte is a token, including comments), recursive-descent parser with Pratt expressions, error recovery into verbatim `ErrorStatement` nodes, and a codegen'd CST layer on `cstree` (see `syntax.def`).
 - **`crates/formatter`** — Wadler/Prettier doc IR and renderer, the CST-to-doc rules, vendored Postgres/SQLite keyword tables, and the semantics-preserving identifier-quoting transform.
-- **`crates/embed`** — formats SQL embedded in host files (Rust sqlx macros, Go database/sql calls) located via tree-sitter queries.
+- **`crates/embed`** — formats SQL embedded in host files, located via tree-sitter queries over built-in or wasm-loaded grammars.
 - **`crates/cli`** — the `squill` binary.
 - **`crates/corpus-report`** — the corpus coverage harness (not installed with the cli).
 

@@ -19,7 +19,7 @@ license = "MPL-2.0"
 unsafe_code = "deny"
 
 [workspace.dependencies]
-embed = { path = "crates/embed/" }
+embed = { path = "crates/embed/", default-features = false }
 formatter = { path = "crates/formatter/" }
 parser = { path = "crates/parser/" }
 cstree = { version = "0.12", features = ["derive"] }

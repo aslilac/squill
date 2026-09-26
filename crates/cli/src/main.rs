@@ -10,11 +10,15 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use formatter::Options;
 use rayon::prelude::*;
 
 mod config;
 mod frozen;
+mod init;
 use config::PartialOptions;
 
 /// `squill <version>` — whatever cargo compiled this binary with, so it
@@ -25,17 +29,24 @@ const USAGE: &str = "\
 squill — a SQL formatter
 
 Usage: squill fmt [OPTIONS] [PATHS...]
+       squill init [--dialect <D>] [--yes]
 
-Formats the given .sql files in place (directories are searched
-recursively). Reads stdin when --stdin is given.
+`squill init` writes a starter squill.toml for the project in the
+working directory: pick the languages whose embedded SQL to format
+(the ones already holding SQL come checked) and their dialects.
+
+Formats the given files in place (directories are searched
+recursively): .sql files, plus whatever squill.toml's [[files]] and
+[[embedded]] rules include. Reads stdin when --stdin is given.
 
 Options:
   --check                 Don't write; print diffs and exit 1 if any file
                           would change
   --stdout                Print formatted output instead of writing files
-  --stdin                 Read from stdin, write to stdout
-  --strict                Exit 1 when statements could not be parsed and
-                          passed through verbatim
+  --stdin, -              Read SQL from stdin, write to stdout
+  --strict                Exit 1 when anything was left unformatted:
+                          statements that could not be parsed, embedded
+                          strings squill could not rewrite safely
   --ignore <GLOB>         Skip matching paths when recursing directories
                           (repeatable; relative to the working directory;
                           `*`, `**`, `?`, `[abc]`, `{a,b}` globs)
@@ -46,6 +57,8 @@ Options:
   --keyword-case <CASE>   lower (default) | upper
   --quote-idents <MODE>   as-needed (default) | always
   --at-params             Treat sqlc-style @name as parameters (Postgres)
+  --question-params       Treat JDBC-style ? as parameters (Postgres; on
+                          by default for java and kotlin grammars)
   --no-config             Ignore squill.toml files
   --frozen <GLOB>         Treat matching paths as immutable once they
                           exist on the baseline ref: format them while
@@ -54,41 +67,44 @@ Options:
                           the remote records as its HEAD)
   --no-frozen-fetch       Don't let --frozen ask the remote for its HEAD.
                           Needs a recorded remote HEAD or --frozen-ref
-  --embedded              Also format SQL embedded in host files (.rs,
-                          .go, .py, .js/.ts/.tsx, .gleam) when recursing
-                          directories (explicit host paths always format)
-  --embedded-query <SCM>  Override the tree-sitter extraction query
   -V, --version           Print the version and exit
   -h, --help              Show this help
 
 Configuration: the nearest squill.toml or .config/squill.toml at or
-above each formatted file supplies defaults (keys: dialect, indent,
-indent-width, max-width, keyword-case, quote-idents, at-params, ignore
-and frozen — arrays of glob patterns relative to the config file —
-frozen-ref, and frozen-fetch).
-Explicit flags override the config. The search upward stops at a git
-repository root, a mount point, or a symlinked directory, so a config
-outside a checkout never reaches inside it. Directory recursion honors
-.gitignore and skips hidden files; explicitly listed files always
-format.
+above each formatted file supplies defaults. Top-level keys: dialect,
+indent, indent-width, max-width, keyword-case, quote-idents, at-params,
+question-params, ignore and frozen (arrays of glob patterns),
+frozen-ref, and frozen-fetch. Explicit flags override the config. The
+search upward stops at a git repository root, a mount point, or a
+symlinked directory, so a config outside a checkout never reaches
+inside it. Directory recursion honors .gitignore and skips hidden files;
+explicitly listed files always format.
 
-A [rust], [go], [python], [javascript], [typescript], or [gleam]
-section takes the same keys (except ignore) and overrides them for SQL
-embedded in files of that language — so one config can ask for two
-spaces in JavaScript and tabs in Go:
+Rules scope settings to paths. Every rule whose `include` matches a
+file applies, later rules winning key by key; paths are relative to
+the directory the config governs. A [[files]] rule covers plain SQL
+(and brings in files not named *.sql):
 
-    indent = \"tabs\"
+    [[files]]
+    include = [\"**/*.sql.sqlite\", \"migrations/sqlite/**\"]
+    dialect = \"sqlite\"
 
-    [javascript]
-    indent = \"spaces\"
-    indent-width = 2
+An [[embedded]] rule formats SQL inside host-language files, found by
+a tree-sitter grammar and query:
 
-One section can name several languages, comma separated. TOML has no
-bare comma in a table header, so quote the list:
+    [[embedded]]
+    include = [\"**/*.rs\"]
+    grammar = \"rust\"
+    query = \".config/squill/rust.scm\"   # optional for built-ins
+    dialect = \"sqlite\"
 
-    [\"javascript, typescript\"]
-    indent = \"spaces\"
-    indent-width = 2
+Built-in grammars: rust, go, python, javascript, typescript, tsx,
+gleam, cpp, csharp, java, kotlin — each with a default query. Any
+other language works with a grammar built by `tree-sitter build
+--wasm` (grammar = \"grammars/tree-sitter-lua.wasm\") and a query.
+Queries capture the SQL string as @sql (or @sql.postgres /
+@sql.sqlite to fix its dialect); only #eq?, #not-eq?, and #any-of?
+predicates are supported.
 
 Embedded SQL copies the host file's own indent character unless an
 indent style is configured, so a spaces-indented file never gains tabs
@@ -111,10 +127,6 @@ struct Args {
 	stdin_mode: bool,
 	strict: bool,
 	no_config: bool,
-	/// Include host-language files when recursing directories.
-	embed: bool,
-	/// Override the tree-sitter extraction query (.scm source).
-	embed_query: Option<String>,
 	frozen: Vec<String>,
 	frozen_ref: Option<String>,
 	frozen_fetch: Option<bool>,
@@ -129,6 +141,7 @@ struct Args {
 /// not errors, so they go to stdout and exit 0.
 enum Invocation {
 	Run(Box<Args>),
+	Init(init::InitArgs),
 	Print(String),
 }
 
@@ -136,6 +149,12 @@ fn parse_args() -> Result<Invocation, String> {
 	let mut argv = std::env::args().skip(1).peekable();
 	match argv.next().as_deref() {
 		Some("fmt") => {}
+		Some("init") => {
+			if argv.peek().is_some_and(|arg| arg == "-h" || arg == "--help") {
+				return Ok(Invocation::Print(init::USAGE.to_string()));
+			}
+			return init::parse(argv).map(Invocation::Init);
+		}
 		Some("-h" | "--help") => return Ok(Invocation::Print(USAGE.to_string())),
 		Some("-V" | "--version") => {
 			return Ok(Invocation::Print(VERSION.to_string()));
@@ -150,8 +169,6 @@ fn parse_args() -> Result<Invocation, String> {
 		stdin_mode: false,
 		strict: false,
 		no_config: false,
-		embed: false,
-		embed_query: None,
 		frozen: Vec::new(),
 		frozen_ref: None,
 		frozen_fetch: None,
@@ -166,17 +183,10 @@ fn parse_args() -> Result<Invocation, String> {
 		match arg.as_str() {
 			"--check" => args.check = true,
 			"--stdout" => args.stdout_mode = true,
-			"--stdin" => args.stdin_mode = true,
+			// `-` as a path is stdin, by the usual convention.
+			"--stdin" | "-" => args.stdin_mode = true,
 			"--strict" => args.strict = true,
 			"--no-config" => args.no_config = true,
-			"--embedded" => args.embed = true,
-			"--embedded-query" => {
-				let path = value(&mut argv, "--embedded-query")?;
-				args.embed_query = Some(
-					std::fs::read_to_string(&path)
-						.map_err(|err| format!("--embedded-query {path}: {err}"))?,
-				);
-			}
 			"--ignore" => args.ignore.push(value(&mut argv, "--ignore")?),
 			"--frozen" => args.frozen.push(value(&mut argv, "--frozen")?),
 			"--frozen-ref" => {
@@ -185,6 +195,7 @@ fn parse_args() -> Result<Invocation, String> {
 			"--frozen-fetch" => args.frozen_fetch = Some(true),
 			"--no-frozen-fetch" => args.frozen_fetch = Some(false),
 			"--at-params" => args.overrides.at_params = Some(true),
+			"--question-params" => args.overrides.question_params = Some(true),
 			"--dialect" => {
 				args.overrides.dialect =
 					Some(config::parse_dialect(&value(&mut argv, "--dialect")?)?)
@@ -230,7 +241,7 @@ fn parse_args() -> Result<Invocation, String> {
 		}
 	}
 	if args.stdin_mode && !args.paths.is_empty() {
-		return Err("--stdin cannot be combined with paths".to_string());
+		return Err("--stdin (or `-`) cannot be combined with paths".to_string());
 	}
 	if !args.stdin_mode && args.paths.is_empty() {
 		return Err(format!("no input files\n\n{USAGE}"));
@@ -238,21 +249,126 @@ fn parse_args() -> Result<Invocation, String> {
 	Ok(Invocation::Run(Box::new(args)))
 }
 
-type ConfigCache = std::collections::HashMap<PathBuf, PartialOptions>;
+/// A parsed config with its rule globs compiled.
+struct Loaded {
+	config: config::Config,
+	/// One matcher per `[[files]]` rule, in order.
+	files: Vec<IgnoreSet>,
+	/// One matcher per `[[embedded]]` rule, in order.
+	embedded: Vec<IgnoreSet>,
+}
 
-/// Read and parse a config file, memoized on its path.
-fn load_partial(
-	config_path: &Path,
-	cache: &mut ConfigCache,
-) -> Result<PartialOptions, String> {
-	if let Some(partial) = cache.get(config_path) {
-		return Ok(partial.clone());
+/// Everything resolution reads from disk, memoized: configs by path,
+/// the nearest config by directory, grammars and queries by path.
+#[derive(Default)]
+struct Caches {
+	configs: HashMap<PathBuf, Arc<Loaded>>,
+	nearest: HashMap<PathBuf, Option<PathBuf>>,
+	#[cfg(feature = "wasm")]
+	grammars: HashMap<PathBuf, Arc<embed::Grammar>>,
+	queries: HashMap<PathBuf, Arc<str>>,
+}
+
+impl Caches {
+	/// The nearest config at or above `dir`.
+	fn discover(&mut self, dir: &Path) -> Option<PathBuf> {
+		self
+			.nearest
+			.entry(dir.to_path_buf())
+			.or_insert_with(|| config::discover(dir))
+			.clone()
 	}
-	let text = std::fs::read_to_string(config_path)
-		.map_err(|err| format!("{}: {err}", config_path.display()))?;
-	let partial = config::parse_config(&text, config_path)?;
-	cache.insert(config_path.to_path_buf(), partial.clone());
-	Ok(partial)
+
+	/// Read, parse, and compile a config file.
+	fn load(&mut self, config_path: &Path) -> Result<Arc<Loaded>, String> {
+		if let Some(loaded) = self.configs.get(config_path) {
+			return Ok(loaded.clone());
+		}
+		let text = std::fs::read_to_string(config_path)
+			.map_err(|err| format!("{}: {err}", config_path.display()))?;
+		let config = config::parse_config(&text, config_path)?;
+		let anchor = config::anchor_dir(config_path);
+		let anchor =
+			std::path::absolute(anchor).unwrap_or_else(|_| anchor.to_path_buf());
+		let compile = |include: &[String]| {
+			build_ignore_set(include, &anchor)
+				.map_err(|message| format!("{}: {message}", config_path.display()))
+		};
+		let files = config
+			.files
+			.iter()
+			.map(|rule| compile(&rule.include))
+			.collect::<Result<_, _>>()?;
+		let embedded = config
+			.embedded
+			.iter()
+			.map(|rule| compile(&rule.include))
+			.collect::<Result<_, _>>()?;
+		let loaded = Arc::new(Loaded { config, files, embedded });
+		self.configs.insert(config_path.to_path_buf(), loaded.clone());
+		Ok(loaded)
+	}
+
+	/// The config governing a file in `dir`, unless --no-config.
+	fn governing(
+		&mut self,
+		dir: &Path,
+		args: &Args,
+	) -> Result<Option<Arc<Loaded>>, String> {
+		if args.no_config {
+			return Ok(None);
+		}
+		match self.discover(dir) {
+			Some(config_path) => self.load(&config_path).map(Some),
+			None => Ok(None),
+		}
+	}
+
+	fn grammar(
+		&mut self,
+		spec: &config::GrammarSpec,
+	) -> Result<Arc<embed::Grammar>, String> {
+		match spec {
+			config::GrammarSpec::Builtin(host) => Ok(Arc::new((*host).into())),
+			#[cfg(feature = "wasm")]
+			config::GrammarSpec::Wasm(path) => {
+				if let Some(grammar) = self.grammars.get(path) {
+					return Ok(grammar.clone());
+				}
+				let grammar = embed::wasm::WasmGrammar::load(path)
+					.map_err(|err| err.to_string())?;
+				let grammar = Arc::new(embed::Grammar::Wasm(grammar));
+				self.grammars.insert(path.clone(), grammar.clone());
+				Ok(grammar)
+			}
+			#[cfg(not(feature = "wasm"))]
+			config::GrammarSpec::Wasm(path) => Err(format!(
+				"{}: this squill was built without wasm grammar support",
+				path.display()
+			)),
+		}
+	}
+
+	fn query(&mut self, path: &Path) -> Result<Arc<str>, String> {
+		if let Some(query) = self.queries.get(path) {
+			return Ok(query.clone());
+		}
+		let query: Arc<str> = std::fs::read_to_string(path)
+			.map_err(|err| format!("query {}: {err}", path.display()))?
+			.into();
+		self.queries.insert(path.to_path_buf(), query.clone());
+		Ok(query)
+	}
+}
+
+/// What a file is, as far as formatting goes.
+enum Kind {
+	Sql,
+	/// A host-language file, and how to find its SQL.
+	Embedded {
+		grammar: Arc<embed::Grammar>,
+		query: Arc<str>,
+	},
 }
 
 /// Effective options for one file, plus where embedding should take its
@@ -260,70 +376,168 @@ fn load_partial(
 struct Resolved {
 	options: Options,
 	indent: embed::Indent,
+	kind: Kind,
 }
 
-/// Resolve effective options for a file in `dir`: defaults, then the
-/// nearest config file's top-level keys (unless --no-config), then that
-/// file's `[<language>]` section for `host`, then explicit flags.
+/// Is this a plain SQL file by name alone?
+fn is_sql_file(path: &Path) -> bool {
+	path.extension().is_some_and(|ext| ext == "sql")
+}
+
+/// Resolve a file: whether squill formats it at all (`None` when
+/// nothing claims it), as what, and with which options. Defaults, then
+/// the nearest config's top-level keys, then every matching rule of the
+/// file's kind in order, then explicit flags.
 ///
 /// Embedded SQL normally copies the host file's own indent character.
 /// An indent style named anywhere in that chain is a deliberate choice,
 /// so it wins over the host file instead.
-fn resolve_options(
-	dir: &Path,
-	host: Option<embed::Host>,
+fn resolve(
+	path: &Path,
 	args: &Args,
-	cache: &mut ConfigCache,
-) -> Result<Resolved, String> {
+	caches: &mut Caches,
+) -> Result<Option<Resolved>, String> {
+	let dir = path.parent().unwrap_or_else(|| Path::new("."));
 	let mut options = Options::default();
 	let mut indent_set = args.overrides.indent_style.is_some();
-	if !args.no_config
-		&& let Some(config_path) = config::discover(dir)
-	{
-		let partial = load_partial(&config_path, cache)?;
-		partial.apply(&mut options);
-		indent_set |= partial.indent_style.is_some();
-		if let Some(section) =
-			host.map(config::language_key).and_then(|key| partial.for_language(key))
+	let mut kind = None;
+	if let Some(loaded) = caches.governing(dir, args)? {
+		let config = &loaded.config;
+		config.options.apply(&mut options);
+		indent_set |= config.options.indent_style.is_some();
+		let absolute = std::path::absolute(path).ok();
+		let matches = |set: &IgnoreSet| set.matches(absolute.as_deref(), path);
+		let embedded: Vec<&config::EmbeddedRule> = config
+			.embedded
+			.iter()
+			.zip(&loaded.embedded)
+			.filter(|(_, set)| matches(set))
+			.map(|(rule, _)| rule)
+			.collect();
+		let files: Vec<&config::FileRule> = config
+			.files
+			.iter()
+			.zip(&loaded.files)
+			.filter(|(_, set)| matches(set))
+			.map(|(rule, _)| rule)
+			.collect();
+		if let Some(spec) =
+			embedded.iter().rev().find_map(|rule| rule.grammar.as_ref())
 		{
-			section.apply(&mut options);
-			indent_set |= section.indent_style.is_some();
+			let grammar = caches.grammar(spec)?;
+			let query =
+				match embedded.iter().rev().find_map(|rule| rule.query.as_ref()) {
+					Some(query_path) => caches.query(query_path)?,
+					None => match spec {
+						config::GrammarSpec::Builtin(host) => host.default_query().into(),
+						config::GrammarSpec::Wasm(wasm) => {
+							return Err(format!(
+								"{}: the wasm grammar {} has no built-in query; give its \
+							 [[embedded]] rule a `query`",
+								path.display(),
+								wasm.display()
+							));
+						}
+					},
+				};
+			let mut question_set = config.options.question_params.is_some()
+				|| args.overrides.question_params.is_some();
+			for rule in &embedded {
+				rule.options.apply(&mut options);
+				indent_set |= rule.options.indent_style.is_some();
+				question_set |= rule.options.question_params.is_some();
+			}
+			// JDBC's `?` is how the JVM writes parameters: on unless
+			// configured either way.
+			if !question_set && let config::GrammarSpec::Builtin(host) = spec {
+				options.question_params = host.uses_question_params();
+			}
+			kind = Some(Kind::Embedded { grammar, query });
+		} else if is_sql_file(path) || !files.is_empty() {
+			for rule in &files {
+				rule.options.apply(&mut options);
+				indent_set |= rule.options.indent_style.is_some();
+			}
+			kind = Some(Kind::Sql);
 		}
+	} else if is_sql_file(path) {
+		kind = Some(Kind::Sql);
 	}
+	let Some(kind) = kind else {
+		return Ok(None);
+	};
 	args.overrides.apply(&mut options);
 	let indent = if indent_set {
 		embed::Indent::Configured
 	} else {
 		embed::Indent::FromHost
 	};
-	Ok(Resolved { options, indent })
+	Ok(Some(Resolved { options, indent, kind }))
 }
 
-/// The embed host for a path, by extension.
-fn host_for(path: &Path) -> Option<embed::Host> {
-	match path.extension()?.to_str()? {
-		"rs" => Some(embed::Host::Rust),
-		"go" => Some(embed::Host::Go),
-		"py" => Some(embed::Host::Python),
-		"js" | "mjs" | "cjs" | "jsx" => Some(embed::Host::JavaScript),
-		"ts" | "mts" | "cts" => Some(embed::Host::TypeScript),
-		"tsx" => Some(embed::Host::Tsx),
-		"gleam" => Some(embed::Host::Gleam),
-		_ => None,
+/// Resolve a file named on the command line. Explicit files always
+/// format: as whatever the config makes them, else as SQL — except a
+/// file in a language squill has a grammar for, which would only fill
+/// the screen with parse errors as SQL.
+fn resolve_explicit(
+	path: &Path,
+	args: &Args,
+	caches: &mut Caches,
+) -> Result<Resolved, String> {
+	if let Some(resolved) = resolve(path, args, caches)? {
+		return Ok(resolved);
 	}
+	let extension = path.extension().and_then(|ext| ext.to_str()).unwrap_or("");
+	if let Some(host) =
+		embed::Host::ALL.iter().find(|host| host.extensions().contains(&extension))
+	{
+		let dir = path.parent().unwrap_or_else(|| Path::new("."));
+		let config = if args.no_config { None } else { caches.discover(dir) };
+		return Err(match config {
+			// No config yet: the wizard writes one, rule included.
+			None if !args.no_config => format!(
+				"{}: no squill.toml covers this file; run `squill init` to set one \
+				 up, and it will offer to format the SQL embedded in {} files",
+				path.display(),
+				host.name()
+			),
+			None => format!(
+				"{}: formatting SQL embedded in {} files needs an [[embedded]] rule, \
+				 and --no-config ignores them",
+				path.display(),
+				host.name()
+			),
+			Some(config) => format!(
+				"{}: no [[embedded]] rule covers this file; to format its SQL, add one \
+				 to {}:\n\n    [[embedded]]\n    include = [\"**/*.{extension}\"]\n    grammar = \"{}\"",
+				path.display(),
+				config.display(),
+				host.name()
+			),
+		});
+	}
+	let mut resolved = resolve_sql_defaults(
+		path.parent().unwrap_or_else(|| Path::new(".")),
+		args,
+		caches,
+	)?;
+	resolved.kind = Kind::Sql;
+	Ok(resolved)
 }
 
-/// Default extraction query for a host.
-fn default_query(host: embed::Host) -> &'static str {
-	match host {
-		embed::Host::Rust => embed::RUST_SQLX_QUERY,
-		embed::Host::Go => embed::GO_DB_QUERY,
-		embed::Host::Python => embed::PYTHON_DB_QUERY,
-		embed::Host::JavaScript | embed::Host::TypeScript | embed::Host::Tsx => {
-			embed::JS_SQL_QUERY
-		}
-		embed::Host::Gleam => embed::GLEAM_SQL_QUERY,
+/// Options for SQL with no path to match rules against (stdin, or an
+/// unclaimed explicit file): defaults, top-level keys, flags.
+fn resolve_sql_defaults(
+	dir: &Path,
+	args: &Args,
+	caches: &mut Caches,
+) -> Result<Resolved, String> {
+	let mut options = Options::default();
+	if let Some(loaded) = caches.governing(dir, args)? {
+		loaded.config.options.apply(&mut options);
 	}
+	args.overrides.apply(&mut options);
+	Ok(Resolved { options, indent: embed::Indent::Configured, kind: Kind::Sql })
 }
 
 /// `, N frozen` when any were skipped, and nothing at all when none
@@ -346,7 +560,7 @@ fn drop_frozen(
 	files: &mut Vec<PathBuf>,
 	args: &Args,
 	cwd: &Path,
-	cache: &mut ConfigCache,
+	caches: &mut Caches,
 ) -> Result<usize, String> {
 	let flag_globs = if args.frozen.is_empty() {
 		None
@@ -375,9 +589,10 @@ fn drop_frozen(
 		let mut frozen_fetch = args.frozen_fetch;
 
 		if !args.no_config
-			&& let Some(config_path) = config::discover(dir)
+			&& let Some(config_path) = caches.discover(dir)
 		{
-			let partial = load_partial(&config_path, cache)?;
+			let loaded = caches.load(&config_path)?;
+			let partial = &loaded.config;
 			if frozen_ref.is_none() {
 				frozen_ref = partial.frozen_ref.clone();
 			}
@@ -521,13 +736,14 @@ fn build_ignore_set(
 	Ok(IgnoreSet { set, anchor: anchor.to_path_buf() })
 }
 
-/// Recursively gather formattable files under the directory `root`.
-/// The walker honors .gitignore and skips hidden entries; `ignores`
-/// prunes squill's own patterns on top.
+/// Recursively gather formattable files under the directory `root`:
+/// every file [`resolve`] claims. The walker honors .gitignore and skips
+/// hidden entries; `ignores` prunes squill's own patterns on top.
 fn collect_files(
 	root: &Path,
-	embed: bool,
 	ignores: Vec<IgnoreSet>,
+	args: &Args,
+	caches: &mut Caches,
 	out: &mut Vec<PathBuf>,
 ) -> Result<(), String> {
 	let root_buf = root.to_path_buf();
@@ -550,9 +766,7 @@ fn collect_files(
 			continue;
 		}
 		let path = entry.into_path();
-		if path.extension().is_some_and(|ext| ext == "sql")
-			|| (embed && host_for(&path).is_some())
-		{
+		if resolve(&path, args, caches)?.is_some() {
 			out.push(path);
 		}
 	}
@@ -606,6 +820,7 @@ fn estimated_edits(before: &str, after: &str) -> usize {
 fn main() -> ExitCode {
 	let args = match parse_args() {
 		Ok(Invocation::Run(args)) => *args,
+		Ok(Invocation::Init(args)) => return init::run(args),
 		Ok(Invocation::Print(message)) => {
 			println!("{message}");
 			return ExitCode::SUCCESS;
@@ -622,10 +837,10 @@ fn main() -> ExitCode {
 			eprintln!("squill: cannot read stdin: {err}");
 			return ExitCode::from(2);
 		}
-		let mut cache = std::collections::HashMap::new();
+		let mut caches = Caches::default();
 		let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
 		// The stdin stream is always SQL, never a host file.
-		let resolved = match resolve_options(&cwd, None, &args, &mut cache) {
+		let resolved = match resolve_sql_defaults(&cwd, &args, &mut caches) {
 			Ok(resolved) => resolved,
 			Err(message) => {
 				eprintln!("squill: {message}");
@@ -650,7 +865,7 @@ fn main() -> ExitCode {
 		return ExitCode::SUCCESS;
 	}
 
-	let mut cache: ConfigCache = std::collections::HashMap::new();
+	let mut caches = Caches::default();
 	let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
 	let cli_ignores = match build_ignore_set(&args.ignore, &cwd) {
 		Ok(set) => set,
@@ -668,20 +883,20 @@ fn main() -> ExitCode {
 		}
 		let mut ignores = vec![cli_ignores.clone()];
 		if !args.no_config
-			&& let Some(config_path) = config::discover(path)
+			&& let Some(config_path) = caches.discover(path)
 		{
-			let partial = match load_partial(&config_path, &mut cache) {
-				Ok(partial) => partial,
+			let loaded = match caches.load(&config_path) {
+				Ok(loaded) => loaded,
 				Err(message) => {
 					eprintln!("squill: {message}");
 					return ExitCode::from(2);
 				}
 			};
-			if !partial.ignore.is_empty() {
+			if !loaded.config.ignore.is_empty() {
 				let anchor = config::anchor_dir(&config_path);
 				let anchor =
 					std::path::absolute(anchor).unwrap_or_else(|_| anchor.to_path_buf());
-				match build_ignore_set(&partial.ignore, &anchor) {
+				match build_ignore_set(&loaded.config.ignore, &anchor) {
 					Ok(set) => ignores.push(set),
 					Err(message) => {
 						eprintln!("squill: {}: {message}", config_path.display());
@@ -690,7 +905,9 @@ fn main() -> ExitCode {
 				}
 			}
 		}
-		if let Err(message) = collect_files(path, args.embed, ignores, &mut files) {
+		if let Err(message) =
+			collect_files(path, ignores, &args, &mut caches, &mut files)
+		{
 			eprintln!("squill: {message}");
 			return ExitCode::from(2);
 		}
@@ -700,7 +917,7 @@ fn main() -> ExitCode {
 
 	// Drop files the baseline already carries. Before any formatting, so
 	// a frozen file is never read, diffed, or counted.
-	let frozen_count = match drop_frozen(&mut files, &args, &cwd, &mut cache) {
+	let frozen_count = match drop_frozen(&mut files, &args, &cwd, &mut caches) {
 		Ok(count) => count,
 		Err(message) => {
 			eprintln!("squill: {message}");
@@ -718,8 +935,13 @@ fn main() -> ExitCode {
 	// path); a config error is a hard error before any file is touched.
 	let mut per_file_options = Vec::with_capacity(files.len());
 	for path in &files {
-		let dir = path.parent().unwrap_or_else(|| Path::new("."));
-		match resolve_options(dir, host_for(path), &args, &mut cache) {
+		// Only an explicit file can go unclaimed; it formats anyway.
+		let resolved = match resolve(path, &args, &mut caches) {
+			Ok(Some(resolved)) => Ok(resolved),
+			Ok(None) => resolve_explicit(path, &args, &mut caches),
+			Err(message) => Err(message),
+		};
+		match resolved {
 			Ok(resolved) => per_file_options.push(resolved),
 			Err(message) => {
 				eprintln!("squill: {message}");
@@ -734,23 +956,29 @@ fn main() -> ExitCode {
 		.map(|(path, resolved)| {
 			let source = std::fs::read_to_string(path)
 				.map_err(|err| format!("{}: {err}", path.display()))?;
-			let outcome = match host_for(path) {
-				Some(host) => {
-					// SQL embedded in a host-language file (sqlx macros,
-					// database/sql calls) via the tree-sitter engine.
-					let query =
-						args.embed_query.as_deref().unwrap_or_else(|| default_query(host));
-					let formatted = embed::format_embedded(
+			let outcome = match &resolved.kind {
+				Kind::Embedded { grammar, query } => {
+					// SQL embedded in a host-language file, found by the
+					// rule's tree-sitter grammar and query.
+					let embedded = embed::format_embedded(
 						&source,
-						host,
+						grammar,
 						query,
 						&resolved.options,
 						resolved.indent,
 					)
 					.map_err(|err| format!("{}: {err}", path.display()))?;
-					Outcome { formatted, diagnostics: Vec::new() }
+					let diagnostics = embedded
+						.warnings
+						.iter()
+						.map(|warning| {
+							let (line, col) = line_col(&source, warning.offset);
+							format!("{line}:{col}: {}", warning.message)
+						})
+						.collect();
+					Outcome { formatted: embedded.text, diagnostics }
 				}
-				None => format_source(&source, &resolved.options),
+				Kind::Sql => format_source(&source, &resolved.options),
 			};
 			Ok(FileResult { path: path.clone(), source, outcome })
 		})

@@ -240,7 +240,7 @@ fn sqlc_at_params_are_opt_in() {
 	let tokens = lex_with(
 		"@name @> b",
 		Postgres,
-		LexOptions { at_params: true, pyformat_params: false },
+		LexOptions { at_params: true, ..LexOptions::default() },
 	);
 	let kinds: Vec<_> = tokens.iter().map(|t| (t.kind, t.text)).collect();
 	assert_eq!(
@@ -257,7 +257,7 @@ fn sqlc_at_params_are_opt_in() {
 	let tokens = lex_with(
 		"@ name",
 		Postgres,
-		LexOptions { at_params: true, pyformat_params: false },
+		LexOptions { at_params: true, ..LexOptions::default() },
 	);
 	assert_eq!(tokens[0].kind, K::Operator);
 }
@@ -359,4 +359,19 @@ fn crlf_line_comment() {
 		"--c\r\nx",
 		&[(K::LineComment, "--c"), (K::Whitespace, "\r\n"), (K::Ident, "x")],
 	);
+}
+
+#[test]
+fn question_params_lex_as_params_in_postgres() {
+	use parser::lexer::LexOptions;
+	use parser::lexer::lex_with;
+	let options = LexOptions { question_params: true, ..LexOptions::default() };
+	let params: Vec<_> =
+		lex_with("a = ? and b ?| c and d ?? e", Postgres, options)
+			.into_iter()
+			.filter(|token| token.kind == K::Param)
+			.map(|token| token.text)
+			.collect();
+	// jsonb operators, and JDBC's doubled `??`, stay operators.
+	assert_eq!(params, ["?"]);
 }

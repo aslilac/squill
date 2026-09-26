@@ -16,6 +16,15 @@ import Docs from "../../layouts/Docs.astro";
 			optional, and a project with no config file is a supported setup.
 		</p>
 		<p>
+			<code>squill init</code> writes a starter config. It lists the languages
+			squill has grammars for as checkboxes &mdash; pre-checking the ones
+			where it already finds SQL &mdash; then asks for the dialect of plain{" "}
+			<code>.sql</code> files and of each language you chose.{" "}
+			<code>--dialect</code> sets where those answers start, and{" "}
+			<code>--yes</code> (or running without a terminal) takes every
+			default.
+		</p>
+		<p>
 			The search upward stops at a git repository root, a mount point, or a
 			symlinked directory. A stray config in a scratch directory or a home
 			directory therefore never reaches inside a checkout &mdash; if a config
@@ -24,8 +33,9 @@ import Docs from "../../layouts/Docs.astro";
 		<div class="note">
 			<p>
 				Layers, lowest first: built-in defaults, the config file&rsquo;s
-				top-level keys, its <code>[language]</code> section for the file being
-				formatted, then command-line flags.
+				top-level keys, every <a href="docs/configuration/#rules">rule</a>{" "}
+				that matches the file being formatted (in file order), then
+				command-line flags.
 			</p>
 		</div>
 	</section>
@@ -51,8 +61,8 @@ import Docs from "../../layouts/Docs.astro";
 					<tr>
 						<td><code>indent</code></td>
 						<td><code>--indent</code></td>
-						<td><code>tab</code> | <code>spaces</code></td>
-						<td><code>tab</code></td>
+						<td><code>tabs</code> | <code>spaces</code></td>
+						<td><code>tabs</code></td>
 					</tr>
 					<tr>
 						<td><code>indent-width</code></td>
@@ -90,6 +100,15 @@ import Docs from "../../layouts/Docs.astro";
 						<td><code>false</code></td>
 					</tr>
 					<tr>
+						<td><code>question-params</code></td>
+						<td><code>--question-params</code></td>
+						<td>lex JDBC-style <code>?</code> parameters in Postgres</td>
+						<td
+							><code>false</code> (<code>true</code> for the <code>java</code>
+							and <code>kotlin</code> grammars)</td
+						>
+					</tr>
+					<tr>
 						<td><code>ignore</code></td>
 						<td><code>--ignore</code></td>
 						<td>glob patterns to skip when recursing</td>
@@ -121,9 +140,9 @@ import Docs from "../../layouts/Docs.astro";
 			</table>
 		</div>
 		<p>
-			Flags with no config key: <code>--check</code>, <code>--stdin</code> /
-			<code>--stdout</code>, <code>--strict</code>, <code>--no-config</code>,{" "}
-			<code>--embedded</code>, <code>--embedded-query</code>,{" "}
+			Flags with no config key: <code>--check</code>, <code>--stdin</code>{" "}
+			(or <code>-</code> as the path) / <code>--stdout</code>,{" "}
+			<code>--strict</code>, <code>--no-config</code>,{" "}
 			<code>--version</code>, and <code>--help</code>.
 		</p>
 	</section>
@@ -145,70 +164,63 @@ import Docs from "../../layouts/Docs.astro";
 		</p>
 	</section>
 
-	<section>
-		<h2>Per-language sections</h2>
+	<section id="rules">
+		<h2>Rules</h2>
 		<p>
-			SQL embedded in host code copies that file&rsquo;s own indent character,
-			so a spaces-indented file never gains tabs. To choose deliberately, add a
-			section named for the host language. It takes the same keys as the top
-			level and overrides them for files of that language, so one config can
-			ask for two spaces in JavaScript and tabs in Go.
+			Rules scope settings to paths. There are two kinds, each written as a
+			TOML array of tables, and each needs an <code>include</code> list of
+			glob patterns (relative to the config, like <code>ignore</code>). Every
+			rule whose <code>include</code> matches a file applies, in file order,
+			later rules winning key by key.
+		</p>
+		<h3>[[files]]</h3>
+		<p>
+			Plain SQL files. <code>*.sql</code> files are always formatted; a{" "}
+			<code>[[files]]</code> rule sets options for the ones it matches, and
+			brings in files by other names &mdash; a mixed-dialect tree needs no
+			second config:
+		</p>
+		<pre><code>dialect = "postgres"
+
+[[files]]
+include = ["**/*.sql.sqlite", "storage/sqlite/**"]
+dialect = "sqlite"
+
+[[files]]
+include = ["**/*.sql.postgres"]</code></pre>
+		<h3>[[embedded]]</h3>
+		<p>
+			SQL inside host-language files. A rule names the tree-sitter{" "}
+			<code>grammar</code> that parses the file and, optionally, the{" "}
+			<code>query</code> that finds SQL in it; matching files are formatted
+			whenever squill walks past them. See{" "}
+			<a href="docs/embedded/">embedded SQL</a> for the grammars and queries.
 		</p>
 		<pre><code>indent = "tabs"
 
-[javascript]
-indent = "spaces"
-indent-width = 2
-
-[python]
+[[embedded]]
+include = ["**/*.rs"]
+grammar = "rust"
 dialect = "sqlite"
-indent = "spaces"
-indent-width = 4</code></pre>
-		<p>Each section covers one host language:</p>
-		<div class="scroll">
-			<table>
-				<thead>
-					<tr><th>section</th><th>files</th></tr>
-				</thead>
-				<tbody>
-					<tr><td><code>[rust]</code></td><td><code>.rs</code></td></tr>
-					<tr><td><code>[go]</code></td><td><code>.go</code></td></tr>
-					<tr><td><code>[python]</code></td><td><code>.py</code></td></tr>
-					<tr>
-						<td><code>[javascript]</code></td>
-						<td>
-							<code>.js</code> <code>.jsx</code> <code>.mjs</code>{" "}
-							<code>.cjs</code>
-						</td>
-					</tr>
-					<tr>
-						<td><code>[typescript]</code></td>
-						<td>
-							<code>.ts</code> <code>.tsx</code> <code>.mts</code>{" "}
-							<code>.cts</code>
-						</td>
-					</tr>
-					<tr><td><code>[gleam]</code></td><td><code>.gleam</code></td></tr>
-				</tbody>
-			</table>
-		</div>
-		<p>
-			JavaScript and TypeScript are split only because they need different
-			grammars; each section covers its whole family.
-		</p>
-		<p>
-			One section can name several languages, comma separated. TOML has no bare
-			comma in a table header, so quote the list:
-		</p>
-		<pre><code>["javascript, typescript"]
+
+[[embedded]]
+include = ["web/**/*.ts", "web/**/*.tsx"]
+grammar = "typescript"
 indent = "spaces"
 indent-width = 2</code></pre>
 		<p>
-			The path-scoped keys &mdash; <code>ignore</code>, <code>frozen</code>,{" "}
+			A rule without a <code>grammar</code> only layers options &mdash; say, a
+			different dialect for one directory of a language another rule already
+			covers. A file some <code>[[embedded]]</code> rule gives a grammar is a
+			host file, and only <code>[[embedded]]</code> rules apply to it;
+			otherwise only <code>[[files]]</code> rules do.
+		</p>
+		<p>
+			The path-selecting keys &mdash; <code>ignore</code>, <code>frozen</code>,{" "}
 			<code>frozen-ref</code>, and <code>frozen-fetch</code> &mdash; apply to
-			the whole config file, so they stay at the top level. Naming an unknown
-			language, or claiming one from two sections, is an error with a line
-			number rather than a silent surprise.
+			the whole config file, so they stay at the top level. A misplaced key, an
+			unknown grammar, or a rule without <code>include</code> is an error with
+			a line number rather than a silent surprise.
 		</p>
 	</section>
 </Docs>

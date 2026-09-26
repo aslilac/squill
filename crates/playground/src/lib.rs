@@ -76,16 +76,8 @@ fn build_options(req: &RequestOptions) -> formatter::Options {
 }
 
 fn embed_host(name: &str) -> Option<(embed::Host, &'static str)> {
-	Some(match name {
-		"rust" => (embed::Host::Rust, embed::RUST_SQLX_QUERY),
-		"go" => (embed::Host::Go, embed::GO_DB_QUERY),
-		"python" => (embed::Host::Python, embed::PYTHON_DB_QUERY),
-		"javascript" => (embed::Host::JavaScript, embed::JS_SQL_QUERY),
-		"typescript" => (embed::Host::TypeScript, embed::JS_SQL_QUERY),
-		"tsx" => (embed::Host::Tsx, embed::JS_SQL_QUERY),
-		"gleam" => (embed::Host::Gleam, embed::GLEAM_SQL_QUERY),
-		_ => return None,
-	})
+	let host = embed::Host::from_name(name)?;
+	Some((host, host.default_query()))
 }
 
 /// 1-based line and column for a byte offset.
@@ -125,8 +117,18 @@ fn format_host(
 	options: &formatter::Options,
 	indent: embed::Indent,
 ) -> Response {
-	match embed::format_embedded(source, host, query, options, indent) {
-		Ok(output) => Response { output: Some(output), diagnostics: Vec::new() },
+	match embed::format_embedded(source, &host.into(), query, options, indent) {
+		Ok(output) => {
+			let diagnostics = output
+				.warnings
+				.iter()
+				.map(|warning| {
+					let (line, col) = line_col(source, warning.offset);
+					format!("{line}:{col}: {}", warning.message)
+				})
+				.collect();
+			Response { output: Some(output.text), diagnostics }
+		}
 		Err(err) => Response { output: None, diagnostics: vec![err.to_string()] },
 	}
 }

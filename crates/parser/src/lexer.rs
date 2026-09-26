@@ -33,6 +33,11 @@ pub struct LexOptions {
 	/// `@` is a legal Postgres operator, so this is opt-in for sqlc
 	/// projects.
 	pub at_params: bool,
+	/// Lex JDBC-style `?` placeholders as `Param` tokens in Postgres
+	/// (they are always params in SQLite). A `?` that starts a jsonb
+	/// operator (`??`, `?|`, `?&`) stays an operator — JDBC spells the
+	/// literal operator with a doubled `??`.
+	pub question_params: bool,
 }
 
 /// Lex with explicit [`LexOptions`]. Infallible and lossless.
@@ -242,6 +247,14 @@ impl Lexer<'_> {
 				} else {
 					SyntaxKind::Error
 				}
+			}
+			// JDBC-style `?` params in Postgres, behind an option.
+			b'?'
+				if self.options.question_params
+					&& !matches!(self.at(1), Some(b'?' | b'|' | b'&')) =>
+			{
+				self.bump(1);
+				SyntaxKind::Param
 			}
 			// sqlc-style `@name` params in Postgres, behind an option.
 			b'@' if self.options.at_params && self.is_ident_start_at(1) => {

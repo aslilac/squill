@@ -114,23 +114,36 @@ fn check_reports_diff_and_exits_1() {
 
 #[test]
 fn stdin_formats_to_stdout() {
-	let mut child = squill()
-		.args(["fmt", "--stdin"])
-		.stdin(Stdio::piped())
-		.stdout(Stdio::piped())
-		.spawn()
-		.expect("spawn");
-	child
-		.stdin
-		.take()
-		.expect("stdin")
-		.write_all(b"SELECT * FROM t WHERE  a=1;")
-		.expect("write stdin");
-	let output = child.wait_with_output().expect("wait");
-	assert!(output.status.success());
-	assert_eq!(
-		String::from_utf8_lossy(&output.stdout),
-		"select * from t where a = 1;\n"
+	// `-` is the conventional spelling of stdin as a path.
+	for flag in ["--stdin", "-"] {
+		let mut child = squill()
+			.args(["fmt", flag])
+			.stdin(Stdio::piped())
+			.stdout(Stdio::piped())
+			.spawn()
+			.expect("spawn");
+		child
+			.stdin
+			.take()
+			.expect("stdin")
+			.write_all(b"SELECT * FROM t WHERE  a=1;")
+			.expect("write stdin");
+		let output = child.wait_with_output().expect("wait");
+		assert!(output.status.success(), "{flag}");
+		assert_eq!(
+			String::from_utf8_lossy(&output.stdout),
+			"select * from t where a = 1;\n",
+			"{flag}"
+		);
+	}
+}
+
+#[test]
+fn stdin_dash_cannot_mix_with_paths() {
+	let output = squill().args(["fmt", "-", "a.sql"]).output().expect("run");
+	assert_eq!(output.status.code(), Some(2));
+	assert!(
+		String::from_utf8_lossy(&output.stderr).contains("cannot be combined")
 	);
 }
 
@@ -534,9 +547,17 @@ const RS_FIXTURE: &str = r####"fn q(pool: &PgPool) {
 }
 "####;
 
+/// The rule every Rust embedding test starts from.
+const RUST_RULE: &str =
+	"[[embedded]]\ninclude = [\"**/*.rs\"]\ngrammar = \"rust\"\n";
+
+/// A Go file whose one query is long enough to break.
+const GO_WIDE: &str = "package main\n\nfunc f(db *sql.DB) {\n\tdb.QueryRow(`SELECT id,name,email,created_at,updated_at,deleted_at,organization_id,avatar_url FROM users WHERE org = $1`)\n}\n";
+
 #[test]
-fn explicit_rust_path_formats_sqlx_macros() {
+fn explicit_rust_path_formats_under_an_embedded_rule() {
 	let dir = temp_dir("embedrs");
+	std::fs::write(dir.join("squill.toml"), RUST_RULE).expect("write config");
 	let file = dir.join("q.rs");
 	std::fs::write(&file, RS_FIXTURE).expect("write");
 	let status = squill().arg("fmt").arg(&file).status().expect("run");
@@ -556,13 +577,40 @@ fn explicit_rust_path_formats_sqlx_macros() {
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// A host file no rule covers is an error when named explicitly — with
+/// the rule to add — rather than a wall of SQL parse errors.
 #[test]
-fn directory_recursion_needs_embed_flag() {
+fn explicit_host_path_without_a_rule_explains_itself() {
+	let dir = temp_dir("embednorule");
+	let file = dir.join("q.rs");
+	std::fs::write(&file, RS_FIXTURE).expect("write");
+	// No config at all: point at the wizard.
+	let output = squill().arg("fmt").arg(&file).output().expect("run");
+	assert_eq!(output.status.code(), Some(2));
+	let stderr = String::from_utf8_lossy(&output.stderr);
+	assert!(stderr.contains("run `squill init`"), "{stderr}");
+	// A config without the rule: show the rule to add.
+	std::fs::write(dir.join("squill.toml"), "dialect = \"postgres\"\n")
+		.expect("write config");
+	let output = squill().arg("fmt").arg(&file).output().expect("run");
+	assert_eq!(output.status.code(), Some(2));
+	let stderr = String::from_utf8_lossy(&output.stderr);
+	assert!(
+		stderr.contains("no [[embedded]] rule covers this file")
+			&& stderr.contains("grammar = \"rust\""),
+		"{stderr}"
+	);
+	assert_eq!(std::fs::read_to_string(&file).expect("read"), RS_FIXTURE);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn embedded_rules_bring_host_files_into_recursion() {
 	let dir = temp_dir("embeddir");
 	std::fs::write(dir.join("q.rs"), RS_FIXTURE).expect("write");
 	std::fs::write(dir.join("plain.sql"), "SELECT   1;\n").expect("write");
 
-	// Without --embedded: only the .sql file changes.
+	// No rule: only the .sql file changes.
 	let status = squill().arg("fmt").arg(&dir).status().expect("run");
 	assert!(status.success());
 	assert_eq!(
@@ -574,27 +622,25 @@ fn directory_recursion_needs_embed_flag() {
 		"select 1;\n"
 	);
 
-	// With --embedded: the .rs file formats too, and --check is then clean.
-	let status =
-		squill().args(["fmt", "--embedded"]).arg(&dir).status().expect("run");
+	// With a rule: the .rs file formats too, and --check is then clean.
+	std::fs::write(dir.join("squill.toml"), RUST_RULE).expect("write config");
+	let status = squill().arg("fmt").arg(&dir).status().expect("run");
 	assert!(status.success());
 	assert!(
 		std::fs::read_to_string(dir.join("q.rs"))
 			.expect("read")
 			.contains("select id, name\n        from users"),
 	);
-	let status = squill()
-		.args(["fmt", "--embedded", "--check"])
-		.arg(&dir)
-		.status()
-		.expect("run");
-	assert!(status.success(), "--check after --embedded fmt must be clean");
+	let status =
+		squill().args(["fmt", "--check"]).arg(&dir).status().expect("run");
+	assert!(status.success(), "--check after fmt must be clean");
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
 #[test]
 fn check_mode_diffs_host_files() {
 	let dir = temp_dir("embedcheck");
+	std::fs::write(dir.join("squill.toml"), RUST_RULE).expect("write config");
 	let file = dir.join("q.rs");
 	std::fs::write(&file, RS_FIXTURE).expect("write");
 	let output =
@@ -609,6 +655,11 @@ fn check_mode_diffs_host_files() {
 #[test]
 fn go_host_files_format() {
 	let dir = temp_dir("embedgo");
+	std::fs::write(
+		dir.join("squill.toml"),
+		"[[embedded]]\ninclude = [\"*.go\"]\ngrammar = \"go\"\n",
+	)
+	.expect("write config");
 	let file = dir.join("q.go");
 	std::fs::write(
         &file,
@@ -625,27 +676,31 @@ fn go_host_files_format() {
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// A rule's `query` replaces the grammar's default, and is found
+/// relative to the config.
 #[test]
-fn custom_embed_query_file() {
+fn rules_take_a_custom_query() {
 	let dir = temp_dir("embedquery");
+	std::fs::create_dir_all(dir.join(".config/squill")).expect("mkdir");
 	// A query that only matches `my_sql!` macros.
 	std::fs::write(
-        dir.join("only_mine.scm"),
-        "((macro_invocation macro: (identifier) @_name (token_tree (raw_string_literal) @sql.postgres)) (#eq? @_name \"my_sql\"))",
+        dir.join(".config/squill/only_mine.scm"),
+        "((macro_invocation macro: (identifier) @_name (token_tree (raw_string_literal) @sql)) (#eq? @_name \"my_sql\"))",
     )
     .expect("write");
-	let file = dir.join("q.rs");
+	std::fs::write(
+		dir.join(".config/squill.toml"),
+		"[[embedded]]\ninclude = [\"**/*.rs\"]\ngrammar = \"rust\"\nquery = \".config/squill/only_mine.scm\"\n",
+	)
+	.expect("write config");
+	std::fs::create_dir_all(dir.join("src")).expect("mkdir");
+	let file = dir.join("src/q.rs");
 	std::fs::write(
         &file,
         "fn f() {\n    my_sql!(r#\"SELECT   1\"#);\n    sqlx::query!(r#\"SELECT   2\"#);\n}\n",
     )
     .expect("write");
-	let status = squill()
-		.args(["fmt", "--embedded-query"])
-		.arg(dir.join("only_mine.scm"))
-		.arg(&file)
-		.status()
-		.expect("run");
+	let status = squill().arg("fmt").arg(&dir).status().expect("run");
 	assert!(status.success());
 	let out = std::fs::read_to_string(&file).expect("read");
 	assert!(
@@ -656,6 +711,28 @@ fn custom_embed_query_file() {
 		out.contains("r#\"SELECT   2\"#"),
 		"default macro must be untouched: {out}"
 	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Strings squill won't rewrite are diagnostics: reported with a
+/// location, and failures under --strict.
+#[test]
+fn embedded_warnings_are_diagnostics() {
+	let dir = temp_dir("embedwarn");
+	std::fs::write(dir.join("squill.toml"), RUST_RULE).expect("write config");
+	let file = dir.join("q.rs");
+	let source =
+		"fn f() {\n    sqlx::query!(r#\"selec nonsense\n    from\"#);\n}\n";
+	std::fs::write(&file, source).expect("write");
+	let output = squill().arg("fmt").arg(&file).output().expect("run");
+	assert!(output.status.success());
+	let stderr = String::from_utf8_lossy(&output.stderr);
+	assert!(stderr.contains("q.rs:2:18: embedded SQL did not parse"), "{stderr}");
+	assert!(stderr.contains("1 diagnostic(s)"), "{stderr}");
+	assert_eq!(std::fs::read_to_string(&file).expect("read"), source);
+	let status =
+		squill().args(["fmt", "--strict"]).arg(&file).status().expect("run");
+	assert_eq!(status.code(), Some(1));
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -684,15 +761,15 @@ fn check_large_diff_prints_replacement_hunk() {
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// One config file, two host languages, two indent styles — and the
-/// section beats the host file's own indentation, which is what makes
-/// the setting worth having for a tab-indented language like Go.
+/// Rules give each host language its own indent — and a rule's indent
+/// beats the host file's own indentation, which is what makes the
+/// setting worth having for a tab-indented language like Go.
 #[test]
-fn language_sections_configure_indent_per_host() {
+fn rules_configure_indent_per_host() {
 	let dir = temp_dir("langsections");
 	std::fs::write(
 		dir.join("squill.toml"),
-		"indent = \"tab\"\n\n[javascript]\nindent = \"spaces\"\nindent-width = 2\n\n[go]\nindent = \"tab\"\n",
+		"indent = \"tabs\"\n\n[[embedded]]\ninclude = [\"*.js\"]\ngrammar = \"javascript\"\nindent = \"spaces\"\nindent-width = 2\n\n[[embedded]]\ninclude = [\"*.go\"]\ngrammar = \"go\"\n",
 	)
 	.expect("write config");
 
@@ -704,45 +781,36 @@ fn language_sections_configure_indent_per_host() {
 	.expect("write js");
 	// A Go file indented with tabs; the SQL keeps tabs.
 	let go = dir.join("q.go");
-	std::fs::write(
-		&go,
-		"package main\n\nfunc f(db *sql.DB) {\n\tdb.QueryRow(`SELECT id,name,email,created_at,updated_at,deleted_at,organization_id,avatar_url FROM users WHERE org = $1`)\n}\n",
-	)
-	.expect("write go");
+	std::fs::write(&go, GO_WIDE).expect("write go");
 
-	let status =
-		squill().args(["fmt", "--embedded"]).arg(&dir).status().expect("run");
+	let status = squill().arg("fmt").arg(&dir).status().expect("run");
 	assert!(status.success());
 
 	let js_out = std::fs::read_to_string(&js).expect("read js");
 	assert!(
 		js_out.contains("  select\n    id,\n    name,\n"),
-		"javascript section did not give two-space SQL: {js_out}"
+		"javascript rule did not give two-space SQL: {js_out}"
 	);
 	let go_out = std::fs::read_to_string(&go).expect("read go");
 	assert!(
 		go_out.contains("\tselect\n\t\tid,\n\t\tname,\n"),
-		"go section did not give tab SQL: {go_out}"
+		"go rule did not give tab SQL: {go_out}"
 	);
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// A section's indent wins over the host file's indentation even when
-/// the two disagree, and unset keys still fall through to the top level.
+/// A rule's indent wins over the host file's indentation even when the
+/// two disagree, and unset keys still fall through to the top level.
 #[test]
-fn language_section_overrides_host_indent_and_inherits_rest() {
+fn rule_overrides_host_indent_and_inherits_rest() {
 	let dir = temp_dir("langoverride");
 	std::fs::write(
 		dir.join("squill.toml"),
-		"keyword-case = \"upper\"\n\n[go]\nindent = \"spaces\"\nindent-width = 4\n",
+		"keyword-case = \"upper\"\n\n[[embedded]]\ninclude = [\"*.go\"]\ngrammar = \"go\"\nindent = \"spaces\"\nindent-width = 4\n",
 	)
 	.expect("write config");
 	let go = dir.join("q.go");
-	std::fs::write(
-		&go,
-		"package main\n\nfunc f(db *sql.DB) {\n\tdb.QueryRow(`SELECT id,name,email,created_at,updated_at,deleted_at,organization_id,avatar_url FROM users WHERE org = $1`)\n}\n",
-	)
-	.expect("write go");
+	std::fs::write(&go, GO_WIDE).expect("write go");
 
 	let status = squill().arg("fmt").arg(&go).status().expect("run");
 	assert!(status.success());
@@ -752,19 +820,19 @@ fn language_section_overrides_host_indent_and_inherits_rest() {
 	assert!(
 		out.contains("\tSELECT\n\t    id,\n\t    name,\n")
 			&& out.contains("\tFROM users\n"),
-		"section indent or inherited keyword-case missing: {out}"
+		"rule indent or inherited keyword-case missing: {out}"
 	);
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// Sections apply only to their own language: a `[go]` section leaves
-/// plain .sql files (and other hosts) on the top-level settings.
+/// An [[embedded]] rule's options apply only to its host files: plain
+/// .sql files stay on the top-level settings.
 #[test]
-fn language_sections_do_not_leak_to_other_files() {
+fn embedded_rules_do_not_leak_to_sql_files() {
 	let dir = temp_dir("langscope");
 	std::fs::write(
 		dir.join("squill.toml"),
-		"indent = \"tab\"\n\n[go]\nindent = \"spaces\"\nindent-width = 4\nkeyword-case = \"upper\"\n",
+		"indent = \"tabs\"\n\n[[embedded]]\ninclude = [\"**\"]\nindent = \"spaces\"\nindent-width = 4\nkeyword-case = \"upper\"\n",
 	)
 	.expect("write config");
 	std::fs::write(dir.join("a.sql"), "select id from (select 1 as id) t;\n")
@@ -775,23 +843,22 @@ fn language_sections_do_not_leak_to_other_files() {
 	let out = std::fs::read_to_string(dir.join("a.sql")).expect("read");
 	assert_eq!(
 		out, "select id from (select 1 as id) t;\n",
-		"the [go] section must not touch .sql files"
+		"an [[embedded]] rule must not touch .sql files"
 	);
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// Flags still beat a section, the same way they beat the top level.
+/// Flags still beat a rule, the same way they beat the top level.
 #[test]
-fn flags_override_language_sections() {
+fn flags_override_rules() {
 	let dir = temp_dir("langflags");
-	std::fs::write(dir.join("squill.toml"), "[go]\nkeyword-case = \"upper\"\n")
-		.expect("write config");
-	let go = dir.join("q.go");
 	std::fs::write(
-		&go,
-		"package main\n\nfunc f(db *sql.DB) {\n\tdb.QueryRow(`SELECT id,name,email,created_at,updated_at,deleted_at,organization_id,avatar_url FROM users WHERE org = $1`)\n}\n",
+		dir.join("squill.toml"),
+		"[[embedded]]\ninclude = [\"*.go\"]\ngrammar = \"go\"\nkeyword-case = \"upper\"\n",
 	)
-	.expect("write go");
+	.expect("write config");
+	let go = dir.join("q.go");
+	std::fs::write(&go, GO_WIDE).expect("write go");
 	let status = squill()
 		.args(["fmt", "--keyword-case", "lower"])
 		.arg(&go)
@@ -801,38 +868,127 @@ fn flags_override_language_sections() {
 	let out = std::fs::read_to_string(&go).expect("read");
 	assert!(
 		out.contains("\tselect\n\t\tid,"),
-		"flag did not override section: {out}"
+		"flag did not override rule: {out}"
 	);
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// Bad sections are hard errors with a location, like any other config
+/// [[files]] rules scope options to paths and bring in SQL files not
+/// named *.sql — a mixed-dialect tree like Synapse's.
+#[test]
+fn files_rules_set_dialect_by_path() {
+	let dir = temp_dir("filesrules");
+	std::fs::write(
+		dir.join("squill.toml"),
+		"[[files]]\ninclude = [\"*.sql.sqlite\", \"sqlite/**\"]\ndialect = \"sqlite\"\n\n[[files]]\ninclude = [\"*.sql.postgres\"]\n",
+	)
+	.expect("write config");
+	std::fs::create_dir_all(dir.join("sqlite")).expect("mkdir");
+	// `?1` is a parameter in SQLite and a syntax error in Postgres.
+	let sqlite = "SELECT a FROM t WHERE b = ?1;\n";
+	std::fs::write(dir.join("delta.sql.sqlite"), sqlite).expect("write");
+	std::fs::write(dir.join("sqlite/schema.sql"), sqlite).expect("write");
+	std::fs::write(dir.join("delta.sql.postgres"), "SELECT   1;\n")
+		.expect("write");
+	std::fs::write(dir.join("notes.txt"), "SELECT   1;\n").expect("write");
+
+	let output =
+		squill().args(["fmt", "--strict"]).arg(&dir).output().expect("run");
+	assert!(
+		output.status.success(),
+		"{}",
+		String::from_utf8_lossy(&output.stderr)
+	);
+	for name in ["delta.sql.sqlite", "sqlite/schema.sql"] {
+		assert_eq!(
+			std::fs::read_to_string(dir.join(name)).expect("read"),
+			"select a from t where b = ?1;\n",
+			"{name}"
+		);
+	}
+	assert_eq!(
+		std::fs::read_to_string(dir.join("delta.sql.postgres")).expect("read"),
+		"select 1;\n",
+		"a [[files]] rule brings its files into recursion"
+	);
+	assert_eq!(
+		std::fs::read_to_string(dir.join("notes.txt")).expect("read"),
+		"SELECT   1;\n",
+		"nothing claims notes.txt"
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Rules layer in file order: a later rule without a grammar narrows
+/// options for part of what an earlier rule covers.
+#[test]
+fn later_rules_layer_over_earlier_ones() {
+	let dir = temp_dir("layering");
+	std::fs::write(
+		dir.join("squill.toml"),
+		format!("{RUST_RULE}keyword-case = \"upper\"\n\n[[embedded]]\ninclude = [\"legacy/**\"]\nkeyword-case = \"lower\"\n"),
+	)
+	.expect("write config");
+	std::fs::create_dir_all(dir.join("legacy")).expect("mkdir");
+	let source = "fn f() {\n    sqlx::query!(r#\"select 1\"#);\n}\n";
+	std::fs::write(dir.join("new.rs"), source).expect("write");
+	std::fs::write(dir.join("legacy/old.rs"), source).expect("write");
+	let status = squill().arg("fmt").arg(&dir).status().expect("run");
+	assert!(status.success());
+	assert!(
+		std::fs::read_to_string(dir.join("new.rs"))
+			.expect("read")
+			.contains("SELECT 1"),
+	);
+	assert!(
+		std::fs::read_to_string(dir.join("legacy/old.rs"))
+			.expect("read")
+			.contains("select 1"),
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Bad rules are hard errors with a location, like any other config
 /// mistake.
 #[test]
-fn language_section_errors_have_locations() {
+fn rule_errors_have_locations() {
 	let dir = temp_dir("langbad");
 	std::fs::write(dir.join("f.sql"), "select 1;\n").expect("write");
 
 	let cases = [
-		("[ruby]\nindent = \"tab\"\n", 1, "unknown section `[ruby]`"),
-		("[go]\nignore = [\"x\"]\n", 2, "applies to the whole file"),
-		("[go]\nindent = \"elephant\"\n", 2, "unknown indent style"),
-		("[go]\nindent-width = 99\n", 2, "integer from 1 to 16"),
-		("[go]\nnope = 1\n", 2, "unknown key `nope`"),
-		("[go]\n[go.inner]\nindent = \"tab\"\n", 2, "do not nest"),
-		// Multi-language headers are validated name by name.
-		("[\"go, ruby\"]\nindent = \"tab\"\n", 1, "unknown section `[ruby]`"),
-		("[\"go,\"]\nindent = \"tab\"\n", 1, "empty language name"),
+		// The old language sections are gone.
+		("[go]\nindent = \"tabs\"\n", 1, "unknown section `[go]`"),
+		("files = 1\n", 1, "write each as `[[files]]`"),
+		("include = [\"x\"]\n", 1, "belongs in a [[files]] or [[embedded]] rule"),
+		("[[files]]\ndialect = \"sqlite\"\n", 1, "needs an `include` list"),
+		("[[files]]\ninclude = []\n", 2, "at least one pattern"),
 		(
-			"[go]\nindent = \"tab\"\n\n[\"go, rust\"]\nindent = \"spaces\"\n",
-			4,
-			"`go` is configured by more than one section",
+			"[[files]]\ninclude = [\"x\"]\ngrammar = \"rust\"\n",
+			3,
+			"belongs in an [[embedded]] rule",
 		),
 		(
-			"[\"go, go\"]\nindent = \"tab\"\n",
-			1,
-			"`go` is configured by more than one section",
+			"[[embedded]]\ninclude = [\"x\"]\ngrammar = \"ruby\"\n",
+			3,
+			"unknown grammar `ruby`",
 		),
+		(
+			"[[embedded]]\ninclude = [\"x\"]\nignore = [\"y\"]\n",
+			3,
+			"applies to the whole file",
+		),
+		(
+			"[[embedded]]\ninclude = [\"x\"]\nindent = \"elephant\"\n",
+			3,
+			"unknown indent style",
+		),
+		(
+			"[[embedded]]\ninclude = [\"x\"]\nindent-width = 99\n",
+			3,
+			"integer from 1 to 16",
+		),
+		("[[embedded]]\ninclude = [\"x\"]\nnope = 1\n", 3, "unknown key `nope`"),
+		("[[embedded]]\ninclude = [\"x\"]\n[embedded.inner]\n", 3, "do not nest"),
 	];
 	for (config, line, needle) in cases {
 		std::fs::write(dir.join("squill.toml"), config).expect("write config");
@@ -963,540 +1119,191 @@ fn relative_paths_find_a_config_above_the_working_directory() {
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// One section can name several languages at once. TOML has no bare
-/// comma in a table header, so the name list is quoted.
+/// A grammar squill does not bundle, loaded from wasm: the Lua grammar's
+/// own release artifact (MIT, see the LICENSE beside it). Long strings
+/// (`[[ ... ]]`) are raw, so their content is SQL as written.
+#[cfg(feature = "wasm")]
 #[test]
-fn one_section_can_name_several_languages() {
-	let dir = temp_dir("multilang");
+fn wasm_grammars_load_from_config() {
+	let dir = temp_dir("wasmgrammar");
+	let grammar = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+		.join("tests/fixtures/grammars/tree-sitter-lua.wasm");
+	std::fs::write(
+		dir.join("lua.scm"),
+		"((function_call name: (method_index_expression method: (identifier) @_m) arguments: (arguments . (string) @sql)) (#eq? @_m \"exec\"))",
+	)
+	.expect("write query");
 	std::fs::write(
 		dir.join("squill.toml"),
-		"indent = \"tab\"\n\n[\"javascript, typescript\"]\nindent = \"spaces\"\nindent-width = 2\n",
-	)
-	.expect("write config");
-
-	let query = "SELECT id,name,email,created_at,updated_at,deleted_at,organization_id,avatar_url FROM users WHERE org = $1";
-	for name in ["q.js", "q.ts", "q.tsx"] {
-		std::fs::write(
-			dir.join(name),
-			format!("export function f(db) {{\n\treturn db.query(`{query}`);\n}}\n"),
-		)
-		.expect("write host file");
-	}
-	// Not named by the section: stays on the top-level tab indent.
-	std::fs::write(
-		dir.join("q.go"),
 		format!(
-			"package main\n\nfunc f(db *sql.DB) {{\n\tdb.QueryRow(`{query}`)\n}}\n"
+			"[[embedded]]\ninclude = [\"*.lua\"]\ngrammar = \"{}\"\nquery = \"lua.scm\"\ndialect = \"sqlite\"\n",
+			grammar.display()
 		),
 	)
-	.expect("write go");
-
-	let status =
-		squill().args(["fmt", "--embedded"]).arg(&dir).status().expect("run");
-	assert!(status.success());
-	for name in ["q.js", "q.ts", "q.tsx"] {
-		let out = std::fs::read_to_string(dir.join(name)).expect("read");
-		assert!(
-			out.contains("\tselect\n\t  id,\n\t  name,\n"),
-			"{name} did not take the shared section: {out}"
-		);
-	}
-	let go_out = std::fs::read_to_string(dir.join("q.go")).expect("read");
-	assert!(
-		go_out.contains("\tselect\n\t\tid,\n\t\tname,\n"),
-		"go should keep the top-level tab indent: {go_out}"
-	);
-	let _ = std::fs::remove_dir_all(&dir);
-}
-
-/// `--version` is a request that was answered: the version on stdout,
-/// exit 0. Accepted before the subcommand and after it, long and short.
-#[test]
-fn version_flag_prints_version() {
-	let want = format!("squill {}\n", env!("CARGO_PKG_VERSION"));
-	for args in
-		[vec!["--version"], vec!["-V"], vec!["fmt", "--version"], vec!["fmt", "-V"]]
-	{
-		let output = squill().args(&args).output().expect("run squill");
-		assert_eq!(output.status.code(), Some(0), "for {args:?}");
-		assert_eq!(String::from_utf8_lossy(&output.stdout), want, "for {args:?}");
-		assert!(output.stderr.is_empty(), "for {args:?}: stderr not empty");
-	}
-}
-
-/// `--help` is the same kind of request, so it goes to stdout and exits
-/// 0 — while the usage text printed *because* of a mistake stays on
-/// stderr with a failing status.
-#[test]
-fn help_succeeds_but_misuse_does_not() {
-	for args in [vec!["--help"], vec!["-h"], vec!["fmt", "--help"]] {
-		let output = squill().args(&args).output().expect("run squill");
-		assert_eq!(output.status.code(), Some(0), "for {args:?}");
-		assert!(
-			String::from_utf8_lossy(&output.stdout).contains("Usage: squill fmt"),
-			"usage missing from stdout for {args:?}"
-		);
-		assert!(output.stderr.is_empty(), "for {args:?}: stderr not empty");
-	}
-	for args in [vec![], vec!["fmt"], vec!["fmt", "--nope"], vec!["frobnicate"]] {
-		let output = squill().args(&args).output().expect("run squill");
-		assert_eq!(output.status.code(), Some(2), "for {args:?}");
-		assert!(output.stdout.is_empty(), "for {args:?}: stdout not empty");
-		assert!(
-			String::from_utf8_lossy(&output.stderr).contains("Usage: squill fmt"),
-			"usage missing from stderr for {args:?}"
-		);
-	}
-}
-
-/// Run git in `dir`, with signing and identity pinned so the test does
-/// not depend on (or trip over) the developer's global config.
-fn git(dir: &std::path::Path, args: &[&str]) {
-	let output = Command::new("git")
-		.current_dir(dir)
-		.args([
-			"-c",
-			"commit.gpgsign=false",
-			"-c",
-			"user.name=t",
-			"-c",
-			"user.email=t@example.invalid",
-			"-c",
-			"tag.gpgsign=false",
-		])
-		.args(args)
-		.output()
-		.expect("run git");
-	assert!(
-		output.status.success(),
-		"git {args:?} failed: {}",
-		String::from_utf8_lossy(&output.stderr)
-	);
-}
-
-/// An upstream repo with one shipped migration, plus a clone of it.
-/// Returns (upstream, work).
-fn frozen_fixture(
-	name: &str,
-	config: &str,
-) -> (std::path::PathBuf, std::path::PathBuf) {
-	let dir = temp_dir(name);
-	let upstream = dir.join("upstream");
-	std::fs::create_dir_all(upstream.join("migrations")).expect("mkdir");
-	std::fs::create_dir_all(upstream.join("queries")).expect("mkdir");
-	std::fs::write(upstream.join("squill.toml"), config).expect("write config");
+	.expect("write config");
+	let file = dir.join("db.lua");
 	std::fs::write(
-		upstream.join("migrations/001_old.sql"),
-		"SELECT   id,name FROM users;\n",
+		&file,
+		"local function migrate(db)\n  db:exec([[\n    CREATE TABLE t (id INTEGER PRIMARY KEY, a TEXT)\n  ]])\n  db:exec(\"SELECT   1\")\nend\n",
 	)
-	.expect("write");
-	std::fs::write(upstream.join("queries/q.sql"), "SELECT   id FROM t;\n")
-		.expect("write");
-	git(&upstream, &["init", "-q", "--initial-branch=banana", "."]);
-	git(&upstream, &["add", "-A"]);
-	git(&upstream, &["commit", "-qm", "base"]);
-
-	let work = dir.join("work");
-	git(&dir, &["clone", "-q", upstream.to_str().expect("utf8"), "work"]);
-	(upstream, work)
-}
-
-/// The sqlx case: a migration is formatted while it is new, and never
-/// rewritten once it exists on the baseline — not by a later run, and
-/// not when squill's own style changes underneath it.
-#[test]
-fn frozen_paths_format_while_new_and_never_after() {
-	let (upstream, work) =
-		frozen_fixture("frozen", "frozen = [\"migrations/**\"]\n");
-	let shipped = "SELECT   id,name FROM users;\n";
-	std::fs::write(
-		work.join("migrations/002_new.sql"),
-		"SELECT   a,b FROM t2;\n",
-	)
-	.expect("write");
-
-	let output = squill().arg("fmt").arg(&work).output().expect("run");
-	assert!(output.status.success());
-	assert!(
-		String::from_utf8_lossy(&output.stderr).contains("1 frozen"),
-		"skip not reported: {}",
-		String::from_utf8_lossy(&output.stderr)
-	);
-	// The shipped migration is byte-identical; the new one is formatted.
-	assert_eq!(
-		std::fs::read_to_string(work.join("migrations/001_old.sql")).expect("read"),
-		shipped
-	);
-	assert_eq!(
-		std::fs::read_to_string(work.join("migrations/002_new.sql")).expect("read"),
-		"select a, b from t2;\n"
-	);
-	// A file outside the frozen globs formats as usual, baseline or not.
-	assert_eq!(
-		std::fs::read_to_string(work.join("queries/q.sql")).expect("read"),
-		"select id from t;\n"
-	);
-
-	// Once the new migration ships, a later style change must not touch
-	// either of them.
-	std::fs::copy(
-		work.join("migrations/002_new.sql"),
-		upstream.join("migrations/002_new.sql"),
-	)
-	.expect("copy");
-	git(&upstream, &["add", "-A"]);
-	git(&upstream, &["commit", "-qm", "ship 002"]);
-	git(&work, &["fetch", "-q", "origin"]);
-
-	let before =
-		std::fs::read_to_string(work.join("migrations/002_new.sql")).expect("read");
-	let output = squill()
-		.args(["fmt", "--keyword-case", "upper"])
-		.arg(&work)
-		.output()
-		.expect("run");
-	assert!(output.status.success());
-	assert!(
-		String::from_utf8_lossy(&output.stderr).contains("2 frozen"),
-		"both migrations should be frozen now: {}",
-		String::from_utf8_lossy(&output.stderr)
-	);
-	assert_eq!(
-		std::fs::read_to_string(work.join("migrations/001_old.sql")).expect("read"),
-		shipped
-	);
-	assert_eq!(
-		std::fs::read_to_string(work.join("migrations/002_new.sql")).expect("read"),
-		before,
-		"a style change rewrote a shipped migration"
-	);
-	let _ = std::fs::remove_dir_all(work.parent().expect("parent"));
-}
-
-/// Naming a frozen file explicitly does not override the freeze — the
-/// whole point is that it is never rewritten.
-#[test]
-fn frozen_applies_to_explicitly_named_files() {
-	let (_upstream, work) =
-		frozen_fixture("frozenexplicit", "frozen = [\"migrations/**\"]\n");
-	let shipped = "SELECT   id,name FROM users;\n";
-
-	let output = squill()
-		.arg("fmt")
-		.arg(work.join("migrations/001_old.sql"))
-		.output()
-		.expect("run");
-	assert!(output.status.success());
-	assert_eq!(
-		std::fs::read_to_string(work.join("migrations/001_old.sql")).expect("read"),
-		shipped
-	);
-	// And --check does not report it as needing a reformat.
-	let output = squill()
-		.args(["fmt", "--check"])
-		.arg(work.join("migrations/001_old.sql"))
-		.output()
-		.expect("run");
-	assert_eq!(output.status.code(), Some(0), "frozen file failed --check");
-	let _ = std::fs::remove_dir_all(work.parent().expect("parent"));
-}
-
-/// An explicit `frozen-ref` is honored, which is how CI names a base
-/// branch when origin/HEAD was never set.
-#[test]
-fn frozen_ref_can_be_named_explicitly() {
-	let (_upstream, work) =
-		frozen_fixture("frozenref", "frozen = [\"migrations/**\"]\n");
-	let output = squill()
-		.args(["fmt", "--frozen-ref", "origin/banana"])
-		.arg(&work)
-		.output()
-		.expect("run");
-	assert!(output.status.success());
-	assert!(
-		String::from_utf8_lossy(&output.stderr).contains("1 frozen"),
-		"explicit ref not used: {}",
-		String::from_utf8_lossy(&output.stderr)
-	);
-	let _ = std::fs::remove_dir_all(work.parent().expect("parent"));
-}
-
-/// Rather than quietly formatting a file it cannot vouch for, squill
-/// stops: a missing baseline is exactly when a wrong answer does damage.
-#[test]
-fn frozen_without_a_baseline_is_a_hard_error() {
-	let (_upstream, work) =
-		frozen_fixture("frozenbad", "frozen = [\"migrations/**\"]\n");
-	let output = squill()
-		.args(["fmt", "--frozen-ref", "origin/nonesuch"])
-		.arg(&work)
-		.output()
-		.expect("run");
-	assert_eq!(output.status.code(), Some(2));
-	assert!(
-		String::from_utf8_lossy(&output.stderr).contains("does not resolve"),
-		"got: {}",
-		String::from_utf8_lossy(&output.stderr)
-	);
-
-	// Same for a frozen pattern outside any repository.
-	let plain = temp_dir("frozennorepo");
-	std::fs::create_dir_all(plain.join("migrations")).expect("mkdir");
-	std::fs::write(plain.join("squill.toml"), "frozen = [\"migrations/**\"]\n")
-		.expect("write");
-	std::fs::write(plain.join("migrations/a.sql"), "SELECT  1;\n")
-		.expect("write");
-	// temp_dir() leaves a bare .git marker; a real git call must not
-	// mistake it for a repository.
-	let _ = std::fs::remove_dir_all(plain.join(".git"));
-	let output = squill().arg("fmt").arg(&plain).output().expect("run");
-	assert_eq!(output.status.code(), Some(2));
-	assert!(
-		String::from_utf8_lossy(&output.stderr).contains("not in a git repository"),
-		"got: {}",
-		String::from_utf8_lossy(&output.stderr)
-	);
-	let _ = std::fs::remove_dir_all(&plain);
-	let _ = std::fs::remove_dir_all(work.parent().expect("parent"));
-}
-
-/// The baseline ref is discovered from the remote, not guessed from a
-/// list of branch names — so a repo whose default branch is called
-/// something unusual works, and so does the CI shape where
-/// `refs/remotes/origin/HEAD` was never recorded.
-#[test]
-fn baseline_ref_is_discovered_not_guessed() {
-	let (upstream, work) =
-		frozen_fixture("frozendiscover", "frozen = [\"migrations/**\"]\n");
-	let shipped = "SELECT   id,name FROM users;\n";
-	std::fs::write(
-		work.join("migrations/002_new.sql"),
-		"SELECT   a,b FROM t2;\n",
-	)
-	.expect("write");
-
-	// A normal clone records the remote's HEAD, whatever it is called.
-	assert_eq!(
-		String::from_utf8_lossy(
-			&Command::new("git")
-				.current_dir(&work)
-				.args(["symbolic-ref", "--short", "refs/remotes/origin/HEAD"])
-				.output()
-				.expect("git")
-				.stdout
-		)
-		.trim(),
-		"origin/banana",
-		"fixture should use an unconventional default branch"
-	);
-	let output = squill().arg("fmt").arg(&work).output().expect("run");
-	assert!(output.status.success());
-	assert!(String::from_utf8_lossy(&output.stderr).contains("1 frozen"));
-	assert_eq!(
-		std::fs::read_to_string(work.join("migrations/001_old.sql")).expect("read"),
-		shipped
-	);
-
-	// Now the CI shape: no recorded HEAD, one fetched branch.
-	let ci = work.parent().expect("parent").join("ci");
-	std::fs::create_dir_all(&ci).expect("mkdir");
-	git(&ci, &["init", "-q", "."]);
-	git(&ci, &["remote", "add", "origin", upstream.to_str().expect("utf8")]);
-	git(
-		&ci,
-		&[
-			"fetch",
-			"-q",
-			"--depth=1",
-			"origin",
-			"+refs/heads/banana:refs/remotes/origin/banana",
-		],
-	);
-	git(&ci, &["checkout", "-q", "-b", "banana", "FETCH_HEAD"]);
-	assert!(
-		!ci.join(".git/refs/remotes/origin/HEAD").exists(),
-		"this shape should have no recorded remote HEAD"
-	);
-	std::fs::write(ci.join("migrations/002_new.sql"), "SELECT   a,b FROM t2;\n")
-		.expect("write");
-	let output = squill().arg("fmt").arg(&ci).output().expect("run");
-	assert!(output.status.success());
-	assert!(
-		String::from_utf8_lossy(&output.stderr).contains("1 frozen"),
-		"the remote's HEAD was not consulted: {}",
-		String::from_utf8_lossy(&output.stderr)
-	);
-	assert_eq!(
-		std::fs::read_to_string(ci.join("migrations/001_old.sql")).expect("read"),
-		shipped
-	);
-
-	// With no recorded HEAD and no fetching there is nothing
-	// authoritative left, so squill refuses rather than infer a baseline
-	// from whichever branches happen to be present.
-	let output =
-		squill().args(["fmt", "--no-frozen-fetch"]).arg(&ci).output().expect("run");
-	assert_eq!(output.status.code(), Some(2));
-	assert!(
-		String::from_utf8_lossy(&output.stderr)
-			.contains("--no-frozen-fetch is in effect"),
-		"got: {}",
-		String::from_utf8_lossy(&output.stderr)
-	);
-	let _ = std::fs::remove_dir_all(work.parent().expect("parent"));
-}
-
-/// Fetching is on by default, and the remote's own HEAD beats the local
-/// refs. Both matter in CI: a pull-request checkout has no base branch
-/// ref at all, and a push build of a topic branch has one that is *not*
-/// the baseline — trusting it would freeze files that never shipped.
-#[test]
-fn frozen_fetch_defaults_on_and_prefers_the_remote_head() {
-	let dir = temp_dir("frozenfetch");
-	let upstream = dir.join("upstream");
-	std::fs::create_dir_all(upstream.join("migrations")).expect("mkdir");
-	git(&upstream, &["init", "-q", "--initial-branch=main", "."]);
-	std::fs::write(
-		upstream.join("squill.toml"),
-		"frozen = [\"migrations/**\"]\n",
-	)
-	.expect("write");
-	std::fs::write(upstream.join("migrations/001_main.sql"), "SELECT   1;\n")
-		.expect("write");
-	git(&upstream, &["add", "-A"]);
-	git(&upstream, &["commit", "-qm", "base"]);
-
-	// A topic branch adds a migration that has not reached main.
-	git(&upstream, &["checkout", "-q", "-b", "topic"]);
-	std::fs::write(
-		upstream.join("migrations/002_topic.sql"),
-		"SELECT   2,3 FROM t;\n",
-	)
-	.expect("write");
-	git(&upstream, &["add", "-A"]);
-	git(&upstream, &["commit", "-qm", "topic"]);
-	// The remote's HEAD must be main, as it would be on a real forge.
-	git(&upstream, &["checkout", "-q", "main"]);
-	let topic = String::from_utf8(
-		Command::new("git")
-			.current_dir(&upstream)
-			.args(["rev-parse", "topic"])
-			.output()
-			.expect("git")
-			.stdout,
-	)
-	.expect("utf8");
-	let topic = topic.trim().to_string();
-
-	// A push build of the topic branch: one remote-tracking ref, and it
-	// is the topic branch, not the baseline.
-	let build = |name: &str| -> std::path::PathBuf {
-		let work = dir.join(name);
-		std::fs::create_dir_all(&work).expect("mkdir");
-		git(&work, &["init", "-q", "."]);
-		git(&work, &["remote", "add", "origin", upstream.to_str().expect("utf8")]);
-		git(
-			&work,
-			&[
-				"fetch",
-				"-q",
-				"--no-tags",
-				"--depth=1",
-				"origin",
-				&format!("+{topic}:refs/remotes/origin/topic"),
-			],
-		);
-		git(&work, &["checkout", "-q", "-b", "work", "FETCH_HEAD"]);
-		work
-	};
-
-	let shipped = "SELECT   2,3 FROM t;\n";
-
-	// Default: the remote says HEAD is main, so only 001 is frozen and
-	// the topic branch's own migration still formats.
-	let work = build("bydefault");
-	let output = squill().arg("fmt").arg(&work).output().expect("run");
-	assert!(output.status.success());
-	assert!(
-		String::from_utf8_lossy(&output.stderr).contains("1 frozen"),
-		"expected only the main-branch migration frozen: {}",
-		String::from_utf8_lossy(&output.stderr)
-	);
-	assert_eq!(
-		std::fs::read_to_string(work.join("migrations/002_topic.sql"))
-			.expect("read"),
-		"select 2, 3 from t;\n",
-		"a migration that never reached the baseline should still format"
-	);
-
-	// --no-frozen-fetch has nothing authoritative to fall back on here, so
-	// it refuses. The tempting guess — the one remote-tracking ref — is
-	// the topic branch, and taking it would freeze 002.
-	let work = build("nofetch");
-	let output = squill()
-		.args(["fmt", "--no-frozen-fetch"])
-		.arg(&work)
-		.output()
-		.expect("run");
-	assert_eq!(output.status.code(), Some(2));
-	assert!(
-		String::from_utf8_lossy(&output.stderr)
-			.contains("--no-frozen-fetch is in effect"),
-		"got: {}",
-		String::from_utf8_lossy(&output.stderr)
-	);
-	assert_eq!(
-		std::fs::read_to_string(work.join("migrations/002_topic.sql"))
-			.expect("read"),
-		shipped,
-		"a refused run must not rewrite anything"
-	);
-
-	// Naming the ref explicitly is the supported way through.
-	let output = squill()
-		.args(["fmt", "--no-frozen-fetch", "--frozen-ref", "origin/topic"])
-		.arg(&work)
-		.output()
-		.expect("run");
+	.expect("write lua");
+	let output = squill().arg("fmt").arg(&dir).output().expect("run");
 	assert!(
 		output.status.success(),
 		"{}",
 		String::from_utf8_lossy(&output.stderr)
 	);
+	assert_eq!(
+		std::fs::read_to_string(&file).expect("read"),
+		"local function migrate(db)\n  db:exec([[\n  create table t (\n    id integer primary key,\n    a text\n  )\n  ]])\n  db:exec(\"SELECT   1\")\nend\n"
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
 
-	// A pull-request checkout has nothing under refs/remotes/<remote>/.
-	let pr = dir.join("pr");
-	std::fs::create_dir_all(&pr).expect("mkdir");
-	git(&pr, &["init", "-q", "."]);
-	git(&pr, &["remote", "add", "origin", upstream.to_str().expect("utf8")]);
-	git(
-		&pr,
-		&[
-			"fetch",
-			"-q",
-			"--no-tags",
-			"--depth=1",
-			"origin",
-			&format!("+{topic}:refs/remotes/pull/7/merge"),
-		],
-	);
-	git(&pr, &["checkout", "-q", "-b", "work", "FETCH_HEAD"]);
-	let output = squill().arg("fmt").arg(&pr).output().expect("run");
-	assert!(
-		output.status.success(),
-		"a pull-request checkout should work without extra flags: {}",
-		String::from_utf8_lossy(&output.stderr)
-	);
-	assert!(String::from_utf8_lossy(&output.stderr).contains("1 frozen"));
-	// And with fetching off there is genuinely nothing to go on.
-	let output =
-		squill().args(["fmt", "--no-frozen-fetch"]).arg(&pr).output().expect("run");
+/// A wasm grammar has no default query to fall back on.
+#[cfg(feature = "wasm")]
+#[test]
+fn wasm_grammars_need_a_query() {
+	let dir = temp_dir("wasmnoquery");
+	let grammar = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+		.join("tests/fixtures/grammars/tree-sitter-lua.wasm");
+	std::fs::write(
+		dir.join("squill.toml"),
+		format!(
+			"[[embedded]]\ninclude = [\"*.lua\"]\ngrammar = \"{}\"\n",
+			grammar.display()
+		),
+	)
+	.expect("write config");
+	std::fs::write(dir.join("db.lua"), "print(1)\n").expect("write lua");
+	let output = squill().arg("fmt").arg(&dir).output().expect("run");
 	assert_eq!(output.status.code(), Some(2));
 	assert!(
 		String::from_utf8_lossy(&output.stderr)
-			.contains("--no-frozen-fetch is in effect"),
-		"got: {}",
+			.contains("give its [[embedded]] rule a `query`"),
+		"{}",
 		String::from_utf8_lossy(&output.stderr)
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// JDBC's `?` is on for Java and Kotlin unless configured; elsewhere
+/// it is opt-in, by key or flag.
+#[test]
+fn question_params_default_by_grammar_and_configure() {
+	let dir = temp_dir("questionparams");
+	let java = "class A {\n    void m() {\n        conn.prepareStatement(\"\"\"\n            SELECT id FROM users WHERE org = ?\n            \"\"\");\n    }\n}\n";
+	std::fs::write(dir.join("A.java"), java).expect("write");
+	std::fs::write(dir.join("q.sql"), "SELECT id FROM users WHERE org = ?;\n")
+		.expect("write");
+	let rule = "[[embedded]]\ninclude = [\"*.java\"]\ngrammar = \"java\"\n";
+
+	// Off by the rule: the `?` no longer lexes, so the string is left
+	// alone and reported.
+	std::fs::write(
+		dir.join("squill.toml"),
+		format!("{rule}question-params = false\n"),
+	)
+	.expect("write config");
+	let output =
+		squill().arg("fmt").arg(dir.join("A.java")).output().expect("run");
+	assert!(String::from_utf8_lossy(&output.stderr).contains("did not parse"));
+	assert_eq!(std::fs::read_to_string(dir.join("A.java")).expect("read"), java);
+
+	// The grammar's default.
+	std::fs::write(dir.join("squill.toml"), rule).expect("write config");
+	let output = squill().arg("fmt").arg(&dir).output().expect("run");
+	assert!(output.status.success());
+	assert!(
+		std::fs::read_to_string(dir.join("A.java"))
+			.expect("read")
+			.contains("        where org = ?\n"),
+	);
+	// Not for plain SQL, where it takes the key or the flag.
+	assert_eq!(
+		std::fs::read_to_string(dir.join("q.sql")).expect("read"),
+		"SELECT id FROM users WHERE org = ?;\n"
+	);
+	let status = squill()
+		.args(["fmt", "--question-params"])
+		.arg(dir.join("q.sql"))
+		.status()
+		.expect("run");
+	assert!(status.success());
+	assert_eq!(
+		std::fs::read_to_string(dir.join("q.sql")).expect("read"),
+		"select id from users where org = ?;\n"
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Run `squill init` in `dir` (no terminal, so no questions), returning
+/// its exit code and stderr.
+fn init_in(dir: &std::path::Path, extra: &[&str]) -> (Option<i32>, String) {
+	let output = squill()
+		.current_dir(dir)
+		.arg("init")
+		.args(extra)
+		.stdin(Stdio::null())
+		.output()
+		.expect("run");
+	(output.status.code(), String::from_utf8_lossy(&output.stderr).into_owned())
+}
+
+/// Without a terminal, init takes the defaults: every language whose
+/// default query finds SQL, in the `--dialect` dialect.
+#[test]
+fn init_defaults_to_the_languages_that_hold_sql() {
+	let dir = temp_dir("init");
+	std::fs::write(dir.join("q.rs"), RS_FIXTURE).expect("write");
+	std::fs::write(
+		dir.join("q.go"),
+		"package main\n\nfunc f(db *sql.DB) {\n\tdb.Exec(`DELETE FROM t`)\n}\n",
+	)
+	.expect("write");
+	// Python without any SQL: not chosen.
+	std::fs::write(dir.join("app.py"), "print('hello')\n").expect("write");
+
+	let (code, stderr) = init_in(&dir, &["--dialect", "sqlite"]);
+	assert_eq!(code, Some(0), "{stderr}");
+	assert!(
+		stderr.contains("Formatting SQL in Rust: found 1 SQL string in 1 file."),
+		"{stderr}"
+	);
+	assert!(!stderr.contains("Python"), "{stderr}");
+	assert_eq!(
+		std::fs::read_to_string(dir.join("squill.toml")).expect("read"),
+		"# squill configuration: https://mckayla.dev/squill/docs/configuration/\n\n\
+		 dialect = \"sqlite\"\n\n\
+		 [[embedded]]\ninclude = [\"**/*.rs\"]\ngrammar = \"rust\"\n\n\
+		 [[embedded]]\ninclude = [\"**/*.go\"]\ngrammar = \"go\"\n"
+	);
+
+	// The config it wrote is one `fmt` accepts, and it formats the Go.
+	let status = squill().arg("fmt").arg(&dir).status().expect("run");
+	assert!(status.success());
+	assert!(
+		std::fs::read_to_string(dir.join("q.go"))
+			.expect("read")
+			.contains("delete from t"),
+	);
+
+	// A second run refuses to overwrite it.
+	let (code, stderr) = init_in(&dir, &[]);
+	assert_eq!(code, Some(2));
+	assert!(stderr.contains("already exists"), "{stderr}");
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A new project: nothing to find, so just the dialect.
+#[test]
+fn init_in_an_empty_project() {
+	let dir = temp_dir("initempty");
+	let (code, stderr) = init_in(&dir, &["--yes"]);
+	assert_eq!(code, Some(0), "{stderr}");
+	assert_eq!(
+		std::fs::read_to_string(dir.join("squill.toml")).expect("read"),
+		"# squill configuration: https://mckayla.dev/squill/docs/configuration/\n\ndialect = \"postgres\"\n"
 	);
 	let _ = std::fs::remove_dir_all(&dir);
 }

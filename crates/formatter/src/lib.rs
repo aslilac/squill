@@ -60,6 +60,10 @@ pub struct Options {
 	/// Python DB-API `pyformat` parameters (`%s`, `%(name)s`); set by
 	/// embedding for Python hosts. Not part of the CLI/config surface.
 	pub pyformat_params: bool,
+	/// JDBC-style `?` placeholders in Postgres (see
+	/// [`LexOptions::question_params`]); used when re-lexing for the
+	/// safety check.
+	pub question_params: bool,
 	/// Never collapse a statement onto one line (clause-per-line even
 	/// when it would fit). Used by embedding for multi-line string
 	/// literals, where the author already chose a vertical layout. Not
@@ -78,6 +82,7 @@ impl Default for Options {
 			dialect: Dialect::default(),
 			at_params: false,
 			pyformat_params: false,
+			question_params: false,
 			always_break_statements: false,
 		}
 	}
@@ -88,6 +93,7 @@ impl Options {
 		LexOptions {
 			at_params: self.at_params,
 			pyformat_params: self.pyformat_params,
+			question_params: self.question_params,
 		}
 	}
 }
@@ -242,25 +248,11 @@ enum BodyLang {
 	Plpgsql,
 }
 
-/// Recursively format procedural dollar-quoted bodies inside a rendered
-/// statement, re-anchoring them to the statement's indentation.
-/// `LANGUAGE sql` bodies use the SQL grammar (TREE-101); `LANGUAGE
-/// plpgsql` bodies and `DO` blocks (plpgsql by default) use the PL/pgSQL
-/// grammar (TREE-103). Every splice is individually guarded: a body that
-/// fails to parse, trips the self-check, or would collide with its own
-/// tag is left untouched.
-fn splice_sql_bodies(statement: &str, options: &Options, depth: u32) -> String {
-	if depth >= MAX_BODY_DEPTH {
-		return statement.to_string();
-	}
-	let lex_options = options.lex_options();
-	let tokens = parser::lexer::lex_with(statement, options.dialect, lex_options);
-
-	// The statement's language marker: `LANGUAGE sql` / `LANGUAGE
-	// plpgsql` (position-independent; LANGUAGE may precede or follow AS).
-	// A `DO` statement without a marker defaults to plpgsql.
-	let non_trivia: Vec<_> =
-		tokens.iter().filter(|t| !t.kind.is_trivia()).collect();
+/// The body grammar of a statement's dollar-quoted strings, if it has
+/// procedural bodies at all: its `LANGUAGE sql` / `LANGUAGE plpgsql`
+/// marker (position-independent; LANGUAGE may precede or follow AS), or
+/// plpgsql for a `DO` statement without one.
+fn body_lang(non_trivia: &[&parser::lexer::Token<'_>]) -> Option<BodyLang> {
 	let marker =
 		non_trivia.iter().zip(non_trivia.iter().skip(1)).find_map(|(a, b)| {
 			if a.kind == SyntaxKind::Ident
@@ -278,16 +270,100 @@ fn splice_sql_bodies(statement: &str, options: &Options, depth: u32) -> String {
 				None
 			}
 		});
-	let lang = match marker {
-		Some(lang) => lang,
-		None
-			if non_trivia
-				.first()
-				.is_some_and(|t| t.text.eq_ignore_ascii_case("do")) =>
-		{
-			BodyLang::Plpgsql
+	marker.or_else(|| {
+		non_trivia
+			.first()
+			.is_some_and(|t| t.text.eq_ignore_ascii_case("do"))
+			.then_some(BodyLang::Plpgsql)
+	})
+}
+
+/// Byte offsets of the lines in formatted `sql` whose leading whitespace
+/// is part of a value: lines that begin inside a string, quoted
+/// identifier, or dollar-quoted string spanning lines. Re-indenting
+/// those (to anchor SQL inside a host file, say) would change the data.
+/// Procedural bodies are the exception — their layout is the
+/// formatter's own — though a value spanning lines inside one is not.
+pub fn verbatim_line_starts(
+	sql: &str,
+	options: &Options,
+) -> std::collections::HashSet<usize> {
+	let mut out = std::collections::HashSet::new();
+	collect_verbatim_lines(sql, 0, options, 0, &mut out);
+	out
+}
+
+fn collect_verbatim_lines(
+	sql: &str,
+	base: usize,
+	options: &Options,
+	depth: u32,
+	out: &mut std::collections::HashSet<usize>,
+) {
+	let tokens =
+		parser::lexer::lex_with(sql, options.dialect, options.lex_options());
+	let mut offsets = Vec::with_capacity(tokens.len());
+	let mut offset = 0;
+	for token in &tokens {
+		offsets.push(offset);
+		offset += token.text.len();
+	}
+	// Statement by statement, since the body marker is per statement.
+	let mut start = 0;
+	while start < tokens.len() {
+		let end = tokens[start..]
+			.iter()
+			.position(|t| t.kind == SyntaxKind::Semicolon)
+			.map_or(tokens.len(), |at| start + at + 1);
+		let statement = &tokens[start..end];
+		let non_trivia: Vec<_> =
+			statement.iter().filter(|t| !t.kind.is_trivia()).collect();
+		let lang = body_lang(&non_trivia);
+		for (index, token) in statement.iter().enumerate() {
+			if token.kind.is_trivia() || !token.text.contains('\n') {
+				continue;
+			}
+			let at = base + offsets[start + index];
+			if token.kind == SyntaxKind::DollarString
+				&& lang.is_some()
+				&& depth < MAX_BODY_DEPTH
+				&& let Some((tag, content)) = check::split_dollar(token.text)
+			{
+				collect_verbatim_lines(
+					content,
+					at + tag.len(),
+					options,
+					depth + 1,
+					out,
+				);
+				continue;
+			}
+			for (newline, _) in token.text.match_indices('\n') {
+				out.insert(at + newline + 1);
+			}
 		}
-		None => return statement.to_string(),
+		start = end;
+	}
+}
+
+/// Recursively format procedural dollar-quoted bodies inside a rendered
+/// statement, re-anchoring them to the statement's indentation.
+/// `LANGUAGE sql` bodies use the SQL grammar (TREE-101); `LANGUAGE
+/// plpgsql` bodies and `DO` blocks (plpgsql by default) use the PL/pgSQL
+/// grammar (TREE-103). Every splice is individually guarded: a body that
+/// fails to parse, trips the self-check, or would collide with its own
+/// tag is left untouched.
+fn splice_sql_bodies(statement: &str, options: &Options, depth: u32) -> String {
+	if depth >= MAX_BODY_DEPTH {
+		return statement.to_string();
+	}
+	let lex_options = options.lex_options();
+	let tokens = parser::lexer::lex_with(statement, options.dialect, lex_options);
+
+	let non_trivia: Vec<_> =
+		tokens.iter().filter(|t| !t.kind.is_trivia()).collect();
+	let Some(lang) = body_lang(&non_trivia) else {
+		return statement.to_string();
 	};
 
 	// Collect (offset, token) for dollar-quoted bodies.

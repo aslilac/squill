@@ -9,6 +9,8 @@ publish = false
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+# Only the grammars the playground offers: the larger built-ins would
+# triple the download.
 embed = { workspace = true }
 formatter = { workspace = true }
 parser = { workspace = true }

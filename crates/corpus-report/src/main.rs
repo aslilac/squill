@@ -18,8 +18,11 @@ use parser::lexer::LexOptions;
 use parser::syntax::SyntaxKind;
 
 /// The coder corpus is sqlc SQL: `@name` params enabled.
-const LEX_OPTIONS: LexOptions =
-	LexOptions { at_params: true, pyformat_params: false };
+const LEX_OPTIONS: LexOptions = LexOptions {
+	at_params: true,
+	pyformat_params: false,
+	question_params: false,
+};
 
 /// Pipeline stages, in order.
 const STAGES: [&str; 3] = ["lex", "parse", "emit"];

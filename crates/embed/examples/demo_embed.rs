@@ -21,11 +21,11 @@ async fn touch(pool: &PgPool, id: Uuid) -> sqlx::Result<()> {
 "##;
 	let out = embed::format_embedded(
 		src,
-		embed::Host::Rust,
+		&embed::Host::Rust.into(),
 		embed::RUST_SQLX_QUERY,
 		&Default::default(),
 		embed::Indent::default(),
 	)
 	.unwrap();
-	print!("{out}");
+	print!("{}", out.text);
 }

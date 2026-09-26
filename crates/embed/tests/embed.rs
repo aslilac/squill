@@ -1,15 +1,25 @@
 //! TREE-100 acceptance: embedded-SQL formatting through tree-sitter
 //! extraction queries. Only multiline string *syntaxes* (Rust raw
 //! strings, Go backticks, Python triple quotes, JS/TS templates, Gleam
-//! strings) are reformatted, quotes on their own lines; plain quoted
-//! strings stay byte-identical, as do f-strings and `${}` templates
-//! (SQL with holes).
+//! strings, and the raw strings / text blocks of C++, C#, Java, and
+//! Kotlin) are reformatted, quotes on their own lines. Plain Rust and Go
+//! strings join them once they already hold a line break, rewritten as
+//! raw strings; single-line ones stay byte-identical, as do f-strings
+//! and `${}` templates (SQL with holes).
 
+#[cfg(feature = "cpp")]
+use embed::CPP_SQL_QUERY;
+#[cfg(feature = "csharp")]
+use embed::CSHARP_SQL_QUERY;
 use embed::GLEAM_SQL_QUERY;
 use embed::GO_DB_QUERY;
 use embed::Host;
 use embed::Indent;
+#[cfg(feature = "java")]
+use embed::JAVA_SQL_QUERY;
 use embed::JS_SQL_QUERY;
+#[cfg(feature = "kotlin")]
+use embed::KOTLIN_SQL_QUERY;
 use embed::PYTHON_DB_QUERY;
 use embed::RUST_SQLX_QUERY;
 use embed::format_embedded;
@@ -32,12 +42,13 @@ fn rust_sqlx_fixture_formats_and_still_compiles() {
 		std::fs::read_to_string(fixture.join("src/lib.rs")).expect("read fixture");
 	let formatted = format_embedded(
 		&source,
-		Host::Rust,
+		&Host::Rust.into(),
 		RUST_SQLX_QUERY,
 		&options(),
 		Indent::FromHost,
 	)
-	.expect("format");
+	.expect("format")
+	.text;
 
 	// The multi-line query formats, quotes on their own lines.
 	assert!(
@@ -81,12 +92,13 @@ fn rust_sqlx_fixture_formats_and_still_compiles() {
 	// Idempotence at the host-file level.
 	let twice = format_embedded(
 		&formatted,
-		Host::Rust,
+		&Host::Rust.into(),
 		RUST_SQLX_QUERY,
 		&options(),
 		Indent::FromHost,
 	)
-	.expect("format");
+	.expect("format")
+	.text;
 	assert_eq!(twice, formatted, "host-file formatting must be idempotent");
 
 	// The formatted fixture still compiles: copy the crate, substitute
@@ -128,12 +140,13 @@ fn single_line_plain_strings_stay_untouched() {
 	let source = "fn main() {\n    let q = sqlx::query!(\"SELECT   id FROM t WHERE x = $1\");\n}\n";
 	let formatted = format_embedded(
 		source,
-		Host::Rust,
+		&Host::Rust.into(),
 		RUST_SQLX_QUERY,
 		&options(),
 		Indent::FromHost,
 	)
-	.expect("format");
+	.expect("format")
+	.text;
 	assert_eq!(formatted, source);
 }
 
@@ -144,12 +157,13 @@ fn single_line_raw_strings_reformat_vertically() {
 	let source = "fn main() {\n    let q = sqlx::query!(\n        r#\"delete from team_auto_add_rules where team_id = $1 and id = $2\"#\n    );\n}\n";
 	let formatted = format_embedded(
 		source,
-		Host::Rust,
+		&Host::Rust.into(),
 		RUST_SQLX_QUERY,
 		&options(),
 		Indent::FromHost,
 	)
-	.expect("format");
+	.expect("format")
+	.text;
 	assert_eq!(
 		formatted,
 		"fn main() {\n    let q = sqlx::query!(\n        r#\"\n        delete from team_auto_add_rules\n        where team_id = $1 and id = $2\n        \"#\n    );\n}\n"
@@ -157,12 +171,13 @@ fn single_line_raw_strings_reformat_vertically() {
 	// Idempotent.
 	let twice = format_embedded(
 		&formatted,
-		Host::Rust,
+		&Host::Rust.into(),
 		RUST_SQLX_QUERY,
 		&options(),
 		Indent::FromHost,
 	)
-	.expect("format");
+	.expect("format")
+	.text;
 	assert_eq!(twice, formatted);
 }
 
@@ -171,12 +186,13 @@ fn multiline_literal_gets_quotes_on_own_lines() {
 	let source = "fn main() {\n    let q = sqlx::query!(\n        r#\"SELECT id,name FROM users\n        WHERE org = $1 ORDER BY name\"#\n    );\n}\n";
 	let formatted = format_embedded(
 		source,
-		Host::Rust,
+		&Host::Rust.into(),
 		RUST_SQLX_QUERY,
 		&options(),
 		Indent::FromHost,
 	)
-	.expect("format");
+	.expect("format")
+	.text;
 	// Multi-line literals stay clause-per-line even when the SQL would
 	// fit on one line.
 	assert_eq!(
@@ -187,29 +203,149 @@ fn multiline_literal_gets_quotes_on_own_lines() {
 	// Idempotent.
 	let twice = format_embedded(
 		&formatted,
-		Host::Rust,
+		&Host::Rust.into(),
 		RUST_SQLX_QUERY,
 		&options(),
 		Indent::FromHost,
 	)
-	.expect("format");
+	.expect("format")
+	.text;
 	assert_eq!(twice, formatted);
 }
 
 #[test]
-fn plain_strings_never_reformat() {
-	// Plain `"..."` syntax is single-line-with-escapes territory: left
-	// byte-identical even when the content already spans lines.
-	let source = "fn f() { sqlx::query!(\"SELECT 'it''s' AS s, \\\"Weird\\\" FROM t\nWHERE x = $1\"); }";
+fn multiline_plain_strings_become_raw_strings() {
+	// A plain `"..."` that already spans lines is rewritten as a raw
+	// string, so quotes and backslashes need no escaping.
+	let source = "fn f() {\n    sqlx::query!(\"SELECT 'it''s' AS s, \\\"Weird\\\" FROM t\n    WHERE x = $1\");\n}\n";
 	let formatted = format_embedded(
 		source,
-		Host::Rust,
+		&Host::Rust.into(),
+		RUST_SQLX_QUERY,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format")
+	.text;
+	assert_eq!(
+		formatted,
+		"fn f() {\n    sqlx::query!(r#\"\n    select 'it''s' as s, \"Weird\"\n    from t\n    where x = $1\n    \"#);\n}\n"
+	);
+}
+
+#[test]
+fn escaped_newlines_count_as_multiline() {
+	// `\n` escapes are a line break too; so is a continuation.
+	let source = "fn f() {\n    sqlx::query!(\"select a\\nfrom t\");\n    sqlx::query!(\"select b \\\n        from t\");\n}\n";
+	let formatted = format_embedded(
+		source,
+		&Host::Rust.into(),
+		RUST_SQLX_QUERY,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format")
+	.text;
+	assert_eq!(
+		formatted,
+		"fn f() {\n    sqlx::query!(r#\"\n    select a\n    from t\n    \"#);\n    sqlx::query!(r#\"\n    select b\n    from t\n    \"#);\n}\n"
+	);
+}
+
+#[test]
+fn rust_query_functions_use_the_session_dialect() {
+	// `db::query(...)` (atuin's wrapper) and `sqlx::query_as::<_, T>(...)`
+	// are function calls, not macros; the default query finds both, and
+	// bare `@sql` captures follow the configured dialect.
+	let source = "fn f() {\n    db::query(\"select id from t\n        where x = ?1 limit 1\");\n    sqlx::query_as::<_, Row>(r#\"select 1\"#);\n}\n";
+	let mut options = options();
+	options.dialect = parser::Dialect::Sqlite;
+	let formatted = format_embedded(
+		source,
+		&Host::Rust.into(),
+		RUST_SQLX_QUERY,
+		&options,
+		Indent::FromHost,
+	)
+	.expect("format");
+	assert!(
+		formatted.text.contains(
+			"db::query(r#\"\n    select id\n    from t\n    where x = ?1\n"
+		),
+		"{}",
+		formatted.text
+	);
+	assert!(
+		formatted.text.contains("query_as::<_, Row>(r#\"\n    select 1\n    \"#)"),
+		"{}",
+		formatted.text
+	);
+}
+
+#[test]
+fn unparsable_sql_is_reported_not_rewritten() {
+	let source =
+		"fn f() {\n    sqlx::query!(r#\"selec nonsense\n    from\"#);\n}\n";
+	let formatted = format_embedded(
+		source,
+		&Host::Rust.into(),
 		RUST_SQLX_QUERY,
 		&options(),
 		Indent::FromHost,
 	)
 	.expect("format");
-	assert_eq!(formatted, source);
+	assert_eq!(formatted.text, source);
+	assert_eq!(formatted.warnings.len(), 1, "{:?}", formatted.warnings);
+	let warning = &formatted.warnings[0];
+	assert_eq!(&source[warning.offset..warning.offset + 3], "r#\"");
+	assert!(warning.message.contains("did not parse"), "{}", warning.message);
+}
+
+#[test]
+fn edits_the_query_cannot_read_back_are_dropped() {
+	// This query only knows plain strings. Formatting turns one into a
+	// raw string the query no longer captures, so the re-parse check
+	// refuses the edit and says so.
+	let query = r#"((macro_invocation (token_tree (string_literal) @sql)))"#;
+	let source = "fn f() {\n    sqlx::query!(\"select 1\n    from t\");\n}\n";
+	let formatted = format_embedded(
+		source,
+		&Host::Rust.into(),
+		query,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format");
+	assert_eq!(formatted.text, source);
+	assert_eq!(formatted.warnings.len(), 1, "{:?}", formatted.warnings);
+	assert!(
+		formatted.warnings[0].message.contains("change how the rust file parses"),
+		"{}",
+		formatted.warnings[0].message
+	);
+}
+
+#[test]
+fn go_multiline_interpreted_strings_become_raw_strings() {
+	let source = "package main\n\nfunc f(db *sql.DB) {\n\tdb.Exec(\"DELETE FROM t\\nWHERE id = $1\")\n\tdb.Exec(\"DELETE FROM `t`\\nWHERE id = $1\")\n}\n";
+	let formatted = format_embedded(
+		source,
+		&Host::Go.into(),
+		GO_DB_QUERY,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format");
+	assert!(
+		formatted
+			.text
+			.contains("db.Exec(`\n\tdelete from t\n\twhere id = $1\n\t`)"),
+		"{}",
+		formatted.text
+	);
+	// A backtick has no raw-string spelling: left alone, with a warning.
+	assert!(formatted.text.contains("\"DELETE FROM `t`\\nWHERE id = $1\""));
+	assert_eq!(formatted.warnings.len(), 1, "{:?}", formatted.warnings);
 }
 
 #[test]
@@ -217,7 +353,7 @@ fn match_predicate_is_rejected() {
 	let query = r#"((identifier) @sql (#match? @sql "q.*"))"#;
 	let err = format_embedded(
 		"fn main() {}",
-		Host::Rust,
+		&Host::Rust.into(),
 		query,
 		&options(),
 		Indent::FromHost,
@@ -232,12 +368,13 @@ fn go_smoke_test() {
         .to_string();
 	let formatted = format_embedded(
 		&source,
-		Host::Go,
+		&Host::Go.into(),
 		GO_DB_QUERY,
 		&options(),
 		Indent::FromHost,
 	)
-	.expect("format");
+	.expect("format")
+	.text;
 	assert!(
 		formatted.contains(
 			"`\n\tselect id, name\n\tfrom users\n\twhere active\n\torder by name\n\t`"
@@ -253,12 +390,13 @@ fn go_smoke_test() {
 	// Idempotent.
 	let twice = format_embedded(
 		&formatted,
-		Host::Go,
+		&Host::Go.into(),
 		GO_DB_QUERY,
 		&options(),
 		Indent::FromHost,
 	)
-	.expect("format");
+	.expect("format")
+	.text;
 	assert_eq!(twice, formatted);
 }
 
@@ -267,12 +405,13 @@ fn python_smoke_test() {
 	let source = "def load(cur, uid):\n    cur.execute(\"\"\"SELECT id,name FROM users WHERE org=%s AND status=%(status)s ORDER BY name\"\"\", args)\n    cur.execute(\"SELECT   1\")\n    cur.execute(f\"SELECT {tbl}\")\n    cur.execute(b\"SELECT 2\")\n";
 	let formatted = format_embedded(
 		source,
-		Host::Python,
+		&Host::Python.into(),
 		PYTHON_DB_QUERY,
 		&options(),
 		Indent::FromHost,
 	)
-	.expect("format");
+	.expect("format")
+	.text;
 	// Triple-quoted strings take the vertical shape; pyformat params
 	// survive byte-exact.
 	assert!(
@@ -288,12 +427,13 @@ fn python_smoke_test() {
 	// Idempotent.
 	let twice = format_embedded(
 		&formatted,
-		Host::Python,
+		&Host::Python.into(),
 		PYTHON_DB_QUERY,
 		&options(),
 		Indent::FromHost,
 	)
-	.expect("format");
+	.expect("format")
+	.text;
 	assert_eq!(twice, formatted);
 }
 
@@ -302,12 +442,13 @@ fn js_smoke_test() {
 	let source = "async function f(db, id) {\n  await db.query(`SELECT id,name FROM users WHERE org = $1 ORDER BY name`, [id]);\n  const r = await sql`SELECT count(*) FROM api_keys WHERE user_id = ${id}`;\n  const t = sql`SELECT   3`;\n  db.query('SELECT   2');\n}\n";
 	let formatted = format_embedded(
 		source,
-		Host::JavaScript,
+		&Host::JavaScript.into(),
 		JS_SQL_QUERY,
 		&options(),
 		Indent::FromHost,
 	)
-	.expect("format");
+	.expect("format")
+	.text;
 	// Template literals take the vertical shape.
 	assert!(
 		formatted.contains(
@@ -326,12 +467,13 @@ fn js_smoke_test() {
 	// Idempotent.
 	let twice = format_embedded(
 		&formatted,
-		Host::JavaScript,
+		&Host::JavaScript.into(),
 		JS_SQL_QUERY,
 		&options(),
 		Indent::FromHost,
 	)
-	.expect("format");
+	.expect("format")
+	.text;
 	assert_eq!(twice, formatted);
 }
 
@@ -340,20 +482,27 @@ fn typescript_smoke_test() {
 	let source = "const f = async (db: Db): Promise<Row[]> =>\n  db.query(`SELECT id FROM t WHERE  x = $1`);\n";
 	let formatted = format_embedded(
 		source,
-		Host::TypeScript,
+		&Host::TypeScript.into(),
 		JS_SQL_QUERY,
 		&options(),
 		Indent::FromHost,
 	)
-	.expect("format");
+	.expect("format")
+	.text;
 	assert!(
 		formatted.contains("`\n  select id\n  from t\n  where x = $1\n  `"),
 		"ts template not formatted: {formatted}"
 	);
 	let tsx = "export const List = () => {\n  const rows = db.query(`SELECT id,name FROM t`);\n  return <ul>{rows.map((r) => <li key={r.id}>{r.name}</li>)}</ul>;\n};\n";
-	let formatted =
-		format_embedded(tsx, Host::Tsx, JS_SQL_QUERY, &options(), Indent::FromHost)
-			.expect("format");
+	let formatted = format_embedded(
+		tsx,
+		&Host::Tsx.into(),
+		JS_SQL_QUERY,
+		&options(),
+		Indent::FromHost,
+	)
+	.expect("format")
+	.text;
 	assert!(
 		formatted.contains("`\n  select id, name\n  from t\n  `"),
 		"tsx template not formatted: {formatted}"
@@ -366,12 +515,13 @@ fn gleam_smoke_test() {
 	let source = "pub fn list(db) {\n  sqlight.query(\"select id,name from users where org = ? order by name\", on: db, with: [])\n  pog.query(\"SELECT   1\")\n}\n";
 	let formatted = format_embedded(
 		source,
-		Host::Gleam,
+		&Host::Gleam.into(),
 		GLEAM_SQL_QUERY,
 		&options(),
 		Indent::FromHost,
 	)
-	.expect("format");
+	.expect("format")
+	.text;
 	// sqlight is SQLite: `?` params lex; strings take the vertical shape.
 	assert!(
 		formatted.contains(
@@ -384,11 +534,178 @@ fn gleam_smoke_test() {
 	// Idempotent.
 	let twice = format_embedded(
 		&formatted,
-		Host::Gleam,
+		&Host::Gleam.into(),
 		GLEAM_SQL_QUERY,
 		&options(),
 		Indent::FromHost,
 	)
-	.expect("format");
+	.expect("format")
+	.text;
 	assert_eq!(twice, formatted);
+}
+
+/// Format with a host's default query, returning text and warnings.
+fn format_host(host: Host, query: &str, source: &str) -> embed::Embedded {
+	// The CLI's default for the host's placeholders.
+	let mut options = options();
+	options.question_params = host.uses_question_params();
+	let formatted =
+		format_embedded(source, &host.into(), query, &options, Indent::FromHost)
+			.expect("format");
+	let twice = format_embedded(
+		&formatted.text,
+		&host.into(),
+		query,
+		&options,
+		Indent::FromHost,
+	)
+	.expect("format");
+	assert_eq!(twice.text, formatted.text, "not idempotent");
+	formatted
+}
+
+#[cfg(feature = "csharp")]
+#[test]
+fn csharp_raw_strings() {
+	let source = r#"class M {
+    void Up(MigrationBuilder b, DbCommand cmd) {
+        b.Sql("""
+            UPDATE BaseItems SET OwnerId = NULL
+              WHERE OwnerId NOT IN (SELECT Id FROM BaseItems);
+            """);
+        cmd.CommandText = """
+            select 1
+        """;
+        b.Sql($"""
+            select {x}
+            """);
+        b.Sql(@"select   1
+            from t");
+    }
+}
+"#;
+	let formatted = format_host(Host::CSharp, CSHARP_SQL_QUERY, source);
+	assert!(
+		formatted.text.contains(
+			"b.Sql(\"\"\"\n        update BaseItems\n        set OwnerId = null\n        where OwnerId not in (select Id from BaseItems);\n        \"\"\");"
+		),
+		"{}",
+		formatted.text
+	);
+	assert!(
+		formatted
+			.text
+			.contains("cmd.CommandText = \"\"\"\n        select 1\n        \"\"\";"),
+		"{}",
+		formatted.text
+	);
+	// Interpolated and verbatim strings are not raw strings: untouched.
+	assert!(formatted.text.contains("$\"\"\"\n            select {x}"));
+	assert!(formatted.text.contains("@\"select   1"));
+	assert!(formatted.warnings.is_empty(), "{:?}", formatted.warnings);
+}
+
+#[cfg(feature = "cpp")]
+#[test]
+fn cpp_raw_strings() {
+	let source = "void f() {\n  sqlite3_prepare_v2(db, R\"sql(\n    SELECT a FROM t LIMIT 1\n  )sql\", -1, &s, 0);\n  txn.exec(R\"(select   1)\");\n}\n";
+	let formatted = format_host(Host::Cpp, CPP_SQL_QUERY, source);
+	// sqlite3_* calls are SQLite; single-line raw strings stay put.
+	assert_eq!(
+		formatted.text,
+		"void f() {\n  sqlite3_prepare_v2(db, R\"sql(\n  select a\n  from t\n  limit 1\n  )sql\", -1, &s, 0);\n  txn.exec(R\"(select   1)\");\n}\n"
+	);
+}
+
+#[cfg(feature = "java")]
+#[test]
+fn java_text_blocks() {
+	let source = "class A {\n    void m() {\n        conn.prepareStatement(\"\"\"\n            SELECT id FROM users WHERE org = ?\n            \"\"\");\n        conn.prepareStatement(\"\"\"\n            SELECT id \\\n            FROM users\n            \"\"\");\n    }\n}\n";
+	let formatted = format_host(Host::Java, JAVA_SQL_QUERY, source);
+	assert!(
+		formatted.text.contains(
+			"prepareStatement(\"\"\"\n        select id\n        from users\n        where org = ?\n        \"\"\");"
+		),
+		"{}",
+		formatted.text
+	);
+	// Text blocks process escapes: one holding a backslash is reported
+	// and left alone.
+	assert!(formatted.text.contains("SELECT id \\\n"));
+	assert_eq!(formatted.warnings.len(), 1, "{:?}", formatted.warnings);
+	assert!(formatted.warnings[0].message.contains("backslash"));
+}
+
+#[cfg(feature = "kotlin")]
+#[test]
+fn kotlin_raw_strings() {
+	let source = "fun m() {\n    db.query(\"\"\"\n        SELECT id FROM users\n    \"\"\", mapper)\n    db.query(\"\"\"\n        SELECT id FROM $table\n    \"\"\")\n}\n";
+	let formatted = format_host(Host::Kotlin, KOTLIN_SQL_QUERY, source);
+	assert!(
+		formatted.text.contains(
+			"db.query(\"\"\"\n    select id\n    from users\n    \"\"\", mapper)"
+		),
+		"{}",
+		formatted.text
+	);
+	// `$table` is a template: never matched.
+	assert!(formatted.text.contains("SELECT id FROM $table"));
+}
+
+#[test]
+fn every_default_query_compiles() {
+	for &host in Host::ALL {
+		let formatted = format_embedded(
+			"",
+			&host.into(),
+			host.default_query(),
+			&options(),
+			Indent::FromHost,
+		);
+		assert!(formatted.is_ok(), "{}: {:?}", host.name(), formatted.err());
+	}
+}
+
+#[test]
+fn multiline_sql_strings_keep_their_value() {
+	// Anchoring indents every SQL line to the host's indentation — except
+	// lines inside a string, whose text is data.
+	let source = "fn f() {\n    sqlx::query!(r#\"insert into t values ('line one\nline two')\"#);\n}\n";
+	let formatted = format_host(Host::Rust, RUST_SQLX_QUERY, source);
+	assert!(
+		formatted.text.contains("'line one\nline two'"),
+		"{}",
+		formatted.text
+	);
+}
+
+#[test]
+fn procedural_bodies_anchor_but_their_strings_do_not() {
+	// A function body's layout is the formatter's own, so it follows the
+	// host's indentation; a string spanning lines inside it is data.
+	let source = "fn f() {\n    sqlx::query!(r#\"create function f() returns void language plpgsql as $$ begin raise notice 'one\ntwo'; end $$;\"#);\n    sqlx::query!(r#\"insert into notes values ($$one\ntwo$$)\"#);\n}\n";
+	let formatted = format_host(Host::Rust, RUST_SQLX_QUERY, source);
+	assert!(
+		formatted.text.contains(
+			"    as $$\n    begin\n      raise notice 'one\ntwo';\n    end\n    $$;\n"
+		),
+		"{}",
+		formatted.text
+	);
+	assert!(formatted.text.contains("$$one\ntwo$$"), "{}", formatted.text);
+}
+
+#[cfg(feature = "csharp")]
+#[test]
+fn column_zero_strings_take_the_files_indent_character() {
+	// No anchor indentation to copy: the file's own indentation decides,
+	// so a spaces-indented file never gains tabs.
+	let source = "class A {\n    void M() {\n        c.Query(\n\"\"\"\n    SELECT key, userId, rating, played, playCount, isFavorite, playbackPositionTicks, lastPlayedDate FROM UserDatas\n\"\"\");\n    }\n}\n";
+	let formatted = format_host(Host::CSharp, CSHARP_SQL_QUERY, source);
+	assert!(!formatted.text.contains('\t'), "{}", formatted.text);
+	assert!(
+		formatted.text.contains("\nselect\n  key,\n  userId,"),
+		"{}",
+		formatted.text
+	);
 }

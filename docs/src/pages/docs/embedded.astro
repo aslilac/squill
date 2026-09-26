@@ -10,51 +10,77 @@ import Docs from "../../layouts/Docs.astro";
 	<section>
 		<h2>What gets formatted</h2>
 		<p>
-			<code>squill fmt src/queries.rs</code> parses the host file with a
-			tree-sitter grammar, runs an extraction query over it to find string
-			literals holding SQL, and reformats those in place. The rest of the file
-			is untouched &mdash; squill never reprints host code, only the string
+			An <a href="docs/configuration/#rules"><code>[[embedded]]</code> rule</a>{" "}
+			tells squill which files hold SQL: it parses them with a tree-sitter
+			grammar, runs an extraction query over the tree to find the strings
+			holding SQL, and reformats those in place. The rest of the file is
+			untouched &mdash; squill never reprints host code, only the string
 			contents it was pointed at.
 		</p>
-		<p>Out of the box:</p>
+		<pre><code>[[embedded]]
+include = ["**/*.rs"]
+grammar = "rust"</code></pre>
+		<p>Built-in grammars, and what their default queries find:</p>
 		<ul>
 			<li>
 				<img style="height: 16px; vertical-align: -2px;" src="langs/rust.svg" alt="" />
-				<code class="boxed">sqlx::query!</code>, <code class="boxed"
-					>query_as!</code
-				>, <code class="boxed">query_scalar!</code>, <code class="boxed"
-					>query_unchecked!</code
-				>
+				<code>rust</code>: sqlx&rsquo;s <code class="boxed">query!</code>,{" "}
+				<code class="boxed">query_as!</code>, <code class="boxed"
+					>query_scalar!</code
+				>, <code class="boxed">query_unchecked!</code> macros and{" "}
+				<code class="boxed">query</code>/<code class="boxed">query_as</code>/<code
+					class="boxed">query_scalar</code
+				> functions
 			</li>
 			<li>
 				<img style="height: 16px; vertical-align: -2px;" src="langs/go.svg" alt="" />
-				<code class="boxed">Query</code>, <code class="boxed">QueryRow</code>,{" "}
-				<code class="boxed">Exec</code> and their <code class="boxed"
-					>Context</code
-				> variants
+				<code>go</code>: <code class="boxed">Query</code>,{" "}
+				<code class="boxed">QueryRow</code>, <code class="boxed">Exec</code> and
+				their <code class="boxed">Context</code> variants
 			</li>
 			<li>
 				<img style="height: 16px; vertical-align: -2px;" src="langs/python.svg" alt="" />
-				<code class="boxed">execute</code>-family methods and SQLAlchemy&rsquo;s{" "}
-				<code class="boxed">text(...)</code>
+				<code>python</code>: <code class="boxed">execute</code>-family methods
+				and SQLAlchemy&rsquo;s <code class="boxed">text(...)</code>, with{" "}
+				<code>%s</code> / <code>%(name)s</code> params preserved
 			</li>
 			<li>
 				<img style="height: 16px; vertical-align: -2px;" src="langs/typescript.svg" alt="" />
+				<code>javascript</code>, <code>typescript</code>, <code>tsx</code>:{" "}
 				<code class="boxed">.query</code>/<code class="boxed">.execute</code>/<code
 					class="boxed">.prepare</code
 				> calls and <code class="boxed">sql`&hellip;`</code> tagged templates
 			</li>
 			<li>
 				<img style="height: 16px; vertical-align: -2px;" src="langs/gleam.svg" alt="" />
-				<code class="boxed">sqlight</code> (as SQLite) and <code class="boxed"
-					>pog</code
-				> (as the session dialect)
+				<code>gleam</code>: <code class="boxed">sqlight</code> (as SQLite) and{" "}
+				<code class="boxed">pog</code> (as the configured dialect)
+			</li>
+			<li>
+				<code>cpp</code>: raw strings passed to <code class="boxed"
+					>sqlite3_prepare*</code
+				>/<code class="boxed">sqlite3_exec</code> (as SQLite), libpq&rsquo;s{" "}
+				<code class="boxed">PQexec</code>-family (as Postgres), and libpqxx-style{" "}
+				<code class="boxed">exec</code>/<code class="boxed">query</code> methods
+			</li>
+			<li>
+				<code>csharp</code>: raw strings passed to EF Core&rsquo;s{" "}
+				<code class="boxed">migrationBuilder.Sql</code> and raw-SQL methods,
+				Dapper&rsquo;s query/execute family, or assigned to{" "}
+				<code class="boxed">CommandText</code>
+			</li>
+			<li>
+				<code>java</code>, <code>kotlin</code>: text blocks and raw strings
+				passed to JDBC, JPA, Spring <code class="boxed">JdbcTemplate</code>, or
+				Exposed calls, with JDBC&rsquo;s <code>?</code> placeholders preserved
+				(<code>question-params</code> is on for these grammars unless
+				configured)
 			</li>
 		</ul>
 		<p>
-			Directory recursion only visits host files when you pass{" "}
-			<code>--embedded</code>. A host file named explicitly on the command line
-			always formats.
+			A file named explicitly on the command line that no rule covers formats
+			as plain SQL &mdash; unless it is in a language squill has a grammar for,
+			in which case squill stops and shows the rule to add.
 		</p>
 	</section>
 
@@ -62,37 +88,57 @@ import Docs from "../../layouts/Docs.astro";
 		<h2>Which strings are eligible</h2>
 		<p>
 			Only <em>multiline string syntaxes</em> are rewritten: Rust raw strings,
-			Go backticks, Python triple quotes, JS template literals, and Gleam
-			strings. Those already support a vertical layout, so squill puts the
-			quotes on their own lines and formats one clause per line.
+			Go backticks, Python triple quotes, JS template literals, Gleam strings,
+			C++ and C# raw strings, Java text blocks, and Kotlin raw strings. Those
+			already support a vertical layout, so squill puts the quotes on their own
+			lines and formats one clause per line.
 		</p>
 		<p>
-			A plain single-line string with escapes stays byte-identical even when
-			the query inside it is ugly, because rewriting it would mean inventing
-			escapes and line continuations in someone else&rsquo;s syntax.
+			A plain Rust or Go string joins them once it already spans lines &mdash;
+			written, escaped (<code>\n</code>), or continued &mdash; and is rewritten
+			as a raw string (<code>r#"&hellip;"#</code>, or backticks in Go), so the
+			SQL reads as written with no escaped quotes. A single-line plain string
+			stays byte-identical.
 		</p>
 		<div class="note">
 			<p>
 				Strings with interpolation holes are never touched &mdash; Python
-				f-strings, and <code>$&lbrace;&hellip;&rbrace;</code> in JS templates.
-				SQL with a hole in it is not SQL squill can parse, so it leaves it
-				exactly as written.
+				f-strings, <code>$&lbrace;&hellip;&rbrace;</code> in JS templates,
+				C#&rsquo;s <code>$"""</code>, and Kotlin&rsquo;s <code>$name</code>{" "}
+				templates. SQL with a hole in it is not SQL squill can parse, so it
+				leaves it exactly as written.
 			</p>
 		</div>
+		<h3>Safety</h3>
+		<p>
+			Every rewritten string passes the same safety check as a{" "}
+			<code>.sql</code> file, and then the host file is parsed again: an edit
+			that would add a syntax error, or whose string no longer reads back
+			through the query exactly as written, is dropped. A string squill
+			declines to rewrite &mdash; SQL that doesn&rsquo;t parse, an escape it
+			can&rsquo;t decode, a result the string can&rsquo;t hold &mdash; is
+			reported as a diagnostic with its line and column, and fails the run
+			under <code>--strict</code>.
+		</p>
 	</section>
 
 	<section>
 		<h2>Writing your own query</h2>
 		<p>
-			<code>--embedded-query custom.scm</code> replaces the built-in extraction
-			query with your own tree-sitter query. A capture named{" "}
-			<code>@sql</code> marks a node whose contents are SQL in the session
-			dialect; <code>@sql.postgres</code> and <code>@sql.sqlite</code> pin the
-			dialect regardless of the <code>dialect</code> setting.
+			A rule&rsquo;s <code>query</code> replaces its grammar&rsquo;s default
+			with a tree-sitter query file, found relative to the config. A capture
+			named <code>@sql</code> marks a string whose contents are SQL in the
+			configured dialect; <code>@sql.postgres</code> and{" "}
+			<code>@sql.sqlite</code> pin the dialect regardless of the{" "}
+			<code>dialect</code> setting.
 		</p>
+		<pre><code>[[embedded]]
+include = ["**/*.rs"]
+grammar = "rust"
+query = ".config/squill/rust.scm"</code></pre>
 		<pre><code>((macro_invocation
    macro: (identifier) @_name
-   (token_tree (raw_string_literal) @sql.postgres))
+   (token_tree (raw_string_literal) @sql))
  (#eq? @_name "my_sql"))</code></pre>
 		<p>
 			Captures whose names start with <code>_</code> are the usual tree-sitter
@@ -108,15 +154,36 @@ import Docs from "../../layouts/Docs.astro";
 			you never intended, so squill refuses the query instead of quietly
 			over-matching.
 		</p>
-		<div class="note">
-			<p>
-				<code>--embedded-query</code> applies to <em>every</em> host in the
-				run, and a query is parsed against each file&rsquo;s own grammar. A
-				query written against Rust node types will fail on a{" "}
-				<code>.go</code> file in the same invocation, so scope the run to one
-				language when you override it.
-			</p>
-		</div>
+	</section>
+
+	<section>
+		<h2>Bringing your own grammar</h2>
+		<p>
+			Any language with a tree-sitter grammar works: build it to wasm with{" "}
+			<code>tree-sitter build --wasm</code> (many grammars publish one with
+			each release) and point a rule at the file. The language name comes from
+			the file name, the way that command writes it:{" "}
+			<code>tree-sitter-lua.wasm</code> holds <code>lua</code>. A loaded
+			grammar has no default query, so the rule needs one.
+		</p>
+		<pre><code>[[embedded]]
+include = ["**/*.lua"]
+grammar = ".config/squill/tree-sitter-lua.wasm"
+query = ".config/squill/lua.scm"
+dialect = "sqlite"</code></pre>
+		<pre><code>((function_call
+   name: (method_index_expression method: (identifier) @_m)
+   arguments: (arguments . (string) @sql))
+ (#eq? @_m "exec"))</code></pre>
+		<p>
+			squill knows nothing about a loaded grammar&rsquo;s string syntax, so it
+			takes the conservative road. Capture either the string&rsquo;s content
+			node or the whole literal (squill takes the text between its opening
+			and closing delimiter tokens); it is rewritten only when it already
+			spans lines &mdash; proof the syntax takes raw newlines &mdash; and
+			never when it holds a backslash that might be an escape. The re-parse
+			check catches the rest.
+		</p>
 	</section>
 
 	<section>
@@ -124,9 +191,10 @@ import Docs from "../../layouts/Docs.astro";
 		<p>
 			Embedded SQL is anchored to the host statement&rsquo;s indentation and,
 			by default, copies that file&rsquo;s own indent character, so a
-			spaces-indented file never gains tabs. Set <code>indent</code> for a
-			language in <a href="docs/configuration/">a config section</a> to choose
-			deliberately instead.
+			spaces-indented file never gains tabs. Set <code>indent</code> in the{" "}
+			<a href="docs/configuration/#rules">rule</a> (or at the top level) to
+			choose deliberately instead. Lines inside a SQL string that itself spans
+			lines are data, and are never re-indented.
 		</p>
 	</section>
 </Docs>

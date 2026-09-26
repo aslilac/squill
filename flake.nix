@@ -43,6 +43,11 @@
 
             cargoBuildFlags = [ "-p" "cli" ];
 
+            # wasmtime (behind the default `wasm` feature, for loading
+            # tree-sitter grammars at runtime) builds its C API with cmake.
+            nativeBuildInputs = [ pkgs.cmake ];
+            dontUseCmakeConfigure = true;
+
             # The cli suite shells out to `git init` to check that
             # directory recursion honors .gitignore.
             nativeCheckInputs = [ pkgs.git ];
@@ -74,6 +79,7 @@
           default = pkgs.mkShell {
             packages = [
               rust
+              pkgs.cmake
               pkgs.nodejs_24
               pkgs.corepack
             ];
