@@ -1,0 +1,16 @@
+[package]
+name = "squill-zed"
+version = "0.2.3"
+edition = "2024"
+license = "MPL-2.0"
+publish = false
+
+# Built by Zed for wasm32-wasip2, on its own: not part of the squill
+# workspace.
+[workspace]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+zed_extension_api = "0.7.0"

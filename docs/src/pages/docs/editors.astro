@@ -80,6 +80,15 @@ language-servers = ["rust-analyzer", &lbrace; name = "squill", only-features = [
 	<section>
 		<h2>Zed</h2>
 		<p>
+			squill&rsquo;s Zed extension, in{" "}
+			<a href="https://github.com/aslilac/squill/tree/trunk/integrations/zed"
+				><code>integrations/zed</code></a
+			>, runs <code>squill lsp</code> for SQL and the languages it formats
+			embedded SQL in; install it with <strong>zed: install dev
+			extension</strong>, and see its README for settings. Without it, an
+			external formatter works too.
+		</p>
+		<p>
 			Install the SQL extension for syntax support, then in{" "}
 			<code>settings.json</code> set squill as an external formatter.{" "}
 			<code>&lbrace;buffer_path&rbrace;</code> passes the buffer&rsquo;s path:
@@ -121,8 +130,18 @@ language-servers = ["rust-analyzer", &lbrace; name = "squill", only-features = [
 	<section>
 		<h2>VS Code</h2>
 		<p>
-			VS Code has no built-in way to run a command-line formatter. Until
-			squill has an extension of its own, the{" "}
+			squill&rsquo;s VS Code extension, in{" "}
+			<a href="https://github.com/aslilac/squill/tree/trunk/integrations/vscode"
+				><code>integrations/vscode</code></a
+			>, runs <code>squill lsp</code>: it formats SQL files, and a{" "}
+			<code>source.formatSql</code> code action formats embedded SQL on save,
+			after the language&rsquo;s own formatter. Build it with{" "}
+			<code>pnpm install &amp;&amp; pnpm run build &amp;&amp; pnpm run package</code>{" "}
+			and install the <code>.vsix</code>; its README covers the settings.
+		</p>
+		<p>
+			VS Code has no built-in way to run a command-line formatter, so
+			without the extension, the{" "}
 			<a
 				href="https://marketplace.visualstudio.com/items?itemName=jkillian.custom-local-formatters"
 				>Custom Local Formatters</a

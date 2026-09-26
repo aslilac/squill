@@ -1,0 +1,41 @@
+id = "squill"
+name = "squill"
+description = "A SQL formatter for Postgres and SQLite, including the SQL embedded in your code."
+version = "0.2.3"
+schema_version = 1
+authors = ["McKayla Washburn-Love <kayla@tree.camp>"]
+repository = "https://github.com/aslilac/squill"
+
+# SQL itself (from the SQL extension), and every language squill has a
+# grammar for. In those, squill formats the embedded SQL and reports
+# what it leaves alone; files no [[embedded]] rule covers are untouched.
+[language_servers.squill]
+name = "squill"
+languages = [
+	"SQL",
+	"Rust",
+	"Go",
+	"Python",
+	"JavaScript",
+	"TypeScript",
+	"TSX",
+	"Gleam",
+	"C++",
+	"CSharp",
+	"Java",
+	"Kotlin",
+]
+
+[language_servers.squill.language_ids]
+"SQL" = "sql"
+"Rust" = "rust"
+"Go" = "go"
+"Python" = "python"
+"JavaScript" = "javascript"
+"TypeScript" = "typescript"
+"TSX" = "typescriptreact"
+"Gleam" = "gleam"
+"C++" = "cpp"
+"CSharp" = "csharp"
+"Java" = "java"
+"Kotlin" = "kotlin"

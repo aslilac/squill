@@ -9,7 +9,11 @@ members = [
 	"crates/parser/",
 	"crates/playground/",
 ]
-exclude = ["crates/parser/fuzz/", "crates/embed/tests/fixtures/sqlx_app/"]
+exclude = [
+	"crates/parser/fuzz/",
+	"crates/embed/tests/fixtures/sqlx_app/",
+	"integrations/zed/",
+]
 
 [workspace.package]
 version = "0.2.3"
