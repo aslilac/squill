@@ -2263,6 +2263,9 @@ fn is_clause_level(kind: SyntaxKind) -> bool {
 			| SyntaxKind::ValuesClause
 			| SyntaxKind::TableCore
 			| SyntaxKind::OrderByClause
+			// A window's frame follows its ORDER BY; as a list element
+			// it would join with no separator (`order by brows ...`).
+			| SyntaxKind::FrameClause
 			| SyntaxKind::LimitClause
 			| SyntaxKind::OffsetClause
 			| SyntaxKind::FetchClause

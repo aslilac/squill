@@ -483,3 +483,20 @@ fn alter_default_privileges_breaks_before_the_grant() {
 		"alter default privileges for role app_owner in schema app, audit\n\tgrant select, insert, update on tables to app_reader;\n"
 	);
 }
+
+/// A window frame right after the window's ORDER BY keeps its space
+/// (it once rendered as `order by brows`, which the safety check caught
+/// and passed through verbatim).
+#[test]
+fn window_frames_follow_order_by() {
+	assert_eq!(
+		format("select max(a) over (order by b rows 1 preceding) from t;"),
+		"select max(a) over (order by b rows 1 preceding) from t;\n"
+	);
+	assert_eq!(
+		format(
+			"select max(a) over w from t window w as (order by b groups 2 preceding);"
+		),
+		"select max(a) over w from t window w as (order by b groups 2 preceding);\n"
+	);
+}
