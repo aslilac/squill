@@ -2,7 +2,7 @@
 
 Runs [squill](https://github.com/aslilac/squill)'s language server, `squill lsp`: formatting for SQL files and for the SQL embedded in your Rust, Go, Python, JavaScript/TypeScript, Gleam, C++, C#, Java, and Kotlin, plus warnings for what squill leaves alone (statements it can't parse, embedded strings it won't rewrite).
 
-squill itself must be installed and on your `PATH`; see [installation](https://github.com/aslilac/squill#installation). Syntax support for SQL files comes from Zed's SQL extension.
+The extension uses the `squill` on your `PATH` if there is one, so the editor formats exactly as your CLI and CI do; otherwise it downloads the latest release from GitHub (macOS on Apple silicon, Linux and Windows on x86-64 and ARM64). Syntax support for SQL files comes from Zed's SQL extension.
 
 To install this extension from a checkout, run **zed: install dev extension** and pick this directory.
 
@@ -50,4 +50,4 @@ Embedded SQL is only formatted in files that an `[[embedded]]` rule in your `squ
 }
 ```
 
-`binary.path` overrides the `squill` found on your `PATH`. Edits to `squill.toml` apply without a restart.
+`binary.path` overrides both the `squill` on your `PATH` and the downloaded one. Edits to `squill.toml` apply without a restart.

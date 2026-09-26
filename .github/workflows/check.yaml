@@ -82,15 +82,15 @@ jobs:
 
       - run: pnpm run check
         name: Type check
-        working-directory: integrations/vscode
+        working-directory: integrations/vscode/
 
       - run: pnpm run build
         name: Bundle
-        working-directory: integrations/vscode
+        working-directory: integrations/vscode/
 
       - run: pnpm run package
         name: Package
-        working-directory: integrations/vscode
+        working-directory: integrations/vscode/
 
   docs:
     name: Docs site
@@ -119,7 +119,6 @@ jobs:
           runtime: node@24
           cache: true
 
-      # `prebuild` builds the playground's wasm first.
       - run: pnpm run build
         name: Build
         working-directory: docs
