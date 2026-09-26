@@ -1,0 +1,18 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table media (
+	fname text not null primary key,
+	-- null indicates deleted file
+	csum text,
+	-- zero if deleted
+	mtime int not null,
+	dirty int not null
+) without rowid;
+create index idx_media_dirty on media (dirty) where dirty = 1;
+create table meta (
+	dirMod int,
+	lastUsn int
+);
+insert into meta values (0, 0);

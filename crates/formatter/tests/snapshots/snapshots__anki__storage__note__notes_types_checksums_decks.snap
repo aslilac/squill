@@ -1,0 +1,10 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+select distinct
+	notes.id,
+	notes.mid,
+	notes.csum,
+	case when cards.odid = 0 then cards.did else cards.odid end as did
+from notes join cards on notes.id = cards.nid

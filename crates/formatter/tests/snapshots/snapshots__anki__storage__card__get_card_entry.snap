@@ -1,0 +1,5 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+select id, nid, case when odid = 0 then did else odid end as did from cards;

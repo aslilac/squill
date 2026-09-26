@@ -131,8 +131,7 @@ where
 -- Authorize Filter clause will be injected below in
 -- GetAuthorizedConnectionLogsOffset
 -- @authorize_filter
-order by
-	connect_time desc
+order by connect_time desc
 limit
 	-- a limit of 0 means "no limit". The connection log table is unbounded
 	-- in size, and is expected to be quite large. Implement a default
@@ -253,8 +252,7 @@ from (
 	-- CountAuthorizedConnectionLogs
 	-- @authorize_filter
 	-- NOTE: See the CountAuditLogs LIMIT note.
-	limit
-		nullif(@count_cap::int, 0) + 1
+	limit nullif(@count_cap::int, 0) + 1
 ) as limited_count;
 
 -- name: DeleteOldConnectionLogs :execrows

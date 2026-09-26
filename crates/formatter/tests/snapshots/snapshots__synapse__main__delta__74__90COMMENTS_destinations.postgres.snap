@@ -1,0 +1,47 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+/* Copyright 2023 The Matrix.org Foundation C.I.C
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+--- destinations
+comment on table destinations is 'Information about remote homeservers and the health of our connection to them.';
+
+comment on column destinations.destination is 'server name of remote homeserver in question';
+
+comment on column destinations.last_successful_stream_ordering is $$Stream ordering of the most recently successfully sent PDU to this server, sent through normal send (not e.g. backfill).
+In Catch-Up Mode, the original PDU persisted by us is represented here, even if we sent a later forward extremity in its stead.
+See `destination_rooms` for more information about catch-up.$$;
+
+comment on column destinations.retry_last_ts is $$The last time we tried and failed to reach the remote server, in ms.
+This field is reset to `0` when we succeed in connecting again.$$;
+
+comment on column destinations.retry_interval is $$How long, in milliseconds, to wait since the last time we tried to reach the remote server before trying again.
+This field is reset to `0` when we succeed in connecting again.$$;
+
+comment on column destinations.failure_ts is $$The first time we tried and failed to reach the remote server, in ms.
+This field is reset to `NULL` when we succeed in connecting again.$$;
+
+
+--- destination_rooms
+comment on table destination_rooms is 'Information about transmission of PDUs in a given room to a given remote homeserver.';
+
+comment on column destination_rooms.destination is 'server name of remote homeserver in question';
+
+comment on column destination_rooms.room_id is 'room ID in question';
+
+comment on column destination_rooms.stream_ordering is $$`stream_ordering` of the most recent PDU in this room that needs to be sent (by us) to this homeserver.
+This can only be pointing to our own PDU because we are only responsible for sending our own PDUs.$$;

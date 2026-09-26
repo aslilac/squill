@@ -1,0 +1,66 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+/* Copyright 2022 The Matrix.org Foundation C.I.C
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+-- SQLite needs to rebuild indices which use partial indices on Postgres, but
+-- previously did not use them on SQLite.
+
+-- Drop each index that was added with register_background_index_update AND specified
+-- a where_clause (that existed before this delta).
+
+-- From events_bg_updates.py
+drop index if exists event_contains_url_index;
+-- There is also a redactions_censored_redacts index, but that gets dropped.
+drop index if exists redactions_have_censored_ts;
+-- There is also a PostgreSQL only index (event_contains_url_index2)
+-- which gets renamed to event_contains_url_index.
+
+-- From roommember.py
+drop index if exists room_memberships_user_room_forgotten;
+
+-- From presence.py
+drop index if exists presence_stream_state_not_offline_idx;
+
+-- From media_repository.py
+drop index if exists local_media_repository_url_idx;
+
+-- From event_push_actions.py
+drop index if exists event_push_actions_highlights_index;
+-- There's also a event_push_actions_stream_highlight_index which was previously
+-- PostgreSQL-only.
+
+-- From state.py
+drop index if exists current_state_events_member_index;
+
+-- Re-insert the background jobs to re-create the indices.
+insert into background_updates (
+	ordering,
+	update_name,
+	progress_json,
+	depends_on
+)
+values
+	(7209, 'event_contains_url_index', '{}', null),
+	(7209, 'redactions_have_censored_ts_idx', '{}', null),
+	(7209, 'room_membership_forgotten_idx', '{}', null),
+	(7209, 'presence_stream_not_offline_index', '{}', null),
+	(7209, 'local_media_repository_url_idx', '{}', null),
+	(7209, 'event_push_actions_highlights_index', '{}', null),
+	(7209, 'event_push_actions_stream_highlight_index', '{}', null),
+	(7209, 'current_state_members_idx', '{}', null)
+on conflict (update_name) do nothing;

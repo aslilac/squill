@@ -1,0 +1,60 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+--
+-- This file is licensed under the Affero General Public License (AGPL) version 3.
+--
+-- Copyright (C) 2023 New Vector, Ltd
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU Affero General Public License as
+-- published by the Free Software Foundation, either version 3 of the
+-- License, or (at your option) any later version.
+--
+-- See the GNU Affero General Public License for more details:
+-- <https://www.gnu.org/licenses/agpl-3.0.html>.
+--
+-- Originally licensed under the Apache License, Version 2.0:
+-- <http://www.apache.org/licenses/LICENSE-2.0>.
+--
+-- [This file includes modifications made by New Vector Limited]
+--
+--
+/* Copyright 2016 OpenMarket Ltd
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+create table push_rules_stream (
+	stream_id bigint not null,
+	event_stream_ordering bigint not null,
+	user_id text not null,
+	rule_id text not null,
+	op text not null, -- One of "ENABLE", "DISABLE", "ACTIONS", "ADD", "DELETE"
+	priority_class smallint,
+	priority integer,
+	conditions text,
+	actions text
+);
+
+-- The extra data for each operation is:
+-- * ENABLE, DISABLE, DELETE: []
+-- * ACTIONS: ["actions"]
+-- * ADD: ["priority_class", "priority", "actions", "conditions"]
+
+-- Index for replication queries.
+create index push_rules_stream_id on push_rules_stream (stream_id);
+-- Index for /sync queries.
+create index push_rules_stream_user_stream_id
+	on push_rules_stream (user_id, stream_id);

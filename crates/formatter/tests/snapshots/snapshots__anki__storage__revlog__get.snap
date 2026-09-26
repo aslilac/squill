@@ -1,0 +1,15 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+select
+	id,
+	cid,
+	usn,
+	ease,
+	cast (ivl as integer),
+	cast (lastIvl as integer),
+	factor,
+	time,
+	type
+from revlog

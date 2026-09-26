@@ -1,0 +1,12 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table background_updates (
+	update_name text not null,
+	progress_json text not null,
+	depends_on text,
+	ordering integer not null default 0
+);
+alter table only background_updates
+	add constraint background_updates_uniqueness unique (update_name);

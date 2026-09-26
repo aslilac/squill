@@ -18,8 +18,7 @@ begin
 	if OLD.organization_id is not null then
 		update organization_members
 		-- this is a noop if the role is not assigned to the member
-		set
-			roles = array_remove(roles, OLD.name)
+		set roles = array_remove(roles, OLD.name)
 		where
 			-- Scope to the correct organization
 			organization_members.organization_id

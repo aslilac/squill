@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table ciphers_collections (
+	cipher_uuid text not null references ciphers (uuid),
+	collection_uuid text not null references collections (uuid),
+	primary key (cipher_uuid, collection_uuid)
+);

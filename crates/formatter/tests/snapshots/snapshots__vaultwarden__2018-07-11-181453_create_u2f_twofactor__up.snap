@@ -1,0 +1,22 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table twofactor (
+	uuid text not null primary key,
+	user_uuid text not null references users (uuid),
+	type integer not null,
+	enabled boolean not null,
+	data text not null,
+	unique(user_uuid, type)
+);
+
+
+insert into twofactor (uuid, user_uuid, type, enabled, data)
+select lower(hex(randomblob(16))), uuid, 0, 1, u.totp_secret
+from users u
+where u.totp_secret is not null;
+
+update users
+set
+	totp_secret = null; -- Instead of recreating the table, just leave the columns empty

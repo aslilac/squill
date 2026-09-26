@@ -1,0 +1,13 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table if exists sso_users;
+
+create table sso_users (
+	user_uuid char(36) not null primary key,
+	identifier text not null unique,
+	created_at timestamp not null default CURRENT_TIMESTAMP,
+	foreign key (user_uuid) references users (uuid) on update cascade
+		on delete cascade
+);

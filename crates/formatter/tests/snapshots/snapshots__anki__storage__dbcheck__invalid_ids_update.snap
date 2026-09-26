@@ -1,0 +1,14 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+update "{target_table}"
+set
+	"{id_column}" = (
+		select invalid_ids.new_id
+		from invalid_ids
+		where invalid_ids.id = "{target_table}"."{id_column}"
+		limit 1
+	)
+where
+	"{target_table}"."{id_column}" in (select invalid_ids.id from invalid_ids);

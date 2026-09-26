@@ -1,0 +1,75 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+/*
+ * Copyright 2020 The Matrix.org Foundation C.I.C.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+-- Dropping last_used column from access_tokens table.
+
+create table access_tokens2 (
+	id bigint primary key,
+	user_id text not null,
+	device_id text,
+	token text not null,
+	valid_until_ms bigint,
+	puppets_user_id text,
+	last_validated bigint,
+	unique(token)
+);
+
+insert into access_tokens2 (id, user_id, device_id, token)
+select id, user_id, device_id, token
+from access_tokens;
+
+drop table access_tokens;
+alter table access_tokens2 rename to access_tokens;
+
+create index access_tokens_device_id on access_tokens (user_id, device_id);
+
+
+-- Re-adding foreign key reference in event_txn_id table
+
+create table event_txn_id2 (
+	event_id text not null,
+	room_id text not null,
+	user_id text not null,
+	token_id bigint not null,
+	txn_id text not null,
+	inserted_ts bigint not null,
+	foreign key (event_id) references events (event_id) on delete cascade,
+	foreign key (token_id) references access_tokens (id) on delete cascade
+);
+
+insert into event_txn_id2 (
+	event_id,
+	room_id,
+	user_id,
+	token_id,
+	txn_id,
+	inserted_ts
+)
+select event_id, room_id, user_id, token_id, txn_id, inserted_ts
+from event_txn_id;
+
+drop table event_txn_id;
+alter table event_txn_id2 rename to event_txn_id;
+
+create unique index if not exists event_txn_id_event_id
+	on event_txn_id (event_id);
+create unique index if not exists event_txn_id_txn_id
+	on event_txn_id (room_id, user_id, token_id, txn_id);
+create index if not exists event_txn_id_ts on event_txn_id (inserted_ts);

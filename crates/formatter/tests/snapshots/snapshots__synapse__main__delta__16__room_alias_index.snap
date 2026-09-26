@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create index if not exists room_aliases_id on room_aliases (room_id);
+create index if not exists room_alias_servers_alias
+	on room_alias_servers (room_alias);

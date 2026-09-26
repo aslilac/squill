@@ -119,8 +119,7 @@ where
 	end
 -- Authorize Filter clause will be injected below in GetAuthorizedAuditLogsOffset
 -- @authorize_filter
-order by
-	time desc
+order by time desc
 limit -- a limit of 0 means "no limit". The audit log table is unbounded
 	-- in size, and is expected to be quite large. Implement a default
 	-- limit of 100 to prevent accidental excessively large queries.
@@ -257,8 +256,7 @@ from (
 	-- here if disabling the capping on a large table permanently.
 	-- This way the PG planner can plan parallel execution for
 	-- potential large wins.
-	limit
-		nullif(@count_cap::int, 0) + 1
+	limit nullif(@count_cap::int, 0) + 1
 ) as limited_count;
 
 -- name: DeleteOldAuditLogConnectionEvents :exec

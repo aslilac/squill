@@ -226,8 +226,7 @@ with
 	),
 	failed_count as (
 		-- Count failed builds per preset in the given period
-		select
-			preset_id, count(*) as num_failed
+		select preset_id, count(*) as num_failed
 		from filtered_builds
 		where
 			job_status = 'failed'::provisioner_job_status
@@ -419,8 +418,7 @@ returning
 with
 	orgs_with_prebuilds as (
 		-- Get unique organizations that have presets with prebuilds configured
-		select distinct
-			o.id, o.name
+		select distinct o.id, o.name
 		from organizations o
 			inner join templates t on t.organization_id = o.id
 			inner join template_versions tv on tv.template_id = t.id
@@ -429,24 +427,21 @@ with
 	),
 	prebuild_user_membership as (
 		-- Check if the user is a member of the organizations
-		select
-			om.organization_id
+		select om.organization_id
 		from organization_members om
 			inner join orgs_with_prebuilds owp on owp.id = om.organization_id
 		where om.user_id = @user_id::uuid
 	),
 	prebuild_groups as (
 		-- Check if the organizations have the prebuilds group
-		select
-			g.organization_id, g.id as group_id
+		select g.organization_id, g.id as group_id
 		from groups g
 			inner join orgs_with_prebuilds owp on owp.id = g.organization_id
 		where g.name = @group_name::text
 	),
 	prebuild_group_membership as (
 		-- Check if the user is in the prebuilds group
-		select
-			pg.organization_id
+		select pg.organization_id
 		from prebuild_groups pg
 			inner join group_members gm on gm.group_id = pg.group_id
 		where gm.user_id = @user_id::uuid

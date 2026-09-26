@@ -1,0 +1,15 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table if exists sort_order;
+create temporary table sort_order (
+	pos integer primary key,
+	nid integer not null unique
+);
+insert into sort_order (nid)
+select nid
+from cards
+where type != 0
+group by nid
+order by avg(factor);

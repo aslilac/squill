@@ -1,0 +1,23 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table auth_requests (
+	uuid text not null primary key,
+	user_uuid text not null,
+	organization_uuid text,
+	request_device_identifier text not null,
+	device_type integer not null,
+	request_ip text not null,
+	response_device_id text,
+	access_code text not null,
+	public_key text not null,
+	enc_key text not null,
+	master_password_hash text not null,
+	approved boolean,
+	creation_date datetime not null,
+	response_date datetime,
+	authentication_date datetime,
+	foreign key (user_uuid) references users (uuid),
+	foreign key (organization_uuid) references organizations (uuid)
+);

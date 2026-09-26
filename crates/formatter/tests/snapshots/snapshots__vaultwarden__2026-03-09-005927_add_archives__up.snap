@@ -1,0 +1,12 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table if exists archives;
+
+create table archives (
+	user_uuid char(36) not null references users (uuid) on delete cascade,
+	cipher_uuid char(36) not null references ciphers (uuid) on delete cascade,
+	archived_at datetime not null default CURRENT_TIMESTAMP,
+	primary key (user_uuid, cipher_uuid)
+);

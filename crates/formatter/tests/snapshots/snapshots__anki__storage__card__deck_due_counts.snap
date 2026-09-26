@@ -1,0 +1,11 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+select
+	case when odid == 0 then did else odid end as original_did,
+	case when odid == 0 then due else odue end as true_due,
+	count() as COUNT
+from cards
+where type = 2 and queue != -1
+group by original_did, true_due

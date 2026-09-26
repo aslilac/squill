@@ -1,0 +1,85 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+--
+-- This file is licensed under the Affero General Public License (AGPL) version 3.
+--
+-- Copyright (C) 2023 New Vector, Ltd
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU Affero General Public License as
+-- published by the Free Software Foundation, either version 3 of the
+-- License, or (at your option) any later version.
+--
+-- See the GNU Affero General Public License for more details:
+-- <https://www.gnu.org/licenses/agpl-3.0.html>.
+--
+-- Originally licensed under the Apache License, Version 2.0:
+-- <http://www.apache.org/licenses/LICENSE-2.0>.
+--
+-- [This file includes modifications made by New Vector Limited]
+--
+--
+/* Copyright 2017 OpenMarket Ltd
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+-- Cache of remote devices.
+create table device_lists_remote_cache (
+	user_id text not null,
+	device_id text not null,
+	content text not null
+);
+
+-- The last update we got for a user. Empty if we're not receiving updates for
+-- that user.
+create table device_lists_remote_extremeties (
+	user_id text not null,
+	stream_id text not null
+);
+
+-- we used to create non-unique indexes on these tables, but as of update 52 we create
+-- unique indexes concurrently:
+--
+-- CREATE INDEX device_lists_remote_cache_id ON device_lists_remote_cache(user_id, device_id);
+-- CREATE INDEX device_lists_remote_extremeties_id ON device_lists_remote_extremeties(user_id, stream_id);
+
+-- Stream of device lists updates. Includes both local and remotes
+create table device_lists_stream (
+	stream_id bigint not null,
+	user_id text not null,
+	device_id text not null
+);
+
+create index device_lists_stream_id on device_lists_stream (stream_id, user_id);
+
+
+-- The stream of updates to send to other servers. We keep at least one row
+-- per user that was sent so that the prev_id for any new updates can be
+-- calculated
+create table device_lists_outbound_pokes (
+	destination text not null,
+	stream_id bigint not null,
+	user_id text not null,
+	device_id text not null,
+	sent boolean not null,
+	ts bigint
+		not null -- So that in future we can clear out pokes to dead servers
+);
+
+create index device_lists_outbound_pokes_id
+	on device_lists_outbound_pokes (destination, stream_id);
+create index device_lists_outbound_pokes_user
+	on device_lists_outbound_pokes (destination, user_id);

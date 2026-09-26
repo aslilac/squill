@@ -1,0 +1,42 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+/* Copyright 2022 Beeper
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+-- Each of these are denormalised copies of `stream_ordering` from the corresponding row in` events` which
+-- we use to improve database performance by reduring JOINs.
+
+-- NOTE: these are set to NOT VALID to prevent locks while adding the column on large existing tables,
+-- which will be validated in a later migration. For all new/updated rows the FKEY will be checked.
+
+alter table current_state_events add column event_stream_ordering bigint;
+alter table current_state_events
+	add constraint event_stream_ordering_fkey foreign key (
+		event_stream_ordering
+	) references events (stream_ordering) not valid;
+
+alter table local_current_membership add column event_stream_ordering bigint;
+alter table local_current_membership
+	add constraint event_stream_ordering_fkey foreign key (
+		event_stream_ordering
+	) references events (stream_ordering) not valid;
+
+alter table room_memberships add column event_stream_ordering bigint;
+alter table room_memberships
+	add constraint event_stream_ordering_fkey foreign key (
+		event_stream_ordering
+	) references events (stream_ordering) not valid;

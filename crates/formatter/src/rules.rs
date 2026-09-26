@@ -2349,14 +2349,31 @@ fn name_leaf(token: &SyntaxToken, pos: IdentPos) -> Doc {
 }
 
 /// `KEYWORDS` + indented, grouped content that collapses when it fits.
-fn clause(head: Vec<Doc>, content: Vec<Doc>) -> Doc {
-	if content.is_empty() {
-		return group(concat(head));
+fn clause(mut head: Vec<Doc>, content: Vec<Doc>) -> Doc {
+	// Leading comments flushed into the head end in a hard line, which
+	// would break the whole group; they belong to the lines above, so
+	// they go ahead of it. (Otherwise a comment above `select` breaks
+	// `select a` over two lines, and only on the second pass, once the
+	// comment has moved there: not idempotent.)
+	let split = head
+		.iter()
+		.rposition(|doc| matches!(doc, Doc::HardLine))
+		.map_or(0, |at| at + 1);
+	let rest = head.split_off(split);
+	let leading = head;
+	let head = rest;
+	let grouped = if content.is_empty() {
+		group(concat(head))
+	} else {
+		group(concat([
+			concat(head),
+			indent(concat([soft_line_or_space(), group(concat(content))])),
+		]))
+	};
+	if leading.is_empty() {
+		return grouped;
 	}
-	group(concat([
-		concat(head),
-		indent(concat([soft_line_or_space(), group(concat(content))])),
-	]))
+	concat([concat(leading), grouped])
 }
 
 /// Separator state for comma-joined lists.

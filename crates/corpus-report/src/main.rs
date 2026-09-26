@@ -1,28 +1,20 @@
 //! Corpus coverage harness.
 //!
-//! Runs every `.sql` file under `corpus/` through lex -> parse -> emit and
-//! reports pass/fail per file and per pipeline stage, plus statement-level
-//! parse coverage (SELECT-ish statements tracked separately until DML/DDL
-//! land with TREE-98).
+//! Runs every file of every corpus under `corpus/` (see the `corpus`
+//! crate for which files, and each one's dialect) through lex -> parse ->
+//! emit and reports pass/fail per file and per pipeline stage, plus
+//! statement-level parse coverage, overall and per corpus.
 //!
 //! Usage: `corpus-report [--summary] [CORPUS_DIR]`
 //!
 //! Always exits 0 when the corpus was read; this is a report, not a gate.
 
-use std::path::Path;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+use corpus::CorpusFile;
 use parser::Dialect;
-use parser::lexer::LexOptions;
 use parser::syntax::SyntaxKind;
-
-/// The coder corpus is sqlc SQL: `@name` params enabled.
-const LEX_OPTIONS: LexOptions = LexOptions {
-	at_params: true,
-	pyformat_params: false,
-	question_params: false,
-};
 
 /// Pipeline stages, in order.
 const STAGES: [&str; 3] = ["lex", "parse", "emit"];
@@ -49,14 +41,20 @@ struct FileResult {
 /// Lex passes when the token stream round-trips byte-for-byte with no
 /// error tokens; parse passes when no statement lands as ErrorStatement;
 /// emit passes when the formatter renders the tree.
-fn run_file(source: &str, show_diagnostics: bool) -> FileResult {
+fn run_file(
+	source: &str,
+	file: &CorpusFile,
+	show_diagnostics: bool,
+) -> FileResult {
+	let dialect = file.dialect;
+	let lex_options = file.lex_options;
 	let fail = |stages_passed: usize, error: String| FileResult {
 		stages_passed,
 		error: Some(error),
 		stmts: StmtStats::default(),
 	};
 
-	let tokens = parser::lexer::lex_with(source, Dialect::Postgres, LEX_OPTIONS);
+	let tokens = parser::lexer::lex_with(source, dialect, lex_options);
 	let rebuilt: String = tokens.iter().map(|t| t.text).collect();
 	if rebuilt != source {
 		return fail(0, "token texts do not round-trip to the input".into());
@@ -66,7 +64,7 @@ fn run_file(source: &str, show_diagnostics: bool) -> FileResult {
 		return fail(0, format!("error token: {snippet:?}"));
 	}
 
-	let parse = parser::parser::parse(&tokens, Dialect::Postgres);
+	let parse = parser::parser::parse(&tokens, dialect);
 	if parse.cst.text() != source {
 		return fail(1, "parse tree does not round-trip to the input".into());
 	}
@@ -151,7 +149,9 @@ fn run_file(source: &str, show_diagnostics: bool) -> FileResult {
 	}
 
 	// PL/pgSQL body coverage: parse every plpgsql dollar-quoted body.
-	if source.to_ascii_lowercase().contains("plpgsql") {
+	if dialect == Dialect::Postgres
+		&& source.to_ascii_lowercase().contains("plpgsql")
+	{
 		for token in tokens.iter().filter(|t| t.kind == SyntaxKind::DollarString) {
 			let Some(open) = token.text[1..].find('$').map(|i| i + 2) else {
 				continue;
@@ -164,18 +164,20 @@ fn run_file(source: &str, show_diagnostics: bool) -> FileResult {
 				continue;
 			}
 			stmts.bodies_total += 1;
-			let body_tokens =
-				parser::lexer::lex_with(body, Dialect::Postgres, LEX_OPTIONS);
+			let body_tokens = parser::lexer::lex_with(body, dialect, lex_options);
 			let body_parse =
-				parser::parser::parse_plpgsql_body(&body_tokens, Dialect::Postgres);
+				parser::parser::parse_plpgsql_body(&body_tokens, dialect);
 			if body_parse.diagnostics.is_empty() {
 				stmts.bodies_ok += 1;
 			}
 		}
 	}
 
-	let format_options =
-		formatter::Options { at_params: true, ..formatter::Options::default() };
+	let format_options = formatter::Options {
+		dialect,
+		at_params: lex_options.at_params,
+		..formatter::Options::default()
+	};
 	let formatted = formatter::format_cst(&parse.cst, &format_options);
 	if formatted.fallback_statements > 0 {
 		return FileResult {
@@ -190,22 +192,6 @@ fn run_file(source: &str, show_diagnostics: bool) -> FileResult {
 	FileResult { stages_passed: 3, error: None, stmts }
 }
 
-/// Recursively collect all `.sql` files under `dir`.
-fn collect_sql_files(
-	dir: &Path,
-	out: &mut Vec<PathBuf>,
-) -> std::io::Result<()> {
-	for entry in std::fs::read_dir(dir)? {
-		let path = entry?.path();
-		if path.is_dir() {
-			collect_sql_files(&path, out)?;
-		} else if path.extension().is_some_and(|ext| ext == "sql") {
-			out.push(path);
-		}
-	}
-	Ok(())
-}
-
 fn main() -> ExitCode {
 	let mut summary_only = false;
 	let mut show_diagnostics = false;
@@ -218,14 +204,18 @@ fn main() -> ExitCode {
 		}
 	}
 
-	let mut files = Vec::new();
-	if let Err(err) = collect_sql_files(&root, &mut files) {
-		eprintln!("corpus-report: cannot read corpus at {}: {err}", root.display());
-		return ExitCode::from(2);
-	}
-	files.sort();
+	let files = match corpus::files(&root) {
+		Ok(files) => files,
+		Err(err) => {
+			eprintln!(
+				"corpus-report: cannot read corpus at {}: {err}",
+				root.display()
+			);
+			return ExitCode::from(2);
+		}
+	};
 	if files.is_empty() {
-		eprintln!("corpus-report: no .sql files under {}", root.display());
+		eprintln!("corpus-report: no corpus files under {}", root.display());
 		return ExitCode::from(2);
 	}
 
@@ -233,7 +223,11 @@ fn main() -> ExitCode {
 	let mut stage_passes = [0usize; STAGES.len()];
 	let mut totals = StmtStats::default();
 	let mut unreadable = 0usize;
-	for path in &files {
+	// Per corpus, in first-seen order: (name, files, files through emit,
+	// statements parsed, statements).
+	let mut per_corpus: Vec<(&str, usize, usize, usize, usize)> = Vec::new();
+	for file in &files {
+		let path = &file.path;
 		let source = match std::fs::read_to_string(path) {
 			Ok(source) => source,
 			Err(err) => {
@@ -244,7 +238,19 @@ fn main() -> ExitCode {
 				continue;
 			}
 		};
-		let result = run_file(&source, show_diagnostics);
+		let result = run_file(&source, file, show_diagnostics);
+		let at = match per_corpus.iter().position(|row| row.0 == file.corpus) {
+			Some(at) => at,
+			None => {
+				per_corpus.push((file.corpus, 0, 0, 0, 0));
+				per_corpus.len() - 1
+			}
+		};
+		let row = &mut per_corpus[at];
+		row.1 += 1;
+		row.2 += usize::from(result.stages_passed == STAGES.len());
+		row.3 += result.stmts.ok;
+		row.4 += result.stmts.total;
 		for count in stage_passes.iter_mut().take(result.stages_passed) {
 			*count += 1;
 		}
@@ -281,6 +287,11 @@ fn main() -> ExitCode {
 		"pl bodies   {:>5}/{} parsed",
 		totals.bodies_ok, totals.bodies_total
 	);
+	for (name, total, clean, ok, statements) in per_corpus {
+		println!(
+			"  {name:<12} {clean:>5}/{total} files clean, {ok:>5}/{statements} statements parsed"
+		);
+	}
 	if unreadable > 0 {
 		println!("unreadable: {unreadable}");
 	}

@@ -1,0 +1,201 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+--
+-- This file is licensed under the Affero General Public License (AGPL) version 3.
+--
+-- Copyright (C) 2023 New Vector, Ltd
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU Affero General Public License as
+-- published by the Free Software Foundation, either version 3 of the
+-- License, or (at your option) any later version.
+--
+-- See the GNU Affero General Public License for more details:
+-- <https://www.gnu.org/licenses/agpl-3.0.html>.
+--
+-- Originally licensed under the Apache License, Version 2.0:
+-- <http://www.apache.org/licenses/LICENSE-2.0>.
+--
+-- [This file includes modifications made by New Vector Limited]
+--
+--
+/* Copyright 2017 Vector Creations Ltd
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+create table groups (
+	group_id text not null,
+	name text, -- the display name of the room
+	avatar_url text,
+	short_description text,
+	long_description text
+);
+
+create unique index groups_idx on groups (group_id);
+
+
+-- list of users the group server thinks are joined
+create table group_users (
+	group_id text not null,
+	user_id text not null,
+	is_admin boolean not null,
+	is_public boolean
+		not null -- whether the users membership can be seen by everyone
+);
+
+
+create index groups_users_g_idx on group_users (group_id, user_id);
+create index groups_users_u_idx on group_users (user_id);
+
+-- list of users the group server thinks are invited
+create table group_invites (
+	group_id text not null,
+	user_id text not null
+);
+
+create index groups_invites_g_idx on group_invites (group_id, user_id);
+create index groups_invites_u_idx on group_invites (user_id);
+
+
+create table group_rooms (
+	group_id text not null,
+	room_id text not null,
+	is_public boolean
+		not null -- whether the room can be seen by everyone
+);
+
+create unique index groups_rooms_g_idx on group_rooms (group_id, room_id);
+create index groups_rooms_r_idx on group_rooms (room_id);
+
+
+-- Rooms to include in the summary
+create table group_summary_rooms (
+	group_id text not null,
+	room_id text not null,
+	category_id text not null,
+	room_order bigint not null,
+	is_public boolean not null, -- whether the room should be show to everyone
+	unique(group_id, category_id, room_id, room_order),
+	check(room_order > 0)
+);
+
+create unique index group_summary_rooms_g_idx
+	on group_summary_rooms (group_id, room_id, category_id);
+
+
+-- Categories to include in the summary
+create table group_summary_room_categories (
+	group_id text not null,
+	category_id text not null,
+	cat_order bigint not null,
+	unique(group_id, category_id, cat_order),
+	check(cat_order > 0)
+);
+
+-- The categories in the group
+create table group_room_categories (
+	group_id text not null,
+	category_id text not null,
+	profile text not null,
+	is_public boolean not null, -- whether the category should be show to everyone
+	unique(group_id, category_id)
+);
+
+-- The users to include in the group summary
+create table group_summary_users (
+	group_id text not null,
+	user_id text not null,
+	role_id text not null,
+	user_order bigint not null,
+	is_public boolean
+		not null -- whether the user should be show to everyone
+);
+
+create index group_summary_users_g_idx on group_summary_users (group_id);
+
+-- The roles to include in the group summary
+create table group_summary_roles (
+	group_id text not null,
+	role_id text not null,
+	role_order bigint not null,
+	unique(group_id, role_id, role_order),
+	check(role_order > 0)
+);
+
+
+-- The roles in a groups
+create table group_roles (
+	group_id text not null,
+	role_id text not null,
+	profile text not null,
+	is_public boolean not null, -- whether the role should be show to everyone
+	unique(group_id, role_id)
+);
+
+
+-- List of  attestations we've given out and need to renew
+create table group_attestations_renewals (
+	group_id text not null,
+	user_id text not null,
+	valid_until_ms bigint not null
+);
+
+create index group_attestations_renewals_g_idx
+	on group_attestations_renewals (group_id, user_id);
+create index group_attestations_renewals_u_idx
+	on group_attestations_renewals (user_id);
+create index group_attestations_renewals_v_idx
+	on group_attestations_renewals (valid_until_ms);
+
+
+-- List of attestations we've received from remotes and are interested in.
+create table group_attestations_remote (
+	group_id text not null,
+	user_id text not null,
+	valid_until_ms bigint not null,
+	attestation_json text not null
+);
+
+create index group_attestations_remote_g_idx
+	on group_attestations_remote (group_id, user_id);
+create index group_attestations_remote_u_idx
+	on group_attestations_remote (user_id);
+create index group_attestations_remote_v_idx
+	on group_attestations_remote (valid_until_ms);
+
+
+-- The group membership for the HS's users
+create table local_group_membership (
+	group_id text not null,
+	user_id text not null,
+	is_admin boolean not null,
+	membership text not null,
+	is_publicised boolean not null, -- if the user is publicising their membership
+	content text not null
+);
+
+create index local_group_membership_u_idx
+	on local_group_membership (user_id, group_id);
+create index local_group_membership_g_idx on local_group_membership (group_id);
+
+
+create table local_group_updates (
+	stream_id bigint not null,
+	group_id text not null,
+	user_id text not null,
+	type text not null,
+	content text not null
+);

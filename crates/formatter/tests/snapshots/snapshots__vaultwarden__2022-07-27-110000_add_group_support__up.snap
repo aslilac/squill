@@ -1,0 +1,27 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table groups (
+	uuid text not null primary key,
+	organizations_uuid text not null references organizations (uuid),
+	name text not null,
+	access_all boolean not null,
+	external_id text null,
+	creation_date timestamp not null,
+	revision_date timestamp not null
+);
+
+create table groups_users (
+	groups_uuid text not null references groups (uuid),
+	users_organizations_uuid text not null references users_organizations (uuid),
+	unique(groups_uuid, users_organizations_uuid)
+);
+
+create table collections_groups (
+	collections_uuid text not null references collections (uuid),
+	groups_uuid text not null references groups (uuid),
+	read_only boolean not null,
+	hide_passwords boolean not null,
+	unique(collections_uuid, groups_uuid)
+);

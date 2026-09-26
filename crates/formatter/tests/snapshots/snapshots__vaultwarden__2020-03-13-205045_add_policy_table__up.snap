@@ -1,0 +1,12 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table org_policies (
+	uuid text not null primary key,
+	org_uuid text not null references organizations (uuid),
+	atype integer not null,
+	enabled boolean not null,
+	data text not null,
+	unique(org_uuid, atype)
+);

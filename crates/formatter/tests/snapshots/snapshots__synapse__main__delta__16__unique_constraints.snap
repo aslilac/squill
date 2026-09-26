@@ -1,0 +1,75 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- We can use SQLite features here, since other db support was only added in v16
+
+--
+delete from current_state_events
+where
+	rowid not in (select min(rowid) from current_state_events group by event_id);
+
+drop index if exists current_state_events_event_id;
+create unique index current_state_events_event_id
+	on current_state_events (event_id);
+
+--
+delete from room_memberships
+where rowid not in (select min(rowid) from room_memberships group by event_id);
+
+drop index if exists room_memberships_event_id;
+create unique index room_memberships_event_id on room_memberships (event_id);
+
+--
+delete from topics
+where rowid not in (select min(rowid) from topics group by event_id);
+
+drop index if exists topics_event_id;
+create unique index topics_event_id on topics (event_id);
+
+--
+delete from room_names
+where rowid not in (select min(rowid) from room_names group by event_id);
+
+drop index if exists room_names_id;
+create unique index room_names_id on room_names (event_id);
+
+--
+delete from presence
+where rowid not in (select min(rowid) from presence group by user_id);
+
+drop index if exists presence_id;
+create unique index presence_id on presence (user_id);
+
+--
+delete from presence_allow_inbound
+where
+	rowid not in (
+		select min(rowid)
+		from presence_allow_inbound
+		group by observed_user_id, observer_user_id
+	);
+
+drop index if exists presence_allow_inbound_observers;
+create unique index presence_allow_inbound_observers
+	on presence_allow_inbound (observed_user_id, observer_user_id);
+
+--
+delete from presence_list
+where
+	rowid not in (
+		select min(rowid)
+		from presence_list
+		group by user_id, observed_user_id
+	);
+
+drop index if exists presence_list_observers;
+create unique index presence_list_observers
+	on presence_list (user_id, observed_user_id);
+
+--
+delete from room_aliases
+where rowid not in (select min(rowid) from room_aliases group by room_alias);
+
+drop index if exists room_aliases_id;
+create index room_aliases_id on room_aliases (room_id);

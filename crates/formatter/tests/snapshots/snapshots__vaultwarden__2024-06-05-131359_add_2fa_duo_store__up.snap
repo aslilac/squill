@@ -1,0 +1,11 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table twofactor_duo_ctx (
+	state text not null,
+	user_email text not null,
+	nonce text not null,
+	exp integer not null,
+	primary key (state)
+);

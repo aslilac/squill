@@ -1,0 +1,18 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table attachments rename to oldAttachments;
+
+create table attachments (
+	id text not null primary key,
+	cipher_uuid text not null references ciphers (uuid),
+	file_name text not null,
+	file_size integer not null
+);
+
+insert into attachments (id, cipher_uuid, file_name, file_size)
+select id, cipher_uuid, file_name, file_size
+from oldAttachments;
+
+drop table oldAttachments;

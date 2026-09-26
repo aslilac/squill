@@ -1,0 +1,22 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table deck_config (
+	id integer not null primary key,
+	name text collate unicase not null,
+	mtime_secs integer not null,
+	usn integer not null,
+	config blob not null
+);
+create table config (
+	KEY text not null primary key,
+	usn integer not null,
+	mtime_secs integer not null,
+	val blob not null
+) without rowid;
+create table tags (
+	tag text collate unicase not null primary key,
+	usn integer not null
+) without rowid;
+update col set ver = 14;

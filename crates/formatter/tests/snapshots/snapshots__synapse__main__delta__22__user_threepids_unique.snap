@@ -1,0 +1,27 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table if not exists user_threepids2 (
+	user_id text not null,
+	medium text not null,
+	address text not null,
+	validated_at bigint not null,
+	added_at bigint not null,
+	constraint medium_address unique (medium, address)
+);
+
+insert into user_threepids2
+select *
+from user_threepids
+where
+	added_at in (
+		select max(added_at)
+		from user_threepids
+		group by medium, address
+	);
+
+drop table user_threepids;
+alter table user_threepids2 rename to user_threepids;
+
+create index user_threepids_user_id on user_threepids (user_id);

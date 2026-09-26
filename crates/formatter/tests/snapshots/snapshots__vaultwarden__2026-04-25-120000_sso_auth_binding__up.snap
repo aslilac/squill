@@ -1,0 +1,5 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table sso_auth add column binding_hash text;

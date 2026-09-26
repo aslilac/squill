@@ -1,0 +1,5 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+select id, guid, mid, mod, usn, tags, "", cast (sfld as text), csum from notes

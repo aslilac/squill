@@ -54,8 +54,7 @@ select * from provisioner_jobs where id = $1 for update;
 with
 	filtered_provisioner_jobs as (
 		-- Step 1: Filter provisioner_jobs
-		select
-			id, created_at, tags
+		select id, created_at, tags
 		from provisioner_jobs
 		where
 			id
@@ -65,8 +64,7 @@ with
 	),
 	pending_jobs as (
 		-- Step 2: Extract only pending jobs
-		select
-			id, initiator_id, created_at, tags
+		select id, initiator_id, created_at, tags
 		from provisioner_jobs
 		where job_status = 'pending'
 	),
@@ -136,8 +134,7 @@ from final_jobs fj
 		on fj.id
 		= pj.id -- Ensure we retrieve full details from `provisioner_jobs`.
 -- JOIN with pj is required for sqlc.embed(pj) to compile successfully.
-order by
-	fj.created_at;
+order by fj.created_at;
 
 -- name: GetProvisionerJobsByOrganizationAndStatusWithQueuePositionAndProvisioner :many
 with
@@ -312,8 +309,7 @@ where
 		and completed_at is null
 	)
 -- To avoid repeatedly attempting to reap the same jobs, we randomly order and limit to @max_jobs.
-order by
-	random()
+order by random()
 limit @max_jobs;
 
 -- name: InsertProvisionerJobTimings :many

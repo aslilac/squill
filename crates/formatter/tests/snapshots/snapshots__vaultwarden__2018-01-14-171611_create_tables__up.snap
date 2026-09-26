@@ -1,0 +1,64 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table users (
+	uuid text not null primary key,
+	created_at datetime not null,
+	updated_at datetime not null,
+	email text not null unique,
+	name text not null,
+	password_hash blob not null,
+	salt blob not null,
+	password_iterations integer not null,
+	password_hint text,
+	key text not null,
+	private_key text,
+	public_key text,
+	totp_secret text,
+	totp_recover text,
+	security_stamp text not null,
+	equivalent_domains text not null,
+	excluded_globals text not null
+);
+
+create table devices (
+	uuid text not null primary key,
+	created_at datetime not null,
+	updated_at datetime not null,
+	user_uuid text not null references users (uuid),
+	name text not null,
+	type integer not null,
+	push_token text,
+	refresh_token text not null
+);
+
+create table ciphers (
+	uuid text not null primary key,
+	created_at datetime not null,
+	updated_at datetime not null,
+	user_uuid text not null references users (uuid),
+	folder_uuid text references folders (uuid),
+	organization_uuid text,
+	type integer not null,
+	name text not null,
+	notes text,
+	fields text,
+	data text not null,
+	favorite boolean not null
+);
+
+create table attachments (
+	id text not null primary key,
+	cipher_uuid text not null references ciphers (uuid),
+	file_name text not null,
+	file_size integer not null
+);
+
+create table folders (
+	uuid text not null primary key,
+	created_at datetime not null,
+	updated_at datetime not null,
+	user_uuid text not null references users (uuid),
+	name text not null
+);

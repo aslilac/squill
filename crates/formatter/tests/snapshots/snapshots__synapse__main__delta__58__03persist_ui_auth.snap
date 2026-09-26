@@ -1,0 +1,58 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+--
+-- This file is licensed under the Affero General Public License (AGPL) version 3.
+--
+-- Copyright (C) 2023 New Vector, Ltd
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU Affero General Public License as
+-- published by the Free Software Foundation, either version 3 of the
+-- License, or (at your option) any later version.
+--
+-- See the GNU Affero General Public License for more details:
+-- <https://www.gnu.org/licenses/agpl-3.0.html>.
+--
+-- Originally licensed under the Apache License, Version 2.0:
+-- <http://www.apache.org/licenses/LICENSE-2.0>.
+--
+-- [This file includes modifications made by New Vector Limited]
+--
+--
+/* Copyright 2020 The Matrix.org Foundation C.I.C
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+create table if not exists ui_auth_sessions (
+	session_id text not null, -- The session ID passed to the client.
+	creation_time bigint not null, -- The time this session was created (epoch time in milliseconds).
+	serverdict text not null, -- A JSON dictionary of arbitrary data added by Synapse.
+	clientdict text not null, -- A JSON dictionary of arbitrary data from the client.
+	uri text not null, -- The URI the UI authentication session is using.
+	method text not null, -- The HTTP method the UI authentication session is using.
+	-- The clientdict, uri, and method make up an tuple that must be immutable
+	-- throughout the lifetime of the UI Auth session.
+	description text not null, -- A human readable description of the operation which caused the UI Auth flow to occur.
+	unique(session_id)
+);
+
+create table if not exists ui_auth_sessions_credentials (
+	session_id text not null, -- The corresponding UI Auth session.
+	stage_type text not null, -- The stage type.
+	result text not null, -- The result of the stage verification, stored as JSON.
+	unique(session_id, stage_type),
+	foreign key (session_id) references ui_auth_sessions (session_id)
+);

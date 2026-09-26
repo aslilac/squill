@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create index events_order on events (topological_ordering, stream_ordering);
+create index events_order_room
+	on events (room_id, topological_ordering, stream_ordering);

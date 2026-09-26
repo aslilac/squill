@@ -1,0 +1,12 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table collections;
+
+drop table organizations;
+
+
+drop table users_collections;
+
+drop table users_organizations;

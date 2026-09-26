@@ -1,48 +1,50 @@
 //! TREE-97/98 acceptance: insta snapshots of the formatted output for
-//! every file in `corpus/coder/queries/` and `corpus/coder/migrations/`.
+//! every file of every corpus under `corpus/`, one per file, named
+//! `<corpus>__<path>`.
 
 use formatter::Options;
 use formatter::format_cst;
 use parser::lexer::lex_with;
-use std::path::Path;
 
-fn snapshot_dir(dir: &str) {
-	let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-		.join(format!("../../corpus/coder/{dir}"));
-	let mut files: Vec<_> = std::fs::read_dir(&root)
-		.expect("read corpus dir")
-		.map(|entry| entry.expect("corpus entry").path())
-		.filter(|path| path.extension().is_some_and(|ext| ext == "sql"))
+/// Snapshot every file of one corpus.
+fn snapshot_corpus(name: &str) {
+	let files: Vec<_> = corpus::files(&corpus::root())
+		.expect("read corpus")
+		.into_iter()
+		.filter(|file| file.corpus == name)
 		.collect();
-	files.sort();
-	assert!(!files.is_empty(), "no files found in {dir}");
+	assert!(!files.is_empty(), "no files found in corpus {name}");
 
-	let options = Options {
-		at_params: true, // sqlc SQL
-		..Options::default()
-	};
-
-	for path in files {
-		let source = std::fs::read_to_string(&path).expect("read corpus file");
+	for file in files {
+		let options = Options {
+			dialect: file.dialect,
+			at_params: file.lex_options.at_params,
+			..Options::default()
+		};
+		let source = std::fs::read_to_string(&file.path).expect("read corpus file");
 		let tokens = lex_with(&source, options.dialect, options.lex_options());
 		let parse = parser::parser::parse(&tokens, options.dialect);
 		let formatted = format_cst(&parse.cst, &options).text;
-		let name = path.file_stem().expect("file stem").to_string_lossy();
-		insta::assert_snapshot!(format!("{dir}__{name}"), formatted);
+		insta::assert_snapshot!(file.name(), formatted);
 	}
 }
 
 #[test]
-fn queries_formatted_snapshots() {
-	snapshot_dir("queries");
+fn coder_snapshots() {
+	snapshot_corpus("coder");
 }
 
 #[test]
-fn migrations_formatted_snapshots() {
-	snapshot_dir("migrations");
+fn anki_snapshots() {
+	snapshot_corpus("anki");
 }
 
 #[test]
-fn fixtures_formatted_snapshots() {
-	snapshot_dir("fixtures");
+fn synapse_snapshots() {
+	snapshot_corpus("synapse");
+}
+
+#[test]
+fn vaultwarden_snapshots() {
+	snapshot_corpus("vaultwarden");
 }

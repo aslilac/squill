@@ -96,8 +96,7 @@ where
 	end
 -- Authorize Filter clause will be injected below in GetAuthorizedTemplates
 -- @authorize_filter
-order by
-	(t.name, t.id) asc;
+order by (t.name, t.id) asc;
 
 -- name: GetTemplateByOrganizationAndName :one
 select *

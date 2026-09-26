@@ -1,0 +1,11 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table attachments rename column key to akey;
+alter table ciphers rename column type to atype;
+alter table devices rename column type to atype;
+alter table twofactor rename column type to atype;
+alter table users rename column key to akey;
+alter table users_organizations rename column key to akey;
+alter table users_organizations rename column type to atype;

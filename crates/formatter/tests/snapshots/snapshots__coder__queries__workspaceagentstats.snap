@@ -72,8 +72,7 @@ where
 		-- Delete at most in batches of 4 hours (with this batch size, assuming
 		-- 1 iteration / 10 minutes, we can clear out the previous 6 months of
 		-- data in 7.5 days) whilst keeping the DB load low.
-		select
-			coalesce(min(created_at) + '4 hours'::interval, now())
+		select coalesce(min(created_at) + '4 hours'::interval, now())
 		from workspace_agent_stats
 	);
 
@@ -394,8 +393,7 @@ with
 				row_number() over (partition by agent_id order by created_at desc) as rn
 			from workspace_agent_stats
 			-- The greater than 0 is to support legacy agents that don't report connection_median_latency_ms.
-			where
-				created_at > $1 and connection_median_latency_ms > 0
+			where created_at > $1 and connection_median_latency_ms > 0
 		) as a
 		where a.rn = 1
 		group by a.user_id, a.agent_id, a.workspace_id
@@ -454,8 +452,7 @@ with
 		from workspace_agent_stats
 		-- We only want the latest stats, but those stats might be
 		-- spread across multiple rows.
-		where
-			usage = true and created_at > now() - '1 minute'::interval
+		where usage = true and created_at > now() - '1 minute'::interval
 		group by user_id, agent_id, workspace_id
 	)
 select

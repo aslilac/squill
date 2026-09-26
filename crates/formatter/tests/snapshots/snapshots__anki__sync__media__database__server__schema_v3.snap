@@ -1,0 +1,20 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+begin exclusive;
+create table if not exists media (
+	fname text not null primary key,
+	csum blob,
+	sz int not null,
+	usn int not null,
+	deleted int not null
+);
+create index if not exists ix_usn on media (usn);
+create table if not exists meta (
+	usn int not null,
+	sz int not null
+);
+insert into meta (usn, sz) values (0, 0);
+pragma user_version = 3;
+commit;

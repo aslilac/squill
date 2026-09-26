@@ -1,0 +1,5 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+select fname, csum, size, usn, mtime from media where fname = ?;

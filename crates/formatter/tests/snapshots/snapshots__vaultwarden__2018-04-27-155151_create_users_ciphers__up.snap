@@ -1,0 +1,65 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table ciphers rename to oldCiphers;
+
+create table ciphers (
+	uuid text not null primary key,
+	created_at datetime not null,
+	updated_at datetime not null,
+	user_uuid text references users (uuid), -- Make this optional
+	organization_uuid text references organizations (uuid), -- Add reference to orgs table
+	-- Remove folder_uuid
+	type integer not null,
+	name text not null,
+	notes text,
+	fields text,
+	data text not null,
+	favorite boolean not null
+);
+
+create table folders_ciphers (
+	cipher_uuid text not null references ciphers (uuid),
+	folder_uuid text not null references folders (uuid),
+	primary key (cipher_uuid, folder_uuid)
+);
+
+insert into ciphers (
+	uuid,
+	created_at,
+	updated_at,
+	user_uuid,
+	organization_uuid,
+	type,
+	name,
+	notes,
+	fields,
+	data,
+	favorite
+)
+select
+	uuid,
+	created_at,
+	updated_at,
+	user_uuid,
+	organization_uuid,
+	type,
+	name,
+	notes,
+	fields,
+	data,
+	favorite
+from oldCiphers;
+
+insert into folders_ciphers (cipher_uuid, folder_uuid)
+select uuid, folder_uuid
+from oldCiphers
+where folder_uuid is not null;
+
+
+drop table oldCiphers;
+
+alter table users_collections
+	add column read_only boolean not null default 0 -- False
+	;

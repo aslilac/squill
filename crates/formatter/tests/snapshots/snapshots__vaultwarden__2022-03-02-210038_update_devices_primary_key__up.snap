@@ -1,0 +1,27 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Create new devices table with primary keys on both uuid and user_uuid
+create table devices_new (
+	uuid text not null,
+	created_at datetime not null,
+	updated_at datetime not null,
+	user_uuid text not null,
+	name text not null,
+	atype integer not null,
+	push_token text,
+	refresh_token text not null,
+	twofactor_remember text,
+	primary key (uuid, user_uuid),
+	foreign key (user_uuid) references users (uuid)
+);
+
+-- Transfer current data to new table
+insert into devices_new select * from devices;
+
+-- Drop the old table
+drop table devices;
+
+-- Rename the new table to the original name
+alter table devices_new rename to devices;

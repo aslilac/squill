@@ -1,0 +1,12 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+with cids as (select cid from search_cids)
+select did
+from cards
+where id in cids
+union
+select odid
+from cards
+where odid != 0 and id in cids

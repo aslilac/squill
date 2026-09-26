@@ -1,0 +1,18 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table if exists sort_order;
+create temporary table sort_order (
+	pos integer primary key,
+	nid integer not null unique
+);
+insert into sort_order (nid)
+select nid
+from cards
+group by nid
+order by
+	coalesce(
+		extract_original_position(data),
+		case when type == 0 then due else 0 end
+	);

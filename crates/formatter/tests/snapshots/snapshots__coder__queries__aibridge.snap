@@ -249,8 +249,7 @@ where
 with
 	interceptions_in_range as (
 		-- Get all matching interceptions in the given timeframe.
-		select
-			id, initiator_id, (ended_at - started_at) as duration
+		select id, initiator_id, (ended_at - started_at) as duration
 		from aibridge_interceptions
 		where
 			provider = @provider::text
@@ -479,8 +478,7 @@ with
 		-- affected by fan-out from multiple prompts per interception).
 		-- COALESCE falls back to MIN(ai.started_at) so the cursor value is
 		-- never NULL, which would silently drop rows from the HAVING comparison.
-		select
-			coalesce(max(up.created_at), min(ai.started_at)) as last_active_at
+		select coalesce(max(up.created_at), min(ai.started_at)) as last_active_at
 		from aibridge_interceptions ai
 			left join aibridge_user_prompts up on up.interception_id = ai.id
 		where ai.session_id = @after_session_id and ai.ended_at is not null
@@ -565,8 +563,7 @@ with
 			end
 		-- Authorize Filter clause will be injected below in ListAuthorizedAIBridgeSessions
 		-- @authorize_filter
-		group by
-			ai.session_id, ai.initiator_id
+		group by ai.session_id, ai.initiator_id
 		having
 			-- Cursor pagination: uses a composite (last_active_at, session_id) cursor to
 			-- support keyset pagination. The less-than comparison matches the DESC
@@ -642,8 +639,7 @@ from session_page sp
 	left join LATERAL (
 		-- Fetch only the most recent user prompt across all interceptions
 		-- in the session.
-		select
-			up.prompt
+		select up.prompt
 		from aibridge_user_prompts up
 		where up.interception_id = any(sr.interception_ids)
 		order by up.created_at desc, up.id desc
@@ -738,8 +734,7 @@ where
 -- to the user and what they are allowed to see.
 -- Authorize Filter clause will be injected below in ListAIBridgeModelsAuthorized
 -- @authorize_filter
-group by
-	model
+group by model
 order by model asc
 limit coalesce(nullif(@limit_::integer, 0), 100)
 offset @offset_;
@@ -762,7 +757,6 @@ where
 -- Authorize Filter clause will be injected below in
 -- ListAIBridgeClientsAuthorized.
 -- @authorize_filter
-group by
-	client
+group by client
 limit coalesce(nullif(@limit_::integer, 0), 100)
 offset @offset_;

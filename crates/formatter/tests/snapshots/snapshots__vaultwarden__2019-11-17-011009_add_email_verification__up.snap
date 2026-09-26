@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table users add column verified_at datetime default null;
+alter table users add column last_verifying_at datetime default null;
+alter table users add column login_verify_count integer not null default 0;
+alter table users add column email_new text default null;
+alter table users add column email_new_token text default null;

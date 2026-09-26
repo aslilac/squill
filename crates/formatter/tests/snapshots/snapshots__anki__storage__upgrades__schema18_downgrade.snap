@@ -1,0 +1,13 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table graves rename to graves_old;
+create table graves (
+	usn integer not null,
+	oid integer not null,
+	type integer not null
+);
+insert into graves (usn, oid, type) select usn, oid, type from graves_old;
+drop table graves_old;
+update col set ver = 17;

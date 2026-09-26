@@ -1,0 +1,18 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table emergency_access (
+	uuid text not null primary key,
+	grantor_uuid text references users (uuid),
+	grantee_uuid text references users (uuid),
+	email text,
+	key_encrypted text,
+	atype integer not null,
+	status integer not null,
+	wait_time_days integer not null,
+	recovery_initiated_at datetime,
+	last_notification_at datetime,
+	updated_at datetime not null,
+	created_at datetime not null
+);

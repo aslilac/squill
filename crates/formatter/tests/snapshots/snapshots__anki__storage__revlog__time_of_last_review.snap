@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+select id / 1000
+from revlog
+where cid = $1 and ease between 1 and 4 and (type != 3 or factor != 0)
+order by id desc
+limit 1

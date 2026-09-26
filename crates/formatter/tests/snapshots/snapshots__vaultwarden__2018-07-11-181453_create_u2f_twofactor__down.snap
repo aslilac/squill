@@ -1,0 +1,13 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+update users
+set
+	totp_secret = (
+		select twofactor.data
+		from twofactor
+		where twofactor.type = 0 and twofactor.user_uuid = users.uuid
+	);
+
+drop table twofactor;

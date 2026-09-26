@@ -1,0 +1,46 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+/* Copyright 2019 The Matrix.org Foundation C.I.C.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Change the hidden column from a default value of FALSE to a default value of
+ * 0, because sqlite3 prior to 3.23.0 caused the hidden column to contain the
+ * string 'FALSE', which is truthy.
+ *
+ * Since sqlite doesn't allow us to just change the default value, we have to
+ * recreate the table, copy the data, fix the rows that have incorrect data, and
+ * replace the old table with the new table.
+ */
+
+create table if not exists devices2 (
+	user_id text not null,
+	device_id text not null,
+	display_name text,
+	last_seen bigint,
+	ip text,
+	user_agent text,
+	hidden boolean default 0,
+	constraint device_uniqueness unique (user_id, device_id)
+);
+
+insert into devices2 select * from devices;
+
+update devices2 set hidden = 0 where hidden = 'FALSE';
+
+drop table devices;
+
+alter table devices2 rename to devices;

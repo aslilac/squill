@@ -1,0 +1,26 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table state_groups (
+	id bigint primary key,
+	room_id text not null,
+	event_id text not null
+);
+create table state_groups_state (
+	state_group bigint not null,
+	room_id text not null,
+	type text not null,
+	state_key text not null,
+	event_id text not null
+);
+create table state_group_edges (
+	state_group bigint not null,
+	prev_state_group bigint not null
+);
+create index state_group_edges_prev_idx on state_group_edges (prev_state_group);
+create index state_groups_state_type_idx
+	on state_groups_state (state_group, type, state_key);
+create index state_groups_room_id_idx on state_groups (room_id);
+create unique index state_group_edges_unique_idx
+	on state_group_edges (state_group, prev_state_group);

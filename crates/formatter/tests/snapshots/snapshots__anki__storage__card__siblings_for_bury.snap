@@ -1,0 +1,15 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+insert into search_cids
+select id
+from cards
+where
+	id != :card_id
+	and nid = :note_id
+	and (
+		(:include_new and queue = :new_queue)
+		or (:include_reviews and queue = :review_queue)
+		or (:include_day_learn and queue = :daylearn_queue)
+	);

@@ -153,8 +153,7 @@ from
 		not exists (
 			-- Return all "used" versions, where "used" is defined as being
 			-- used by a latest workspace build.
-			select
-				template_version_id
+			select template_version_id
 			from (
 				select distinct on (workspace_id) template_version_id, transition
 				from workspace_builds

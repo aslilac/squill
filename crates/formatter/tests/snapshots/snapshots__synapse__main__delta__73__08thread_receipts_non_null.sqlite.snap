@@ -1,0 +1,90 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+/* Copyright 2022 The Matrix.org Foundation C.I.C
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+-- Drop constraint on (room_id, receipt_type, user_id).
+--
+-- SQLite doesn't support modifying constraints to an existing table, so it must
+-- be recreated.
+
+-- Create the new tables.
+create table receipts_linearized_new (
+	stream_id bigint not null,
+	room_id text not null,
+	receipt_type text not null,
+	user_id text not null,
+	event_id text not null,
+	thread_id text,
+	event_stream_ordering bigint,
+	data text not null,
+	constraint receipts_linearized_uniqueness_thread
+		unique (room_id, receipt_type, user_id, thread_id)
+);
+
+create table receipts_graph_new (
+	room_id text not null,
+	receipt_type text not null,
+	user_id text not null,
+	event_ids text not null,
+	thread_id text,
+	data text not null,
+	constraint receipts_graph_uniqueness_thread
+		unique (room_id, receipt_type, user_id, thread_id)
+);
+
+-- Drop the old indexes.
+drop index if exists receipts_linearized_id;
+drop index if exists receipts_linearized_room_stream;
+drop index if exists receipts_linearized_user;
+
+-- Copy the data.
+insert into receipts_linearized_new (
+	stream_id,
+	room_id,
+	receipt_type,
+	user_id,
+	event_id,
+	data
+)
+select stream_id, room_id, receipt_type, user_id, event_id, data
+from receipts_linearized;
+insert into receipts_graph_new (room_id, receipt_type, user_id, event_ids, data)
+select room_id, receipt_type, user_id, event_ids, data
+from receipts_graph;
+
+-- Drop the old tables.
+drop table receipts_linearized;
+drop table receipts_graph;
+
+-- Rename the tables.
+alter table receipts_linearized_new rename to receipts_linearized;
+alter table receipts_graph_new rename to receipts_graph;
+
+-- Create the indices.
+create index receipts_linearized_id on receipts_linearized (stream_id);
+create index receipts_linearized_room_stream
+	on receipts_linearized (room_id, stream_id);
+create index receipts_linearized_user on receipts_linearized (user_id);
+
+-- Re-run background updates from 72/08thread_receipts.sql.
+insert into background_updates (ordering, update_name, progress_json)
+values (7308, 'receipts_linearized_unique_index', '{}')
+on conflict (update_name) do nothing;
+insert into background_updates (ordering, update_name, progress_json)
+values (7308, 'receipts_graph_unique_index', '{}')
+on conflict (update_name) do nothing;

@@ -7,8 +7,7 @@ select coalesce(sum(groups.quota_allowance), 0)::bigint
 from (
 	-- Select all groups this user is a member of. This will also include
 	-- the "Everyone" group for organizations the user is a member of.
-	select
-		*
+	select *
 	from group_members_expanded
 	where
 		@user_id = user_id

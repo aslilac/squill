@@ -1,0 +1,40 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table state_group_edges (
+	state_group bigint not null,
+	prev_state_group bigint not null
+);
+create sequence state_group_id_seq
+	start with 1
+	increment by 1
+	no minvalue
+	no maxvalue
+	cache 1;
+create table state_groups (
+	id bigint not null,
+	room_id text not null,
+	event_id text not null
+);
+create table state_groups_state (
+	state_group bigint not null,
+	room_id text not null,
+	type text not null,
+	state_key text not null,
+	event_id text not null
+);
+alter table only state_groups_state
+	alter column state_group set (n_distinct = -0.02);
+alter table only state_groups add constraint state_groups_pkey primary key (id);
+create index state_group_edges_prev_idx
+	on state_group_edges
+	using btree(prev_state_group);
+create unique index state_group_edges_unique_idx
+	on state_group_edges
+	using btree(state_group, prev_state_group);
+create index state_groups_room_id_idx on state_groups using btree(room_id);
+create index state_groups_state_type_idx
+	on state_groups_state
+	using btree(state_group, type, state_key);
+select pg_catalog.setval('state_group_id_seq', 1, false);

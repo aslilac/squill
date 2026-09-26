@@ -1,0 +1,11 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table tags;
+create table tags (
+	tag text collate unicase not null primary key,
+	usn integer not null,
+	collapsed boolean not null,
+	config blob null
+) without rowid;

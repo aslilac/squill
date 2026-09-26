@@ -11,4 +11,5 @@ workspace = true
 parser = { workspace = true }
 
 [dev-dependencies]
+corpus.workspace = true
 insta = { workspace = true }

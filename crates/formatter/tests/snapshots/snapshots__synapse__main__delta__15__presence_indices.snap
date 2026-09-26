@@ -1,0 +1,5 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create index if not exists presence_list_user_id on presence_list (user_id);

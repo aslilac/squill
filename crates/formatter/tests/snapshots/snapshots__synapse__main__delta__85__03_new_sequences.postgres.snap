@@ -1,0 +1,78 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+--
+-- This file is licensed under the Affero General Public License (AGPL) version 3.
+--
+-- Copyright (C) 2024 New Vector, Ltd
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU Affero General Public License as
+-- published by the Free Software Foundation, either version 3 of the
+-- License, or (at your option) any later version.
+--
+-- See the GNU Affero General Public License for more details:
+-- <https://www.gnu.org/licenses/agpl-3.0.html>.
+
+-- Add squences for stream tables to allow them to be used with
+-- `MultiWriterIdGenerator`
+create sequence if not exists device_lists_sequence;
+
+-- We need to take the max across all the device lists tables as they share the
+-- ID generator
+select
+	setval(
+		'device_lists_sequence',
+		(
+			select
+				greatest(
+					(select coalesce(max(stream_id), 1) from device_lists_stream),
+					(select coalesce(max(stream_id), 1) from user_signature_stream),
+					(select coalesce(max(stream_id), 1) from device_lists_outbound_pokes),
+					(
+						select coalesce(max(stream_id), 1)
+						from device_lists_changes_in_room
+					),
+					(select coalesce(max(stream_id), 1) from device_lists_remote_pending),
+					(
+						select coalesce(max(stream_id), 1)
+						from device_lists_changes_converted_stream_position
+					)
+				)
+		)
+	);
+
+create sequence if not exists e2e_cross_signing_keys_sequence;
+
+select
+	setval(
+		'e2e_cross_signing_keys_sequence',
+		(select coalesce(max(stream_id), 1) from e2e_cross_signing_keys)
+	);
+
+
+create sequence if not exists push_rules_stream_sequence;
+
+select
+	setval(
+		'push_rules_stream_sequence',
+		(select coalesce(max(stream_id), 1) from push_rules_stream)
+	);
+
+
+create sequence if not exists pushers_sequence;
+
+-- We need to take the max across all the pusher tables as they share the
+-- ID generator
+select
+	setval(
+		'pushers_sequence',
+		(
+			select
+				greatest(
+					(select coalesce(max(id), 1) from pushers),
+					(select coalesce(max(stream_id), 1) from deleted_pushers)
+				)
+		)
+	);

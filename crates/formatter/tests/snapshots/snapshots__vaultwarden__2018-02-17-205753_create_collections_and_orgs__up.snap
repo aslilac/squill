@@ -1,0 +1,33 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table collections (
+	uuid text not null primary key,
+	org_uuid text not null references organizations (uuid),
+	name text not null
+);
+
+create table organizations (
+	uuid text not null primary key,
+	name text not null,
+	billing_email text not null
+);
+
+
+create table users_collections (
+	user_uuid text not null references users (uuid),
+	collection_uuid text not null references collections (uuid),
+	primary key (user_uuid, collection_uuid)
+);
+
+create table users_organizations (
+	uuid text not null primary key,
+	user_uuid text not null references users (uuid),
+	org_uuid text not null references organizations (uuid),
+	access_all boolean not null,
+	key text not null,
+	status integer not null,
+	type integer not null,
+	unique(user_uuid, org_uuid)
+);

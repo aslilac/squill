@@ -1,0 +1,33 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Create new auth_requests table with master_password_hash as nullable column
+create table auth_requests_new (
+	uuid text not null primary key,
+	user_uuid text not null,
+	organization_uuid text,
+	request_device_identifier text not null,
+	device_type integer not null,
+	request_ip text not null,
+	response_device_id text,
+	access_code text not null,
+	public_key text not null,
+	enc_key text,
+	master_password_hash text,
+	approved boolean,
+	creation_date datetime not null,
+	response_date datetime,
+	authentication_date datetime,
+	foreign key (user_uuid) references users (uuid),
+	foreign key (organization_uuid) references organizations (uuid)
+);
+
+-- Transfer current data to new table
+insert into auth_requests_new select * from auth_requests;
+
+-- Drop the old table
+drop table auth_requests;
+
+-- Rename the new table to the original name
+alter table auth_requests_new rename to auth_requests;

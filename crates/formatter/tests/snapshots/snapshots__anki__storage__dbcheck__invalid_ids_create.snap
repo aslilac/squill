@@ -1,0 +1,26 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table if exists invalid_ids;
+create temporary table invalid_ids as
+with
+	max_existing_valid_id as (
+		select coalesce(max(id), 0) as max_id
+		from "{source_table}"
+		where id <= "{max_valid_id}"
+	),
+	first_new_id as (
+		select
+			case
+				when "{new_id}" > (select max_id from max_existing_valid_id)
+					then "{new_id}"
+				else (select max_id from max_existing_valid_id) + 1
+			end as id
+	)
+select
+	id,
+	(select id from first_new_id) + row_number() over (order by id) - 1 as new_id
+from "{source_table}"
+where id > "{max_valid_id}";
+create index invalid_ids_id_idx on invalid_ids (id);

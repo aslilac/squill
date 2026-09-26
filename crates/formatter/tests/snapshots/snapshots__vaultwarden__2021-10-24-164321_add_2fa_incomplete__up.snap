@@ -1,0 +1,12 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table twofactor_incomplete (
+	user_uuid text not null references users (uuid),
+	device_uuid text not null,
+	device_name text not null,
+	login_time datetime not null,
+	ip_address text not null,
+	primary key (user_uuid, device_uuid)
+);

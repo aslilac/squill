@@ -1,0 +1,5 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+update revlog set ease = ease + 1 where ease in (2, 3) and type in (0, 2);

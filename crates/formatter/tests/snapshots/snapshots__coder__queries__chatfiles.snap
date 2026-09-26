@@ -58,8 +58,7 @@ with
 		-- because there is no archived_at column. Correctness
 		-- requires that updated_at is never backdated on archived
 		-- chats. See ArchiveChatByID.
-		select distinct
-			cfl.file_id
+		select distinct cfl.file_id
 		from chat_file_links cfl join chats c on c.id = cfl.chat_id
 		where c.archived = false or c.updated_at >= @before_time::timestamptz
 	),

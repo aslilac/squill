@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+update deck_config
+set name = ?, mtime_secs = ?, usn = ?, config = ?
+where id = ?;

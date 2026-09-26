@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table if exists search_nids;
+create temporary table search_nids (
+	nid integer not null primary key
+);

@@ -1,0 +1,60 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Convert `access_tokens`.user from rowids to user strings.
+-- MUST BE DONE BEFORE REMOVING ID COLUMN FROM USERS TABLE BELOW
+create table if not exists new_access_tokens (
+	id bigint UNSIGNED primary key,
+	user_id text not null,
+	device_id text,
+	token text not null,
+	last_used bigint UNSIGNED,
+	unique(token)
+);
+
+insert into new_access_tokens
+select a.id, u.name, a.device_id, a.token, a.last_used
+from access_tokens as a inner join users as u on u.id = a.user_id;
+
+drop table access_tokens;
+
+alter table new_access_tokens rename to access_tokens;
+
+-- Remove ID column from `users` table
+create table if not exists new_users (
+	name text,
+	password_hash text,
+	creation_ts bigint UNSIGNED,
+	admin bool not null default 0,
+	unique(name)
+);
+
+insert into new_users select name, password_hash, creation_ts, admin from users;
+
+drop table users;
+
+alter table new_users rename to users;
+
+
+-- Remove UNIQUE constraint from `user_ips` table
+create table if not exists new_user_ips (
+	user_id text not null,
+	access_token text not null,
+	device_id text,
+	ip text not null,
+	user_agent text not null,
+	last_seen bigint UNSIGNED not null
+);
+
+insert into new_user_ips
+select user, access_token, device_id, ip, user_agent, last_seen
+from user_ips;
+
+drop table user_ips;
+
+alter table new_user_ips rename to user_ips;
+
+create index if not exists user_ips_user on user_ips (user_id);
+create index if not exists user_ips_user_ip
+	on user_ips (user_id, access_token, ip);

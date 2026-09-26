@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Add the external_id to the users_organizations table
+alter table users_organizations add column external_id text;

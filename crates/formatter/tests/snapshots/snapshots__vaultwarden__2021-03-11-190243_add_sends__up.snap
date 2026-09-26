@@ -1,0 +1,24 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table sends (
+	uuid text not null primary key,
+	user_uuid text references users (uuid),
+	organization_uuid text references organizations (uuid),
+	name text not null,
+	notes text,
+	atype integer not null,
+	data text not null,
+	key text not null,
+	password_hash blob,
+	password_salt blob,
+	password_iter integer,
+	max_access_count integer,
+	access_count integer not null,
+	creation_date datetime not null,
+	revision_date datetime not null,
+	expiration_date datetime,
+	deletion_date datetime not null,
+	disabled boolean not null
+);

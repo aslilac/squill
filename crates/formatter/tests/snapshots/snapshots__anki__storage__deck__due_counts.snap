@@ -1,0 +1,22 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+select
+	did,
+	-- new
+	sum(queue = :new_queue),
+	-- reviews
+	sum(queue = :review_queue and due <= :day_cutoff),
+	-- interday learning
+	sum(queue = :daylearn_queue and due <= :day_cutoff),
+	-- intraday learning
+	sum(
+		(
+			(queue = :learn_queue and due < :learn_cutoff)
+			or (queue = :preview_queue and due <= :learn_cutoff)
+		)
+	),
+	-- total
+	count(1)
+from cards

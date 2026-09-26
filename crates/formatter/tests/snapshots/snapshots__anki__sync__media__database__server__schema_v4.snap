@@ -1,0 +1,39 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- csum is no longer nulled on deletion
+-- sz renamed to size
+-- deleted renamed to mtime
+begin exclusive;
+alter table media rename to media_tmp;
+drop index ix_usn;
+create table media (
+	fname text not null primary key,
+	csum blob not null,
+	-- if zero, file has been deleted
+	size int not null,
+	usn int not null,
+	mtime int not null
+);
+insert into media (fname, csum, size, usn, mtime)
+select fname, csum, sz, usn, deleted
+from media_tmp
+where csum is not null;
+drop table media_tmp;
+create index ix_usn on media (usn);
+drop table meta;
+-- columns renamed; file count added
+create table meta (
+	last_usn int not null,
+	total_bytes int not null,
+	total_nonempty_files int not null
+);
+insert into meta (last_usn, total_bytes, total_nonempty_files)
+select coalesce(max(usn), 0), coalesce(sum(size), 0), 0
+from media;
+update meta
+set total_nonempty_files = (select count(*) from media where size > 0);
+pragma user_version = 4;
+commit;
+vacuum;

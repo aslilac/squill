@@ -1,0 +1,15 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+delete from event_to_state_groups
+where
+	state_group not in (
+		select max(state_group)
+		from event_to_state_groups
+		group by event_id
+	);
+
+delete from event_to_state_groups
+where
+	rowid not in (select min(rowid) from event_to_state_groups group by event_id);

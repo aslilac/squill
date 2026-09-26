@@ -13,8 +13,7 @@ set
 	linked_id = case
 		when (
 			-- When the count of linked_id is greater than 1, set the linked_id to empty
-			select
-				count(*)
+			select count(*)
 			from user_links inn
 			where out.linked_id = inn.linked_id and out.login_type = inn.login_type
 		)

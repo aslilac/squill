@@ -1,0 +1,12 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table if exists sso_nonce;
+
+create table sso_nonce (
+	state text not null primary key,
+	nonce text not null,
+	redirect_uri text not null,
+	created_at datetime not null default CURRENT_TIMESTAMP
+);

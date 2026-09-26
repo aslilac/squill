@@ -1,8 +1,9 @@
-//! TREE-93 acceptance: the token stream round-trips byte-for-byte over the
-//! entire coder corpus, with no error tokens.
+//! TREE-93 acceptance: the token stream round-trips byte-for-byte over
+//! every corpus, with no error tokens; TREE-95: so does the parse tree.
 
 use parser::Dialect;
 use parser::lexer::lex;
+use parser::lexer::lex_with;
 use parser::syntax::SyntaxKind;
 use std::path::Path;
 use std::path::PathBuf;
@@ -20,20 +21,23 @@ fn collect_sql_files(dir: &Path, out: &mut Vec<PathBuf>) {
 
 #[test]
 fn corpus_lexes_losslessly_with_no_error_tokens() {
-	let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
-	let mut files = Vec::new();
-	collect_sql_files(&root, &mut files);
+	let files = corpus::files(&corpus::root()).expect("read corpus");
 	assert!(!files.is_empty(), "no corpus files found");
 
-	for path in files {
-		let source = std::fs::read_to_string(&path).expect("read corpus file");
-		let tokens = lex(&source, Dialect::Postgres);
+	for file in files {
+		let source = std::fs::read_to_string(&file.path).expect("read corpus file");
+		let tokens = lex_with(&source, file.dialect, file.lex_options);
 		let rebuilt: String = tokens.iter().map(|t| t.text).collect();
-		assert_eq!(rebuilt, source, "round-trip failed for {}", path.display());
+		assert_eq!(
+			rebuilt,
+			source,
+			"round-trip failed for {}",
+			file.path.display()
+		);
 		if let Some(err) = tokens.iter().find(|t| t.kind == SyntaxKind::Error) {
 			panic!(
 				"error token in {}: {:?}",
-				path.display(),
+				file.path.display(),
 				err.text.chars().take(40).collect::<String>()
 			);
 		}
@@ -43,19 +47,15 @@ fn corpus_lexes_losslessly_with_no_error_tokens() {
 /// TREE-95: parsing is lossless corpus-wide, including ErrorStatements.
 #[test]
 fn corpus_parses_losslessly() {
-	let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
-	let mut files = Vec::new();
-	collect_sql_files(&root, &mut files);
-
-	for path in files {
-		let source = std::fs::read_to_string(&path).expect("read corpus file");
-		let tokens = lex(&source, Dialect::Postgres);
-		let parse = parser::parser::parse(&tokens, Dialect::Postgres);
+	for file in corpus::files(&corpus::root()).expect("read corpus") {
+		let source = std::fs::read_to_string(&file.path).expect("read corpus file");
+		let tokens = lex_with(&source, file.dialect, file.lex_options);
+		let parse = parser::parser::parse(&tokens, file.dialect);
 		assert_eq!(
 			parse.cst.text(),
 			source,
 			"parse round-trip failed for {}",
-			path.display()
+			file.path.display()
 		);
 	}
 }

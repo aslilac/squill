@@ -1,0 +1,50 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+/* Copyright 2022 The Matrix.org Foundation C.I.C
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+-- Drop unused column application_services_state.last_txn
+
+create table application_services_state2 (
+	as_id text not null primary key,
+	state varchar(5),
+	read_receipt_stream_id bigint,
+	presence_stream_id bigint,
+	to_device_stream_id bigint,
+	device_list_stream_id bigint
+);
+
+
+insert into application_services_state2 (
+	as_id,
+	state,
+	read_receipt_stream_id,
+	presence_stream_id,
+	to_device_stream_id,
+	device_list_stream_id
+)
+select
+	as_id,
+	state,
+	read_receipt_stream_id,
+	presence_stream_id,
+	to_device_stream_id,
+	device_list_stream_id
+from application_services_state;
+
+drop table application_services_state;
+alter table application_services_state2 rename to application_services_state;

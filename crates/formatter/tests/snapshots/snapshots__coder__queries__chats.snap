@@ -3015,8 +3015,7 @@ with
 		-- partial index instead of evaluating every LATERAL subquery
 		-- before sorting. All candidates are past the cutoff, so the
 		-- archive order is immaterial once the backlog drains.
-		order by
-			c.created_at asc
+		order by c.created_at asc
 		limit @limit_count
 	),
 	archived as (

@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+update notes
+set guid = ?, mid = ?, mod = ?, usn = ?, tags = ?, flds = ?, sfld = ?, csum = ?
+where id = ?

@@ -1,0 +1,50 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+/* Copyright 2023 The Matrix.org Foundation C.I.C
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+-- Fix up the triggers that were in `78/04_read_write_locks_triggers.sql`
+
+-- Reduce the number of writes we do on this table.
+--
+-- Note: that we still want to lock the row here (i.e. still do a `DO UPDATE
+-- SET`) so that we serialize updates.
+create or replace function upsert_read_write_lock_parent()
+returns trigger
+language plpgsql
+as $$
+begin
+	insert into worker_read_write_locks_mode (
+		lock_name,
+		lock_key,
+		write_lock,
+		token
+	)
+	values (NEW.lock_name, NEW.lock_key, NEW.write_lock, NEW.token)
+	on conflict
+		(lock_name,
+		lock_key) do update set write_lock = NEW.write_lock where
+			OLD.write_lock != NEW.write_lock;
+	return NEW;
+end
+$$;
+
+drop trigger if exists upsert_read_write_lock_parent_trigger on worker_read_write_locks;
+create trigger upsert_read_write_lock_parent_trigger
+	before insert on worker_read_write_locks
+	for each row
+	execute procedure upsert_read_write_lock_parent();

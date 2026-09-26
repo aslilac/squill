@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+select id, nid, due, cast (mod as integer), did, odid, reps
+from cards
+where did in (select id from active_decks) and (queue in (1, 4) and due <= ?)

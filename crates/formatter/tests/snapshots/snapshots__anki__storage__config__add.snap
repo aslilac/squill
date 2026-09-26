@@ -1,0 +1,5 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+insert or replace into config (key, usn, mtime_secs, val) values (?, ?, ?, ?)

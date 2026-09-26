@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+insert into search_cids
+select id
+from cards
+where nid in (select nid from search_nids)

@@ -1,0 +1,23 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table event (
+	uuid text not null primary key,
+	event_type integer not null,
+	user_uuid text,
+	org_uuid text,
+	cipher_uuid text,
+	collection_uuid text,
+	group_uuid text,
+	org_user_uuid text,
+	act_user_uuid text,
+	device_type integer,
+	ip_address text,
+	event_date datetime not null,
+	policy_uuid text,
+	provider_uuid text,
+	provider_user_uuid text,
+	provider_org_uuid text,
+	unique(uuid)
+);

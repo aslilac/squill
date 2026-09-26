@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create index if not exists remote_media_cache_thumbnails_media_id
+	on remote_media_cache_thumbnails (media_id);

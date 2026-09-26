@@ -474,8 +474,7 @@ with
 	org_usage as (
 		-- Distinct developers with a non-deleted workspace; the prebuilds system
 		-- user is excluded so unclaimed prebuilds do not inflate popularity.
-		select
-			w.template_id, count(distinct w.owner_id) as org_devs
+		select w.template_id, count(distinct w.owner_id) as org_devs
 		from workspaces w
 		where
 			w.template_id = any(@template_ids::uuid[])

@@ -1,0 +1,15 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+update revlog
+set
+	ivl = min(max(round(ivl), -2147483648), 2147483647),
+	lastIvl = min(max(round(lastIvl), -2147483648), 2147483647),
+	time = min(max(round(time), 0), 2147483647),
+	type = (case when type = 0 and time = 0 and ease = 0 then 5 else type end)
+where
+	ivl != min(max(round(ivl), -2147483648), 2147483647)
+	or lastIvl != min(max(round(lastIvl), -2147483648), 2147483647)
+	or time != min(max(round(time), 0), 2147483647)
+	or type != (case when type = 0 and time = 0 and ease = 0 then 5 else type end)

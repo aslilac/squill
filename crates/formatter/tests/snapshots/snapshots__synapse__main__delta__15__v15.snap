@@ -1,0 +1,58 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+-- Drop, copy & recreate pushers table to change unique key
+-- Also add access_token column at the same time
+create table if not exists pushers2 (
+	id bigint primary key,
+	user_name text not null,
+	access_token bigint default null,
+	profile_tag varchar(32) not null,
+	kind varchar(8) not null,
+	app_id varchar(64) not null,
+	app_display_name varchar(64) not null,
+	device_display_name varchar(128) not null,
+	pushkey bytea not null,
+	ts bigint not null,
+	lang varchar(8),
+	data bytea,
+	last_token text,
+	last_success bigint,
+	failing_since bigint,
+	unique(app_id, pushkey)
+);
+insert into pushers2 (
+	id,
+	user_name,
+	profile_tag,
+	kind,
+	app_id,
+	app_display_name,
+	device_display_name,
+	pushkey,
+	ts,
+	lang,
+	data,
+	last_token,
+	last_success,
+	failing_since
+)
+select
+	id,
+	user_name,
+	profile_tag,
+	kind,
+	app_id,
+	app_display_name,
+	device_display_name,
+	pushkey,
+	ts,
+	lang,
+	data,
+	last_token,
+	last_success,
+	failing_since
+from pushers;
+drop table pushers;
+alter table pushers2 rename to pushers;

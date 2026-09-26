@@ -1,0 +1,13 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table user_threepids (
+	user_id text not null,
+	medium text not null,
+	address text not null,
+	validated_at bigint not null,
+	added_at bigint not null,
+	constraint user_medium_address unique (user_id, medium, address)
+);
+create index user_threepids_user_id on user_threepids (user_id);

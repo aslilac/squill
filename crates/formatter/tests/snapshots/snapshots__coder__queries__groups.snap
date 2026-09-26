@@ -70,8 +70,7 @@ where
 		else true
 	end
 -- A limit of 0 means "no limit".
-limit
-	nullif(@limit_opt::int, 0);
+limit nullif(@limit_opt::int, 0);
 
 -- name: InsertGroup :one
 insert into groups (

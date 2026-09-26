@@ -33,8 +33,7 @@ select
 from workspaces w
 	inner join LATERAL (
 		-- Find the latest build for this workspace that has has_ai_task = true.
-		select
-			wb.template_version_id
+		select wb.template_version_id
 		from workspace_builds wb
 		where wb.workspace_id = w.id and wb.has_ai_task = true
 		order by wb.build_number desc
@@ -42,8 +41,7 @@ from workspaces w
 	) latest_task_build on true
 	left join LATERAL (
 		-- Find the latest build that has a non-empty AI Prompt parameter.
-		select
-			wb.id
+		select wb.id
 		from workspace_builds wb
 		where
 			wb.workspace_id = w.id
@@ -60,8 +58,7 @@ from workspaces w
 	) latest_prompt_build on true
 	left join LATERAL (
 		-- Extract the AI Prompt parameter value from the prompt build.
-		select
-			wbp.value
+		select wbp.value
 		from workspace_build_parameters wbp
 		where
 			wbp.workspace_build_id = latest_prompt_build.id and wbp.name = 'AI Prompt'
@@ -69,8 +66,7 @@ from workspaces w
 	) ai_prompt on true
 	left join LATERAL (
 		-- Aggregate all other parameters (excluding AI Prompt) from the prompt build.
-		select
-			jsonb_object_agg(wbp.name, wbp.value) as template_parameters
+		select jsonb_object_agg(wbp.name, wbp.value) as template_parameters
 		from workspace_build_parameters wbp
 		where
 			wbp.workspace_build_id = latest_prompt_build.id
@@ -98,8 +94,7 @@ select
 from tasks t
 	inner join LATERAL (
 		-- Find the latest build for this tasks workspace.
-		select
-			wb.build_number, wb.ai_task_sidebar_app_id
+		select wb.build_number, wb.ai_task_sidebar_app_id
 		from workspace_builds wb
 		where wb.workspace_id = t.workspace_id
 		order by wb.build_number desc

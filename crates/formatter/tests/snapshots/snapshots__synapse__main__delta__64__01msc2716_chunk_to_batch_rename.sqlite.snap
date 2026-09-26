@@ -1,0 +1,44 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+/* Copyright 2021 The Matrix.org Foundation C.I.C
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+-- Re-create the insertion_events table since SQLite doesn't support better
+-- renames for columns (next_chunk_id -> next_batch_id)
+drop table insertion_events;
+create table if not exists insertion_events (
+	event_id text not null,
+	room_id text not null,
+	next_batch_id text not null
+);
+create unique index if not exists insertion_events_event_id
+	on insertion_events (event_id);
+create index if not exists insertion_events_next_batch_id
+	on insertion_events (next_batch_id);
+
+-- Re-create the chunk_events table since SQLite doesn't support better renames
+-- for columns (chunk_id -> batch_id)
+drop table chunk_events;
+create table if not exists batch_events (
+	event_id text not null,
+	room_id text not null,
+	batch_id text not null
+);
+
+create unique index if not exists batch_events_event_id
+	on batch_events (event_id);
+create index if not exists batch_events_batch_id on batch_events (batch_id);

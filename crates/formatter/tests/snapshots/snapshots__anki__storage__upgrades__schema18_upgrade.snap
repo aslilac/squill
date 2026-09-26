@@ -1,0 +1,17 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table graves rename to graves_old;
+create table graves (
+	oid integer not null,
+	type integer not null,
+	usn integer not null,
+	primary key (oid, type)
+) without ROWID;
+insert or ignore into graves (oid, type, usn)
+select oid, type, usn
+from graves_old;
+drop table graves_old;
+create index idx_graves_pending on graves (usn);
+update col set ver = 18;

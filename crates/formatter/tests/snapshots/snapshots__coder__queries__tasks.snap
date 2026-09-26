@@ -132,8 +132,7 @@ with
 		-- All app statuses across every historical app for each task,
 		-- plus synthetic "boundary" rows at each stop/start build transition.
 		-- This allows us to correctly take gaps due to pause/resume into account.
-		select
-			tai.task_id, was.created_at, was.state::text as state
+		select tai.task_id, was.created_at, was.state::text as state
 		from workspace_app_statuses was
 			join task_app_ids tai on tai.workspace_app_id = was.app_id
 		union all

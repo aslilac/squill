@@ -1,0 +1,9 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+select nid, did
+from cards
+where nid in (select nid from search_nids)
+group by nid
+having ord = min(ord)

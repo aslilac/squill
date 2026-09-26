@@ -1,0 +1,1736 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create function check_partial_state_events()
+returns trigger
+language plpgsql
+as $$
+begin
+	if exists (
+		select 1
+		from events
+		where events.event_id = NEW.event_id and events.room_id != NEW.room_id
+	) then
+		raise exception 'Incorrect room_id in partial_state_events';
+	end if;
+	return NEW;
+end;
+$$;
+create table access_tokens (
+	id bigint not null,
+	user_id text not null,
+	device_id text,
+	token text not null,
+	valid_until_ms bigint,
+	puppets_user_id text,
+	last_validated bigint,
+	refresh_token_id bigint,
+	used boolean
+);
+create table account_data (
+	user_id text not null,
+	account_data_type text not null,
+	stream_id bigint not null,
+	content text not null,
+	instance_name text
+);
+create sequence account_data_sequence
+	start with 1
+	increment by 1
+	no minvalue
+	no maxvalue
+	cache 1;
+create table account_validity (
+	user_id text not null,
+	expiration_ts_ms bigint not null,
+	email_sent boolean not null,
+	renewal_token text,
+	token_used_ts_ms bigint
+);
+create table application_services_state (
+	as_id text not null,
+	state character varying(5),
+	read_receipt_stream_id bigint,
+	presence_stream_id bigint,
+	to_device_stream_id bigint,
+	device_list_stream_id bigint
+);
+create sequence application_services_txn_id_seq
+	start with 1
+	increment by 1
+	no minvalue
+	no maxvalue
+	cache 1;
+create table application_services_txns (
+	as_id text not null,
+	txn_id bigint not null,
+	event_ids text not null
+);
+create table appservice_room_list (
+	appservice_id text not null,
+	network_id text not null,
+	room_id text not null
+);
+create table appservice_stream_position (
+	lock character(1) not null default 'X'::bpchar,
+	stream_ordering bigint,
+	constraint appservice_stream_position_lock_check check ((lock = 'X'::bpchar))
+);
+create table batch_events (
+	event_id text not null,
+	room_id text not null,
+	batch_id text not null
+);
+create table blocked_rooms (
+	room_id text not null,
+	user_id text not null
+);
+create table cache_invalidation_stream_by_instance (
+	stream_id bigint not null,
+	instance_name text not null,
+	cache_func text not null,
+	keys text[],
+	invalidation_ts bigint
+);
+create sequence cache_invalidation_stream_seq
+	start with 1
+	increment by 1
+	no minvalue
+	no maxvalue
+	cache 1;
+create table current_state_delta_stream (
+	stream_id bigint not null,
+	room_id text not null,
+	type text not null,
+	state_key text not null,
+	event_id text,
+	prev_event_id text,
+	instance_name text
+);
+create table current_state_events (
+	event_id text not null,
+	room_id text not null,
+	type text not null,
+	state_key text not null,
+	membership text
+);
+create table dehydrated_devices (
+	user_id text not null,
+	device_id text not null,
+	device_data text not null
+);
+create table deleted_pushers (
+	stream_id bigint not null,
+	app_id text not null,
+	pushkey text not null,
+	user_id text not null
+);
+create table destination_rooms (
+	destination text not null,
+	room_id text not null,
+	stream_ordering bigint not null
+);
+create table destinations (
+	destination text not null,
+	retry_last_ts bigint,
+	retry_interval bigint,
+	failure_ts bigint,
+	last_successful_stream_ordering bigint
+);
+create table device_auth_providers (
+	user_id text not null,
+	device_id text not null,
+	auth_provider_id text not null,
+	auth_provider_session_id text not null
+);
+create table device_federation_inbox (
+	origin text not null,
+	message_id text not null,
+	received_ts bigint not null,
+	instance_name text
+);
+create table device_federation_outbox (
+	destination text not null,
+	stream_id bigint not null,
+	queued_ts bigint not null,
+	messages_json text not null,
+	instance_name text
+);
+create table device_inbox (
+	user_id text not null,
+	device_id text not null,
+	stream_id bigint not null,
+	message_json text not null,
+	instance_name text
+);
+create sequence device_inbox_sequence
+	start with 1
+	increment by 1
+	no minvalue
+	no maxvalue
+	cache 1;
+create table device_lists_changes_in_room (
+	user_id text not null,
+	device_id text not null,
+	room_id text not null,
+	stream_id bigint not null,
+	converted_to_destinations boolean not null,
+	opentracing_context text
+);
+create table device_lists_outbound_last_success (
+	destination text not null,
+	user_id text not null,
+	stream_id bigint not null
+);
+create table device_lists_outbound_pokes (
+	destination text not null,
+	stream_id bigint not null,
+	user_id text not null,
+	device_id text not null,
+	sent boolean not null,
+	ts bigint not null,
+	opentracing_context text
+);
+create table device_lists_remote_cache (
+	user_id text not null,
+	device_id text not null,
+	content text not null
+);
+create table device_lists_remote_extremeties (
+	user_id text not null,
+	stream_id text not null
+);
+create table device_lists_remote_resync (
+	user_id text not null,
+	added_ts bigint not null
+);
+create table device_lists_stream (
+	stream_id bigint not null,
+	user_id text not null,
+	device_id text not null
+);
+create table devices (
+	user_id text not null,
+	device_id text not null,
+	display_name text,
+	last_seen bigint,
+	ip text,
+	user_agent text,
+	hidden boolean default false
+);
+create table e2e_cross_signing_keys (
+	user_id text not null,
+	keytype text not null,
+	keydata text not null,
+	stream_id bigint not null
+);
+create table e2e_cross_signing_signatures (
+	user_id text not null,
+	key_id text not null,
+	target_user_id text not null,
+	target_device_id text not null,
+	signature text not null
+);
+create table e2e_device_keys_json (
+	user_id text not null,
+	device_id text not null,
+	ts_added_ms bigint not null,
+	key_json text not null
+);
+create table e2e_fallback_keys_json (
+	user_id text not null,
+	device_id text not null,
+	algorithm text not null,
+	key_id text not null,
+	key_json text not null,
+	used boolean not null default false
+);
+create table e2e_one_time_keys_json (
+	user_id text not null,
+	device_id text not null,
+	algorithm text not null,
+	key_id text not null,
+	ts_added_ms bigint not null,
+	key_json text not null
+);
+create table e2e_room_keys (
+	user_id text not null,
+	room_id text not null,
+	session_id text not null,
+	version bigint not null,
+	first_message_index integer,
+	forwarded_count integer,
+	is_verified boolean,
+	session_data text not null
+);
+create table e2e_room_keys_versions (
+	user_id text not null,
+	version bigint not null,
+	algorithm text not null,
+	auth_data text not null,
+	deleted smallint not null default 0,
+	etag bigint
+);
+create table erased_users (
+	user_id text not null
+);
+create table event_auth (
+	event_id text not null,
+	auth_id text not null,
+	room_id text not null
+);
+create sequence event_auth_chain_id
+	start with 1
+	increment by 1
+	no minvalue
+	no maxvalue
+	cache 1;
+create table event_auth_chain_links (
+	origin_chain_id bigint not null,
+	origin_sequence_number bigint not null,
+	target_chain_id bigint not null,
+	target_sequence_number bigint not null
+);
+create table event_auth_chain_to_calculate (
+	event_id text not null,
+	room_id text not null,
+	type text not null,
+	state_key text not null
+);
+create table event_auth_chains (
+	event_id text not null,
+	chain_id bigint not null,
+	sequence_number bigint not null
+);
+create table event_backward_extremities (
+	event_id text not null,
+	room_id text not null
+);
+create table event_edges (
+	event_id text not null,
+	prev_event_id text not null,
+	room_id text,
+	is_state boolean not null default false
+);
+create table event_expiry (
+	event_id text not null,
+	expiry_ts bigint not null
+);
+create table event_forward_extremities (
+	event_id text not null,
+	room_id text not null
+);
+create table event_json (
+	event_id text not null,
+	room_id text not null,
+	internal_metadata text not null,
+	json text not null,
+	format_version integer
+);
+create table event_labels (
+	event_id text not null,
+	label text not null,
+	room_id text not null,
+	topological_ordering bigint not null
+);
+create table event_push_actions (
+	room_id text not null,
+	event_id text not null,
+	user_id text not null,
+	profile_tag character varying(32),
+	actions text not null,
+	topological_ordering bigint,
+	stream_ordering bigint,
+	notif smallint,
+	highlight smallint,
+	unread smallint,
+	thread_id text
+);
+create table event_push_actions_staging (
+	event_id text not null,
+	user_id text not null,
+	actions text not null,
+	notif smallint not null,
+	highlight smallint not null,
+	unread smallint,
+	thread_id text
+);
+create table event_push_summary (
+	user_id text not null,
+	room_id text not null,
+	notif_count bigint not null,
+	stream_ordering bigint not null,
+	unread_count bigint,
+	last_receipt_stream_ordering bigint,
+	thread_id text
+);
+create table event_push_summary_last_receipt_stream_id (
+	lock character(1) not null default 'X'::bpchar,
+	stream_id bigint not null,
+	constraint event_push_summary_last_receipt_stream_id_lock_check
+		check ((lock = 'X'::bpchar))
+);
+create table event_push_summary_stream_ordering (
+	lock character(1) not null default 'X'::bpchar,
+	stream_ordering bigint not null,
+	constraint event_push_summary_stream_ordering_lock_check
+		check ((lock = 'X'::bpchar))
+);
+create table event_relations (
+	event_id text not null,
+	relates_to_id text not null,
+	relation_type text not null,
+	aggregation_key text
+);
+create table event_reports (
+	id bigint not null,
+	received_ts bigint not null,
+	room_id text not null,
+	event_id text not null,
+	user_id text not null,
+	reason text,
+	content text
+);
+create table event_search (
+	event_id text,
+	room_id text,
+	sender text,
+	key text,
+	vector tsvector,
+	origin_server_ts bigint,
+	stream_ordering bigint
+);
+create table event_to_state_groups (
+	event_id text not null,
+	state_group bigint not null
+);
+create table event_txn_id (
+	event_id text not null,
+	room_id text not null,
+	user_id text not null,
+	token_id bigint not null,
+	txn_id text not null,
+	inserted_ts bigint not null
+);
+create table events (
+	topological_ordering bigint not null,
+	event_id text not null,
+	type text not null,
+	room_id text not null,
+	content text,
+	unrecognized_keys text,
+	processed boolean not null,
+	outlier boolean not null,
+	depth bigint not null default 0,
+	origin_server_ts bigint,
+	received_ts bigint,
+	sender text,
+	contains_url boolean,
+	instance_name text,
+	stream_ordering bigint,
+	state_key text,
+	rejection_reason text
+);
+create sequence events_backfill_stream_seq
+	start with 1
+	increment by 1
+	no minvalue
+	no maxvalue
+	cache 1;
+create sequence events_stream_seq
+	start with 1
+	increment by 1
+	no minvalue
+	no maxvalue
+	cache 1;
+create table ex_outlier_stream (
+	event_stream_ordering bigint not null,
+	event_id text not null,
+	state_group bigint not null,
+	instance_name text
+);
+create table federation_inbound_events_staging (
+	origin text not null,
+	room_id text not null,
+	event_id text not null,
+	received_ts bigint not null,
+	event_json text not null,
+	internal_metadata text not null
+);
+create table federation_stream_position (
+	type text not null,
+	stream_id bigint not null,
+	instance_name text not null default 'master'::text
+);
+create table ignored_users (
+	ignorer_user_id text not null,
+	ignored_user_id text not null
+);
+create table insertion_event_edges (
+	event_id text not null,
+	room_id text not null,
+	insertion_prev_event_id text not null
+);
+create table insertion_event_extremities (
+	event_id text not null,
+	room_id text not null
+);
+create table insertion_events (
+	event_id text not null,
+	room_id text not null,
+	next_batch_id text not null
+);
+create table instance_map (
+	instance_id integer not null,
+	instance_name text not null
+);
+create sequence instance_map_instance_id_seq
+	as integer
+	start with 1
+	increment by 1
+	no minvalue
+	no maxvalue
+	cache 1;
+alter sequence instance_map_instance_id_seq owned by instance_map.instance_id;
+create table local_current_membership (
+	room_id text not null,
+	user_id text not null,
+	event_id text not null,
+	membership text not null
+);
+create table local_media_repository (
+	media_id text,
+	media_type text,
+	media_length integer,
+	created_ts bigint,
+	upload_name text,
+	user_id text,
+	quarantined_by text,
+	url_cache text,
+	last_access_ts bigint,
+	safe_from_quarantine boolean not null default false
+);
+create table local_media_repository_thumbnails (
+	media_id text,
+	thumbnail_width integer,
+	thumbnail_height integer,
+	thumbnail_type text,
+	thumbnail_method text,
+	thumbnail_length integer
+);
+create table local_media_repository_url_cache (
+	url text,
+	response_code integer,
+	etag text,
+	expires_ts bigint,
+	og text,
+	media_id text,
+	download_ts bigint
+);
+create table monthly_active_users (
+	user_id text not null,
+	timestamp bigint not null
+);
+create table open_id_tokens (
+	token text not null,
+	ts_valid_until_ms bigint not null,
+	user_id text not null
+);
+create table partial_state_events (
+	room_id text not null,
+	event_id text not null
+);
+create table partial_state_rooms (
+	room_id text not null
+);
+create table partial_state_rooms_servers (
+	room_id text not null,
+	server_name text not null
+);
+create table presence (
+	user_id text not null,
+	state character varying(20),
+	status_msg text,
+	mtime bigint
+);
+create table presence_stream (
+	stream_id bigint,
+	user_id text,
+	state text,
+	last_active_ts bigint,
+	last_federation_update_ts bigint,
+	last_user_sync_ts bigint,
+	status_msg text,
+	currently_active boolean,
+	instance_name text
+);
+create sequence presence_stream_sequence
+	start with 1
+	increment by 1
+	no minvalue
+	no maxvalue
+	cache 1;
+create table profiles (
+	user_id text not null,
+	displayname text,
+	avatar_url text
+);
+create table push_rules (
+	id bigint not null,
+	user_name text not null,
+	rule_id text not null,
+	priority_class smallint not null,
+	priority integer not null default 0,
+	conditions text not null,
+	actions text not null
+);
+create table push_rules_enable (
+	id bigint not null,
+	user_name text not null,
+	rule_id text not null,
+	enabled smallint
+);
+create table push_rules_stream (
+	stream_id bigint not null,
+	event_stream_ordering bigint not null,
+	user_id text not null,
+	rule_id text not null,
+	op text not null,
+	priority_class smallint,
+	priority integer,
+	conditions text,
+	actions text
+);
+create table pusher_throttle (
+	pusher bigint not null,
+	room_id text not null,
+	last_sent_ts bigint,
+	throttle_ms bigint
+);
+create table pushers (
+	id bigint not null,
+	user_name text not null,
+	access_token bigint,
+	profile_tag text not null,
+	kind text not null,
+	app_id text not null,
+	app_display_name text not null,
+	device_display_name text not null,
+	pushkey text not null,
+	ts bigint not null,
+	lang text,
+	data text,
+	last_stream_ordering bigint,
+	last_success bigint,
+	failing_since bigint
+);
+create table ratelimit_override (
+	user_id text not null,
+	messages_per_second bigint,
+	burst_count bigint
+);
+create table receipts_graph (
+	room_id text not null,
+	receipt_type text not null,
+	user_id text not null,
+	event_ids text not null,
+	data text not null,
+	thread_id text
+);
+create table receipts_linearized (
+	stream_id bigint not null,
+	room_id text not null,
+	receipt_type text not null,
+	user_id text not null,
+	event_id text not null,
+	data text not null,
+	instance_name text,
+	event_stream_ordering bigint,
+	thread_id text
+);
+create sequence receipts_sequence
+	start with 1
+	increment by 1
+	no minvalue
+	no maxvalue
+	cache 1;
+create table received_transactions (
+	transaction_id text,
+	origin text,
+	ts bigint,
+	response_code integer,
+	response_json bytea,
+	has_been_referenced smallint default 0
+);
+create table redactions (
+	event_id text not null,
+	redacts text not null,
+	have_censored boolean not null default false,
+	received_ts bigint
+);
+create table refresh_tokens (
+	id bigint not null,
+	user_id text not null,
+	device_id text not null,
+	token text not null,
+	next_token_id bigint,
+	expiry_ts bigint,
+	ultimate_session_expiry_ts bigint
+);
+create table registration_tokens (
+	token text not null,
+	uses_allowed integer,
+	pending integer not null,
+	completed integer not null,
+	expiry_time bigint
+);
+create table rejections (
+	event_id text not null,
+	reason text not null,
+	last_check text not null
+);
+create table remote_media_cache (
+	media_origin text,
+	media_id text,
+	media_type text,
+	created_ts bigint,
+	upload_name text,
+	media_length integer,
+	filesystem_id text,
+	last_access_ts bigint,
+	quarantined_by text
+);
+create table remote_media_cache_thumbnails (
+	media_origin text,
+	media_id text,
+	thumbnail_width integer,
+	thumbnail_height integer,
+	thumbnail_method text,
+	thumbnail_type text,
+	thumbnail_length integer,
+	filesystem_id text
+);
+create table room_account_data (
+	user_id text not null,
+	room_id text not null,
+	account_data_type text not null,
+	stream_id bigint not null,
+	content text not null,
+	instance_name text
+);
+create table room_alias_servers (
+	room_alias text not null,
+	server text not null
+);
+create table room_aliases (
+	room_alias text not null,
+	room_id text not null,
+	creator text
+);
+create table room_depth (
+	room_id text not null,
+	min_depth bigint
+);
+create table room_memberships (
+	event_id text not null,
+	user_id text not null,
+	sender text not null,
+	room_id text not null,
+	membership text not null,
+	forgotten integer default 0,
+	display_name text,
+	avatar_url text
+);
+create table room_retention (
+	room_id text not null,
+	event_id text not null,
+	min_lifetime bigint,
+	max_lifetime bigint
+);
+create table room_stats_current (
+	room_id text not null,
+	current_state_events integer not null,
+	joined_members integer not null,
+	invited_members integer not null,
+	left_members integer not null,
+	banned_members integer not null,
+	local_users_in_room integer not null,
+	completed_delta_stream_id bigint not null,
+	knocked_members integer
+);
+create table room_stats_earliest_token (
+	room_id text not null,
+	token bigint not null
+);
+create table room_stats_state (
+	room_id text not null,
+	name text,
+	canonical_alias text,
+	join_rules text,
+	history_visibility text,
+	encryption text,
+	avatar text,
+	guest_access text,
+	is_federatable boolean,
+	topic text,
+	room_type text
+);
+create table room_tags (
+	user_id text not null,
+	room_id text not null,
+	tag text not null,
+	content text not null
+);
+create table room_tags_revisions (
+	user_id text not null,
+	room_id text not null,
+	stream_id bigint not null,
+	instance_name text
+);
+create table rooms (
+	room_id text not null,
+	is_public boolean,
+	creator text,
+	room_version text,
+	has_auth_chain_index boolean
+);
+create table server_keys_json (
+	server_name text not null,
+	key_id text not null,
+	from_server text not null,
+	ts_added_ms bigint not null,
+	ts_valid_until_ms bigint not null,
+	key_json bytea not null
+);
+create table server_signature_keys (
+	server_name text,
+	key_id text,
+	from_server text,
+	ts_added_ms bigint,
+	verify_key bytea,
+	ts_valid_until_ms bigint
+);
+create table sessions (
+	session_type text not null,
+	session_id text not null,
+	value text not null,
+	expiry_time_ms bigint not null
+);
+create table state_events (
+	event_id text not null,
+	room_id text not null,
+	type text not null,
+	state_key text not null,
+	prev_state text
+);
+create table stats_incremental_position (
+	lock character(1) not null default 'X'::bpchar,
+	stream_id bigint not null,
+	constraint stats_incremental_position_lock_check check ((lock = 'X'::bpchar))
+);
+create table stream_ordering_to_exterm (
+	stream_ordering bigint not null,
+	room_id text not null,
+	event_id text not null
+);
+create table stream_positions (
+	stream_name text not null,
+	instance_name text not null,
+	stream_id bigint not null
+);
+create table threepid_guest_access_tokens (
+	medium text,
+	address text,
+	guest_access_token text,
+	first_inviter text
+);
+create table threepid_validation_session (
+	session_id text not null,
+	medium text not null,
+	address text not null,
+	client_secret text not null,
+	last_send_attempt bigint not null,
+	validated_at bigint
+);
+create table threepid_validation_token (
+	token text not null,
+	session_id text not null,
+	next_link text,
+	expires bigint not null
+);
+create table ui_auth_sessions (
+	session_id text not null,
+	creation_time bigint not null,
+	serverdict text not null,
+	clientdict text not null,
+	uri text not null,
+	method text not null,
+	description text not null
+);
+create table ui_auth_sessions_credentials (
+	session_id text not null,
+	stage_type text not null,
+	result text not null
+);
+create table ui_auth_sessions_ips (
+	session_id text not null,
+	ip text not null,
+	user_agent text not null
+);
+create table user_daily_visits (
+	user_id text not null,
+	device_id text,
+	timestamp bigint not null,
+	user_agent text
+);
+create table user_directory (
+	user_id text not null,
+	room_id text,
+	display_name text,
+	avatar_url text
+);
+create table user_directory_search (
+	user_id text not null,
+	vector tsvector
+);
+create table user_directory_stream_pos (
+	lock character(1) not null default 'X'::bpchar,
+	stream_id bigint,
+	constraint user_directory_stream_pos_lock_check check ((lock = 'X'::bpchar))
+);
+create table user_external_ids (
+	auth_provider text not null,
+	external_id text not null,
+	user_id text not null
+);
+create table user_filters (
+	user_id text not null,
+	filter_id bigint not null,
+	filter_json bytea not null
+);
+create sequence user_id_seq
+	start with 1
+	increment by 1
+	no minvalue
+	no maxvalue
+	cache 1;
+create table user_ips (
+	user_id text not null,
+	access_token text not null,
+	device_id text,
+	ip text not null,
+	user_agent text not null,
+	last_seen bigint not null
+);
+create table user_signature_stream (
+	stream_id bigint not null,
+	from_user_id text not null,
+	user_ids text not null
+);
+create table user_stats_current (
+	user_id text not null,
+	joined_rooms bigint not null,
+	completed_delta_stream_id bigint not null
+);
+create table user_threepid_id_server (
+	user_id text not null,
+	medium text not null,
+	address text not null,
+	id_server text not null
+);
+create table user_threepids (
+	user_id text not null,
+	medium text not null,
+	address text not null,
+	validated_at bigint not null,
+	added_at bigint not null
+);
+create table users (
+	name text,
+	password_hash text,
+	creation_ts bigint,
+	admin smallint not null default 0,
+	upgrade_ts bigint,
+	is_guest smallint not null default 0,
+	appservice_id text,
+	consent_version text,
+	consent_server_notice_sent text,
+	user_type text,
+	deactivated smallint not null default 0,
+	shadow_banned boolean,
+	consent_ts bigint
+);
+create table users_in_public_rooms (
+	user_id text not null,
+	room_id text not null
+);
+create table users_pending_deactivation (
+	user_id text not null
+);
+create table users_to_send_full_presence_to (
+	user_id text not null,
+	presence_stream_id bigint
+);
+create table users_who_share_private_rooms (
+	user_id text not null,
+	other_user_id text not null,
+	room_id text not null
+);
+create table worker_locks (
+	lock_name text not null,
+	lock_key text not null,
+	instance_name text not null,
+	token text not null,
+	last_renewed_ts bigint not null
+);
+alter table only instance_map
+	alter column instance_id set default nextval(
+		'instance_map_instance_id_seq'::regclass
+	);
+alter table only access_tokens
+	add constraint access_tokens_pkey primary key (id);
+alter table only access_tokens
+	add constraint access_tokens_token_key unique (token);
+alter table only account_data
+	add constraint account_data_uniqueness unique (user_id, account_data_type);
+alter table only account_validity
+	add constraint account_validity_pkey primary key (user_id);
+alter table only application_services_state
+	add constraint application_services_state_pkey primary key (as_id);
+alter table only application_services_txns
+	add constraint application_services_txns_as_id_txn_id_key unique (
+		as_id,
+		txn_id
+	);
+alter table only appservice_stream_position
+	add constraint appservice_stream_position_lock_key unique (lock);
+alter table only current_state_events
+	add constraint current_state_events_event_id_key unique (event_id);
+alter table only current_state_events
+	add constraint current_state_events_room_id_type_state_key_key unique (
+		room_id,
+		type,
+		state_key
+	);
+alter table only dehydrated_devices
+	add constraint dehydrated_devices_pkey primary key (user_id);
+alter table only destination_rooms
+	add constraint destination_rooms_pkey primary key (destination, room_id);
+alter table only destinations
+	add constraint destinations_pkey primary key (destination);
+alter table only devices
+	add constraint device_uniqueness unique (user_id, device_id);
+alter table only e2e_device_keys_json
+	add constraint e2e_device_keys_json_uniqueness unique (user_id, device_id);
+alter table only e2e_fallback_keys_json
+	add constraint e2e_fallback_keys_json_uniqueness unique (
+		user_id,
+		device_id,
+		algorithm
+	);
+alter table only e2e_one_time_keys_json
+	add constraint e2e_one_time_keys_json_uniqueness unique (
+		user_id,
+		device_id,
+		algorithm,
+		key_id
+	);
+alter table only event_auth_chain_to_calculate
+	add constraint event_auth_chain_to_calculate_pkey primary key (event_id);
+alter table only event_auth_chains
+	add constraint event_auth_chains_pkey primary key (event_id);
+alter table only event_backward_extremities
+	add constraint event_backward_extremities_event_id_room_id_key unique (
+		event_id,
+		room_id
+	);
+alter table only event_expiry
+	add constraint event_expiry_pkey primary key (event_id);
+alter table only event_forward_extremities
+	add constraint event_forward_extremities_event_id_room_id_key unique (
+		event_id,
+		room_id
+	);
+alter table only event_push_actions
+	add constraint event_id_user_id_profile_tag_uniqueness unique (
+		room_id,
+		event_id,
+		user_id,
+		profile_tag
+	);
+alter table only event_json
+	add constraint event_json_event_id_key unique (event_id);
+alter table only event_labels
+	add constraint event_labels_pkey primary key (event_id, label);
+alter table only event_push_summary_last_receipt_stream_id
+	add constraint event_push_summary_last_receipt_stream_id_lock_key unique (
+		lock
+	);
+alter table only event_push_summary_stream_ordering
+	add constraint event_push_summary_stream_ordering_lock_key unique (lock);
+alter table only event_reports
+	add constraint event_reports_pkey primary key (id);
+alter table only event_to_state_groups
+	add constraint event_to_state_groups_event_id_key unique (event_id);
+alter table only events add constraint events_event_id_key unique (event_id);
+alter table only ex_outlier_stream
+	add constraint ex_outlier_stream_pkey primary key (event_stream_ordering);
+alter table only instance_map
+	add constraint instance_map_pkey primary key (instance_id);
+alter table only local_media_repository
+	add constraint local_media_repository_media_id_key unique (media_id);
+alter table only user_threepids
+	add constraint medium_address unique (medium, address);
+alter table only open_id_tokens
+	add constraint open_id_tokens_pkey primary key (token);
+alter table only partial_state_events
+	add constraint partial_state_events_event_id_key unique (event_id);
+alter table only partial_state_rooms
+	add constraint partial_state_rooms_pkey primary key (room_id);
+alter table only partial_state_rooms_servers
+	add constraint partial_state_rooms_servers_room_id_server_name_key unique (
+		room_id,
+		server_name
+	);
+alter table only presence add constraint presence_user_id_key unique (user_id);
+alter table only profiles add constraint profiles_user_id_key unique (user_id);
+alter table only push_rules_enable
+	add constraint push_rules_enable_pkey primary key (id);
+alter table only push_rules_enable
+	add constraint push_rules_enable_user_name_rule_id_key unique (
+		user_name,
+		rule_id
+	);
+alter table only push_rules add constraint push_rules_pkey primary key (id);
+alter table only push_rules
+	add constraint push_rules_user_name_rule_id_key unique (user_name, rule_id);
+alter table only pusher_throttle
+	add constraint pusher_throttle_pkey primary key (pusher, room_id);
+alter table only pushers
+	add constraint pushers2_app_id_pushkey_user_name_key unique (
+		app_id,
+		pushkey,
+		user_name
+	);
+alter table only pushers add constraint pushers2_pkey primary key (id);
+alter table only receipts_graph
+	add constraint receipts_graph_uniqueness unique (
+		room_id,
+		receipt_type,
+		user_id
+	);
+alter table only receipts_graph
+	add constraint receipts_graph_uniqueness_thread unique (
+		room_id,
+		receipt_type,
+		user_id,
+		thread_id
+	);
+alter table only receipts_linearized
+	add constraint receipts_linearized_uniqueness unique (
+		room_id,
+		receipt_type,
+		user_id
+	);
+alter table only receipts_linearized
+	add constraint receipts_linearized_uniqueness_thread unique (
+		room_id,
+		receipt_type,
+		user_id,
+		thread_id
+	);
+alter table only received_transactions
+	add constraint received_transactions_transaction_id_origin_key unique (
+		transaction_id,
+		origin
+	);
+alter table only redactions
+	add constraint redactions_event_id_key unique (event_id);
+alter table only refresh_tokens
+	add constraint refresh_tokens_pkey primary key (id);
+alter table only refresh_tokens
+	add constraint refresh_tokens_token_key unique (token);
+alter table only registration_tokens
+	add constraint registration_tokens_token_key unique (token);
+alter table only rejections
+	add constraint rejections_event_id_key unique (event_id);
+alter table only remote_media_cache
+	add constraint remote_media_cache_media_origin_media_id_key unique (
+		media_origin,
+		media_id
+	);
+alter table only room_account_data
+	add constraint room_account_data_uniqueness unique (
+		user_id,
+		room_id,
+		account_data_type
+	);
+alter table only room_aliases
+	add constraint room_aliases_room_alias_key unique (room_alias);
+alter table only room_depth
+	add constraint room_depth_room_id_key unique (room_id);
+alter table only room_memberships
+	add constraint room_memberships_event_id_key unique (event_id);
+alter table only room_retention
+	add constraint room_retention_pkey primary key (room_id, event_id);
+alter table only room_stats_current
+	add constraint room_stats_current_pkey primary key (room_id);
+alter table only room_tags_revisions
+	add constraint room_tag_revisions_uniqueness unique (user_id, room_id);
+alter table only room_tags
+	add constraint room_tag_uniqueness unique (user_id, room_id, tag);
+alter table only rooms add constraint rooms_pkey primary key (room_id);
+alter table only server_keys_json
+	add constraint server_keys_json_uniqueness unique (
+		server_name,
+		key_id,
+		from_server
+	);
+alter table only server_signature_keys
+	add constraint server_signature_keys_server_name_key_id_key unique (
+		server_name,
+		key_id
+	);
+alter table only sessions
+	add constraint sessions_session_type_session_id_key unique (
+		session_type,
+		session_id
+	);
+alter table only state_events
+	add constraint state_events_event_id_key unique (event_id);
+alter table only stats_incremental_position
+	add constraint stats_incremental_position_lock_key unique (lock);
+alter table only threepid_validation_session
+	add constraint threepid_validation_session_pkey primary key (session_id);
+alter table only threepid_validation_token
+	add constraint threepid_validation_token_pkey primary key (token);
+alter table only ui_auth_sessions_credentials
+	add constraint ui_auth_sessions_credentials_session_id_stage_type_key unique (
+		session_id,
+		stage_type
+	);
+alter table only ui_auth_sessions_ips
+	add constraint ui_auth_sessions_ips_session_id_ip_user_agent_key unique (
+		session_id,
+		ip,
+		user_agent
+	);
+alter table only ui_auth_sessions
+	add constraint ui_auth_sessions_session_id_key unique (session_id);
+alter table only user_directory_stream_pos
+	add constraint user_directory_stream_pos_lock_key unique (lock);
+alter table only user_external_ids
+	add constraint user_external_ids_auth_provider_external_id_key unique (
+		auth_provider,
+		external_id
+	);
+alter table only user_stats_current
+	add constraint user_stats_current_pkey primary key (user_id);
+alter table only users add constraint users_name_key unique (name);
+alter table only users_to_send_full_presence_to
+	add constraint users_to_send_full_presence_to_pkey primary key (user_id);
+create index access_tokens_device_id
+	on access_tokens
+	using btree(user_id, device_id);
+create index account_data_stream_id
+	on account_data
+	using btree(user_id, stream_id);
+create index application_services_txns_id
+	on application_services_txns
+	using btree(as_id);
+create unique index appservice_room_list_idx
+	on appservice_room_list
+	using btree(appservice_id, network_id, room_id);
+create index batch_events_batch_id on batch_events using btree(batch_id);
+create unique index blocked_rooms_idx on blocked_rooms using btree(room_id);
+create unique index cache_invalidation_stream_by_instance_id
+	on cache_invalidation_stream_by_instance
+	using btree(stream_id);
+create index cache_invalidation_stream_by_instance_instance_index
+	on cache_invalidation_stream_by_instance
+	using btree(instance_name, stream_id);
+create unique index chunk_events_event_id on batch_events using btree(event_id);
+create index current_state_delta_stream_idx
+	on current_state_delta_stream
+	using btree(stream_id);
+create index current_state_events_member_index
+	on current_state_events
+	using btree(state_key)
+	where (type = 'm.room.member'::text);
+create index deleted_pushers_stream_id
+	on deleted_pushers
+	using btree(stream_id);
+create index destination_rooms_room_id
+	on destination_rooms
+	using btree(room_id);
+create index device_auth_providers_devices
+	on device_auth_providers
+	using btree(user_id, device_id);
+create index device_auth_providers_sessions
+	on device_auth_providers
+	using btree(auth_provider_id, auth_provider_session_id);
+create index device_federation_inbox_sender_id
+	on device_federation_inbox
+	using btree(origin, message_id);
+create index device_federation_outbox_destination_id
+	on device_federation_outbox
+	using btree(destination, stream_id);
+create index device_federation_outbox_id
+	on device_federation_outbox
+	using btree(stream_id);
+create index device_inbox_stream_id_user_id
+	on device_inbox
+	using btree(stream_id, user_id);
+create index device_inbox_user_stream_id
+	on device_inbox
+	using btree(user_id, device_id, stream_id);
+create unique index device_lists_changes_in_stream_id
+	on device_lists_changes_in_room
+	using btree(stream_id, room_id);
+create index device_lists_changes_in_stream_id_unconverted
+	on device_lists_changes_in_room
+	using btree(stream_id)
+	where (not converted_to_destinations);
+create unique index device_lists_outbound_last_success_unique_idx
+	on device_lists_outbound_last_success
+	using btree(destination, user_id);
+create index device_lists_outbound_pokes_id
+	on device_lists_outbound_pokes
+	using btree(destination, stream_id);
+create index device_lists_outbound_pokes_stream
+	on device_lists_outbound_pokes
+	using btree(stream_id);
+create index device_lists_outbound_pokes_user
+	on device_lists_outbound_pokes
+	using btree(destination, user_id);
+create unique index device_lists_remote_cache_unique_id
+	on device_lists_remote_cache
+	using btree(user_id, device_id);
+create unique index device_lists_remote_extremeties_unique_idx
+	on device_lists_remote_extremeties
+	using btree(user_id);
+create unique index device_lists_remote_resync_idx
+	on device_lists_remote_resync
+	using btree(user_id);
+create index device_lists_remote_resync_ts_idx
+	on device_lists_remote_resync
+	using btree(added_ts);
+create index device_lists_stream_id
+	on device_lists_stream
+	using btree(stream_id, user_id);
+create index device_lists_stream_user_id
+	on device_lists_stream
+	using btree(user_id, device_id);
+create unique index e2e_cross_signing_keys_idx
+	on e2e_cross_signing_keys
+	using btree(user_id, keytype, stream_id);
+create unique index e2e_cross_signing_keys_stream_idx
+	on e2e_cross_signing_keys
+	using btree(stream_id);
+create index e2e_cross_signing_signatures2_idx
+	on e2e_cross_signing_signatures
+	using btree(user_id, target_user_id, target_device_id);
+create unique index e2e_room_keys_versions_idx
+	on e2e_room_keys_versions
+	using btree(user_id, version);
+create unique index e2e_room_keys_with_version_idx
+	on e2e_room_keys
+	using btree(user_id, version, room_id, session_id);
+create unique index erased_users_user on erased_users using btree(user_id);
+create index ev_b_extrem_id on event_backward_extremities using btree(event_id);
+create index ev_b_extrem_room
+	on event_backward_extremities
+	using btree(room_id);
+create index ev_edges_prev_id on event_edges using btree(prev_event_id);
+create index ev_extrem_id on event_forward_extremities using btree(event_id);
+create index ev_extrem_room on event_forward_extremities using btree(room_id);
+create index evauth_edges_id on event_auth using btree(event_id);
+create index event_auth_chain_links_idx
+	on event_auth_chain_links
+	using btree(origin_chain_id, target_chain_id);
+create index event_auth_chain_to_calculate_rm_id
+	on event_auth_chain_to_calculate
+	using btree(room_id);
+create unique index event_auth_chains_c_seq_index
+	on event_auth_chains
+	using btree(chain_id, sequence_number);
+create index event_contains_url_index
+	on events
+	using btree(room_id, topological_ordering, stream_ordering)
+	where ((contains_url = true) and (outlier = false));
+create unique index event_edges_event_id_prev_event_id_idx
+	on event_edges
+	using btree(event_id, prev_event_id);
+create index event_expiry_expiry_ts_idx on event_expiry using btree(expiry_ts);
+create index event_labels_room_id_label_idx
+	on event_labels
+	using btree(room_id, label, topological_ordering);
+create index event_push_actions_highlights_index
+	on event_push_actions
+	using btree(user_id, room_id, topological_ordering, stream_ordering)
+	where (highlight = 1);
+create index event_push_actions_rm_tokens
+	on event_push_actions
+	using btree(user_id, room_id, topological_ordering, stream_ordering);
+create index event_push_actions_room_id_user_id
+	on event_push_actions
+	using btree(room_id, user_id);
+create index event_push_actions_staging_id
+	on event_push_actions_staging
+	using btree(event_id);
+create index event_push_actions_stream_highlight_index
+	on event_push_actions
+	using btree(highlight, stream_ordering)
+	where (highlight = 0);
+create index event_push_actions_stream_ordering
+	on event_push_actions
+	using btree(stream_ordering, user_id);
+create index event_push_actions_u_highlight
+	on event_push_actions
+	using btree(user_id, stream_ordering);
+create unique index event_push_summary_unique_index
+	on event_push_summary
+	using btree(user_id, room_id);
+create unique index event_push_summary_unique_index2
+	on event_push_summary
+	using btree(user_id, room_id, thread_id);
+create unique index event_relations_id on event_relations using btree(event_id);
+create index event_relations_relates
+	on event_relations
+	using btree(relates_to_id, relation_type, aggregation_key);
+create index event_search_ev_ridx on event_search using btree(room_id);
+create unique index event_search_event_id_idx
+	on event_search
+	using btree(event_id);
+create index event_search_fts_idx on event_search using gin(vector);
+create index event_to_state_groups_sg_index
+	on event_to_state_groups
+	using btree(state_group);
+create unique index event_txn_id_event_id on event_txn_id using btree(event_id);
+create index event_txn_id_ts on event_txn_id using btree(inserted_ts);
+create unique index event_txn_id_txn_id
+	on event_txn_id
+	using btree(room_id, user_id, token_id, txn_id);
+create index events_order_room
+	on events
+	using btree(room_id, topological_ordering, stream_ordering);
+create index events_room_stream on events using btree(room_id, stream_ordering);
+create unique index events_stream_ordering
+	on events
+	using btree(stream_ordering);
+create index events_ts on events using btree(origin_server_ts, stream_ordering);
+create unique index federation_inbound_events_staging_instance_event
+	on federation_inbound_events_staging
+	using btree(origin, event_id);
+create index federation_inbound_events_staging_room
+	on federation_inbound_events_staging
+	using btree(room_id, received_ts);
+create unique index federation_stream_position_instance
+	on federation_stream_position
+	using btree(type, instance_name);
+create index ignored_users_ignored_user_id
+	on ignored_users
+	using btree(ignored_user_id);
+create unique index ignored_users_uniqueness
+	on ignored_users
+	using btree(ignorer_user_id, ignored_user_id);
+create index insertion_event_edges_event_id
+	on insertion_event_edges
+	using btree(event_id);
+create index insertion_event_edges_insertion_prev_event_id
+	on insertion_event_edges
+	using btree(insertion_prev_event_id);
+create index insertion_event_edges_insertion_room_id
+	on insertion_event_edges
+	using btree(room_id);
+create unique index insertion_event_extremities_event_id
+	on insertion_event_extremities
+	using btree(event_id);
+create index insertion_event_extremities_room_id
+	on insertion_event_extremities
+	using btree(room_id);
+create unique index insertion_events_event_id
+	on insertion_events
+	using btree(event_id);
+create index insertion_events_next_batch_id
+	on insertion_events
+	using btree(next_batch_id);
+create unique index instance_map_idx on instance_map using btree(instance_name);
+create unique index local_current_membership_idx
+	on local_current_membership
+	using btree(user_id, room_id);
+create index local_current_membership_room_idx
+	on local_current_membership
+	using btree(room_id);
+create unique index local_media_repository_thumbn_media_id_width_height_method_key
+	on local_media_repository_thumbnails
+	using btree(
+		media_id,
+		thumbnail_width,
+		thumbnail_height,
+		thumbnail_type,
+		thumbnail_method
+	);
+create index local_media_repository_thumbnails_media_id
+	on local_media_repository_thumbnails
+	using btree(media_id);
+create index local_media_repository_url_cache_by_url_download_ts
+	on local_media_repository_url_cache
+	using btree(url, download_ts);
+create index local_media_repository_url_cache_expires_idx
+	on local_media_repository_url_cache
+	using btree(expires_ts);
+create index local_media_repository_url_cache_media_idx
+	on local_media_repository_url_cache
+	using btree(media_id);
+create index local_media_repository_url_idx
+	on local_media_repository
+	using btree(created_ts)
+	where (url_cache is not null);
+create index monthly_active_users_time_stamp
+	on monthly_active_users
+	using btree(timestamp);
+create unique index monthly_active_users_users
+	on monthly_active_users
+	using btree(user_id);
+create index open_id_tokens_ts_valid_until_ms
+	on open_id_tokens
+	using btree(ts_valid_until_ms);
+create index partial_state_events_room_id_idx
+	on partial_state_events
+	using btree(room_id);
+create index presence_stream_id
+	on presence_stream
+	using btree(stream_id, user_id);
+create index presence_stream_state_not_offline_idx
+	on presence_stream
+	using btree(state)
+	where (state <> 'offline'::text);
+create index presence_stream_user_id on presence_stream using btree(user_id);
+create index public_room_index on rooms using btree(is_public);
+create index push_rules_enable_user_name
+	on push_rules_enable
+	using btree(user_name);
+create index push_rules_stream_id on push_rules_stream using btree(stream_id);
+create index push_rules_stream_user_stream_id
+	on push_rules_stream
+	using btree(user_id, stream_id);
+create index push_rules_user_name on push_rules using btree(user_name);
+create unique index ratelimit_override_idx
+	on ratelimit_override
+	using btree(user_id);
+create unique index receipts_graph_unique_index
+	on receipts_graph
+	using btree(room_id, receipt_type, user_id)
+	where (thread_id is null);
+create index receipts_linearized_id
+	on receipts_linearized
+	using btree(stream_id);
+create index receipts_linearized_room_stream
+	on receipts_linearized
+	using btree(room_id, stream_id);
+create unique index receipts_linearized_unique_index
+	on receipts_linearized
+	using btree(room_id, receipt_type, user_id)
+	where (thread_id is null);
+create index receipts_linearized_user
+	on receipts_linearized
+	using btree(user_id);
+create index received_transactions_ts on received_transactions using btree(ts);
+create index redactions_have_censored_ts
+	on redactions
+	using btree(received_ts)
+	where (not have_censored);
+create index redactions_redacts on redactions using btree(redacts);
+create index refresh_tokens_next_token_id
+	on refresh_tokens
+	using btree(next_token_id)
+	where (next_token_id is not null);
+create unique index remote_media_repository_thumbn_media_origin_id_width_height_met
+	on remote_media_cache_thumbnails
+	using btree(
+		media_origin,
+		media_id,
+		thumbnail_width,
+		thumbnail_height,
+		thumbnail_type,
+		thumbnail_method
+	);
+create index room_account_data_stream_id
+	on room_account_data
+	using btree(user_id, stream_id);
+create index room_alias_servers_alias
+	on room_alias_servers
+	using btree(room_alias);
+create index room_aliases_id on room_aliases using btree(room_id);
+create index room_memberships_room_id on room_memberships using btree(room_id);
+create index room_memberships_user_id on room_memberships using btree(user_id);
+create index room_memberships_user_room_forgotten
+	on room_memberships
+	using btree(user_id, room_id)
+	where (forgotten = 1);
+create index room_retention_max_lifetime_idx
+	on room_retention
+	using btree(max_lifetime);
+create unique index room_stats_earliest_token_idx
+	on room_stats_earliest_token
+	using btree(room_id);
+create unique index room_stats_state_room
+	on room_stats_state
+	using btree(room_id);
+create index stream_ordering_to_exterm_idx
+	on stream_ordering_to_exterm
+	using btree(stream_ordering);
+create index stream_ordering_to_exterm_rm_idx
+	on stream_ordering_to_exterm
+	using btree(room_id, stream_ordering);
+create unique index stream_positions_idx
+	on stream_positions
+	using btree(stream_name, instance_name);
+create unique index threepid_guest_access_tokens_index
+	on threepid_guest_access_tokens
+	using btree(medium, address);
+create index threepid_validation_token_session_id
+	on threepid_validation_token
+	using btree(session_id);
+create index user_daily_visits_ts_idx
+	on user_daily_visits
+	using btree(timestamp);
+create index user_daily_visits_uts_idx
+	on user_daily_visits
+	using btree(user_id, timestamp);
+create index user_directory_room_idx on user_directory using btree(room_id);
+create index user_directory_search_fts_idx
+	on user_directory_search
+	using gin(vector);
+create unique index user_directory_search_user_idx
+	on user_directory_search
+	using btree(user_id);
+create unique index user_directory_user_idx
+	on user_directory
+	using btree(user_id);
+create index user_external_ids_user_id_idx
+	on user_external_ids
+	using btree(user_id);
+create unique index user_filters_unique
+	on user_filters
+	using btree(user_id, filter_id);
+create index user_ips_device_id
+	on user_ips
+	using btree(user_id, device_id, last_seen);
+create index user_ips_last_seen on user_ips using btree(user_id, last_seen);
+create index user_ips_last_seen_only on user_ips using btree(last_seen);
+create unique index user_ips_user_token_ip_unique_index
+	on user_ips
+	using btree(user_id, access_token, ip);
+create unique index user_signature_stream_idx
+	on user_signature_stream
+	using btree(stream_id);
+create unique index user_threepid_id_server_idx
+	on user_threepid_id_server
+	using btree(user_id, medium, address, id_server);
+create index user_threepids_medium_address
+	on user_threepids
+	using btree(medium, address);
+create index user_threepids_user_id on user_threepids using btree(user_id);
+create index users_creation_ts on users using btree(creation_ts);
+create index users_have_local_media
+	on local_media_repository
+	using btree(user_id, created_ts);
+create index users_in_public_rooms_r_idx
+	on users_in_public_rooms
+	using btree(room_id);
+create unique index users_in_public_rooms_u_idx
+	on users_in_public_rooms
+	using btree(user_id, room_id);
+create index users_who_share_private_rooms_o_idx
+	on users_who_share_private_rooms
+	using btree(other_user_id);
+create index users_who_share_private_rooms_r_idx
+	on users_who_share_private_rooms
+	using btree(room_id);
+create unique index users_who_share_private_rooms_u_idx
+	on users_who_share_private_rooms
+	using btree(user_id, other_user_id, room_id);
+create unique index worker_locks_key
+	on worker_locks
+	using btree(lock_name, lock_key);
+create trigger check_partial_state_events
+	before insert or update on partial_state_events
+	for each row
+	execute procedure check_partial_state_events();
+alter table only access_tokens
+	add constraint access_tokens_refresh_token_id_fkey foreign key (
+		refresh_token_id
+	) references refresh_tokens (id) on delete cascade;
+alter table only destination_rooms
+	add constraint destination_rooms_destination_fkey foreign key (
+		destination
+	) references destinations (destination);
+alter table only destination_rooms
+	add constraint destination_rooms_room_id_fkey foreign key (
+		room_id
+	) references rooms (room_id);
+alter table only event_edges
+	add constraint event_edges_event_id_fkey foreign key (
+		event_id
+	) references events (event_id);
+alter table only event_txn_id
+	add constraint event_txn_id_event_id_fkey foreign key (
+		event_id
+	) references events (event_id) on delete cascade;
+alter table only event_txn_id
+	add constraint event_txn_id_token_id_fkey foreign key (
+		token_id
+	) references access_tokens (id) on delete cascade;
+alter table only partial_state_events
+	add constraint partial_state_events_event_id_fkey foreign key (
+		event_id
+	) references events (event_id);
+alter table only partial_state_events
+	add constraint partial_state_events_room_id_fkey foreign key (
+		room_id
+	) references partial_state_rooms (room_id);
+alter table only partial_state_rooms
+	add constraint partial_state_rooms_room_id_fkey foreign key (
+		room_id
+	) references rooms (room_id);
+alter table only partial_state_rooms_servers
+	add constraint partial_state_rooms_servers_room_id_fkey foreign key (
+		room_id
+	) references partial_state_rooms (room_id);
+alter table only refresh_tokens
+	add constraint refresh_tokens_next_token_id_fkey foreign key (
+		next_token_id
+	) references refresh_tokens (id) on delete cascade;
+alter table only ui_auth_sessions_credentials
+	add constraint ui_auth_sessions_credentials_session_id_fkey foreign key (
+		session_id
+	) references ui_auth_sessions (session_id);
+alter table only ui_auth_sessions_ips
+	add constraint ui_auth_sessions_ips_session_id_fkey foreign key (
+		session_id
+	) references ui_auth_sessions (session_id);
+alter table only users_to_send_full_presence_to
+	add constraint users_to_send_full_presence_to_user_id_fkey foreign key (
+		user_id
+	) references users (name);
+insert into appservice_stream_position values ('X', 0);
+insert into event_push_summary_last_receipt_stream_id values ('X', 0);
+insert into event_push_summary_stream_ordering values ('X', 0);
+insert into federation_stream_position values ('federation', -1, 'master');
+insert into federation_stream_position values ('events', -1, 'master');
+insert into stats_incremental_position values ('X', 1);
+insert into user_directory_stream_pos values ('X', 1);
+select pg_catalog.setval('account_data_sequence', 1, true);
+select pg_catalog.setval('application_services_txn_id_seq', 1, false);
+select pg_catalog.setval('cache_invalidation_stream_seq', 1, true);
+select pg_catalog.setval('device_inbox_sequence', 1, true);
+select pg_catalog.setval('event_auth_chain_id', 1, false);
+select pg_catalog.setval('events_backfill_stream_seq', 1, true);
+select pg_catalog.setval('events_stream_seq', 1, true);
+select pg_catalog.setval('instance_map_instance_id_seq', 1, false);
+select pg_catalog.setval('presence_stream_sequence', 1, true);
+select pg_catalog.setval('receipts_sequence', 1, true);
+select pg_catalog.setval('user_id_seq', 1, false);

@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
 	"crates/cli/",
+	"crates/corpus/",
 	"crates/corpus-report/",
 	"crates/embed/",
 	"crates/formatter/",
@@ -19,6 +20,7 @@ license = "MPL-2.0"
 unsafe_code = "deny"
 
 [workspace.dependencies]
+corpus = { path = "crates/corpus/" }
 embed = { path = "crates/embed/", default-features = false }
 formatter = { path = "crates/formatter/" }
 parser = { path = "crates/parser/" }

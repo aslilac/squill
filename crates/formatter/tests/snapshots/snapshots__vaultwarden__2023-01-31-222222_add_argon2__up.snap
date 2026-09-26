@@ -1,0 +1,7 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+alter table users add column client_kdf_memory integer default null;
+
+alter table users add column client_kdf_parallelism integer default null;

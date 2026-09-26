@@ -1,0 +1,6 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+insert into background_updates (ordering, update_name, progress_json)
+values (5822, 'users_have_local_media', '{}');

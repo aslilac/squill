@@ -1,0 +1,5 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+select last_usn, total_bytes, total_nonempty_files from meta;

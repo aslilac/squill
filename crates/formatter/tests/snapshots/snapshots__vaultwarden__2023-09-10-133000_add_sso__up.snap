@@ -1,0 +1,8 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table sso_nonce (
+	nonce char(36) not null primary key,
+	created_at datetime not null default CURRENT_TIMESTAMP
+);

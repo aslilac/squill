@@ -1,0 +1,15 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+create table organization_api_key (
+	uuid text not null,
+	org_uuid text not null,
+	atype integer not null,
+	api_key text not null,
+	revision_date datetime not null,
+	primary key (uuid, org_uuid),
+	foreign key (org_uuid) references organizations (uuid)
+);
+
+alter table users add column external_id text;

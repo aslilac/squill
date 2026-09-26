@@ -92,8 +92,7 @@ with
 		select id
 		from api_keys
 		-- expired keys only
-		where
-			expires_at < @before::timestamptz
+		where expires_at < @before::timestamptz
 		limit @limit_count
 	)
 delete from api_keys

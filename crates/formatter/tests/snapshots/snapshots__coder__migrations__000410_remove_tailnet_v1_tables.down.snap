@@ -79,8 +79,7 @@ begin
 	end if;
 
 	-- Read all agents the client is subscribed to, so we can notify them.
-	select
-		array_agg(agent_id)
+	select array_agg(agent_id)
 	into var_agent_ids
 	from tailnet_client_subscriptions subs
 	where subs.client_id = NEW.id and subs.coordinator_id = NEW.coordinator_id;

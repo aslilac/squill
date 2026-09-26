@@ -1,0 +1,57 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+--
+-- This file is licensed under the Affero General Public License (AGPL) version 3.
+--
+-- Copyright (C) 2025 New Vector, Ltd
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU Affero General Public License as
+-- published by the Free Software Foundation, either version 3 of the
+-- License, or (at your option) any later version.
+--
+-- See the GNU Affero General Public License for more details:
+-- <https://www.gnu.org/licenses/agpl-3.0.html>.
+
+-- Introduce a table for tracking users' subscriptions to threads.
+create table thread_subscriptions (
+	stream_id integer not null primary key,
+	instance_name text not null,
+	room_id text not null,
+	event_id text not null,
+	user_id text not null,
+	subscribed boolean not null,
+	automatic boolean not null,
+	constraint thread_subscriptions_fk_users foreign key (user_id)
+		references users (name),
+	constraint thread_subscriptions_fk_rooms foreign key (room_id)
+		-- When we delete a room, we should already have deleted all the events in that room
+		-- and so there shouldn't be any subscriptions left in that room.
+		-- So the `ON DELETE CASCADE` should be optional, but included anyway for good measure.
+		references rooms (room_id) on delete cascade,
+	constraint thread_subscriptions_fk_events foreign key (event_id)
+		references events (event_id) on delete cascade,
+
+	-- This order provides a useful index for:
+	-- 1. foreign key constraint on (room_id)
+	-- 2. foreign key constraint on (room_id, event_id)
+	-- 3. finding the user's settings for a specific thread (as well as enforcing uniqueness)
+	unique(room_id, event_id, user_id)
+);
+
+-- this provides a useful index for finding a user's own rules,
+-- potentially scoped to a single room
+create index thread_subscriptions_user_room
+	on thread_subscriptions (user_id, room_id);
+
+-- this provides a useful way for clients to efficiently find new changes to
+-- their subscriptions.
+-- (This is necessary to sync subscriptions between multiple devices.)
+create index thread_subscriptions_by_user
+	on thread_subscriptions (user_id, stream_id);
+
+-- this provides a useful index for deleting the subscriptions when the underlying
+-- events are removed. This also covers the foreign key constraint on `events`.
+create index thread_subscriptions_by_event on thread_subscriptions (event_id);

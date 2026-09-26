@@ -66,8 +66,7 @@ select *
 -- for the table.
 from usage_events
 -- The CTE and the reorder is required because UPDATE doesn't guarantee order.
-order by
-	created_at asc;
+order by created_at asc;
 
 -- name: UpdateUsageEventsPostPublish :exec
 update usage_events

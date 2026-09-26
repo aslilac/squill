@@ -1,0 +1,175 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+--
+-- This file is licensed under the Affero General Public License (AGPL) version 3.
+--
+-- Copyright (C) 2023 New Vector, Ltd
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU Affero General Public License as
+-- published by the Free Software Foundation, either version 3 of the
+-- License, or (at your option) any later version.
+--
+-- See the GNU Affero General Public License for more details:
+-- <https://www.gnu.org/licenses/agpl-3.0.html>.
+--
+-- Originally licensed under the Apache License, Version 2.0:
+-- <http://www.apache.org/licenses/LICENSE-2.0>.
+--
+-- [This file includes modifications made by New Vector Limited]
+--
+--
+/* Copyright 2018 New Vector Ltd
+ * Copyright 2019 The Matrix.org Foundation C.I.C.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+----- First clean up from previous versions of room stats.
+
+-- First remove old stats stuff
+drop table if exists room_stats;
+drop table if exists room_state;
+drop table if exists room_stats_state;
+drop table if exists user_stats;
+drop table if exists room_stats_earliest_tokens;
+drop table if exists _temp_populate_stats_position;
+drop table if exists _temp_populate_stats_rooms;
+drop table if exists stats_stream_pos;
+
+-- Unschedule old background updates if they're still scheduled
+delete from background_updates
+where
+	update_name in (
+		'populate_stats_createtables',
+		'populate_stats_process_rooms',
+		'populate_stats_process_users',
+		'populate_stats_cleanup'
+	);
+
+-- this relies on current_state_events.membership having been populated, so add
+-- a dependency on current_state_events_membership.
+insert into background_updates (update_name, progress_json, depends_on)
+values
+	('populate_stats_process_rooms', '{}', 'current_state_events_membership');
+
+-- this also relies on current_state_events.membership having been populated, but
+-- we get that as a side-effect of depending on populate_stats_process_rooms.
+insert into background_updates (update_name, progress_json, depends_on)
+values ('populate_stats_process_users', '{}', 'populate_stats_process_rooms');
+
+----- Create tables for our version of room stats.
+
+-- single-row table to track position of incremental updates
+drop table if exists stats_incremental_position;
+create table stats_incremental_position (
+	Lock char(1) not null unique default 'X', -- Makes sure this table only has one row.
+	stream_id bigint not null,
+	check(Lock = 'X')
+);
+
+-- insert a null row and make sure it is the only one.
+insert into stats_incremental_position (stream_id)
+select coalesce(max(stream_ordering), 0)
+from events;
+
+-- represents PRESENT room statistics for a room
+-- only holds absolute fields
+drop table if exists room_stats_current;
+create table room_stats_current (
+	room_id text not null primary key,
+
+	-- These are absolute counts
+	current_state_events int not null,
+	joined_members int not null,
+	invited_members int not null,
+	left_members int not null,
+	banned_members int not null,
+	local_users_in_room int not null,
+
+	-- The maximum delta stream position that this row takes into account.
+	completed_delta_stream_id bigint not null
+);
+
+
+-- represents HISTORICAL room statistics for a room
+drop table if exists room_stats_historical;
+create table room_stats_historical (
+	room_id text not null,
+	-- These stats cover the time from (end_ts - bucket_size)...end_ts (in ms).
+	-- Note that end_ts is quantised.
+	end_ts bigint not null,
+	bucket_size bigint not null,
+
+	-- These stats are absolute counts
+	current_state_events bigint not null,
+	joined_members bigint not null,
+	invited_members bigint not null,
+	left_members bigint not null,
+	banned_members bigint not null,
+	local_users_in_room bigint not null,
+
+	-- These stats are per time slice
+	total_events bigint not null,
+	total_event_bytes bigint not null,
+	primary key (room_id, end_ts)
+);
+
+-- We use this index to speed up deletion of ancient room stats.
+create index room_stats_historical_end_ts on room_stats_historical (end_ts);
+
+-- represents PRESENT statistics for a user
+-- only holds absolute fields
+drop table if exists user_stats_current;
+create table user_stats_current (
+	user_id text not null primary key,
+	joined_rooms bigint not null,
+
+	-- The maximum delta stream position that this row takes into account.
+	completed_delta_stream_id bigint not null
+);
+
+-- represents HISTORICAL statistics for a user
+drop table if exists user_stats_historical;
+create table user_stats_historical (
+	user_id text not null,
+	end_ts bigint not null,
+	bucket_size bigint not null,
+	joined_rooms bigint not null,
+	invites_sent bigint not null,
+	rooms_created bigint not null,
+	total_events bigint not null,
+	total_event_bytes bigint not null,
+	primary key (user_id, end_ts)
+);
+
+-- We use this index to speed up deletion of ancient user stats.
+create index user_stats_historical_end_ts on user_stats_historical (end_ts);
+
+
+create table room_stats_state (
+	room_id text not null,
+	name text,
+	canonical_alias text,
+	join_rules text,
+	history_visibility text,
+	encryption text,
+	avatar text,
+	guest_access text,
+	is_federatable boolean,
+	topic text
+);
+
+create unique index room_stats_state_room on room_stats_state (room_id);

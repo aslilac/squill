@@ -1,0 +1,13 @@
+---
+source: crates/formatter/tests/snapshots.rs
+expression: formatted
+---
+drop table users;
+
+drop table devices;
+
+drop table ciphers;
+
+drop table attachments;
+
+drop table folders;
