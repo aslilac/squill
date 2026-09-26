@@ -63,6 +63,11 @@ pub(crate) const DDL_STARTERS: &[&str] = &[
 	"explain",
 	"show",
 	"execute",
+	// Cursors in plain SQL: `DECLARE c CURSOR FOR ...`, `FETCH`, ...
+	"declare",
+	"fetch",
+	"move",
+	"close",
 	"call",
 	"copy",
 	"import",

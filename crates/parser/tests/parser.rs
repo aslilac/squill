@@ -425,3 +425,11 @@ fn merge_statements() {
 		[SyntaxKind::MergeStmt]
 	);
 }
+
+#[test]
+fn plain_sql_cursor_statements() {
+	let cst = parse_ok(
+		"DECLARE c CURSOR WITH HOLD FOR SELECT 1; FETCH 10 FROM c; MOVE LAST IN c; CLOSE c;",
+	);
+	assert_eq!(top_level_kinds(&cst), [SyntaxKind::DdlStmt; 4]);
+}

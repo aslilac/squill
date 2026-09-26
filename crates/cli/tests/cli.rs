@@ -1708,3 +1708,27 @@ fn grammar_urls_use_the_lockfile_and_cache() {
 	);
 	let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// A function body squill can't parse is a diagnostic, not a silent
+/// pass-through, and fails --strict.
+#[test]
+fn unparsable_function_bodies_are_diagnostics() {
+	let dir = temp_dir("badbody");
+	let file = dir.join("f.sql");
+	std::fs::write(
+		&file,
+		"create function f() returns int language plpgsql as $$\nbegin\n  frobnicate 1;\nend\n$$;\n",
+	)
+	.expect("write");
+	let output =
+		squill().args(["fmt", "--check"]).arg(&file).output().expect("run");
+	let stderr = String::from_utf8_lossy(&output.stderr);
+	assert!(
+		stderr.contains("f.sql:3:3: expected a statement, found `frobnicate` (PL/pgSQL body left as written)"),
+		"{stderr}"
+	);
+	let status =
+		squill().args(["fmt", "--strict"]).arg(&file).status().expect("run");
+	assert_eq!(status.code(), Some(1));
+	let _ = std::fs::remove_dir_all(&dir);
+}

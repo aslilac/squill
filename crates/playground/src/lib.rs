@@ -101,6 +101,10 @@ fn format_sql(source: &str, options: &formatter::Options) -> Response {
 			format!("{line}:{col}: {} (statement passed through verbatim)", d.message)
 		})
 		.collect();
+	diagnostics.extend(result.body_diagnostics.iter().map(|body| {
+		let (line, col) = line_col(source, body.start);
+		format!("{line}:{col}: {}", body.message)
+	}));
 	if result.fallback_statements > 0 {
 		diagnostics.push(format!(
 			"{} statement(s) passed through verbatim (formatter self-check)",

@@ -113,6 +113,17 @@ pub struct Formatted {
 	/// fully formatted file. ErrorStatements are always verbatim and are
 	/// not counted here.
 	pub fallback_statements: usize,
+	/// Procedural bodies (`LANGUAGE plpgsql` / `LANGUAGE sql` / `DO`)
+	/// that didn't parse, so were left as written.
+	pub body_diagnostics: Vec<BodyDiagnostic>,
+}
+
+/// Where a procedural body failed to parse, in the source's bytes.
+#[derive(Debug, Clone)]
+pub struct BodyDiagnostic {
+	pub start: usize,
+	pub end: usize,
+	pub message: String,
 }
 
 /// Format a CST. Statement-by-statement: each formatted statement is
@@ -213,7 +224,18 @@ fn format_cst_at(cst: &Cst, options: &Options, depth: u32) -> Formatted {
 	if !out.is_empty() && !out.ends_with('\n') {
 		out.push('\n');
 	}
-	Formatted { text: out, fallback_statements: fallbacks }
+	// Bodies that don't parse are left as written by the splice; say so,
+	// pointing into the source. Only at the top: nested bodies are
+	// reported with the one that holds them.
+	let mut body_diagnostics = Vec::new();
+	if depth == 0 {
+		for node in cst.root().children() {
+			if node.kind() != SyntaxKind::ErrorStatement {
+				collect_body_diagnostics(node, options, &mut body_diagnostics);
+			}
+		}
+	}
+	Formatted { text: out, fallback_statements: fallbacks, body_diagnostics }
 }
 
 /// The most blank lines squill will keep between two top-level pieces.
@@ -240,6 +262,61 @@ fn leading_blanks(original: &str) -> usize {
 /// whitespace that statement assembly regenerates.
 fn trim_verbatim(original: &str) -> String {
 	original.trim().to_string()
+}
+
+/// Parse each procedural body in `statement` (as the splice would) and
+/// record where any fails to.
+fn collect_body_diagnostics(
+	statement: &parser::syntax::SyntaxNode,
+	options: &Options,
+	out: &mut Vec<BodyDiagnostic>,
+) {
+	let tokens: Vec<(usize, parser::lexer::Token<'_>)> = statement
+		.descendants_with_tokens()
+		.filter_map(|element| element.into_token())
+		.filter(|token| !token.kind().is_trivia())
+		.map(|token| {
+			let start = u32::from(token.text_range().start()) as usize;
+			(start, parser::lexer::Token { kind: token.kind(), text: token.text() })
+		})
+		.collect();
+	let non_trivia: Vec<&parser::lexer::Token<'_>> =
+		tokens.iter().map(|(_, token)| token).collect();
+	let Some(lang) = body_lang(&non_trivia) else {
+		return;
+	};
+	let lex_options = options.lex_options();
+	for (start, token) in &tokens {
+		if token.kind != SyntaxKind::DollarString {
+			continue;
+		}
+		let Some((tag, content)) = check::split_dollar(token.text) else {
+			continue;
+		};
+		if content.trim().is_empty() {
+			continue;
+		}
+		let body_tokens =
+			parser::lexer::lex_with(content, options.dialect, lex_options);
+		let (parse, what) = match lang {
+			BodyLang::Sql => (
+				parser::parser::parse(&body_tokens, options.dialect),
+				"SQL function body",
+			),
+			BodyLang::Plpgsql => (
+				parser::parser::parse_plpgsql_body(&body_tokens, options.dialect),
+				"PL/pgSQL body",
+			),
+		};
+		let base = start + tag.len();
+		for diagnostic in &parse.diagnostics {
+			out.push(BodyDiagnostic {
+				start: base + diagnostic.start,
+				end: base + diagnostic.end,
+				message: format!("{} ({what} left as written)", diagnostic.message),
+			});
+		}
+	}
 }
 
 /// Which body grammar a statement's dollar-quoted string holds.

@@ -193,3 +193,32 @@ fn corpus_plpgsql_bodies_parse() {
 		failures.join("\n")
 	);
 }
+
+#[test]
+fn cursors_labels_and_assert() {
+	parse_ok(
+		"declare
+			c cursor for select * from t;
+			d no scroll cursor (n int) for select n;
+			e scroll cursor is select 1;
+		begin
+			open c;
+			open d(1);
+			open e for execute 'select 1' using 2;
+			fetch next from c into r;
+			fetch c into r;
+			move forward 2 in c;
+			close c;
+			assert n >= 0, 'negative';
+			assert true;
+			<<outer>>
+			for r in select * from t loop
+				exit outer when r.a;
+			end loop outer;
+			<<counting>>
+			while n > 0 loop
+				n := n - 1;
+			end loop counting;
+		end",
+	);
+}

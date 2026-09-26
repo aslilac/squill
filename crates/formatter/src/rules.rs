@@ -89,6 +89,8 @@ pub(crate) fn lower_statement(
 		| SyntaxKind::PlPerform
 		| SyntaxKind::PlExecute
 		| SyntaxKind::PlGetDiag
+		| SyntaxKind::PlCursor
+		| SyntaxKind::PlAssert
 		| SyntaxKind::PlNull => {
 			// Statement-leading trivia (comments before the first token)
 			// attaches at statement level, outside the body group, so a
@@ -295,6 +297,8 @@ impl Lowerer {
 			| SyntaxKind::PlPerform
 			| SyntaxKind::PlExecute
 			| SyntaxKind::PlGetDiag
+			| SyntaxKind::PlCursor
+			| SyntaxKind::PlAssert
 			| SyntaxKind::PlNull => {
 				let mut docs = Vec::new();
 				self.dml_flow(&mut docs, node);
@@ -1905,6 +1909,7 @@ impl Lowerer {
 	fn pl_block(&mut self, node: &SyntaxNode) -> Doc {
 		let mut docs = Vec::new();
 		let mut first = true;
+		let mut label = Label::default();
 		for element in node.children_with_tokens() {
 			match element {
 				SyntaxElement::Token(token) if token.kind().is_trivia() => {
@@ -1913,7 +1918,9 @@ impl Lowerer {
 				SyntaxElement::Token(token) => {
 					let lower = token.text().to_ascii_lowercase();
 					let section = matches!(lower.as_str(), "declare" | "begin" | "end");
-					if section && !first {
+					if let Some(separator) = label.before(token) {
+						docs.push(separator);
+					} else if section && !first {
 						docs.push(hard_line());
 					} else if !first && token.kind() != SyntaxKind::Semicolon {
 						docs.push(space());
@@ -1947,6 +1954,7 @@ impl Lowerer {
 		let mut first = true;
 		let mut seen_end = false;
 		let mut tight_dot = false;
+		let mut label = Label::default();
 		for element in node.children_with_tokens() {
 			match element {
 				SyntaxElement::Token(token) if token.kind().is_trivia() => {
@@ -1961,7 +1969,9 @@ impl Lowerer {
 						|| (token.kind() == SyntaxKind::Number
 							&& token.text().starts_with('.'));
 					tight_dot = token.kind() == SyntaxKind::Dot;
-					if lower == "end" {
+					if let Some(separator) = label.before(token) {
+						docs.push(separator);
+					} else if lower == "end" {
 						seen_end = true;
 						docs.push(hard_line());
 					} else if token.kind() != SyntaxKind::Semicolon && !first && !tight {
@@ -2301,6 +2311,8 @@ fn is_pl_statement(kind: SyntaxKind) -> bool {
 				| SyntaxKind::PlPerform
 				| SyntaxKind::PlExecute
 				| SyntaxKind::PlGetDiag
+				| SyntaxKind::PlCursor
+				| SyntaxKind::PlAssert
 				| SyntaxKind::PlNull
 				| SyntaxKind::SelectStmt
 				| SyntaxKind::InsertStmt
@@ -2311,6 +2323,43 @@ fn is_pl_statement(kind: SyntaxKind) -> bool {
 				| SyntaxKind::ErrorStatement
 				| SyntaxKind::EmptyStmt
 		)
+}
+
+/// A PL/pgSQL `<<label>>` opening a block or loop: written tight, on a
+/// line of its own.
+#[derive(Default)]
+struct Label {
+	/// Where we are in `<<` name `>>`: 0 before it, 1 after `<<`, 2 after
+	/// the name, 3 after `>>` (then the block or loop begins).
+	at: u8,
+}
+
+impl Label {
+	/// The separator before `token` when the label decides it; `None`
+	/// leaves it to the caller.
+	fn before(&mut self, token: &SyntaxToken) -> Option<Doc> {
+		let is =
+			|op: &str| token.kind() == SyntaxKind::Operator && token.text() == op;
+		match self.at {
+			0 if is("<<") => {
+				self.at = 1;
+				Some(concat([]))
+			}
+			1 => {
+				self.at = 2;
+				Some(concat([]))
+			}
+			2 if is(">>") => {
+				self.at = 3;
+				Some(concat([]))
+			}
+			3 => {
+				self.at = 4;
+				Some(hard_line())
+			}
+			_ => None,
+		}
+	}
 }
 
 /// Is this node one of the clause-level pieces inside a query body?

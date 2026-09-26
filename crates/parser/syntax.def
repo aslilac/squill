@@ -92,6 +92,9 @@ node PlAssign
 node PlPerform
 node PlExecute
 node PlGetDiag
+# OPEN / FETCH / MOVE / CLOSE on a cursor.
+node PlCursor
+node PlAssert
 node PlNull
 node PlException
 # `INTO [STRICT] targets` inside body SQL (SELECT/RETURNING/EXECUTE).

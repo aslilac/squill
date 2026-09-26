@@ -51,6 +51,11 @@ fn pl_statement(p: &mut Parser<'_>) -> PResult {
 }
 
 fn pl_statement_inner(p: &mut Parser<'_>) -> PResult {
+	// A `<<label>>` belongs to the block or loop after it.
+	let labeled = p.at_op("<<") && p.nth_at_op(2, ">>");
+	if labeled && LOOP_WORDS.iter().any(|word| p.nth_at_kw(3, word)) {
+		return pl_loop(p);
+	}
 	if p.at_kw("declare") || p.at_kw("begin") || p.at_op("<<") {
 		return pl_block(p);
 	}
@@ -60,8 +65,14 @@ fn pl_statement_inner(p: &mut Parser<'_>) -> PResult {
 	if p.at_kw("case") {
 		return pl_case(p);
 	}
-	if p.at_any_kw(&["loop", "while", "for", "foreach"]) {
+	if p.at_any_kw(LOOP_WORDS) {
 		return pl_loop(p);
+	}
+	if p.at_any_kw(&["open", "fetch", "move", "close"]) {
+		return pl_cursor(p);
+	}
+	if p.at_kw("assert") {
+		return pl_assert(p);
 	}
 	if p.at_kw("exit") || p.at_kw("continue") {
 		return pl_exit(p);
@@ -160,6 +171,25 @@ fn pl_declare(p: &mut Parser<'_>) -> PResult {
 		p.finish();
 		return Ok(());
 	}
+	// `name [NO] [SCROLL] CURSOR [(args)] FOR query;`
+	if p.at_kw("cursor")
+		|| p.at_kw("scroll")
+		|| (p.at_kw("no") && p.nth_at_kw(1, "scroll"))
+	{
+		p.eat_kw("no");
+		p.eat_kw("scroll");
+		p.expect_kw("cursor")?;
+		if p.at(SyntaxKind::LParen) {
+			super::ddl::column_list(p)?;
+		}
+		if !p.eat_kw("for") {
+			p.expect_kw("is")?;
+		}
+		query_body(p)?;
+		p.expect(SyntaxKind::Semicolon, "`;`")?;
+		p.finish();
+		return Ok(());
+	}
 	p.eat_kw("constant");
 	type_name(p)?;
 	// `%TYPE` / `%ROWTYPE` suffix.
@@ -235,17 +265,28 @@ fn pl_case(p: &mut Parser<'_>) -> PResult {
 	Ok(())
 }
 
+/// The words that start a loop.
+const LOOP_WORDS: &[&str] = &["loop", "while", "for", "foreach"];
+
+/// `[<<label>>] LOOP | WHILE ... | FOR ... | FOREACH ...`, through
+/// `END LOOP [label];`.
 fn pl_loop(p: &mut Parser<'_>) -> PResult {
-	let kind = if p.at_kw("loop") {
+	let at = if p.at_op("<<") { 3 } else { 0 };
+	let kind = if p.nth_at_kw(at, "loop") {
 		SyntaxKind::PlLoop
-	} else if p.at_kw("while") {
+	} else if p.nth_at_kw(at, "while") {
 		SyntaxKind::PlWhile
-	} else if p.at_kw("for") {
+	} else if p.nth_at_kw(at, "for") {
 		SyntaxKind::PlFor
 	} else {
 		SyntaxKind::PlForeach
 	};
 	p.start(kind);
+	if at > 0 {
+		p.bump(); // <<
+		ident(p)?;
+		p.bump(); // >>
+	}
 	match kind {
 		SyntaxKind::PlLoop => {
 			p.bump();
@@ -466,6 +507,51 @@ fn assignment_operator(p: &mut Parser<'_>) -> bool {
 	} else {
 		false
 	}
+}
+
+/// `OPEN cursor [...] [FOR query | FOR EXECUTE ...]`, `FETCH [direction
+/// FROM] cursor INTO target`, `MOVE [direction FROM] cursor`, `CLOSE
+/// cursor`. Directions and cursor arguments are kept as they come.
+fn pl_cursor(p: &mut Parser<'_>) -> PResult {
+	p.start(SyntaxKind::PlCursor);
+	let open = p.at_kw("open");
+	p.bump();
+	while !p.at(SyntaxKind::Semicolon) {
+		if p.at_eof() {
+			return Err(p.error("expected `;`"));
+		}
+		if open && p.at_kw("for") {
+			p.bump();
+			if p.at_kw("execute") {
+				pl_execute_tail(p)?;
+			} else {
+				query_body(p)?;
+			}
+		} else if p.at_kw("into") {
+			super::grammar::pl_into(p)?;
+		} else if p.at(SyntaxKind::LParen) {
+			// `OPEN c(args)`.
+			super::grammar::paren_expr_list(p)?;
+		} else {
+			p.bump();
+		}
+	}
+	p.bump();
+	p.finish();
+	Ok(())
+}
+
+/// `ASSERT condition [, message];`
+fn pl_assert(p: &mut Parser<'_>) -> PResult {
+	p.start(SyntaxKind::PlAssert);
+	p.expect_kw("assert")?;
+	expr(p, 0)?;
+	if p.eat(SyntaxKind::Comma) {
+		expr(p, 0)?;
+	}
+	p.expect(SyntaxKind::Semicolon, "`;`")?;
+	p.finish();
+	Ok(())
 }
 
 /// The body's outermost END often has no trailing `;` before EOF.

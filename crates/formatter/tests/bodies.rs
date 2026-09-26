@@ -232,3 +232,38 @@ fn oracle_whitespace_leeway_is_only_for_bodies() {
 		"do $$begin raise notice $x$a  b$x$; end$$;",
 	));
 }
+
+/// Labels sit on their own line, written tight, for blocks and loops.
+#[test]
+fn labels_are_tight_and_on_their_own_line() {
+	assert_eq!(
+		format(
+			"do $$ << blk >> begin << outer >> loop exit outer; end loop outer; end blk $$;"
+		),
+		"do $$\n<<blk>>\nbegin\n\t<<outer>>\n\tloop\n\t\texit outer;\n\tend loop outer;\nend blk\n$$;\n"
+	);
+}
+
+/// A procedural body that doesn't parse is left as written, and says so,
+/// pointing into the source.
+#[test]
+fn unparsable_bodies_are_reported() {
+	let source = "create function f() returns int language plpgsql as $$\nbegin\n  frobnicate 1;\nend\n$$;\ncreate function g() returns int language sql as $$ frobnicate 1 $$;\ncreate function h() returns int language plpgsql as $$ begin return 1; end $$;\n";
+	let options = Options::default();
+	let tokens = lex_with(source, Dialect::Postgres, options.lex_options());
+	let parse = parser::parser::parse(&tokens, Dialect::Postgres);
+	let formatted = format_cst(&parse.cst, &options);
+	let found: Vec<(&str, &str)> = formatted
+		.body_diagnostics
+		.iter()
+		.map(|d| (&source[d.start..d.end], d.message.as_str()))
+		.collect();
+	assert_eq!(found.len(), 2, "{found:?}");
+	assert_eq!(found[0].0, "frobnicate");
+	assert!(found[0].1.contains("PL/pgSQL body left as written"), "{found:?}");
+	assert_eq!(found[1].0, "frobnicate");
+	assert!(
+		found[1].1.contains("SQL function body left as written"),
+		"{found:?}"
+	);
+}
