@@ -9,13 +9,13 @@ workspace = true
 
 [features]
 default = [
-	"wasm",
+	"external-grammars",
 	"rust", "go", "python", "javascript", "typescript", "gleam",
 	"cpp", "csharp", "java", "kotlin",
 ]
 # Load tree-sitter grammars compiled to wasm (`grammar = "x.wasm"`).
 # Pulls in wasmtime, whose build needs cmake.
-wasm = ["embed/wasm"]
+external-grammars = ["embed/external-grammars"]
 # The built-in grammars, one feature each: build with
 # `--no-default-features --features rust,go` for just those.
 rust = ["embed/rust"]

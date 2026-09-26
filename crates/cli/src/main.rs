@@ -267,7 +267,7 @@ struct Loaded {
 struct Caches {
 	configs: HashMap<PathBuf, Arc<Loaded>>,
 	nearest: HashMap<PathBuf, Option<PathBuf>>,
-	#[cfg(feature = "wasm")]
+	#[cfg(feature = "external-grammars")]
 	grammars: HashMap<PathBuf, Arc<embed::Grammar>>,
 	queries: HashMap<PathBuf, Arc<str>>,
 }
@@ -349,7 +349,7 @@ impl Caches {
 	) -> Result<Arc<embed::Grammar>, String> {
 		match spec {
 			config::GrammarSpec::Builtin(host) => Ok(Arc::new((*host).into())),
-			#[cfg(feature = "wasm")]
+			#[cfg(feature = "external-grammars")]
 			config::GrammarSpec::Wasm(path) => {
 				if let Some(grammar) = self.grammars.get(path) {
 					return Ok(grammar.clone());
@@ -360,7 +360,7 @@ impl Caches {
 				self.grammars.insert(path.clone(), grammar.clone());
 				Ok(grammar)
 			}
-			#[cfg(not(feature = "wasm"))]
+			#[cfg(not(feature = "external-grammars"))]
 			config::GrammarSpec::Wasm(path) => Err(format!(
 				"{}: this squill was built without wasm grammar support",
 				path.display()

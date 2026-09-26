@@ -1121,7 +1121,7 @@ fn relative_paths_find_a_config_above_the_working_directory() {
 /// A grammar squill does not bundle, loaded from wasm: the Lua grammar's
 /// own release artifact (MIT, see the LICENSE beside it). Long strings
 /// (`[[ ... ]]`) are raw, so their content is SQL as written.
-#[cfg(feature = "wasm")]
+#[cfg(feature = "external-grammars")]
 #[test]
 fn wasm_grammars_load_from_config() {
 	let dir = temp_dir("wasmgrammar");
@@ -1160,7 +1160,7 @@ fn wasm_grammars_load_from_config() {
 }
 
 /// A wasm grammar has no default query to fall back on.
-#[cfg(feature = "wasm")]
+#[cfg(feature = "external-grammars")]
 #[test]
 fn wasm_grammars_need_a_query() {
 	let dir = temp_dir("wasmnoquery");

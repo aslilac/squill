@@ -282,7 +282,7 @@ impl Host {
 		feature = "csharp",
 		feature = "java",
 		feature = "kotlin",
-		feature = "wasm"
+		feature = "external-grammars"
 	)),
 	allow(dead_code)
 )]
@@ -296,11 +296,11 @@ enum Codec {
 }
 
 /// A tree-sitter grammar to find SQL with: built in, or (with the
-/// `wasm` feature) loaded from a `.wasm` file at runtime.
+/// `external-grammars` feature) loaded from a `.wasm` file at runtime.
 #[derive(Clone)]
 pub enum Grammar {
 	Builtin(Host),
-	#[cfg(feature = "wasm")]
+	#[cfg(feature = "external-grammars")]
 	Wasm(wasm::WasmGrammar),
 }
 
@@ -315,7 +315,7 @@ impl Grammar {
 	pub fn name(&self) -> &str {
 		match self {
 			Grammar::Builtin(host) => host.name(),
-			#[cfg(feature = "wasm")]
+			#[cfg(feature = "external-grammars")]
 			Grammar::Wasm(grammar) => grammar.name(),
 		}
 	}
@@ -324,7 +324,7 @@ impl Grammar {
 		match self {
 			Grammar::Builtin(host) => host.codec(),
 			// Nothing is known about a loaded grammar's strings.
-			#[cfg(feature = "wasm")]
+			#[cfg(feature = "external-grammars")]
 			Grammar::Wasm(_) => Codec::Content { backslash_escapes: true },
 		}
 	}
@@ -332,7 +332,7 @@ impl Grammar {
 	fn host(&self) -> Option<Host> {
 		match self {
 			Grammar::Builtin(host) => Some(*host),
-			#[cfg(feature = "wasm")]
+			#[cfg(feature = "external-grammars")]
 			Grammar::Wasm(_) => None,
 		}
 	}
@@ -351,13 +351,13 @@ impl Grammar {
 					.map_err(|err| EmbedError::Grammar(err.to_string()))?;
 				f(&mut parser, &language)
 			}
-			#[cfg(feature = "wasm")]
+			#[cfg(feature = "external-grammars")]
 			Grammar::Wasm(grammar) => grammar.with_parser(f),
 		}
 	}
 }
 
-#[cfg(feature = "wasm")]
+#[cfg(feature = "external-grammars")]
 pub mod wasm {
 	//! Grammars compiled to wasm (`tree-sitter build --wasm`), run by
 	//! tree-sitter's wasmtime integration.

@@ -490,7 +490,7 @@ fn apply_key(
 /// A `grammar` value: a built-in name, or a path ending in `.wasm`.
 fn parse_grammar(raw: &str, anchor: &Path) -> Result<GrammarSpec, String> {
 	if raw.ends_with(".wasm") {
-		if cfg!(feature = "wasm") {
+		if cfg!(feature = "external-grammars") {
 			return Ok(GrammarSpec::Wasm(anchor.join(raw)));
 		}
 		return Err(format!(

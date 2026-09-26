@@ -43,7 +43,7 @@
 
             cargoBuildFlags = [ "-p" "cli" ];
 
-            # wasmtime (behind the default `wasm` feature, for loading
+            # wasmtime (behind the default `external-grammars` feature, for loading
             # tree-sitter grammars at runtime) builds its C API with cmake.
             nativeBuildInputs = [ pkgs.cmake ];
             dontUseCmakeConfigure = true;

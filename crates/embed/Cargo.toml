@@ -27,7 +27,7 @@ java = ["dep:tree-sitter-java"]
 kotlin = ["dep:tree-sitter-kotlin-ng"]
 # Load tree-sitter grammars compiled to wasm at runtime (pulls in
 # wasmtime). Off for the playground, which is itself wasm.
-wasm = ["tree-sitter/wasm"]
+external-grammars = ["tree-sitter/wasm"]
 
 [dependencies]
 formatter = { workspace = true }
