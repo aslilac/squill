@@ -199,7 +199,9 @@ pub fn discover(dir: &Path) -> Option<PathBuf> {
 			return None;
 		}
 		let parent = current.parent()?;
-		if !same_device(current, parent) {
+		// A directory that doesn't exist yet (an unsaved editor buffer's,
+		// via --stdin-filepath) is no mount point: walk on up.
+		if current.exists() && !same_device(current, parent) {
 			return None;
 		}
 		current = parent;

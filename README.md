@@ -64,7 +64,7 @@ Set in the nearest `squill.toml` or `.config/squill.toml`, overridable with flag
 | `frozen-ref` | `--frozen-ref` | the baseline ref `frozen` compares against | discovered from the remote |
 | `frozen-fetch` | `--frozen-fetch` / `--no-frozen-fetch` | let `frozen` ask the remote for its HEAD when it isn't recorded locally | `true` |
 
-Flags with no config key: `--check` (print diffs and exit 1 if any file would change), `--stdin` (or `-` as the path) / `--stdout`, `--strict` (fail when anything was left unformatted), `--no-config`, `--version` / `-V`, and `--help` / `-h`.
+Flags with no config key: `--check` (print diffs and exit 1 if any file would change), `--stdin` (or `-` as the path) / `--stdout`, `--stdin-filepath <path>` (read stdin as the file at that path, for editors: its config, rules, and ignores apply, and it need not exist yet), `--strict` (fail when anything was left unformatted), `--no-config`, `--version` / `-V`, and `--help` / `-h`.
 
 When recursing directories, squill honors `.gitignore` and skips hidden files; the `ignore` key and repeated `--ignore` flags skip more, with `*`, `**`, `?`, `[abc]`, and `{a,b}` glob syntax. Explicitly listed files always format.
 

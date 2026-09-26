@@ -1354,3 +1354,91 @@ fn pyformat_params_default_by_grammar_and_configure() {
 	);
 	let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Pipe `input` through `squill fmt --stdin-filepath <path>` in `dir`,
+/// returning exit code, stdout, and stderr.
+fn stdin_as(
+	dir: &std::path::Path,
+	path: &str,
+	input: &str,
+	extra: &[&str],
+) -> (Option<i32>, String, String) {
+	let mut child = squill()
+		.current_dir(dir)
+		.args(["fmt", "--stdin-filepath", path])
+		.args(extra)
+		.stdin(Stdio::piped())
+		.stdout(Stdio::piped())
+		.stderr(Stdio::piped())
+		.spawn()
+		.expect("spawn");
+	child
+		.stdin
+		.take()
+		.expect("stdin")
+		.write_all(input.as_bytes())
+		.expect("write");
+	let output = child.wait_with_output().expect("wait");
+	(
+		output.status.code(),
+		String::from_utf8_lossy(&output.stdout).into_owned(),
+		String::from_utf8_lossy(&output.stderr).into_owned(),
+	)
+}
+
+/// `--stdin-filepath` formats the stream as the file at that path would
+/// be — no file needed on disk, as for an unsaved editor buffer.
+#[test]
+fn stdin_filepath_resolves_rules_against_the_path() {
+	let dir = temp_dir("stdinpath");
+	std::fs::write(
+		dir.join("squill.toml"),
+		format!(
+			"{RUST_RULE}\n[[files]]\ninclude = [\"*.sql.sqlite\"]\ndialect = \"sqlite\"\n"
+		),
+	)
+	.expect("write config");
+
+	// A host file: its embedded SQL formats.
+	let (code, out, _) = stdin_as(&dir, "src/q.rs", RS_FIXTURE, &[]);
+	assert_eq!(code, Some(0));
+	assert!(out.contains("select id, name\n        from users"), "{out}");
+
+	// A [[files]] rule applies: `?1` only lexes in SQLite.
+	let (code, out, err) = stdin_as(
+		&dir,
+		"delta.sql.sqlite",
+		"SELECT a FROM t WHERE b = ?1",
+		&["--strict"],
+	);
+	assert_eq!(code, Some(0), "{err}");
+	assert_eq!(out, "select a from t where b = ?1\n");
+
+	// Diagnostics carry the path.
+	let (_, _, err) = stdin_as(
+		&dir,
+		"src/bad.rs",
+		"fn f() { sqlx::query!(r#\"select (\n\"#); }\n",
+		&[],
+	);
+	assert!(err.contains("src/bad.rs:1:23: embedded SQL did not parse"), "{err}");
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// What squill wouldn't format as a file, it hands back unchanged from
+/// stdin: an ignored path, or a host file no rule covers.
+#[test]
+fn stdin_filepath_passes_through_what_it_would_not_format() {
+	let dir = temp_dir("stdinpassthrough");
+	std::fs::write(dir.join("squill.toml"), "ignore = [\"generated/**\"]\n")
+		.expect("write config");
+	let messy = "SELECT   1;";
+	let (code, out, _) = stdin_as(&dir, "generated/q.sql", messy, &[]);
+	assert_eq!((code, out.as_str()), (Some(0), messy));
+	let (code, out, _) = stdin_as(&dir, "src/q.rs", RS_FIXTURE, &[]);
+	assert_eq!((code, out.as_str()), (Some(0), RS_FIXTURE));
+	// Anything else is SQL, as a named file would be.
+	let (code, out, _) = stdin_as(&dir, "notes.txt", messy, &[]);
+	assert_eq!((code, out.as_str()), (Some(0), "select 1;\n"));
+	let _ = std::fs::remove_dir_all(&dir);
+}

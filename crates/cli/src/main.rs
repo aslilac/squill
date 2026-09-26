@@ -44,6 +44,11 @@ Options:
                           would change
   --stdout                Print formatted output instead of writing files
   --stdin, -              Read SQL from stdin, write to stdout
+  --stdin-filepath <PATH> Read stdin as the file at PATH (which need not
+                          exist): config and rules resolve against it,
+                          so a host file's embedded SQL formats too.
+                          Ignored, frozen, and unconfigured host files
+                          pass through unchanged. For editors.
   --strict                Exit 1 when anything was left unformatted:
                           statements that could not be parsed, embedded
                           strings squill could not rewrite safely
@@ -127,6 +132,9 @@ struct Args {
 	check: bool,
 	stdout_mode: bool,
 	stdin_mode: bool,
+	/// `--stdin-filepath`: the path the stdin stream stands for, which
+	/// config and rules resolve against.
+	stdin_path: Option<PathBuf>,
 	strict: bool,
 	no_config: bool,
 	frozen: Vec<String>,
@@ -169,6 +177,7 @@ fn parse_args() -> Result<Invocation, String> {
 		check: false,
 		stdout_mode: false,
 		stdin_mode: false,
+		stdin_path: None,
 		strict: false,
 		no_config: false,
 		frozen: Vec::new(),
@@ -187,6 +196,11 @@ fn parse_args() -> Result<Invocation, String> {
 			"--stdout" => args.stdout_mode = true,
 			// `-` as a path is stdin, by the usual convention.
 			"--stdin" | "-" => args.stdin_mode = true,
+			"--stdin-filepath" => {
+				args.stdin_mode = true;
+				args.stdin_path =
+					Some(PathBuf::from(value(&mut argv, "--stdin-filepath")?));
+			}
 			"--strict" => args.strict = true,
 			"--no-config" => args.no_config = true,
 			"--ignore" => args.ignore.push(value(&mut argv, "--ignore")?),
@@ -244,7 +258,10 @@ fn parse_args() -> Result<Invocation, String> {
 		}
 	}
 	if args.stdin_mode && !args.paths.is_empty() {
-		return Err("--stdin (or `-`) cannot be combined with paths".to_string());
+		return Err(
+			"--stdin (or `-`, or --stdin-filepath) cannot be combined with paths"
+				.to_string(),
+		);
 	}
 	if !args.stdin_mode && args.paths.is_empty() {
 		return Err(format!("no input files\n\n{USAGE}"));
@@ -552,6 +569,51 @@ fn resolve_explicit(
 	Ok(resolved)
 }
 
+/// Resolve the stdin stream as the file at `path` (`--stdin-filepath`).
+/// `None` means hand it back untouched: the path is ignored or frozen,
+/// or it's a host-language file no `[[embedded]]` rule covers. The file
+/// itself need not exist, so an unsaved editor buffer works.
+fn stdin_as(
+	path: &Path,
+	args: &Args,
+	cwd: &Path,
+	caches: &mut Caches,
+) -> Result<Option<Resolved>, String> {
+	let dir = path.parent().unwrap_or_else(|| Path::new("."));
+	let absolute = std::path::absolute(path).ok();
+	let mut ignores = vec![build_ignore_set(&args.ignore, cwd)?];
+	if !args.no_config
+		&& let Some(config_path) = caches.discover(dir)
+	{
+		let loaded = caches.load(&config_path)?;
+		if !loaded.config.ignore.is_empty() {
+			let anchor = config::anchor_dir(&config_path);
+			let anchor =
+				std::path::absolute(anchor).unwrap_or_else(|_| anchor.to_path_buf());
+			ignores.push(build_ignore_set(&loaded.config.ignore, &anchor)?);
+		}
+	}
+	let relative = path.strip_prefix(cwd).unwrap_or(path);
+	if ignores.iter().any(|set| set.matches(absolute.as_deref(), relative)) {
+		return Ok(None);
+	}
+	let mut files = vec![path.to_path_buf()];
+	if drop_frozen(&mut files, args, cwd, caches)? > 0 {
+		return Ok(None);
+	}
+	if let Some(resolved) = resolve(path, args, caches)? {
+		return Ok(Some(resolved));
+	}
+	let extension = path.extension().and_then(|ext| ext.to_str()).unwrap_or("");
+	if embed::Host::ALL.iter().any(|host| host.extensions().contains(&extension))
+	{
+		return Ok(None);
+	}
+	let mut resolved = resolve_sql_defaults(dir, args, caches)?;
+	resolved.kind = Kind::Sql;
+	Ok(Some(resolved))
+}
+
 /// Options for SQL with no path to match rules against (stdin, or an
 /// unclaimed explicit file): defaults, top-level keys, flags.
 fn resolve_sql_defaults(
@@ -704,6 +766,36 @@ fn format_source(source: &str, options: &Options) -> Outcome {
 		));
 	}
 	Outcome { formatted: result.text, diagnostics }
+}
+
+/// Format one source the way its resolution says: SQL, or a host file
+/// whose embedded SQL the rule's grammar and query find.
+fn format_resolved(
+	source: &str,
+	resolved: &Resolved,
+) -> Result<Outcome, String> {
+	match &resolved.kind {
+		Kind::Embedded { grammar, query } => {
+			let embedded = embed::format_embedded(
+				source,
+				grammar,
+				query,
+				&resolved.options,
+				resolved.indent,
+			)
+			.map_err(|err| err.to_string())?;
+			let diagnostics = embedded
+				.warnings
+				.iter()
+				.map(|warning| {
+					let (line, col) = line_col(source, warning.offset);
+					format!("{line}:{col}: {}", warning.message)
+				})
+				.collect();
+			Ok(Outcome { formatted: embedded.text, diagnostics })
+		}
+		Kind::Sql => Ok(format_source(source, &resolved.options)),
+	}
 }
 
 /// 1-based line and column for a byte offset.
@@ -866,21 +958,43 @@ fn main() -> ExitCode {
 		}
 		let mut caches = Caches::default();
 		let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-		// The stdin stream is always SQL, never a host file.
-		let resolved = match resolve_sql_defaults(&cwd, &args, &mut caches) {
-			Ok(resolved) => resolved,
+		let resolved = match &args.stdin_path {
+			// With a path, the stream is whatever that file would be.
+			Some(path) => stdin_as(path, &args, &cwd, &mut caches),
+			// Without one, it is always SQL, never a host file.
+			None => resolve_sql_defaults(&cwd, &args, &mut caches).map(Some),
+		};
+		let resolved = match resolved {
+			Ok(Some(resolved)) => resolved,
+			Ok(None) => {
+				// Not ours to touch: hand the buffer back as it came.
+				if !args.check {
+					print!("{source}");
+				}
+				return ExitCode::SUCCESS;
+			}
 			Err(message) => {
 				eprintln!("squill: {message}");
 				return ExitCode::from(2);
 			}
 		};
-		let outcome = format_source(&source, &resolved.options);
+		let label = args
+			.stdin_path
+			.as_ref()
+			.map_or_else(|| "<stdin>".to_string(), |path| path.display().to_string());
+		let outcome = match format_resolved(&source, &resolved) {
+			Ok(outcome) => outcome,
+			Err(message) => {
+				eprintln!("squill: {label}: {message}");
+				return ExitCode::from(2);
+			}
+		};
 		for diagnostic in &outcome.diagnostics {
-			eprintln!("<stdin>:{diagnostic}");
+			eprintln!("{label}:{diagnostic}");
 		}
 		if args.check {
 			if outcome.formatted != source {
-				print_diff("<stdin>", &source, &outcome.formatted);
+				print_diff(&label, &source, &outcome.formatted);
 				return ExitCode::from(1);
 			}
 		} else {
@@ -983,30 +1097,8 @@ fn main() -> ExitCode {
 		.map(|(path, resolved)| {
 			let source = std::fs::read_to_string(path)
 				.map_err(|err| format!("{}: {err}", path.display()))?;
-			let outcome = match &resolved.kind {
-				Kind::Embedded { grammar, query } => {
-					// SQL embedded in a host-language file, found by the
-					// rule's tree-sitter grammar and query.
-					let embedded = embed::format_embedded(
-						&source,
-						grammar,
-						query,
-						&resolved.options,
-						resolved.indent,
-					)
-					.map_err(|err| format!("{}: {err}", path.display()))?;
-					let diagnostics = embedded
-						.warnings
-						.iter()
-						.map(|warning| {
-							let (line, col) = line_col(&source, warning.offset);
-							format!("{line}:{col}: {}", warning.message)
-						})
-						.collect();
-					Outcome { formatted: embedded.text, diagnostics }
-				}
-				Kind::Sql => format_source(&source, &resolved.options),
-			};
+			let outcome = format_resolved(&source, resolved)
+				.map_err(|err| format!("{}: {err}", path.display()))?;
 			Ok(FileResult { path: path.clone(), source, outcome })
 		})
 		.collect();
