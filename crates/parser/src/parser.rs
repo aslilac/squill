@@ -378,7 +378,7 @@ impl Parser<'_> {
 			grammar::select_stmt(self)
 		} else if self.at_kw("with") {
 			dml::with_statement(self)
-		} else if self.at_kw("insert") {
+		} else if self.at_kw("insert") || dml::at_replace_into(self) {
 			dml::insert_stmt(self)
 		} else if self.at_kw("update") {
 			dml::update_stmt(self)

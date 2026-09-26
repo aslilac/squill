@@ -447,13 +447,36 @@ fn table_primary_inner(p: &mut Parser<'_>) -> PResult {
 			p.eat_op_star();
 		}
 	}
-	if p.eat_kw("as") || at_bare_alias(p, TABLE_ALIAS_STOP) {
+	if !at_index_hint(p) && (p.eat_kw("as") || at_bare_alias(p, TABLE_ALIAS_STOP))
+	{
 		alias_name(p)?;
 		if p.at(SyntaxKind::LParen) {
 			paren_name_list(p)?;
 		}
 	}
+	index_hint(p)?;
 	p.finish();
+	Ok(())
+}
+
+/// SQLite's `INDEXED BY index` / `NOT INDEXED` after a table name?
+pub(crate) fn at_index_hint(p: &Parser<'_>) -> bool {
+	p.dialect() == crate::dialect::Dialect::Sqlite
+		&& ((p.at_kw("indexed") && p.nth_at_kw(1, "by"))
+			|| (p.at_kw("not") && p.nth_at_kw(1, "indexed")))
+}
+
+/// SQLite's `INDEXED BY index` / `NOT INDEXED`, if present.
+pub(crate) fn index_hint(p: &mut Parser<'_>) -> PResult {
+	if !at_index_hint(p) {
+		return Ok(());
+	}
+	let indexed_by = p.at_kw("indexed");
+	p.bump();
+	p.bump();
+	if indexed_by {
+		qualified_name(p)?;
+	}
 	Ok(())
 }
 
@@ -658,6 +681,12 @@ pub(crate) fn trailing_clauses(p: &mut Parser<'_>) -> PResult {
 			p.bump();
 			if !p.eat_kw("all") {
 				expr(p, 0)?;
+				// SQLite's `LIMIT offset, count`.
+				if p.dialect() == crate::dialect::Dialect::Sqlite
+					&& p.eat(SyntaxKind::Comma)
+				{
+					expr(p, 0)?;
+				}
 			}
 			p.finish();
 		} else if p.at_kw("offset") {

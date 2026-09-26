@@ -6,8 +6,10 @@ use super::Parser;
 use super::expr::expr;
 use super::grammar::alias_name;
 use super::grammar::at_bare_alias;
+use super::grammar::at_index_hint;
 use super::grammar::from_clause;
 use super::grammar::from_item;
+use super::grammar::index_hint;
 use super::grammar::paren_expr_list;
 use super::grammar::paren_name_list;
 use super::grammar::qualified_name;
@@ -15,6 +17,7 @@ use super::grammar::query_body;
 use super::grammar::select_list;
 use super::grammar::where_clause;
 use super::grammar::with_clause;
+use crate::dialect::Dialect;
 use crate::syntax::SyntaxKind;
 
 /// Keywords that stop a bare alias after a DML target table.
@@ -35,7 +38,7 @@ const DML_ALIAS_STOP: &[&str] = &[
 pub(crate) fn with_statement(p: &mut Parser<'_>) -> PResult {
 	let checkpoint = p.checkpoint();
 	with_clause(p)?;
-	let kind = if p.at_kw("insert") {
+	let kind = if p.at_kw("insert") || at_replace_into(p) {
 		SyntaxKind::InsertStmt
 	} else if p.at_kw("update") {
 		SyntaxKind::UpdateStmt
@@ -105,8 +108,34 @@ fn end_statement(p: &mut Parser<'_>) -> PResult {
 	Ok(())
 }
 
+/// SQLite's `REPLACE INTO`, an `INSERT OR REPLACE` by another name.
+pub(crate) fn at_replace_into(p: &Parser<'_>) -> bool {
+	p.dialect() == Dialect::Sqlite && p.at_kw("replace") && p.nth_at_kw(1, "into")
+}
+
+/// SQLite's `OR ROLLBACK | ABORT | REPLACE | FAIL | IGNORE` after
+/// `INSERT` or `UPDATE`: what to do when a constraint fails.
+fn conflict_resolution(p: &mut Parser<'_>) -> PResult {
+	if p.dialect() == Dialect::Sqlite && p.at_kw("or") {
+		p.bump();
+		if !p.at_any_kw(&["rollback", "abort", "replace", "fail", "ignore"]) {
+			return Err(p.error(
+				"expected `ROLLBACK`, `ABORT`, `REPLACE`, `FAIL`, or `IGNORE`",
+			));
+		}
+		p.bump();
+	}
+	Ok(())
+}
+
 fn insert_body(p: &mut Parser<'_>) -> PResult {
-	p.expect_kws(&["insert", "into"])?;
+	if at_replace_into(p) {
+		p.bump();
+	} else {
+		p.expect_kw("insert")?;
+		conflict_resolution(p)?;
+	}
+	p.expect_kw("into")?;
 	dml_target(p)?;
 	if p.at(SyntaxKind::LParen) {
 		// Wrapped so long column lists format as an indented block.
@@ -138,6 +167,7 @@ fn insert_body(p: &mut Parser<'_>) -> PResult {
 
 fn update_body(p: &mut Parser<'_>) -> PResult {
 	p.expect_kw("update")?;
+	conflict_resolution(p)?;
 	p.eat_kw("only");
 	dml_target(p)?;
 	set_clause(p)?;
@@ -195,9 +225,10 @@ fn update_where(p: &mut Parser<'_>) -> PResult {
 fn dml_target(p: &mut Parser<'_>) -> PResult {
 	p.start(SyntaxKind::TableRef);
 	qualified_name(p)?;
-	if p.eat_kw("as") || at_bare_alias(p, DML_ALIAS_STOP) {
+	if !at_index_hint(p) && (p.eat_kw("as") || at_bare_alias(p, DML_ALIAS_STOP)) {
 		alias_name(p)?;
 	}
+	index_hint(p)?;
 	p.finish();
 	Ok(())
 }

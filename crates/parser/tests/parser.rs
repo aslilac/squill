@@ -299,3 +299,58 @@ fn pathological_paren_speculation_terminates() {
 	assert_eq!(parse.cst.text(), bomb, "round-trip failed");
 	assert!(!parse.diagnostics.is_empty(), "expected a diagnostic");
 }
+
+/// Parse `sql` as SQLite, asserting it round-trips with no diagnostics.
+fn parse_sqlite_ok(sql: &str) -> Vec<SyntaxKind> {
+	let tokens = lex(sql, Dialect::Sqlite);
+	let parse = parse(&tokens, Dialect::Sqlite);
+	assert_eq!(parse.cst.text(), sql);
+	assert!(parse.diagnostics.is_empty(), "{sql}: {:?}", parse.diagnostics);
+	top_level_kinds(&parse.cst)
+}
+
+#[test]
+fn sqlite_conflict_resolution_and_replace() {
+	for resolution in ["rollback", "abort", "replace", "fail", "ignore"] {
+		assert_eq!(
+			parse_sqlite_ok(&format!("INSERT OR {resolution} INTO t VALUES (1);")),
+			[SyntaxKind::InsertStmt]
+		);
+		assert_eq!(
+			parse_sqlite_ok(&format!("UPDATE OR {resolution} t SET a = 1;")),
+			[SyntaxKind::UpdateStmt]
+		);
+	}
+	assert_eq!(
+		parse_sqlite_ok("REPLACE INTO t (a) VALUES (1);"),
+		[SyntaxKind::InsertStmt]
+	);
+	assert_eq!(
+		parse_sqlite_ok("WITH x AS (SELECT 1) REPLACE INTO t SELECT * FROM x;"),
+		[SyntaxKind::InsertStmt]
+	);
+	// Postgres has neither.
+	let tokens = lex("INSERT OR REPLACE INTO t VALUES (1);", Dialect::Postgres);
+	assert!(!parse(&tokens, Dialect::Postgres).diagnostics.is_empty());
+}
+
+#[test]
+fn sqlite_operators_and_clauses() {
+	for sql in [
+		"SELECT * FROM t WHERE a GLOB 'x*' AND b NOT GLOB 'y*';",
+		"SELECT * FROM t WHERE a REGEXP '^x' AND b NOT REGEXP 'y';",
+		"SELECT * FROM docs WHERE docs MATCH 'sqlite AND fts';",
+		"SELECT * FROM t WHERE a IN some_table AND b NOT IN main.other;",
+		"SELECT * FROM t WHERE a IN json_each(?1);",
+		"SELECT * FROM t INDEXED BY t_a WHERE a = 1;",
+		"SELECT * FROM t AS x NOT INDEXED;",
+		"UPDATE t INDEXED BY t_a SET a = 1;",
+		"DELETE FROM t NOT INDEXED WHERE a = 1;",
+		"SELECT * FROM t LIMIT 10, 20;",
+	] {
+		assert_eq!(parse_sqlite_ok(sql).len(), 1, "{sql}");
+	}
+	// In Postgres these words stay aliases.
+	let cst = parse_ok("SELECT a glob, b regexp, c match FROM t;");
+	assert_eq!(top_level_kinds(&cst), [SyntaxKind::SelectStmt]);
+}

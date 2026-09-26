@@ -142,12 +142,19 @@ fn infix_loop(p: &mut Parser<'_>, checkpoint: usize, min_bp: u8) -> PResult {
 			continue;
 		}
 
-		// [NOT] BETWEEN / IN / LIKE / ILIKE / SIMILAR TO
+		// [NOT] BETWEEN / IN / LIKE / ILIKE / SIMILAR TO, and SQLite's
+		// [NOT] GLOB / REGEXP / MATCH. (Only in SQLite: elsewhere those
+		// words are just as likely a bare column alias.)
 		let (negated, range_kw) =
 			if p.at_kw("not") { (true, 1) } else { (false, 0) };
+		let sqlite = p.dialect() == Dialect::Sqlite;
 		let is_range = ["between", "in", "like", "ilike", "similar"]
 			.iter()
-			.any(|kw| p.nth_at_kw(range_kw, kw));
+			.any(|kw| p.nth_at_kw(range_kw, kw))
+			|| (sqlite
+				&& ["glob", "regexp", "match"]
+					.iter()
+					.any(|kw| p.nth_at_kw(range_kw, kw)));
 		if is_range && BP_RANGE > min_bp {
 			if p.nth_at_kw(range_kw, "between") {
 				p.open_at(checkpoint, SyntaxKind::BetweenExpr);
@@ -168,6 +175,18 @@ fn infix_loop(p: &mut Parser<'_>, checkpoint: usize, min_bp: u8) -> PResult {
 				p.bump(); // IN
 				if p.at(SyntaxKind::LParen) && at_subquery_start(p, 1) {
 					subquery(p)?;
+				} else if sqlite && !p.at(SyntaxKind::LParen) {
+					// SQLite: `x IN some_table`, or a table-valued
+					// function, `x IN json_each(?)`.
+					let name = p.checkpoint();
+					p.start(SyntaxKind::ColumnRef);
+					qualified_name(p)?;
+					p.finish();
+					if p.at(SyntaxKind::LParen) {
+						p.open_at(name, SyntaxKind::FunctionCall);
+						arg_list(p)?;
+						p.finish();
+					}
 				} else {
 					paren_expr_list(p)?;
 				}
@@ -177,8 +196,12 @@ fn infix_loop(p: &mut Parser<'_>, checkpoint: usize, min_bp: u8) -> PResult {
 				if negated {
 					p.bump();
 				}
-				p.bump(); // LIKE | ILIKE | SIMILAR
-				p.eat_kw("to");
+				// LIKE | ILIKE | SIMILAR [TO] | GLOB | REGEXP | MATCH
+				let similar = p.at_kw("similar");
+				p.bump();
+				if similar {
+					p.eat_kw("to");
+				}
 				expr(p, BP_RANGE)?;
 				if p.eat_kw("escape") {
 					expr(p, BP_RANGE)?;
