@@ -243,7 +243,7 @@ fn trim_verbatim(original: &str) -> String {
 
 /// Which body grammar a statement's dollar-quoted string holds.
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum BodyLang {
+pub(crate) enum BodyLang {
 	Sql,
 	Plpgsql,
 }
@@ -252,7 +252,9 @@ enum BodyLang {
 /// procedural bodies at all: its `LANGUAGE sql` / `LANGUAGE plpgsql`
 /// marker (position-independent; LANGUAGE may precede or follow AS), or
 /// plpgsql for a `DO` statement without one.
-fn body_lang(non_trivia: &[&parser::lexer::Token<'_>]) -> Option<BodyLang> {
+pub(crate) fn body_lang(
+	non_trivia: &[&parser::lexer::Token<'_>],
+) -> Option<BodyLang> {
 	let marker =
 		non_trivia.iter().zip(non_trivia.iter().skip(1)).find_map(|(a, b)| {
 			if a.kind == SyntaxKind::Ident

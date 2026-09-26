@@ -193,3 +193,42 @@ fn recursive_equivalence_covers_bodies() {
 	);
 	assert_eq!(comments, ["-- inner", "-- outer"]);
 }
+
+/// The oracle lets whitespace move only inside procedural bodies — the
+/// dollar strings the formatter reformats. Anywhere else a dollar string
+/// is a value, and its whitespace is data.
+#[test]
+fn oracle_whitespace_leeway_is_only_for_bodies() {
+	let equivalent = |a: &str, b: &str| {
+		formatter::check::tokens_equivalent(
+			a,
+			b,
+			Dialect::Postgres,
+			Options::default().lex_options(),
+		)
+	};
+	// A body: re-indenting it is sanctioned.
+	assert!(equivalent(
+		"create function f() returns int language sql as $$select 1$$;",
+		"create function f() returns int language sql as $$\n  select 1\n$$;",
+	));
+	assert!(equivalent(
+		"do $$begin null; end$$;",
+		"do $$\nbegin\n  null;\nend\n$$;"
+	));
+	// A value: the same change is a different string.
+	assert!(!equivalent(
+		"insert into notes values ($$line one\nline two$$);",
+		"insert into notes values ($$line one\n    line two$$);",
+	));
+	// One statement's body marker doesn't reach the next statement.
+	assert!(!equivalent(
+		"do $$begin null; end$$; select $$a b$$;",
+		"do $$begin null; end$$; select $$a  b$$;",
+	));
+	// A value inside a body is still a value.
+	assert!(!equivalent(
+		"do $$begin raise notice $x$a b$x$; end$$;",
+		"do $$begin raise notice $x$a  b$x$; end$$;",
+	));
+}

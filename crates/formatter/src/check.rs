@@ -17,8 +17,11 @@ use parser::syntax::SyntaxKind;
 const MAX_BODY_DEPTH: u32 = 4;
 
 /// Are the two sources token-identical modulo trivia, keyword case,
-/// sanctioned identifier-quote changes, and whitespace inside
-/// dollar-quoted bodies (which are compared recursively)?
+/// sanctioned identifier-quote changes, and whitespace inside procedural
+/// bodies — the dollar-quoted strings of a `LANGUAGE sql` / `LANGUAGE
+/// plpgsql` statement or a `DO` block, which the formatter reformats and
+/// which are compared recursively? Any other dollar-quoted string is a
+/// value, and must match byte for byte.
 pub fn tokens_equivalent(
 	input: &str,
 	output: &str,
@@ -39,6 +42,9 @@ fn tokens_equivalent_at(
 	let b = lex_with(output, dialect, lex_options);
 	let a: Vec<_> = a.iter().filter(|t| !t.kind.is_trivia()).collect();
 	let b: Vec<_> = b.iter().filter(|t| !t.kind.is_trivia()).collect();
+	// Which of the input's dollar-quoted strings are procedural bodies,
+	// by statement, before canonical ordering moves tokens around.
+	let bodies = procedural_bodies(&a);
 	// CREATE FUNCTION attribute clauses are sanctioned to move (the
 	// formatter emits them in canonical order); canonicalize both sides
 	// with the same permutation the formatter uses before comparing.
@@ -47,15 +53,34 @@ fn tokens_equivalent_at(
 	a.len() == b.len()
 		&& a.iter().zip(&b).all(|(x, y)| {
 			token_equivalent(
-				x.kind,
-				x.text,
-				y.kind,
-				y.text,
+				x,
+				y,
+				bodies.contains(&std::ptr::from_ref(*x).cast::<()>()),
 				dialect,
 				lex_options,
 				depth,
 			)
 		})
+}
+
+/// The dollar-quoted tokens (by address) that are procedural bodies: in
+/// a statement the formatter reformats bodies of (see
+/// [`crate::body_lang`]).
+fn procedural_bodies(
+	tokens: &[&parser::lexer::Token<'_>],
+) -> std::collections::HashSet<*const ()> {
+	let mut out = std::collections::HashSet::new();
+	for statement in tokens.split(|t| t.kind == SyntaxKind::Semicolon) {
+		if crate::body_lang(statement).is_none() {
+			continue;
+		}
+		for token in statement {
+			if token.kind == SyntaxKind::DollarString {
+				out.insert(std::ptr::from_ref(*token).cast::<()>());
+			}
+		}
+	}
+	out
 }
 
 /// Reorder each statement's tokens into canonical attribute order, so a
@@ -225,14 +250,15 @@ fn permute_chunks<'a, 'src>(
 }
 
 fn token_equivalent(
-	kind_a: SyntaxKind,
-	text_a: &str,
-	kind_b: SyntaxKind,
-	text_b: &str,
+	a: &parser::lexer::Token<'_>,
+	b: &parser::lexer::Token<'_>,
+	// Is `a` a procedural body?
+	body: bool,
 	dialect: Dialect,
 	lex_options: LexOptions,
 	depth: u32,
 ) -> bool {
+	let (kind_a, text_a, kind_b, text_b) = (a.kind, a.text, b.kind, b.text);
 	use SyntaxKind::*;
 	match (kind_a, kind_b) {
 		// Bare word vs bare word: keyword casing is sanctioned, and bare
@@ -245,9 +271,10 @@ fn token_equivalent(
 		| (QuotedIdent, QuotedIdent) => {
 			resolve_ident(text_a, dialect) == resolve_ident(text_b, dialect)
 		}
-		// Dollar-quoted bodies: same tag, recursively equivalent content
-		// (procedural bodies get reformatted in place).
-		(DollarString, DollarString) => {
+		// Procedural bodies: same tag, recursively equivalent content
+		// (they get reformatted in place). Any other dollar-quoted string
+		// is data, and falls through to the exact match below.
+		(DollarString, DollarString) if body => {
 			if text_a == text_b {
 				return true;
 			}
