@@ -44,3 +44,23 @@ jobs:
 
       - run: cargo test
         name: Test
+
+  zed:
+    name: Zed extension
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        name: Checkout
+
+      - uses: dtolnay/rust-toolchain@stable
+        name: Configure Rust
+        with:
+          targets: wasm32-wasip2
+
+      - run: cargo clippy --manifest-path integrations/zed/Cargo.toml --target wasm32-wasip2 -- -D warnings
+        name: Lint
+
+      - run: cargo build --manifest-path integrations/zed/Cargo.toml --target wasm32-wasip2 --release
+        name: Build

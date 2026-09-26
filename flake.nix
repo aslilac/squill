@@ -65,8 +65,10 @@
         let
           rust = (toolchainFor pkgs).override {
             extensions = [ "rust-src" "rust-analyzer" ];
-	          # wasm32-wasip1 is needed for the docs playground.
-            targets = [ "wasm32-wasip1" ];
+            # wasm32-wasip1 for the docs playground (a plain module the
+            # browser loads); wasm32-wasip2 for the Zed extension (Zed
+            # loads components).
+            targets = [ "wasm32-wasip1" "wasm32-wasip2" ];
           };
 
           # Stands in for a hand-installed wasi-sdk: the tree-sitter grammars
