@@ -2,7 +2,7 @@
 	"name": "squill",
 	"displayName": "squill",
 	"description": "A SQL formatter for Postgres and SQLite, including the SQL embedded in your code.",
-	"version": "0.2.3",
+	"version": "0.1.0",
 	"publisher": "aslilac",
 	"license": "MPL-2.0",
 	"repository": {

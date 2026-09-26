@@ -498,7 +498,7 @@ dependencies = [
 
 [[package]]
 name = "squill-zed"
-version = "0.2.3"
+version = "0.1.0"
 dependencies = [
  "zed_extension_api",
 ]
