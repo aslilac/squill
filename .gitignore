@@ -9,3 +9,6 @@ crates/parser/fuzz/artifacts/
 crates/parser/fuzz/corpus/
 crates/parser/fuzz/Cargo.lock
 .envrc
+out/
+*.vsix
+integrations/zed/extension.wasm
