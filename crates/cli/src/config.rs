@@ -129,6 +129,8 @@ pub enum GrammarSpec {
 	Builtin(embed::Host),
 	/// A `.wasm` grammar, resolved against the config's directory.
 	Wasm(PathBuf),
+	/// A `.wasm` grammar at an https URL, locked in `squill.lock`.
+	Url(String),
 }
 
 // Shared value parsers, used by both config keys and CLI flags.
@@ -489,8 +491,26 @@ fn apply_key(
 	Ok(())
 }
 
-/// A `grammar` value: a built-in name, or a path ending in `.wasm`.
+/// A `grammar` value: a built-in name, or a path or https URL ending in
+/// `.wasm`.
 fn parse_grammar(raw: &str, anchor: &Path) -> Result<GrammarSpec, String> {
+	if raw.starts_with("http://") {
+		return Err(format!("`{raw}`: grammar URLs must use https"));
+	}
+	if raw.starts_with("https://") {
+		if !cfg!(feature = "external-grammars") {
+			return Err(format!(
+				"`{raw}`: this squill was built without wasm grammar support"
+			));
+		}
+		if url_file_name(raw).is_none_or(|name| !name.ends_with(".wasm")) {
+			return Err(format!(
+				"`{raw}`: a grammar URL must name a `.wasm` file, like \
+				 `tree-sitter-lua.wasm`: the language is named after it"
+			));
+		}
+		return Ok(GrammarSpec::Url(raw.to_string()));
+	}
 	if raw.ends_with(".wasm") {
 		if cfg!(feature = "external-grammars") {
 			return Ok(GrammarSpec::Wasm(anchor.join(raw)));
@@ -507,6 +527,12 @@ fn parse_grammar(raw: &str, anchor: &Path) -> Result<GrammarSpec, String> {
 			names.join(", ")
 		)
 	})
+}
+
+/// The last path segment of a URL, without any query or fragment.
+pub fn url_file_name(url: &str) -> Option<&str> {
+	let path = url.split(['?', '#']).next()?;
+	path.rsplit('/').next().filter(|name| !name.is_empty())
 }
 
 /// An array of glob patterns, each checked to compile.

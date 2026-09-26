@@ -396,6 +396,15 @@ pub mod wasm {
 			RefCell::new(HashMap::new());
 	}
 
+	/// The language a wasm grammar file holds, from its name the way
+	/// `tree-sitter build --wasm` writes it: `tree-sitter-c_sharp.wasm`
+	/// holds `c_sharp`.
+	pub fn language_name(file_name: &str) -> Option<String> {
+		let stem = file_name.strip_suffix(".wasm")?;
+		let stem = stem.strip_prefix("tree-sitter-").unwrap_or(stem);
+		(!stem.is_empty()).then(|| stem.replace('-', "_"))
+	}
+
 	impl WasmGrammar {
 		/// Load a grammar built by `tree-sitter build --wasm`. The
 		/// language name comes from the file name, the way that command
@@ -404,24 +413,29 @@ pub mod wasm {
 			let bytes = std::fs::read(path).map_err(|err| {
 				EmbedError::Grammar(format!("{}: {err}", path.display()))
 			})?;
-			let stem =
-				path.file_stem().and_then(|stem| stem.to_str()).ok_or_else(|| {
-					EmbedError::Grammar(format!(
-						"{}: cannot name a grammar from this file name",
-						path.display()
-					))
-				})?;
-			let name =
-				stem.strip_prefix("tree-sitter-").unwrap_or(stem).replace('-', "_");
-			let grammar = WasmGrammar {
-				name,
-				key: path.display().to_string(),
-				bytes: bytes.into(),
-			};
+			let file_name =
+				path.file_name().and_then(|name| name.to_str()).unwrap_or_default();
+			let name = language_name(file_name).ok_or_else(|| {
+				EmbedError::Grammar(format!(
+					"{}: cannot name a grammar from this file name",
+					path.display()
+				))
+			})?;
+			Self::from_bytes(name, path.display().to_string(), bytes)
+		}
+
+		/// A grammar from its wasm bytes, named `name`. `key` identifies it
+		/// (a path or URL) in messages and the per-thread parser cache.
+		pub fn from_bytes(
+			name: String,
+			key: String,
+			bytes: Vec<u8>,
+		) -> Result<Self, EmbedError> {
+			let grammar = WasmGrammar { name, key, bytes: bytes.into() };
 			// Fail at load time, not on the first file that uses it.
 			grammar.with_parser(|_, _| Ok(())).map_err(|err| match err {
 				EmbedError::Grammar(message) => {
-					EmbedError::Grammar(format!("{}: {message}", path.display()))
+					EmbedError::Grammar(format!("{}: {message}", grammar.key))
 				}
 				other => other,
 			})?;

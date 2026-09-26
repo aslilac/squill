@@ -64,7 +64,7 @@ Set in the nearest `squill.toml` or `.config/squill.toml`, overridable with flag
 | `frozen-ref` | `--frozen-ref` | the baseline ref `frozen` compares against | discovered from the remote |
 | `frozen-fetch` | `--frozen-fetch` / `--no-frozen-fetch` | let `frozen` ask the remote for its HEAD when it isn't recorded locally | `true` |
 
-Flags with no config key: `--check` (print diffs and exit 1 if any file would change), `--stdin` (or `-` as the path) / `--stdout`, `--stdin-filepath <path>` (read stdin as the file at that path, for editors: its config, rules, and ignores apply, and it need not exist yet), `--strict` (fail when anything was left unformatted), `--no-config`, `--version` / `-V`, and `--help` / `-h`.
+Flags with no config key: `--check` (print diffs and exit 1 if any file would change), `--stdin` (or `-` as the path) / `--stdout`, `--stdin-filepath <path>` (read stdin as the file at that path, for editors: its config, rules, and ignores apply, and it need not exist yet), `--strict` (fail when anything was left unformatted), `--locked` (fail rather than record a grammar URL `squill.lock` doesn't have, for CI), `--no-config`, `--version` / `-V`, and `--help` / `-h`.
 
 When recursing directories, squill honors `.gitignore` and skips hidden files; the `ignore` key and repeated `--ignore` flags skip more, with `*`, `**`, `?`, `[abc]`, and `{a,b}` glob syntax. Explicitly listed files always format.
 
@@ -135,6 +135,8 @@ include = ["**/*.lua"]
 grammar = ".config/squill/tree-sitter-lua.wasm"
 query = ".config/squill/lua.scm"
 ```
+
+`grammar` can also be an `https` URL to the `.wasm`. The first download records its SHA-256 in a `squill.lock` beside the config (commit it), and every later download must match; downloads are cached by hash, and `squill fmt --locked` (for CI) refuses to record a URL the lockfile doesn't have.
 
 Only multiline string syntaxes are reformatted — raw strings, backticks, triple quotes, templates, text blocks, Gleam strings — always into a vertical block: quotes on their own lines, one clause per line. A plain Rust or Go string that already spans lines is rewritten as a raw string; a single-line one stays byte-identical, and so do Python f-strings and interpolated templates (SQL with holes is never touched). Every rewrite is checked by re-parsing the host file, and a string squill declines to touch is reported as a diagnostic. Embedded SQL copies the host file's own indent character unless an indent style is configured, so a spaces-indented file never gains tabs.
 

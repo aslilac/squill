@@ -21,6 +21,8 @@ mod frozen;
 mod init;
 #[cfg(feature = "lsp")]
 mod lsp;
+#[cfg(feature = "external-grammars")]
+mod remote;
 use config::PartialOptions;
 
 /// `squill <version>` — whatever cargo compiled this binary with, so it
@@ -58,6 +60,8 @@ Options:
   --strict                Exit 1 when anything was left unformatted:
                           statements that could not be parsed, embedded
                           strings squill could not rewrite safely
+  --locked                Fail rather than record a grammar URL that
+                          squill.lock doesn't have yet (for CI)
   --ignore <GLOB>         Skip matching paths when recursing directories
                           (repeatable; relative to the working directory;
                           `*`, `**`, `?`, `[abc]`, `{a,b}` globs)
@@ -142,6 +146,9 @@ struct Args {
 	/// `--stdin-filepath`: the path the stdin stream stands for, which
 	/// config and rules resolve against.
 	stdin_path: Option<PathBuf>,
+	/// `--locked`: a grammar URL missing from squill.lock is an error,
+	/// not a new entry.
+	locked: bool,
 	strict: bool,
 	no_config: bool,
 	frozen: Vec<String>,
@@ -189,6 +196,7 @@ fn parse_args() -> Result<Invocation, String> {
 		stdout_mode: false,
 		stdin_mode: false,
 		stdin_path: None,
+		locked: false,
 		strict: false,
 		no_config: false,
 		frozen: Vec::new(),
@@ -213,6 +221,7 @@ fn parse_args() -> Result<Invocation, String> {
 					Some(PathBuf::from(value(&mut argv, "--stdin-filepath")?));
 			}
 			"--strict" => args.strict = true,
+			"--locked" => args.locked = true,
 			"--no-config" => args.no_config = true,
 			"--ignore" => args.ignore.push(value(&mut argv, "--ignore")?),
 			"--frozen" => args.frozen.push(value(&mut argv, "--frozen")?),
@@ -282,6 +291,8 @@ fn parse_args() -> Result<Invocation, String> {
 
 /// A parsed config with its rule globs compiled.
 struct Loaded {
+	/// Where it was read from: `squill.lock` sits beside it.
+	path: PathBuf,
 	config: config::Config,
 	/// One matcher per `[[files]]` rule, in order.
 	files: Vec<IgnoreSet>,
@@ -295,8 +306,9 @@ struct Loaded {
 struct Caches {
 	configs: HashMap<PathBuf, Arc<Loaded>>,
 	nearest: HashMap<PathBuf, Option<PathBuf>>,
+	/// Loaded wasm grammars, by path or URL.
 	#[cfg(feature = "external-grammars")]
-	grammars: HashMap<PathBuf, Arc<embed::Grammar>>,
+	grammars: HashMap<String, Arc<embed::Grammar>>,
 	queries: HashMap<PathBuf, Arc<str>>,
 }
 
@@ -345,7 +357,12 @@ impl Caches {
 			.iter()
 			.map(|rule| compile(&rule.include))
 			.collect::<Result<_, _>>()?;
-		let loaded = Arc::new(Loaded { config, files, embedded });
+		let loaded = Arc::new(Loaded {
+			path: config_path.to_path_buf(),
+			config,
+			files,
+			embedded,
+		});
 		self.configs.insert(config_path.to_path_buf(), loaded.clone());
 		Ok(loaded)
 	}
@@ -381,28 +398,50 @@ impl Caches {
 		)),
 		allow(unreachable_code)
 	)]
+	/// The grammar a rule names. A URL grammar is checked against (or
+	/// recorded in) the `squill.lock` beside `config_path`.
+	#[cfg_attr(not(feature = "external-grammars"), allow(unused_variables))]
 	fn grammar(
 		&mut self,
 		spec: &config::GrammarSpec,
+		config_path: &Path,
+		locked: bool,
 	) -> Result<Arc<embed::Grammar>, String> {
 		match spec {
 			config::GrammarSpec::Builtin(host) => Ok(Arc::new((*host).into())),
 			#[cfg(feature = "external-grammars")]
 			config::GrammarSpec::Wasm(path) => {
-				if let Some(grammar) = self.grammars.get(path) {
+				let key = path.display().to_string();
+				if let Some(grammar) = self.grammars.get(&key) {
 					return Ok(grammar.clone());
 				}
 				let grammar = embed::wasm::WasmGrammar::load(path)
 					.map_err(|err| err.to_string())?;
 				let grammar = Arc::new(embed::Grammar::Wasm(grammar));
-				self.grammars.insert(path.clone(), grammar.clone());
+				self.grammars.insert(key, grammar.clone());
+				Ok(grammar)
+			}
+			#[cfg(feature = "external-grammars")]
+			config::GrammarSpec::Url(url) => {
+				if let Some(grammar) = self.grammars.get(url) {
+					return Ok(grammar.clone());
+				}
+				let lockfile = config_path.with_file_name("squill.lock");
+				let bytes = remote::grammar_bytes(url, &lockfile, locked)?;
+				let name = config::url_file_name(url)
+					.and_then(embed::wasm::language_name)
+					.ok_or_else(|| format!("{url}: cannot name a grammar from it"))?;
+				let grammar =
+					embed::wasm::WasmGrammar::from_bytes(name, url.clone(), bytes)
+						.map_err(|err| err.to_string())?;
+				let grammar = Arc::new(embed::Grammar::Wasm(grammar));
+				self.grammars.insert(url.clone(), grammar.clone());
 				Ok(grammar)
 			}
 			#[cfg(not(feature = "external-grammars"))]
-			config::GrammarSpec::Wasm(path) => Err(format!(
-				"{}: this squill was built without wasm grammar support",
-				path.display()
-			)),
+			config::GrammarSpec::Wasm(_) | config::GrammarSpec::Url(_) => {
+				Err("this squill was built without wasm grammar support".to_string())
+			}
 		}
 	}
 
@@ -436,6 +475,15 @@ struct Resolved {
 	kind: Kind,
 }
 
+/// The directory a file is in. A bare file name's parent is the empty
+/// path, which is the working directory, not a path that doesn't exist.
+fn parent_dir(path: &Path) -> &Path {
+	match path.parent() {
+		Some(parent) if !parent.as_os_str().is_empty() => parent,
+		_ => Path::new("."),
+	}
+}
+
 /// Is this a plain SQL file by name alone?
 fn is_sql_file(path: &Path) -> bool {
 	path.extension().is_some_and(|ext| ext == "sql")
@@ -454,7 +502,7 @@ fn resolve(
 	args: &Args,
 	caches: &mut Caches,
 ) -> Result<Option<Resolved>, String> {
-	let dir = path.parent().unwrap_or_else(|| Path::new("."));
+	let dir = parent_dir(path);
 	let mut options = Options::default();
 	let mut indent_set = args.overrides.indent_style.is_some();
 	let mut kind = None;
@@ -481,18 +529,22 @@ fn resolve(
 		if let Some(spec) =
 			embedded.iter().rev().find_map(|rule| rule.grammar.as_ref())
 		{
-			let grammar = caches.grammar(spec)?;
+			let grammar = caches.grammar(spec, &loaded.path, args.locked)?;
 			let query =
 				match embedded.iter().rev().find_map(|rule| rule.query.as_ref()) {
 					Some(query_path) => caches.query(query_path)?,
 					None => match spec {
 						config::GrammarSpec::Builtin(host) => host.default_query().into(),
-						config::GrammarSpec::Wasm(wasm) => {
+						config::GrammarSpec::Wasm(_) | config::GrammarSpec::Url(_) => {
+							let wasm = match spec {
+								config::GrammarSpec::Wasm(wasm) => wasm.display().to_string(),
+								config::GrammarSpec::Url(url) => url.clone(),
+								config::GrammarSpec::Builtin(_) => unreachable!(),
+							};
 							return Err(format!(
-								"{}: the wasm grammar {} has no built-in query; give its \
-							 [[embedded]] rule a `query`",
+								"{}: the wasm grammar {wasm} has no built-in query; give \
+								 its [[embedded]] rule a `query`",
 								path.display(),
-								wasm.display()
 							));
 						}
 					},
@@ -556,7 +608,7 @@ fn resolve_explicit(
 	if let Some(host) =
 		embed::Host::ALL.iter().find(|host| host.extensions().contains(&extension))
 	{
-		let dir = path.parent().unwrap_or_else(|| Path::new("."));
+		let dir = parent_dir(path);
 		let config = if args.no_config { None } else { caches.discover(dir) };
 		return Err(match config {
 			// No config yet: the wizard writes one, rule included.
@@ -581,11 +633,7 @@ fn resolve_explicit(
 			),
 		});
 	}
-	let mut resolved = resolve_sql_defaults(
-		path.parent().unwrap_or_else(|| Path::new(".")),
-		args,
-		caches,
-	)?;
+	let mut resolved = resolve_sql_defaults(parent_dir(path), args, caches)?;
 	resolved.kind = Kind::Sql;
 	Ok(resolved)
 }
@@ -600,7 +648,7 @@ fn stdin_as(
 	cwd: &Path,
 	caches: &mut Caches,
 ) -> Result<Option<Resolved>, String> {
-	let dir = path.parent().unwrap_or_else(|| Path::new("."));
+	let dir = parent_dir(path);
 	let absolute = std::path::absolute(path).ok();
 	let mut ignores = vec![build_ignore_set(&args.ignore, cwd)?];
 	if !args.no_config
@@ -690,7 +738,7 @@ fn drop_frozen(
 	let mut dropped = 0;
 	let mut kept = Vec::with_capacity(files.len());
 	for path in std::mem::take(files) {
-		let dir = path.parent().unwrap_or_else(|| Path::new("."));
+		let dir = parent_dir(&path);
 		let mut claimed = flag_globs.as_ref().is_some_and(|globs| {
 			globs.matches(std::path::absolute(&path).ok().as_deref(), &path)
 		});

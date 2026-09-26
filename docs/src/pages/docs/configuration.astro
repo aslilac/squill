@@ -157,7 +157,9 @@ import Docs from "../../layouts/Docs.astro";
 			<code>--stdin-filepath &lt;path&gt;</code> (read stdin as the file at
 			that path, for editors: its config, rules, and ignores apply, and it
 			need not exist yet),{" "}
-			<code>--strict</code>, <code>--no-config</code>,{" "}
+			<code>--strict</code>, <code>--locked</code> (fail rather than record
+			a grammar URL <code>squill.lock</code> doesn&rsquo;t have, for CI),{" "}
+			<code>--no-config</code>,{" "}
 			<code>--version</code>, and <code>--help</code>.
 		</p>
 	</section>

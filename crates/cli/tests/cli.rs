@@ -1616,3 +1616,91 @@ fn language_server_serves_one_formatter_editors() {
 	assert_eq!(reply(3)["result"], json!([]));
 	let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// A bare file name, run from its own directory, finds the config there:
+/// its parent is the working directory, not an empty path.
+#[test]
+fn bare_file_names_find_their_config() {
+	let dir = temp_dir("barename");
+	std::fs::write(dir.join("squill.toml"), "keyword-case = \"upper\"\n")
+		.expect("write config");
+	std::fs::write(dir.join("a.sql"), "select 1;\n").expect("write");
+	let status =
+		squill().current_dir(&dir).args(["fmt", "a.sql"]).status().expect("run");
+	assert!(status.success());
+	assert_eq!(
+		std::fs::read_to_string(dir.join("a.sql")).expect("read"),
+		"SELECT 1;\n"
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A grammar URL locked in squill.lock and already cached never touches
+/// the network (the URL here doesn't resolve); one the lockfile doesn't
+/// have is refused under --locked.
+#[cfg(feature = "external-grammars")]
+#[test]
+fn grammar_urls_use_the_lockfile_and_cache() {
+	use sha2::Digest;
+	let dir = temp_dir("grammarurl");
+	let wasm = std::fs::read(
+		std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+			.join("tests/fixtures/grammars/tree-sitter-lua.wasm"),
+	)
+	.expect("read grammar");
+	let sha: String = sha2::Sha256::digest(&wasm)
+		.iter()
+		.map(|byte| format!("{byte:02x}"))
+		.collect();
+	let url = "https://grammars.example.invalid/tree-sitter-lua.wasm";
+	let cache = dir.join("cache/squill/grammars");
+	std::fs::create_dir_all(&cache).expect("mkdir cache");
+	std::fs::write(cache.join(format!("{sha}.wasm")), &wasm)
+		.expect("write cache");
+	std::fs::write(
+		dir.join("lua.scm"),
+		"((function_call name: (method_index_expression method: (identifier) @_m) arguments: (arguments . (string) @sql)) (#eq? @_m \"exec\"))",
+	)
+	.expect("write query");
+	std::fs::write(
+		dir.join("squill.toml"),
+		format!("[[embedded]]\ninclude = [\"*.lua\"]\ngrammar = \"{url}\"\nquery = \"lua.scm\"\n"),
+	)
+	.expect("write config");
+	std::fs::write(
+		dir.join("squill.lock"),
+		format!("[grammars]\n\"{url}\" = \"{sha}\"\n"),
+	)
+	.expect("write lock");
+	std::fs::write(dir.join("db.lua"), "db:exec([[\n  SELECT   1\n]])\n")
+		.expect("write lua");
+
+	let run = |args: &[&str]| {
+		squill()
+			.current_dir(&dir)
+			.env("XDG_CACHE_HOME", dir.join("cache"))
+			.args(args)
+			.output()
+			.expect("run")
+	};
+	let output = run(&["fmt", "--locked", "db.lua"]);
+	assert!(
+		output.status.success(),
+		"{}",
+		String::from_utf8_lossy(&output.stderr)
+	);
+	assert_eq!(
+		std::fs::read_to_string(dir.join("db.lua")).expect("read"),
+		"db:exec([[\nselect 1\n]])\n"
+	);
+
+	std::fs::remove_file(dir.join("squill.lock")).expect("remove lock");
+	let output = run(&["fmt", "--locked", "db.lua"]);
+	assert_eq!(output.status.code(), Some(2));
+	assert!(
+		String::from_utf8_lossy(&output.stderr).contains("--locked won't add it"),
+		"{}",
+		String::from_utf8_lossy(&output.stderr)
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}

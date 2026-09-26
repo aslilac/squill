@@ -186,6 +186,26 @@ dialect = "sqlite"</code></pre>
 			never when it holds a backslash that might be an escape. The re-parse
 			check catches the rest.
 		</p>
+		<h3>From a URL</h3>
+		<p>
+			A grammar can also come straight from where it&rsquo;s published, as an{" "}
+			<code>https</code> URL naming the <code>.wasm</code> file:
+		</p>
+		<pre><code>[[embedded]]
+include = ["**/*.lua"]
+grammar = "https://github.com/tree-sitter-grammars/tree-sitter-lua/releases/download/v0.5.0/tree-sitter-lua.wasm"
+query = ".config/squill/lua.scm"</code></pre>
+		<p>
+			The first time squill downloads it, it records the grammar&rsquo;s
+			SHA-256 in a <code>squill.lock</code> beside the config; commit that
+			file. Every later download must match it, or squill stops and shows
+			both hashes. Downloads are cached by hash in your user cache directory
+			(<code>$XDG_CACHE_HOME/squill</code>, or the platform&rsquo;s own), so
+			a locked grammar that&rsquo;s already cached never touches the network.
+			In CI, <code>squill fmt --locked</code> refuses to record anything new:
+			a grammar URL missing from <code>squill.lock</code> is an error instead
+			of a download trusted on sight.
+		</p>
 	</section>
 
 	<section>
