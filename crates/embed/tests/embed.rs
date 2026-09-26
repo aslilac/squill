@@ -719,3 +719,17 @@ fn column_zero_strings_take_the_files_indent_character() {
 		formatted.text
 	);
 }
+
+#[test]
+fn unparsable_function_bodies_in_embedded_sql_are_reported() {
+	let source = "fn f() {\n    sqlx::query!(r#\"create function f() returns int language plpgsql as $$ begin frobnicate; end $$\"#);\n}\n";
+	let formatted = format_host(Host::Rust, RUST_SQLX_QUERY, source);
+	// The statement around the body still formats; the body is flagged.
+	assert!(formatted.text.contains("returns int"), "{}", formatted.text);
+	assert_eq!(formatted.warnings.len(), 1, "{:?}", formatted.warnings);
+	assert!(
+		formatted.warnings[0].message.contains("PL/pgSQL body left as written"),
+		"{:?}",
+		formatted.warnings
+	);
+}

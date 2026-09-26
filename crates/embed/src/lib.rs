@@ -813,8 +813,17 @@ pub fn format_embedded(
 				dialect,
 				options,
 				indent,
+				body_warning: std::cell::RefCell::new(None),
 			};
-			match snippet.rewrite() {
+			let rewrite = snippet.rewrite();
+			if let Some(message) = snippet.body_warning.take() {
+				warnings.push(Warning {
+					offset: node_range.start,
+					end: node_range.end,
+					message,
+				});
+			}
+			match rewrite {
 				Rewrite::Skip => {}
 				Rewrite::Warn(message) => {
 					warnings.push(Warning {
@@ -1075,6 +1084,9 @@ struct Snippet<'a> {
 	dialect: Dialect,
 	options: &'a Options,
 	indent: Indent,
+	/// A procedural body in the SQL that didn't parse (so was left as
+	/// written), reported alongside whatever else happens to the string.
+	body_warning: std::cell::RefCell<Option<String>>,
 }
 
 impl Snippet<'_> {
@@ -1180,6 +1192,11 @@ impl Snippet<'_> {
 				"embedded SQL failed the formatter's self-check; left unformatted"
 					.to_string(),
 			));
+		}
+		if let Some(body) = formatted.body_diagnostics.first() {
+			self
+				.body_warning
+				.replace(Some(format!("embedded SQL: {}", body.message)));
 		}
 		let sql = formatted.text.trim_end();
 
