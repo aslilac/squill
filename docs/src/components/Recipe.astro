@@ -32,7 +32,7 @@ const after = all.find((file) => file.startsWith("after."));
 // How a language is named in a pane's corner, where shiki's id differs.
 const labels = { cpp: "c++", csharp: "c#" };
 const label = (id) => labels[id] ?? id;
-const highlight = (code, as = lang) => shiki(code.replace(/\n$/, ""), as);
+const highlight = (code, as = lang) => shiki(code.trimEnd(), as);
 // What each config-side file is written in, for its caption and colors.
 const kind = (path) =>
 	path.endsWith(".scm") ? "query" : path.endsWith(".toml") ? "toml" : "yaml";
