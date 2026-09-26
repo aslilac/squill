@@ -47,7 +47,7 @@ auto-format = true`} />
 		</p>
 		<Code lang="toml" file="languages.toml" code={`[[language]]
 name = "rust"
-formatter = { command = "sh", args = ["-c", "rustfmt --edition 2024 | squill fmt --stdin-filepath \\"$0\\"", "%{buffer_name}"] }`} />
+formatter = { command = "sh", args = ["-c", "rustfmt | squill fmt --stdin-filepath \\"$0\\"", "%{buffer_name}"] }`} />
 	</section>
 
 	<section>
