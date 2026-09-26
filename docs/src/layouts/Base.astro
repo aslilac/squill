@@ -269,15 +269,12 @@ const topNav = [
 			line-height: 1.6;
 			tab-size: 2;
 		}
-		/* A file's name, over the pre that holds it. */
-		.filename {
-			font-family: "JetBrains Mono", monospace;
+		/* A file's name in a pane's caption keeps its own case. */
+		.pair figcaption .filename {
+			text-transform: none;
+			letter-spacing: normal;
 			font-size: 0.75rem;
-			color: var(--muted);
-			margin: 1.25rem 0 0.35rem;
-		}
-		.filename + pre {
-			margin-top: 0;
+			color: var(--pane-text);
 		}
 		.recipe .pair {
 			margin-top: 1.25rem;

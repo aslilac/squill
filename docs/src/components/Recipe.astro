@@ -5,8 +5,7 @@
 // shows them exactly as written and never needs syncing by hand.
 import { readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { codeToHtml } from "shiki";
-import { shikiTheme } from "../playground/theme.js";
+import { highlight as shiki } from "./highlight.js";
 
 const { name, lang } = Astro.props;
 
@@ -30,19 +29,25 @@ const files = readdirSync(dir, { recursive: true, withFileTypes: true })
 const all = readdirSync(dir);
 const before = all.find((file) => file.startsWith("before."));
 const after = all.find((file) => file.startsWith("after."));
-const highlight = (code) =>
-	codeToHtml(code.replace(/\n$/, ""), { lang, theme: shikiTheme });
+const highlight = (code, as = lang) => shiki(code.replace(/\n$/, ""), as);
+// What each config-side file is written in, for its caption and colors.
+const kind = (path) =>
+	path.endsWith(".scm") ? "query" : path.endsWith(".toml") ? "toml" : "yaml";
 ---
 
 <div class="recipe">
-	{
-		files.map((path) => (
-			<>
-				<p class="filename">{path}</p>
-				<pre><code>{read(path).replace(/\n$/, "")}</code></pre>
-			</>
-		))
-	}
+	<div class="pair stacked">
+		{
+			files.map(async (path) => (
+				<figure>
+					<figcaption>
+						<span class="filename">{path}</span> <span>{kind(path)}</span>
+					</figcaption>
+					<div set:html={await highlight(read(path), kind(path))} />
+				</figure>
+			))
+		}
+	</div>
 	<div class="pair stacked">
 		<figure>
 			<figcaption>before <span>{lang}</span></figcaption>
