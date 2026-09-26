@@ -147,6 +147,12 @@ pub fn format_request(json: &str) -> String {
 					Some(_) => embed::Indent::Configured,
 					None => embed::Indent::FromHost,
 				};
+				// And the CLI's host-conventional placeholders.
+				let options = formatter::Options {
+					pyformat_params: host.uses_pyformat_params(),
+					question_params: host.uses_question_params(),
+					..options
+				};
 				format_host(&request.source, host, query, &options, indent)
 			} else {
 				Response {

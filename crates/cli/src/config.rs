@@ -45,6 +45,7 @@ pub struct PartialOptions {
 	pub quoting: Option<IdentQuoting>,
 	pub at_params: Option<bool>,
 	pub question_params: Option<bool>,
+	pub pyformat_params: Option<bool>,
 }
 
 impl PartialOptions {
@@ -72,6 +73,9 @@ impl PartialOptions {
 		}
 		if let Some(value) = self.question_params {
 			options.question_params = value;
+		}
+		if let Some(value) = self.pyformat_params {
+			options.pyformat_params = value;
 		}
 	}
 }
@@ -399,6 +403,12 @@ fn apply_key(
 		"at-params" => match value.get_ref() {
 			DeValue::Boolean(flag) => options.at_params = Some(*flag),
 			_ => return Err(err("`at-params` expects true or false".into())),
+		},
+		"pyformat-params" => match value.get_ref() {
+			DeValue::Boolean(flag) => options.pyformat_params = Some(*flag),
+			_ => {
+				return Err(err("`pyformat-params` expects true or false".into()));
+			}
 		},
 		"question-params" => match value.get_ref() {
 			DeValue::Boolean(flag) => options.question_params = Some(*flag),

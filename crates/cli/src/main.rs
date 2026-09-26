@@ -59,6 +59,8 @@ Options:
   --at-params             Treat sqlc-style @name as parameters (Postgres)
   --question-params       Treat JDBC-style ? as parameters (Postgres; on
                           by default for java and kotlin grammars)
+  --pyformat-params       Treat Python DB-API %s / %(name)s as
+                          parameters (on by default for python grammars)
   --no-config             Ignore squill.toml files
   --frozen <GLOB>         Treat matching paths as immutable once they
                           exist on the baseline ref: format them while
@@ -73,12 +75,12 @@ Options:
 Configuration: the nearest squill.toml or .config/squill.toml at or
 above each formatted file supplies defaults. Top-level keys: dialect,
 indent, indent-width, max-width, keyword-case, quote-idents, at-params,
-question-params, ignore and frozen (arrays of glob patterns),
-frozen-ref, and frozen-fetch. Explicit flags override the config. The
-search upward stops at a git repository root, a mount point, or a
-symlinked directory, so a config outside a checkout never reaches
-inside it. Directory recursion honors .gitignore and skips hidden files;
-explicitly listed files always format.
+question-params, pyformat-params, ignore and frozen (arrays of glob
+patterns), frozen-ref, and frozen-fetch. Explicit flags override the
+config. The search upward stops at a git repository root, a mount
+point, or a symlinked directory, so a config outside a checkout never
+reaches inside it. Directory recursion honors .gitignore and skips
+hidden files; explicitly listed files always format.
 
 Rules scope settings to paths. Every rule whose `include` matches a
 file applies, later rules winning key by key; paths are relative to
@@ -196,6 +198,7 @@ fn parse_args() -> Result<Invocation, String> {
 			"--no-frozen-fetch" => args.frozen_fetch = Some(false),
 			"--at-params" => args.overrides.at_params = Some(true),
 			"--question-params" => args.overrides.question_params = Some(true),
+			"--pyformat-params" => args.overrides.pyformat_params = Some(true),
 			"--dialect" => {
 				args.overrides.dialect =
 					Some(config::parse_dialect(&value(&mut argv, "--dialect")?)?)
@@ -456,17 +459,25 @@ fn resolve(
 						}
 					},
 				};
+			// Host-conventional placeholders are on unless configured
+			// either way: JDBC's `?` on the JVM, psycopg's `%s` in Python.
 			let mut question_set = config.options.question_params.is_some()
 				|| args.overrides.question_params.is_some();
+			let mut pyformat_set = config.options.pyformat_params.is_some()
+				|| args.overrides.pyformat_params.is_some();
 			for rule in &embedded {
 				rule.options.apply(&mut options);
 				indent_set |= rule.options.indent_style.is_some();
 				question_set |= rule.options.question_params.is_some();
+				pyformat_set |= rule.options.pyformat_params.is_some();
 			}
-			// JDBC's `?` is how the JVM writes parameters: on unless
-			// configured either way.
-			if !question_set && let config::GrammarSpec::Builtin(host) = spec {
-				options.question_params = host.uses_question_params();
+			if let config::GrammarSpec::Builtin(host) = spec {
+				if !question_set {
+					options.question_params = host.uses_question_params();
+				}
+				if !pyformat_set {
+					options.pyformat_params = host.uses_pyformat_params();
+				}
 			}
 			kind = Some(Kind::Embedded { grammar, query });
 		} else if is_sql_file(path) || !files.is_empty() {

@@ -235,8 +235,10 @@ impl Host {
 		}
 	}
 
-	/// psycopg-style `%s` / `%(name)s` placeholders are Python's.
-	fn uses_pyformat_params(self) -> bool {
+	/// Does code in this language conventionally write psycopg-style
+	/// `%s` / `%(name)s` placeholders? Callers use it as the default for
+	/// `Options::pyformat_params` when nothing is configured.
+	pub fn uses_pyformat_params(self) -> bool {
 		match self {
 			#[cfg(feature = "python")]
 			Host::Python => true,
@@ -1134,11 +1136,6 @@ impl Snippet<'_> {
 		let host_indent = line_indent(self.source, self.range.start);
 		let mut format_options = *self.options;
 		format_options.dialect = self.dialect;
-		// psycopg-style `%s` / `%(name)s` placeholders must survive
-		// byte-exact; lex them as params. (JDBC's `?` is configurable,
-		// so it arrives in `options`; see `Host::uses_question_params`.)
-		format_options.pyformat_params =
-			self.grammar.host().is_some_and(Host::uses_pyformat_params);
 		// The author chose a multi-line literal: keep statements
 		// clause-per-line, never collapsed onto one line.
 		format_options.always_break_statements = true;

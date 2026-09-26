@@ -57,8 +57,9 @@ pub struct Options {
 	/// sqlc-style `@name` parameters (see [`LexOptions::at_params`]);
 	/// used when re-lexing for the safety check.
 	pub at_params: bool,
-	/// Python DB-API `pyformat` parameters (`%s`, `%(name)s`); set by
-	/// embedding for Python hosts. Not part of the CLI/config surface.
+	/// Python DB-API `pyformat` parameters (`%s`, `%(name)s`; see
+	/// [`LexOptions::pyformat_params`]); used when re-lexing for the
+	/// safety check.
 	pub pyformat_params: bool,
 	/// JDBC-style `?` placeholders in Postgres (see
 	/// [`LexOptions::question_params`]); used when re-lexing for the

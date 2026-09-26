@@ -1307,3 +1307,51 @@ fn init_in_an_empty_project() {
 	);
 	let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// psycopg's `%s` is on for Python unless configured; elsewhere it is
+/// opt-in, by key or flag.
+#[test]
+fn pyformat_params_default_by_grammar_and_configure() {
+	let dir = temp_dir("pyformatparams");
+	let python = "def f(cur):\n    cur.execute(\"\"\"SELECT id FROM users WHERE org = %(org)s\"\"\")\n";
+	std::fs::write(dir.join("q.py"), python).expect("write");
+	std::fs::write(dir.join("q.sql"), "SELECT id FROM users WHERE org = %s;\n")
+		.expect("write");
+	let rule = "[[embedded]]\ninclude = [\"*.py\"]\ngrammar = \"python\"\n";
+
+	// Off by the rule: the placeholder no longer lexes as one.
+	std::fs::write(
+		dir.join("squill.toml"),
+		format!("{rule}pyformat-params = false\n"),
+	)
+	.expect("write config");
+	let output = squill().arg("fmt").arg(dir.join("q.py")).output().expect("run");
+	assert!(
+		String::from_utf8_lossy(&output.stderr).contains("did not parse"),
+		"{}",
+		String::from_utf8_lossy(&output.stderr)
+	);
+	assert_eq!(std::fs::read_to_string(dir.join("q.py")).expect("read"), python);
+
+	// The grammar's default.
+	std::fs::write(dir.join("squill.toml"), rule).expect("write config");
+	let status = squill().arg("fmt").arg(dir.join("q.py")).status().expect("run");
+	assert!(status.success());
+	assert!(
+		std::fs::read_to_string(dir.join("q.py"))
+			.expect("read")
+			.contains("    where org = %(org)s\n"),
+	);
+	// Plain SQL takes the flag.
+	let status = squill()
+		.args(["fmt", "--pyformat-params"])
+		.arg(dir.join("q.sql"))
+		.status()
+		.expect("run");
+	assert!(status.success());
+	assert_eq!(
+		std::fs::read_to_string(dir.join("q.sql")).expect("read"),
+		"select id from users where org = %s;\n"
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}

@@ -410,6 +410,11 @@ fn go_smoke_test() {
 	assert_eq!(twice, formatted);
 }
 
+/// Options as the CLI resolves them for Python: pyformat params on.
+fn python_options() -> Options {
+	Options { pyformat_params: true, ..options() }
+}
+
 #[test]
 fn python_smoke_test() {
 	let source = "def load(cur, uid):\n    cur.execute(\"\"\"SELECT id,name FROM users WHERE org=%s AND status=%(status)s ORDER BY name\"\"\", args)\n    cur.execute(\"SELECT   1\")\n    cur.execute(f\"SELECT {tbl}\")\n    cur.execute(b\"SELECT 2\")\n";
@@ -417,7 +422,7 @@ fn python_smoke_test() {
 		source,
 		&Host::Python.into(),
 		PYTHON_DB_QUERY,
-		&options(),
+		&python_options(),
 		Indent::FromHost,
 	)
 	.expect("format")
@@ -439,7 +444,7 @@ fn python_smoke_test() {
 		&formatted,
 		&Host::Python.into(),
 		PYTHON_DB_QUERY,
-		&options(),
+		&python_options(),
 		Indent::FromHost,
 	)
 	.expect("format")
@@ -556,9 +561,10 @@ fn gleam_smoke_test() {
 
 /// Format with a host's default query, returning text and warnings.
 fn format_host(host: Host, query: &str, source: &str) -> embed::Embedded {
-	// The CLI's default for the host's placeholders.
+	// The CLI's defaults for the host's placeholders.
 	let mut options = options();
 	options.question_params = host.uses_question_params();
+	options.pyformat_params = host.uses_pyformat_params();
 	let formatted =
 		format_embedded(source, &host.into(), query, &options, Indent::FromHost)
 			.expect("format");
