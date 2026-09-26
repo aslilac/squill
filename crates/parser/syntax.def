@@ -178,3 +178,5 @@ node IsExpr
 node BetweenExpr
 node InExpr
 node SubscriptExpr
+# `(composite).field` / `(composite).*`: a field of a row value.
+node FieldExpr

@@ -203,6 +203,16 @@ impl Parser<'_> {
 			.map(|t| t.text.to_ascii_lowercase())
 	}
 
+	/// The previous token, lowercased, when it's a bare word: a function
+	/// call's name, seen from its `(`.
+	pub(crate) fn prev_word(&self) -> Option<String> {
+		self
+			.toks
+			.get(self.pos.checked_sub(1)?)
+			.filter(|t| t.kind == SyntaxKind::Ident)
+			.map(|t| t.text.to_ascii_lowercase())
+	}
+
 	pub(crate) fn at_any_kw(&self, kws: &[&str]) -> bool {
 		kws.iter().any(|kw| self.at_kw(kw))
 	}

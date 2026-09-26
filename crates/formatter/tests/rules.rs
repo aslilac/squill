@@ -500,3 +500,45 @@ fn window_frames_follow_order_by() {
 		"select max(a) over w from t window w as (order by b groups 2 preceding);\n"
 	);
 }
+
+#[test]
+fn cte_column_lists_are_tight() {
+	assert_eq!(
+		format("WITH RECURSIVE r(n) AS (SELECT 1) SELECT * FROM r;"),
+		"with recursive r(n) as (select 1) select * from r;\n"
+	);
+}
+
+/// A `PARTITION OF` table's first parenthesized list is its partition
+/// bound, not columns: it doesn't take the always-broken column layout.
+#[test]
+fn partition_bounds_stay_inline() {
+	assert_eq!(
+		format(
+			"CREATE TABLE m1 PARTITION OF m FOR VALUES FROM ('2020-01-01') TO ('2021-01-01');"
+		),
+		"create table m1 partition of m for values from ('2020-01-01') to ('2021-01-01');\n"
+	);
+}
+
+#[test]
+fn call_like_statements_glue_their_parens() {
+	assert_eq!(format("CALL p();"), "call p();\n");
+	assert_eq!(
+		format("PREPARE q(int) AS SELECT $1;"),
+		"prepare q(int) as select $1;\n"
+	);
+	assert_eq!(format("EXECUTE q(1);"), "execute q(1);\n");
+}
+
+#[test]
+fn tablesample_and_sql_json() {
+	assert_eq!(
+		format("SELECT * FROM t AS x TABLESAMPLE SYSTEM (10) REPEATABLE (1);"),
+		"select * from t as x tablesample SYSTEM(10) repeatable (1);\n"
+	);
+	assert_eq!(
+		format("SELECT json_object('a': 1, 'b' VALUE 2 NULL ON NULL) FROM t;"),
+		"select json_object('a': 1, 'b' value 2 null on null) from t;\n"
+	);
+}

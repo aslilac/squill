@@ -371,3 +371,30 @@ fn json_table_and_default_privileges() {
 		assert_eq!(top_level_kinds(&cst).len(), 1, "{sql}");
 	}
 }
+
+#[test]
+fn postgres_odds_and_ends() {
+	for sql in [
+		"SELECT * FROM t AS x TABLESAMPLE SYSTEM (10) REPEATABLE (1);",
+		"SELECT * FROM t TABLESAMPLE bernoulli (5);",
+		"SELECT (a).b, (a).*, (f(x)).y, (arr[1]).z FROM t;",
+		"SELECT TIMESTAMP WITH TIME ZONE '2020-01-01', DOUBLE PRECISION '1.5';",
+		"SELECT INTERVAL '1' DAY, INTERVAL '1-2' YEAR TO MONTH;",
+		"EXECUTE q(1);",
+		"SHOW timezone;",
+		"SELECT position('a' IN 'abc'), position(x || y IN z);",
+		"SELECT json_object('a': 1, 'b' VALUE 2 NULL ON NULL RETURNING jsonb);",
+		"SELECT json_arrayagg(x ORDER BY y), json_array(SELECT 1);",
+		"SELECT json_value(j, '$.a' RETURNING int DEFAULT 0 ON EMPTY) FROM t;",
+		"SELECT a IS JSON OBJECT WITH UNIQUE KEYS, b IS NOT JSON FROM t;",
+		"SELECT xmlelement(NAME foo, xmlattributes(a AS b), 'bar');",
+		"SELECT xmlserialize(CONTENT x AS text), xmlparse(DOCUMENT '<a/>');",
+	] {
+		let cst = parse_ok(sql);
+		assert_eq!(top_level_kinds(&cst).len(), 1, "{sql}");
+	}
+	// `a IS b` stays SQLite's; in Postgres it's an error.
+	let tokens = lex("SELECT a IS b FROM t;", Dialect::Postgres);
+	assert!(!parse(&tokens, Dialect::Postgres).diagnostics.is_empty());
+	assert_eq!(parse_sqlite_ok("SELECT a IS b, c IS NOT d FROM t;").len(), 1);
+}

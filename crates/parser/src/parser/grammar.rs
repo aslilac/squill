@@ -32,6 +32,7 @@ const SELECT_ITEM_STOP: &[&str] = &[
 
 /// Keywords that stop a bare table alias in FROM position.
 const TABLE_ALIAS_STOP: &[&str] = &[
+	"tablesample",
 	"on",
 	"using",
 	"join",
@@ -458,6 +459,19 @@ fn table_primary_inner(p: &mut Parser<'_>) -> PResult {
 		}
 	}
 	index_hint(p)?;
+	// `TABLESAMPLE method (args) [REPEATABLE (seed)]`.
+	if p.at_kw("tablesample") {
+		p.bump();
+		qualified_name(p)?;
+		arg_list(p)?;
+		if p.eat_kw("repeatable") {
+			p.start(SyntaxKind::ParenExpr);
+			p.expect(SyntaxKind::LParen, "`(`")?;
+			expr(p, 0)?;
+			p.expect(SyntaxKind::RParen, "`)`")?;
+			p.finish();
+		}
+	}
 	p.finish();
 	Ok(())
 }
@@ -849,7 +863,114 @@ pub(crate) fn paren_expr_list(p: &mut Parser<'_>) -> PResult {
 }
 
 /// Function-call style argument list; also used for table functions.
+/// Functions whose arguments are expressions threaded with keywords:
+/// SQL/JSON (`json_object('a': 1 null on null returning jsonb)`) and
+/// SQL/XML (`xmlelement(name foo, ...)`, `xmlserialize(content x as
+/// text)`). Their arguments parse tolerantly: see [`keyword_args`].
+const KEYWORD_ARG_FUNCTIONS: &[&str] = &[
+	"json_object",
+	"json_array",
+	"json_objectagg",
+	"json_arrayagg",
+	"json_query",
+	"json_value",
+	"json_exists",
+	"json",
+	"json_scalar",
+	"json_serialize",
+	"xmlelement",
+	"xmlattributes",
+	"xmlforest",
+	"xmlparse",
+	"xmlserialize",
+	"xmlpi",
+	"xmlroot",
+	"xmlexists",
+];
+
+/// The keywords that may sit between those functions' arguments.
+const ARGUMENT_KEYWORDS: &[&str] = &[
+	"value",
+	"null",
+	"absent",
+	"on",
+	"with",
+	"without",
+	"unique",
+	"keys",
+	"format",
+	"json",
+	"encoding",
+	"passing",
+	"as",
+	"wrapper",
+	"conditional",
+	"unconditional",
+	"array",
+	"quotes",
+	"keep",
+	"omit",
+	"empty",
+	"error",
+	"default",
+	"true",
+	"false",
+	"unknown",
+	"order",
+	"by",
+	"asc",
+	"desc",
+	"name",
+	"document",
+	"content",
+	"ref",
+	"version",
+	"no",
+	"standalone",
+	"yes",
+	"strip",
+	"preserve",
+	"whitespace",
+	"indent",
+];
+
+/// `( ... )` for [`KEYWORD_ARG_FUNCTIONS`]: expressions where they start,
+/// the keywords, `:` and `,` as they come, and a type after RETURNING.
+fn keyword_args(p: &mut Parser<'_>) -> PResult {
+	p.start(SyntaxKind::ArgList);
+	p.expect(SyntaxKind::LParen, "`(`")?;
+	loop {
+		if p.at(SyntaxKind::RParen) || p.at_eof() {
+			break;
+		}
+		if p.at(SyntaxKind::Comma) || p.at(SyntaxKind::Colon) {
+			p.bump();
+		} else if p.at_kw("returning") {
+			p.bump();
+			super::expr::type_name(p)?;
+		} else if p.at_any_kw(ARGUMENT_KEYWORDS) && !p.nth_at(1, SyntaxKind::LParen)
+		{
+			p.bump();
+		} else if at_subquery_start(p, 0) {
+			// `json_array(select ...)`.
+			query_body(p)?;
+		} else {
+			expr(p, 0)?;
+		}
+	}
+	p.expect(SyntaxKind::RParen, "`)`")?;
+	p.finish();
+	Ok(())
+}
+
 pub(crate) fn arg_list(p: &mut Parser<'_>) -> PResult {
+	let function = p.prev_word();
+	if function
+		.as_deref()
+		.is_some_and(|name| KEYWORD_ARG_FUNCTIONS.contains(&name))
+	{
+		return keyword_args(p);
+	}
 	p.start(SyntaxKind::ArgList);
 	p.expect(SyntaxKind::LParen, "`(`")?;
 	if !p.at(SyntaxKind::RParen) {
@@ -857,9 +978,14 @@ pub(crate) fn arg_list(p: &mut Parser<'_>) -> PResult {
 			p.eat_kw("all");
 		}
 		p.eat_kw("variadic");
+		// POSITION(a IN b): the first argument stops before IN, which
+		// would otherwise read as an IN test.
+		let mut first = function.as_deref() == Some("position");
 		loop {
 			if p.at_op("*") {
 				p.bump();
+			} else if std::mem::take(&mut first) {
+				expr(p, super::expr::BP_RANGE)?;
 			} else {
 				expr(p, 0)?;
 			}

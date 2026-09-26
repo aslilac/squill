@@ -61,6 +61,8 @@ pub(crate) const DDL_STARTERS: &[&str] = &[
 	"prepare",
 	"deallocate",
 	"explain",
+	"show",
+	"execute",
 	"call",
 	"merge",
 	"copy",

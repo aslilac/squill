@@ -381,7 +381,9 @@ impl Lowerer {
 			SyntaxKind::PrefixExpr => self.prefix_expr(node),
 			SyntaxKind::BinaryExpr => self.binary_expr(node),
 			SyntaxKind::IsExpr | SyntaxKind::BetweenExpr => self.binary_expr(node),
-			SyntaxKind::SubscriptExpr => self.tight_flow(node),
+			SyntaxKind::SubscriptExpr | SyntaxKind::FieldExpr => {
+				self.tight_flow(node)
+			}
 			_ => self.space_flow(node, IdentPos::ColumnOrTable),
 		}
 	}
@@ -485,7 +487,7 @@ impl Lowerer {
 			.children_with_tokens()
 			.filter_map(|el| el.into_token())
 			.filter(|t| t.kind() == SyntaxKind::Ident)
-			.take(6)
+			.take(8)
 			.map(|t| t.text().to_ascii_lowercase())
 			.collect();
 		if words.first().is_some_and(|w| w == "alter") {
@@ -556,8 +558,11 @@ impl Lowerer {
 						"strict",
 					];
 				}
-				Some("table") => {
-					// CREATE TABLE column lists always break.
+				// CREATE TABLE column lists always break; a `PARTITION OF`
+				// table's first list is its partition bound instead.
+				Some("table")
+					if !words.windows(2).any(|pair| pair == ["partition", "of"]) =>
+				{
 					self.force_first_element_list = true;
 				}
 				Some("type") if words.iter().any(|w| w == "enum") => {
@@ -567,7 +572,16 @@ impl Lowerer {
 				_ => {}
 			}
 		}
-		if matches!(object, Some("function" | "procedure")) {
+		// `call p(...)`, `prepare q(int)`, `execute q(1)`: the parens glue
+		// to the name, as in a call.
+		let call_like = matches!(
+			words.first().map(String::as_str),
+			Some("call" | "prepare" | "execute")
+		);
+		if call_like {
+			let elements: Vec<SyntaxElement> = node.children_with_tokens().collect();
+			self.dml_flow_elements(docs, &elements, break_before, true);
+		} else if matches!(object, Some("function" | "procedure")) {
 			// Attribute clauses land in canonical (pg_dump) order:
 			// returns, language, modifiers, the body last. Skipped when
 			// a comment would move with a segment — comment order is
@@ -1033,6 +1047,13 @@ impl Lowerer {
 				items.sep(docs);
 				self.push(docs, text(")"));
 			}
+			SyntaxElement::Token(token) if token.kind() == SyntaxKind::Colon => {
+				// SQL/JSON's `'key': value`: tight before, spaced after.
+				items.next_sep = None;
+				items.tight_next = true;
+				items.sep(docs);
+				self.push(docs, text(":"));
+			}
 			SyntaxElement::Token(token)
 				if matches!(token.kind(), SyntaxKind::Dot | SyntaxKind::ColonColon) =>
 			{
@@ -1096,8 +1117,14 @@ impl Lowerer {
 
 	/// Table references: `[lateral] [only] name [args] [as] [alias (cols)]`.
 	fn table_ref(&mut self, node: &SyntaxNode) -> Doc {
-		let has_args =
-			node.children().any(|child| child.kind() == SyntaxKind::ArgList);
+		// A table function's arguments; TABLESAMPLE's `(10)` isn't one.
+		let tablesample = node.children_with_tokens().any(|element| {
+			element
+				.as_token()
+				.is_some_and(|token| token.text().eq_ignore_ascii_case("tablesample"))
+		});
+		let has_args = !tablesample
+			&& node.children().any(|child| child.kind() == SyntaxKind::ArgList);
 		let name_pos =
 			if has_args { IdentPos::TypeOrFunction } else { IdentPos::ColumnOrTable };
 		let mut docs = Vec::new();
@@ -1113,7 +1140,14 @@ impl Lowerer {
 					let lower = token.text().to_ascii_lowercase();
 					let is_marker = matches!(
 						lower.as_str(),
-						"lateral" | "only" | "as" | "with" | "ordinality"
+						"lateral"
+							| "only"
+							| "as" | "with"
+							| "ordinality"
+							| "tablesample"
+							| "repeatable"
+							| "indexed"
+							| "not" | "by"
 					) && token.kind() == SyntaxKind::Ident;
 					let leaf = match token.kind() {
 						SyntaxKind::Dot => {
@@ -1252,6 +1286,8 @@ impl Lowerer {
 		let mut docs = Vec::new();
 		let mut first = true;
 		let mut seen_as = false;
+		// Just after the column list's `(`: no space (`r(n)`, not `r( n)`).
+		let mut after_open = false;
 		let mut body: Option<Vec<Doc>> = None;
 		for element in node.children_with_tokens() {
 			match element {
@@ -1314,12 +1350,13 @@ impl Lowerer {
 						let want_space = if in_body {
 							!docs_ref.is_empty() && !tight
 						} else {
-							!first && !tight
+							!first && !tight && !after_open
 						};
 						if want_space {
 							docs_ref.push(space());
 						}
 						self.push(docs_ref, leaf);
+						after_open = !in_body && token.kind() == SyntaxKind::LParen;
 					}
 				},
 				SyntaxElement::Node(child) => {

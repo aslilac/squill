@@ -23,7 +23,7 @@ const BP_EXP: u8 = 140; // ^
 const BP_MUL: u8 = 130; // * / %
 const BP_ADD: u8 = 120; // + -
 const BP_OTHER: u8 = 110; // any other operator (||, @>, ->, ...)
-const BP_RANGE: u8 = 100; // BETWEEN, IN, LIKE, ILIKE, SIMILAR
+pub(crate) const BP_RANGE: u8 = 100; // BETWEEN, IN, LIKE, ILIKE, SIMILAR
 const BP_CMP: u8 = 90; // < > = <= >= <> !=
 const BP_IS: u8 = 80;
 const BP_NOT: u8 = 70; // prefix NOT
@@ -59,6 +59,21 @@ fn infix_loop(p: &mut Parser<'_>, checkpoint: usize, min_bp: u8) -> PResult {
 				expr(p, 0)?;
 			}
 			p.expect(SyntaxKind::RBracket, "`]`")?;
+			p.finish();
+			continue;
+		}
+		// `(row).field` / `(row).*`: a field of a composite value. (A
+		// plain `a.b` is a qualified name, and never gets here.)
+		if p.at(SyntaxKind::Dot)
+			&& BP_SUBSCRIPT > min_bp
+			&& (matches!(
+				p.nth_kind(1),
+				Some(SyntaxKind::Ident | SyntaxKind::QuotedIdent)
+			) || p.nth_at_op(1, "*"))
+		{
+			p.open_at(checkpoint, SyntaxKind::FieldExpr);
+			p.bump();
+			p.bump();
 			p.finish();
 			continue;
 		}
@@ -109,11 +124,27 @@ fn infix_loop(p: &mut Parser<'_>, checkpoint: usize, min_bp: u8) -> PResult {
 			if p.eat_kw("distinct") {
 				p.expect_kw("from")?;
 				expr(p, BP_IS)?;
-			} else if !(p.eat_kw("null")
+			} else if p.eat_kw("null")
 				|| p.eat_kw("true")
 				|| p.eat_kw("false")
-				|| p.eat_kw("unknown"))
+				|| p.eat_kw("unknown")
 			{
+			} else if p.dialect() == Dialect::Sqlite {
+				// SQLite's `a IS b`: equality that treats NULLs as equal.
+				expr(p, BP_IS)?;
+			} else if p.at_kw("json") {
+				// SQL/JSON's `IS [NOT] JSON [VALUE | OBJECT | ARRAY |
+				// SCALAR] [WITH | WITHOUT UNIQUE [KEYS]]`.
+				p.bump();
+				let _ = p.eat_kw("value")
+					|| p.eat_kw("object")
+					|| p.eat_kw("array")
+					|| p.eat_kw("scalar");
+				if p.eat_kw("with") || p.eat_kw("without") {
+					p.expect_kw("unique")?;
+					p.eat_kw("keys");
+				}
+			} else {
 				return Err(p.error(
 					"expected `NULL`, `TRUE`, `FALSE`, `UNKNOWN`, or `DISTINCT FROM`",
 				));
@@ -371,6 +402,31 @@ fn ident_prefix(p: &mut Parser<'_>) -> PResult {
 		p.finish();
 		return Ok(());
 	}
+	// Typed literals whose type is several words: `timestamp with time
+	// zone '...'`, `double precision '...'`.
+	const PHRASES: &[&[&str]] = &[
+		&["timestamp", "with", "time", "zone"],
+		&["timestamp", "without", "time", "zone"],
+		&["time", "with", "time", "zone"],
+		&["time", "without", "time", "zone"],
+		&["double", "precision"],
+		&["character", "varying"],
+		&["bit", "varying"],
+	];
+	for phrase in PHRASES {
+		if phrase.iter().enumerate().all(|(n, word)| p.nth_at_kw(n, word))
+			&& matches!(
+				p.nth_kind(phrase.len()),
+				Some(SyntaxKind::String | SyntaxKind::EscapeString)
+			) {
+			p.start(SyntaxKind::Literal);
+			for _ in 0..=phrase.len() {
+				p.bump();
+			}
+			p.finish();
+			return Ok(());
+		}
+	}
 	// `interval '...'` / `date '...'` style typed literals.
 	if matches!(
 		p.nth_kind(1),
@@ -378,9 +434,22 @@ fn ident_prefix(p: &mut Parser<'_>) -> PResult {
 			SyntaxKind::String | SyntaxKind::EscapeString | SyntaxKind::UnicodeString
 		)
 	) {
+		let interval = p.at_kw("interval");
 		p.start(SyntaxKind::Literal);
 		p.bump();
 		p.bump();
+		// `interval '1' day`, `interval '1-2' year to month`.
+		if interval {
+			const FIELDS: &[&str] =
+				&["year", "month", "day", "hour", "minute", "second"];
+			if p.at_any_kw(FIELDS) {
+				p.bump();
+				if p.at_kw("to") && FIELDS.iter().any(|field| p.nth_at_kw(1, field)) {
+					p.bump();
+					p.bump();
+				}
+			}
+		}
 		p.finish();
 		return Ok(());
 	}
