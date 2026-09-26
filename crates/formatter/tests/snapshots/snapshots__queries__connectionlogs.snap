@@ -265,7 +265,8 @@ with
 		where connect_time < @before_time::timestamp with time zone
 		order by connect_time asc
 		limit @limit_count
-	) delete from connection_logs
+	)
+delete from connection_logs
 using old_logs
 where connection_logs.id = old_logs.id;
 

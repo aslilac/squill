@@ -10,7 +10,8 @@ with
 	tmp as (
 		select id, row_number() over (partition by job_id order by name) as index
 		from parameter_schemas
-	) update parameter_schemas
+	)
+update parameter_schemas
 set index = tmp.index
 from tmp
 where parameter_schemas.id = tmp.id;

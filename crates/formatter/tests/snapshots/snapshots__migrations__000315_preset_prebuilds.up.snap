@@ -21,7 +21,8 @@ with
 				order by id
 			) as row_num
 		from template_version_presets
-	) update template_version_presets
+	)
+update template_version_presets
 set name = ranked.name || '_auto_' || row_num
 from ranked
 where template_version_presets.id = ranked.id and row_num > 1;

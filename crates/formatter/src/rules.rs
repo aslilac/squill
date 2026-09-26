@@ -759,6 +759,9 @@ impl Lowerer {
 		let mut tight = false;
 		let mut prev_name = false;
 		let mut after_no = false;
+		// A leading WITH clause that breaks puts the statement keyword
+		// (`update`, `delete`, `insert`) on its own line, as for SELECT.
+		let mut after_with = false;
 		for &element in elements {
 			match element {
 				SyntaxElement::Token(token) if token.kind().is_trivia() => {
@@ -800,12 +803,16 @@ impl Lowerer {
 						&& break_before
 							.iter()
 							.any(|kw| token.text().eq_ignore_ascii_case(kw));
-					if (soft_break && !first) || (pending_sls && !tight_before) {
+					if (soft_break && !first)
+						|| (pending_sls && !tight_before)
+						|| after_with
+					{
 						docs.push(soft_line_or_space());
 					} else if !first && !tight_before {
 						docs.push(space());
 					}
 					pending_sls = false;
+					after_with = false;
 					tight = matches!(
 						token.kind(),
 						SyntaxKind::LParen
@@ -833,6 +840,7 @@ impl Lowerer {
 					let call_parens =
 						tight_call_parens && prev_name && starts_with_lparen(child);
 					prev_name = false;
+					after_with = child.kind() == SyntaxKind::WithClause;
 					if clause {
 						if !first {
 							docs.push(soft_line_or_space());

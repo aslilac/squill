@@ -74,7 +74,8 @@ with
 					and pricing.cache_write_price is not null
 				)
 			)
-	) update chat_messages as msg
+	)
+update chat_messages as msg
 set total_cost_micros = message_costs.total_cost_micros
 from message_costs
 where msg.id = message_costs.id;

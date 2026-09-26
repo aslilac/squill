@@ -56,7 +56,8 @@ with
 		select
 			id, row_number() over (partition by chat_id order by created_at, id) as rn
 		from chat_queued_messages
-	) update chat_queued_messages
+	)
+update chat_queued_messages
 set position = ordered.rn
 from ordered
 where chat_queued_messages.id = ordered.id;

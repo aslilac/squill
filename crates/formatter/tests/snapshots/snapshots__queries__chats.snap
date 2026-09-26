@@ -166,7 +166,8 @@ with
 			coalesce((select max(ranked.next_pin_order) from ranked), 0)
 			+ 1 as pin_order
 		from target_chat
-	) update chats c
+	)
+update chats c
 set pin_order = updates.pin_order
 from updates
 where c.id = updates.id;
@@ -198,7 +199,8 @@ with
 				else ranked.current_position
 			end as pin_order
 		from ranked cross join target
-	) update chats c
+	)
+update chats c
 set pin_order = updates.pin_order
 from updates
 where c.id = updates.id;
@@ -243,7 +245,8 @@ with
 				else ranked.current_position
 			end as pin_order
 		from ranked cross join target
-	) update chats c
+	)
+update chats c
 set pin_order = updates.pin_order
 from updates
 where c.id = updates.id;
@@ -272,7 +275,8 @@ with
 			and role in ('user', 'assistant')
 		order by id desc
 		limit @batch_size::int
-	) update chat_messages cm
+	)
+update chat_messages cm
 -- NULL means "pending", empty tsvector means "backfilled, no text".
 set
 	search_tsv = coalesce(
@@ -816,7 +820,8 @@ with
 					chats.last_reasoning_effort
 				)
 			)
-	) insert into chat_messages (
+	)
+insert into chat_messages (
 	chat_id,
 	created_by,
 	api_key_id,
@@ -1437,7 +1442,8 @@ with
 			and archived = false
 			and context_aggregate_hash is null
 		returning id
-	) insert into chat_context_resources (
+	)
+insert into chat_context_resources (
 	chat_id,
 	source,
 	body_kind,
@@ -2416,7 +2422,8 @@ with
 		where archived = true and updated_at < @before_time::timestamptz
 		order by updated_at asc
 		limit @limit_count
-	) delete from chats
+	)
+delete from chats
 using deletable
 where chats.id = deletable.id and chats.archived = true;
 

@@ -62,7 +62,8 @@ with
 		from ai_provider_keys apk join chat_providers cp on cp.id = apk.provider_id
 		where cp.api_key != ''
 		order by apk.provider_id asc, apk.created_at asc, apk.id asc
-	) update ai_provider_keys apk
+	)
+update ai_provider_keys apk
 set
 	api_key = cp.api_key,
 	api_key_key_id = cp.api_key_key_id,

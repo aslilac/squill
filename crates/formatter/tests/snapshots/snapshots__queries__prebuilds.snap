@@ -402,7 +402,8 @@ with
 			and pj.worker_id is null
 			and pj.canceled_at is null
 			and pj.completed_at is null
-	) update provisioner_jobs
+	)
+update provisioner_jobs
 set canceled_at = @now::timestamptz, completed_at = @now::timestamptz
 from jobs_to_cancel
 where provisioner_jobs.id = jobs_to_cancel.id

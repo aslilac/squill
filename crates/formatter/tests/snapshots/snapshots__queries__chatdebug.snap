@@ -94,7 +94,8 @@ with
 		where
 			id = @run_id::uuid and chat_id = @chat_id::uuid and finished_at is null
 		returning chat_id
-	) insert into chat_debug_steps (
+	)
+insert into chat_debug_steps (
 	run_id,
 	chat_id,
 	step_number,
@@ -202,7 +203,8 @@ with
 		set updated_at = @now::timestamptz
 		where id = @run_id::uuid and chat_id = @chat_id::uuid
 		returning id, chat_id
-	) update chat_debug_steps
+	)
+update chat_debug_steps
 set updated_at = @now::timestamptz
 from touched_run
 where
@@ -264,7 +266,8 @@ with
 				step.assistant_message_id > @message_id::bigint
 				or step.history_tip_message_id > @message_id::bigint
 			)
-	) delete from chat_debug_runs
+	)
+delete from chat_debug_runs
 where chat_id = @chat_id::uuid and id in (select id from affected_runs);
 
 -- updated_at is the retention clock, so the window starts after the run
@@ -279,7 +282,8 @@ with
 		where updated_at < @before_time::timestamptz
 		order by updated_at asc
 		limit @limit_count::int
-	) delete from chat_debug_runs
+	)
+delete from chat_debug_runs
 using deletable
 where
 	chat_debug_runs.id = deletable.id

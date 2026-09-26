@@ -91,7 +91,8 @@ with
 		where captured_at < @before_time::timestamptz
 		order by captured_at asc
 		limit @limit_count
-	) delete from boundary_logs
+	)
+delete from boundary_logs
 using old_logs
 where boundary_logs.id = old_logs.id;
 
@@ -111,6 +112,7 @@ with
 			)
 		order by bs.updated_at asc
 		limit @limit_count
-	) delete from boundary_sessions
+	)
+delete from boundary_sessions
 using old_sessions
 where boundary_sessions.id = old_sessions.id;

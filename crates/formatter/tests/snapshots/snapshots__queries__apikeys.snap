@@ -95,7 +95,8 @@ with
 		where
 			expires_at < @before::timestamptz
 		limit @limit_count
-	) delete from api_keys
+	)
+delete from api_keys
 using expired_keys
 where api_keys.id = expired_keys.id;
 
@@ -127,7 +128,8 @@ with
 			user_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid
 			and token_name = ''
 			and expires_at > @now::timestamptz
-	) update api_keys
+	)
+update api_keys
 set expires_at = @now::timestamptz
 where
 	id in (

@@ -75,12 +75,8 @@ where (users.deleted = false);
 comment on view group_members_expanded is 'Joins group members with user information, organization ID, group name. Includes both regular group members and organization members (as part of the "Everyone" group).';
 -- TODO: do we *want* to use the default org here? how do we handle multi-org?
 with
-	default_org as (
-		select id
-		from organizations
-		where is_default = true
-		limit 1
-	) insert into organization_members (
+	default_org as (select id from organizations where is_default = true limit 1)
+insert into organization_members (
 	organization_id,
 	user_id,
 	created_at,

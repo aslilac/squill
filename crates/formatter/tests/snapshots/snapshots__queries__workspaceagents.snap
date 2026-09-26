@@ -150,7 +150,8 @@ with
 			unnest(sqlc.arg('value')::text[]) as value,
 			unnest(sqlc.arg('error')::text[]) as error,
 			unnest(sqlc.arg('collected_at')::timestamptz[]) as collected_at
-	) update workspace_agent_metadata wam
+	)
+update workspace_agent_metadata wam
 set value = m.value, error = m.error, collected_at = m.collected_at
 from metadata m
 where wam.workspace_agent_id = $1 and wam.key = m.key;
@@ -164,7 +165,8 @@ with
 			unnest(sqlc.arg('value')::text[]) as value,
 			unnest(sqlc.arg('error')::text[]) as error,
 			unnest(sqlc.arg('collected_at')::timestamptz[]) as collected_at
-	) update workspace_agent_metadata wam
+	)
+update workspace_agent_metadata wam
 set value = m.value, error = m.error, collected_at = m.collected_at
 from metadata m
 where wam.workspace_agent_id = m.workspace_agent_id and wam.key = m.key;
@@ -201,7 +203,8 @@ with
 		update workspace_agents
 		set logs_length = logs_length + @output_length
 		where workspace_agents.id = @agent_id
-	) insert into workspace_agent_logs (
+	)
+insert into workspace_agent_logs (
 	agent_id,
 	created_at,
 	output,
@@ -266,7 +269,8 @@ with
 				-- The agent never connected, and was created before @threshold
 				else wa.created_at < @threshold::timestamptz
 			end
-	) delete from workspace_agent_logs
+	)
+delete from workspace_agent_logs
 where agent_id in (select id from old_agents);
 
 -- name: GetWorkspaceAgentsInLatestBuildByWorkspaceID :many
@@ -474,7 +478,8 @@ with
 	purged_context_resources as (
 		delete from workspace_agent_context_resources
 		where workspace_agent_id in (select id from soft_deleted_agents)
-	) delete from workspace_agent_context_snapshots
+	)
+delete from workspace_agent_context_snapshots
 where workspace_agent_id in (select id from soft_deleted_agents);
 
 -- name: GetWorkspaceAgentsForMetrics :many
@@ -552,7 +557,8 @@ with
 	purged_context_resources as (
 		delete from workspace_agent_context_resources
 		where workspace_agent_id in (select id from soft_deleted_agents)
-	) delete from workspace_agent_context_snapshots
+	)
+delete from workspace_agent_context_snapshots
 where workspace_agent_id in (select id from soft_deleted_agents);
 
 -- name: SoftDeleteWorkspaceAgentsByWorkspaceID :exec
@@ -581,5 +587,6 @@ with
 	purged_context_resources as (
 		delete from workspace_agent_context_resources
 		where workspace_agent_id in (select id from soft_deleted_agents)
-	) delete from workspace_agent_context_snapshots
+	)
+delete from workspace_agent_context_snapshots
 where workspace_agent_id in (select id from soft_deleted_agents);

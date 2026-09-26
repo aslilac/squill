@@ -112,6 +112,7 @@ with
 			and updated_at < @before_time::timestamptz
 		order by updated_at asc
 		limit @limit_count::int
-	) delete from workspace_build_orchestrations
+	)
+delete from workspace_build_orchestrations
 using deletable
 where workspace_build_orchestrations.id = deletable.id;

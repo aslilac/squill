@@ -51,7 +51,8 @@ with
 		select distinct on (workspace_id) id, workspace_id
 		from workspace_builds
 		order by workspace_id, build_number desc
-	) update workspace_agents
+	)
+update workspace_agents
 set deleted = true
 where
 	id in (

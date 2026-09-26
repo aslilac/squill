@@ -69,6 +69,7 @@ with
 		where cf.created_at < @before_time::timestamptz and k.file_id is null
 		order by cf.created_at asc
 		limit @limit_count
-	) delete from chat_files
+	)
+delete from chat_files
 using deletable
 where chat_files.id = deletable.id;

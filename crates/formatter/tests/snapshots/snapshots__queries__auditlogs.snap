@@ -292,6 +292,7 @@ with
 			and action not in ('connect', 'disconnect', 'open', 'close')
 		order by time asc
 		limit @limit_count
-	) delete from audit_logs
+	)
+delete from audit_logs
 using old_logs
 where audit_logs.id = old_logs.id;

@@ -147,12 +147,8 @@ group by group_id;
 
 -- InsertUserGroupsByID adds a user to all provided groups, if they exist.
 -- name: InsertUserGroupsByID :many
-with
-	groups as (
-		select id
-		from groups
-		where groups.id = any(@group_ids::uuid[])
-	) insert into group_members (user_id, group_id)
+with groups as (select id from groups where groups.id = any(@group_ids::uuid[]))
+insert into group_members (user_id, group_id)
 select @user_id, groups.id
 from groups
 -- If there is a conflict, the user is already a member

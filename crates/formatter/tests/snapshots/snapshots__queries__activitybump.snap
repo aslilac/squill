@@ -72,7 +72,8 @@ with
 			and workspaces.owner_id != 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid
 		order by workspace_builds.build_number desc
 		limit 1
-	) update workspace_builds wb
+	)
+update workspace_builds wb
 set
 	updated_at = now(),
 	deadline = case
