@@ -50,21 +50,20 @@ import Docs from "../../layouts/Docs.astro";
 	<section>
 		<h2>Options</h2>
 		<p>
-			Every key has a matching flag. Keys are what you put in{" "}
-			<code>squill.toml</code>; flags win over both config layers.
+			Every key has a matching flag, and flags win over both config layers.
+			The flags with no key &mdash; <code>--check</code>,{" "}
+			<code>--strict</code>, <code>--locked</code>, and the rest &mdash; are
+			on the <a href="docs/cli/">command line</a> page.
 		</p>
+
+		<h3>Style</h3>
+		<p>How the output looks. All of these can differ from rule to rule.</p>
 		<div class="scroll">
-			<table>
+			<table class="options">
 				<thead>
 					<tr><th>key</th><th>flag</th><th>values</th><th>default</th></tr>
 				</thead>
 				<tbody>
-					<tr>
-						<td><code>dialect</code></td>
-						<td><code>--dialect</code></td>
-						<td><code>postgres</code> | <code>sqlite</code></td>
-						<td><code>postgres</code></td>
-					</tr>
 					<tr>
 						<td><code>indent</code></td>
 						<td><code>--indent</code></td>
@@ -94,6 +93,31 @@ import Docs from "../../layouts/Docs.astro";
 						<td><code>--quote-idents</code></td>
 						<td><code>as-needed</code> | <code>always</code></td>
 						<td><code>as-needed</code></td>
+					</tr>
+
+				</tbody>
+			</table>
+		</div>
+
+		<h3>Dialect and parameters</h3>
+		<p>
+			How squill reads the SQL. The <code>*-params</code> keys make a
+			driver&rsquo;s placeholders lex as parameters where the dialect has
+			other plans for them &mdash; in Postgres, <code>?</code> and{" "}
+			<code>@</code> are operators and <code>%</code> is modulo. Each is on
+			by default for the grammars whose code conventionally writes it.
+		</p>
+		<div class="scroll">
+			<table class="options">
+				<thead>
+					<tr><th>key</th><th>flag</th><th>values</th><th>default</th></tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td><code>dialect</code></td>
+						<td><code>--dialect</code></td>
+						<td><code>postgres</code> | <code>sqlite</code></td>
+						<td><code>postgres</code></td>
 					</tr>
 					<tr>
 						<td><code>at-params</code></td>
@@ -131,6 +155,24 @@ import Docs from "../../layouts/Docs.astro";
 							<code>python</code> grammar)</td
 						>
 					</tr>
+
+				</tbody>
+			</table>
+		</div>
+
+		<h3>Which files</h3>
+		<p>
+			What squill leaves alone. These apply to the whole config file, so
+			they belong at its top level rather than in a rule; see{" "}
+			<a href="docs/configuration/#skipping-files">skipping files</a> and{" "}
+			<a href="docs/frozen/">frozen paths</a>.
+		</p>
+		<div class="scroll">
+			<table class="options">
+				<thead>
+					<tr><th>key</th><th>flag</th><th>values</th><th>default</th></tr>
+				</thead>
+				<tbody>
 					<tr>
 						<td><code>ignore</code></td>
 						<td><code>--ignore</code></td>
@@ -159,23 +201,13 @@ import Docs from "../../layouts/Docs.astro";
 							not recorded locally</td>
 						<td><code>true</code></td>
 					</tr>
+
 				</tbody>
 			</table>
 		</div>
-		<p>
-			Flags with no config key: <code>--check</code>, <code>--stdin</code>{" "}
-			(or <code>-</code> as the path) / <code>--stdout</code>,{" "}
-			<code>--stdin-filepath &lt;path&gt;</code> (read stdin as the file at
-			that path, for editors: its config, rules, and ignores apply, and it
-			need not exist yet),{" "}
-			<code>--strict</code>, <code>--locked</code> (fail rather than record
-			a grammar URL <code>squill.lock</code> doesn&rsquo;t have, for CI),{" "}
-			<code>--no-config</code>,{" "}
-			<code>--version</code>, and <code>--help</code>.
-		</p>
 	</section>
 
-	<section>
+	<section id="skipping-files">
 		<h2>Skipping files</h2>
 		<p>
 			When recursing directories squill honors <code>.gitignore</code> and skips

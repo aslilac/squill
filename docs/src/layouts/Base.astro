@@ -361,6 +361,21 @@ const topNav = [
 			padding: 0.5rem 0.75rem;
 			border-bottom: 1px solid var(--edge);
 		}
+		/* The configuration page's option tables share their columns, so
+		   the three line up as one. */
+		table.options {
+			table-layout: fixed;
+			min-width: 44rem;
+		}
+		table.options th:nth-child(1) {
+			width: 17%;
+		}
+		table.options th:nth-child(2) {
+			width: 20%;
+		}
+		table.options th:nth-child(4) {
+			width: 22%;
+		}
 		/* Option names shouldn't break at their hyphens; the table is in a
 		   .scroll wrapper, so it can grow sideways instead. */
 		td code {
