@@ -8,7 +8,7 @@ Get familiar with its code style in the [playground](https://mckayla.dev/squill/
 
 ### Mise
 
-You can use [mise](https://mise.jdx.dev) and the Github backend, which will download a precompiled binary from the latest Github release.
+You can use [mise](https://mise.jdx.dev) to download a precompiled binary from the latest Github release.
 
 ```sh
 mise use -g github:aslilac/squill
@@ -86,7 +86,7 @@ SQL embedded in host code formats too: `squill fmt src/queries.rs` rewrites the 
 Embedded SQL copies the host file's own indent character, so a spaces-indented file never gains tabs. To set it deliberately — per language, from one config file — add a `[rust]`, `[go]`, `[python]`, `[javascript]`, `[typescript]`, or `[gleam]` section. A section takes the same keys as the top level (all but `ignore`, which is file-wide) and overrides them for files of that language:
 
 ```toml
-indent = "tab"
+indent = "tabs"
 
 [javascript]
 indent = "spaces"

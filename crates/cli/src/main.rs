@@ -40,7 +40,7 @@ Options:
                           (repeatable; relative to the working directory;
                           `*`, `**`, `?`, `[abc]`, `{a,b}` globs)
   --dialect <D>           postgres (default) | sqlite
-  --indent <STYLE>        tab (default) | spaces
+  --indent <STYLE>        tabs (default) | spaces
   --indent-width <N>      Indent width (and tab measure), default 2
   --max-width <N>         Target line width (20 to 500), default 80
   --keyword-case <CASE>   lower (default) | upper
@@ -64,8 +64,8 @@ Options:
 Configuration: the nearest squill.toml or .config/squill.toml at or
 above each formatted file supplies defaults (keys: dialect, indent,
 indent-width, max-width, keyword-case, quote-idents, at-params, ignore
-and frozen — arrays of glob patterns relative to the config file — and
-frozen-ref).
+and frozen — arrays of glob patterns relative to the config file —
+frozen-ref, and frozen-fetch).
 Explicit flags override the config. The search upward stops at a git
 repository root, a mount point, or a symlinked directory, so a config
 outside a checkout never reaches inside it. Directory recursion honors
@@ -77,7 +77,7 @@ section takes the same keys (except ignore) and overrides them for SQL
 embedded in files of that language — so one config can ask for two
 spaces in JavaScript and tabs in Go:
 
-    indent = \"tab\"
+    indent = \"tabs\"
 
     [javascript]
     indent = \"spaces\"
