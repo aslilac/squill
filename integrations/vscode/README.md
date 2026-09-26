@@ -2,7 +2,7 @@
 
 Formats SQL with [squill](https://github.com/aslilac/squill), a formatter for Postgres and SQLite: `.sql` files, and the SQL embedded in your Rust, Go, Python, JavaScript/TypeScript, Gleam, C++, C#, Java, and Kotlin. It also shows what squill leaves alone (statements it can't parse, embedded strings it won't rewrite) as warnings in the editor.
 
-The extension runs `squill lsp`. It uses the `squill` on your `PATH` if there is one, so the editor formats exactly as your CLI and CI do; otherwise it uses the squill it bundles. Each GitHub release has a build of the extension per platform (`squill-<version>-<platform>.vsix`: macOS on Apple silicon, Linux and Windows on x64 and ARM64) with that platform's squill inside. To use a particular squill, set `squill.path`.
+The extension runs `squill lsp`. It uses the `squill` on your `PATH` if there is one, so the editor formats exactly as your CLI and CI do; otherwise it uses the squill it bundles. The extension is packaged per platform (macOS on Apple silicon, Linux and Windows on x64 and ARM64), each with that platform's squill from the latest release inside. To use a particular squill, set `squill.path`.
 
 ## Formatting SQL files
 
