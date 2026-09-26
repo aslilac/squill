@@ -1,8 +1,5 @@
-name: Package VS Code extension
+name: Release VS Code extension
 
-# Run by hand when the extension changes. One package for every
-# platform: the extension downloads squill itself when it isn't
-# installed. The package is left as a workflow artifact to publish.
 on:
   workflow_dispatch:
 
