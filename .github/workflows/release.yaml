@@ -23,6 +23,15 @@ jobs:
             echo "tag ${{ github.ref_name }} does not match version $version in Cargo.toml"
             exit 1
           fi
+          # The editor extensions ship with each release, at its version.
+          vscode="v$(node -p 'require("./integrations/vscode/package.json").version')"
+          zed="v$(grep -m 1 '^version' integrations/zed/extension.toml | sed -r 's/version *= *"([[:digit:].]+)"/\1/')"
+          for pair in "integrations/vscode/package.json:$vscode" "integrations/zed/extension.toml:$zed"; do
+            if [ "${pair#*:}" != "${{ github.ref_name }}" ]; then
+              echo "tag ${{ github.ref_name }} does not match version ${pair#*:} in ${pair%%:*}"
+              exit 1
+            fi
+          done
         name: Verify version
 
       - uses: dtolnay/rust-toolchain@stable
@@ -41,22 +50,27 @@ jobs:
         release:
           - os: ubuntu-26.04-arm
             target: aarch64-unknown-linux-gnu
+            vscode: linux-arm64
             executable: squill
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+            vscode: linux-x64
             executable: squill
 
           - os: windows-latest
             target: aarch64-pc-windows-msvc
+            vscode: win32-arm64
             executable: squill.exe
 
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+            vscode: win32-x64
             executable: squill.exe
 
           - os: macos-latest
             target: aarch64-apple-darwin
+            vscode: darwin-arm64
             executable: squill
 
     name: Package.${{ matrix.release.target }}
@@ -93,8 +107,26 @@ jobs:
         working-directory: ./target/${{ matrix.release.target }}/release/
         if: ${{ startsWith(matrix.release.os, 'windows') }}
 
+      # The VS Code extension for this platform, with this squill in its
+      # bin/: the extension falls back to it when squill isn't on PATH.
+      - uses: pnpm/setup@v3
+        name: Configure pnpm
+        with:
+          runtime: node@24
+
+      - run: |
+          mkdir -p integrations/vscode/bin
+          cp target/${{ matrix.release.target }}/release/${{ matrix.release.executable }} integrations/vscode/bin/
+          cd integrations/vscode
+          pnpm run build
+          pnpm exec vsce package --no-dependencies --target ${{ matrix.release.vscode }} --out ../../dist/squill-${{ github.ref_name }}-${{ matrix.release.vscode }}.vsix
+        name: Package (VS Code) — ${{ matrix.release.vscode }}
+        shell: bash
+
       # Upload archives to a Github release for this version
       - uses: softprops/action-gh-release@v3
         name: Publish
         with:
-          files: ./dist/squill-${{ github.ref_name }}-${{ matrix.release.target }}.*
+          files: |
+            ./dist/squill-${{ github.ref_name }}-${{ matrix.release.target }}.*
+            ./dist/squill-${{ github.ref_name }}-${{ matrix.release.vscode }}.vsix

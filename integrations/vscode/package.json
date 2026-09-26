@@ -45,8 +45,8 @@
 			"properties": {
 				"squill.path": {
 					"type": "string",
-					"default": "squill",
-					"markdownDescription": "The `squill` executable: a name to look up on `PATH`, or a path to it."
+					"default": "",
+					"markdownDescription": "The `squill` executable. Empty (the default) uses the `squill` on your `PATH`, or else the one this extension bundles."
 				},
 				"squill.trace.server": {
 					"type": "string",

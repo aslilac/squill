@@ -2,7 +2,7 @@
 
 Formats SQL with [squill](https://github.com/aslilac/squill), a formatter for Postgres and SQLite: `.sql` files, and the SQL embedded in your Rust, Go, Python, JavaScript/TypeScript, Gleam, C++, C#, Java, and Kotlin. It also shows what squill leaves alone (statements it can't parse, embedded strings it won't rewrite) as warnings in the editor.
 
-The extension runs `squill lsp`, so squill itself must be installed. See [installation](https://github.com/aslilac/squill#installation). If it isn't on your `PATH`, set `squill.path`.
+The extension runs `squill lsp`. It uses the `squill` on your `PATH` if there is one, so the editor formats exactly as your CLI and CI do; otherwise it uses the squill it bundles. Each GitHub release has a build of the extension per platform (`squill-<version>-<platform>.vsix`: macOS on Apple silicon, Linux and Windows on x64 and ARM64) with that platform's squill inside. To use a particular squill, set `squill.path`.
 
 ## Formatting SQL files
 
@@ -35,7 +35,7 @@ Embedded SQL is only formatted in files that an `[[embedded]]` rule in your `squ
 
 ## Settings
 
-- `squill.path`: the `squill` executable, a name on `PATH` or a path. Default `squill`.
+- `squill.path`: the `squill` executable to run. Empty (the default) means the one on `PATH`, else the bundled one.
 - `squill.trace.server`: log the messages to and from the language server (`off`, `messages`, `verbose`).
 
 The **squill: Restart Language Server** command restarts it, and changing `squill.path` restarts it too. Edits to `squill.toml` apply without a restart.
