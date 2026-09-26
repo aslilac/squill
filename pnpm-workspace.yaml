@@ -1,0 +1,8 @@
+packages:
+  - docs
+  - integrations/vscode
+
+allowBuilds:
+  esbuild: true
+  # Only needed to sign a .vsix, which squill doesn't.
+  "@vscode/vsce-sign": false

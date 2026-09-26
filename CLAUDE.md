@@ -20,7 +20,7 @@ cargo run -p corpus-report -- --summary                 # corpus coverage number
 
 Snapshot tests use `insta` (formatter snapshots cover every file of every corpus under `corpus/`, named `<corpus>__<path>`). After an intentional formatting change, review/accept with `cargo insta review` (or `INSTA_UPDATE=always cargo test ...` then inspect the diff).
 
-Docs site (`docs/`, Astro + Monaco playground): `pnpm dev` / `pnpm build`. The pre-step (`scripts/build-wasm.sh`) compiles `crates/playground` to wasm; it needs the `wasm32-wasip1` target plus a C toolchain for the tree-sitter grammars. `nix develop` supplies both (see `flake.nix`); otherwise add the target with `rustup` and install wasi-sdk at `~/.local/wasi-sdk` (see `docs/README.md`).
+JS lives in one pnpm workspace rooted at the repo (`docs/` and `integrations/vscode/`, one lockfile). Docs site (`docs/`, Astro + Monaco playground): `pnpm dev` / `pnpm build`. The pre-step (`scripts/build-wasm.sh`) compiles `crates/playground` to wasm; it needs the `wasm32-wasip1` target plus a C toolchain for the tree-sitter grammars. `nix develop` supplies both (see `flake.nix`); otherwise add the target with `rustup` and install wasi-sdk at `~/.local/wasi-sdk` (see `docs/README.md`).
 
 ## Architecture
 
@@ -34,6 +34,7 @@ Pipeline: **lex → parse (CST) → doc IR → render → safety check**, one cr
 - **`crates/corpus`** — the list of vendored corpora (`corpus/coder` Postgres, `corpus/anki` and `corpus/vaultwarden` SQLite, `corpus/synapse` both, by file suffix) and each file's dialect and lex options. Every corpus harness walks it; a new corpus is one entry there plus a directory with a README and LICENSE.
 - **`crates/corpus-report`** — the corpus coverage harness (CI-only, kept out of `cargo install`).
 - **`crates/playground`** — wasm module for the docs-site playground (built with the `wasm-release` profile).
+- **`integrations/`** — editor clients for `squill lsp` (served by `crates/cli/src/lsp.rs`): `vscode/` (TypeScript, esbuild-bundled; formats SQL only, embedded SQL via the `source.formatSql` code action) and `zed/` (its own Cargo workspace, built by Zed for `wasm32-wasip2`, excluded from squill's).
 
 `crates/parser/fuzz/` and `crates/embed/tests/fixtures/sqlx_app/` are excluded from the workspace.
 
