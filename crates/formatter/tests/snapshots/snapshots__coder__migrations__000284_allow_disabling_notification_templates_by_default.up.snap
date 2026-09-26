@@ -37,6 +37,7 @@ begin
 	) then
 		raise exception 'cannot enqueue message: notification is not enabled';
 	end if;
+
 	return NEW;
 end;
 $$;

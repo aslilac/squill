@@ -83,6 +83,7 @@ begin
 			var_client_id || ',' || var_agent_id
 		);
 	end loop;
+
 	return null;
 end;
 $$;

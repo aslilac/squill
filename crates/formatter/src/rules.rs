@@ -1936,6 +1936,7 @@ impl Lowerer {
 	fn pl_block(&mut self, node: &SyntaxNode) -> Doc {
 		let mut docs = Vec::new();
 		let mut first = true;
+		let mut after_statement = false;
 		let mut label = Label::default();
 		for element in node.children_with_tokens() {
 			match element {
@@ -1956,15 +1957,20 @@ impl Lowerer {
 					}
 					self.push(&mut docs, token_leaf(token));
 					first = false;
+					after_statement = false;
 				}
 				SyntaxElement::Node(child) => {
+					let blank = after_statement && blank_line_before(child);
 					let doc = self.node(child);
 					if child.kind() == SyntaxKind::PlException {
 						docs.push(fresh_line());
 						self.push(&mut docs, doc);
+						after_statement = false;
 					} else {
-						// Declarations and statements: indented lines.
-						self.push(&mut docs, indent(concat([fresh_line(), doc])));
+						// Declarations and statements: indented lines, a
+						// blank line between them kept.
+						self.push(&mut docs, indent(concat([statement_break(blank), doc])));
+						after_statement = true;
 					}
 					first = false;
 				}
@@ -1983,6 +1989,7 @@ impl Lowerer {
 		let mut first = true;
 		let mut seen_end = false;
 		let mut tight_dot = false;
+		let mut after_statement = false;
 		let mut label = Label::default();
 		// A loop's query (`for r in select ...`): one group, so a short
 		// query stays on one line.
@@ -2015,6 +2022,7 @@ impl Lowerer {
 					}
 					self.push(&mut docs, token_leaf(token));
 					first = false;
+					after_statement = false;
 				}
 				SyntaxElement::Node(child) => {
 					let arm = matches!(
@@ -2025,6 +2033,7 @@ impl Lowerer {
 							| SyntaxKind::PlException
 					);
 					let statement = is_pl_statement(child.kind());
+					let blank = statement && after_statement && blank_line_before(child);
 					let clause = is_clause_level(child.kind());
 					if !clause {
 						flush_query(&mut docs, &mut query);
@@ -2047,7 +2056,7 @@ impl Lowerer {
 							self.push(&mut docs, doc);
 						}
 					} else if statement && !seen_end {
-						self.push(&mut docs, indent(concat([fresh_line(), doc])));
+						self.push(&mut docs, indent(concat([statement_break(blank), doc])));
 					} else {
 						// Range bounds after `..` attach tight.
 						if !first && !tight_dot {
@@ -2057,6 +2066,7 @@ impl Lowerer {
 					}
 					tight_dot = false;
 					first = false;
+					after_statement = statement && !seen_end;
 				}
 			}
 		}
@@ -2599,4 +2609,27 @@ impl ListJoiner {
 		}
 		self.any = true;
 	}
+}
+
+/// The line break before a statement in a PL/pgSQL body: a fresh line
+/// (a trailing comment may already have ended the previous one), and a
+/// blank line too where the author left one.
+fn statement_break(blank: bool) -> Doc {
+	if blank { concat([fresh_line(), hard_line()]) } else { fresh_line() }
+}
+
+/// Did the author leave a blank line before `node`'s code? Not when a
+/// comment comes between: a leading comment keeps its own blank line.
+fn blank_line_before(node: &SyntaxNode) -> bool {
+	let mut blank = false;
+	for token in node.descendants_with_tokens().filter_map(|el| el.into_token()) {
+		match token.kind() {
+			SyntaxKind::Whitespace => {
+				blank |= token.text().matches('\n').count() >= 2;
+			}
+			SyntaxKind::LineComment | SyntaxKind::BlockComment => return false,
+			_ => return blank,
+		}
+	}
+	false
 }

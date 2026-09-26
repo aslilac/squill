@@ -42,6 +42,7 @@ begin
 		NEW.name
 		using ERRCODE = 'unique_violation';
 	end if;
+
 	return NEW;
 end;
 $$;

@@ -7,6 +7,7 @@ begin
 	if to_regclass('chat_providers') is null then
 		return;
 	end if;
+
 	with
 		migrated_provider_ids as (
 			select id
@@ -19,6 +20,7 @@ begin
 	update chat_model_configs
 	set ai_provider_id = null
 	where ai_provider_id in (select id from migrated_provider_ids);
+
 	with
 		migrated_provider_ids as (
 			select id
@@ -30,6 +32,7 @@ begin
 		)
 	delete from user_ai_provider_keys
 	where ai_provider_id in (select id from migrated_provider_ids);
+
 	with
 		migrated_provider_ids as (
 			select id
@@ -41,6 +44,7 @@ begin
 		)
 	delete from ai_provider_keys
 	where provider_id in (select id from migrated_provider_ids);
+
 	with
 		migrated_provider_ids as (
 			select id

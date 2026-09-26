@@ -22,21 +22,25 @@ begin
 		from workspaces
 		where workspaces.organization_id = OLD.id and workspaces.deleted = false
 	);
+
 	template_count := (
 		select count(*) as count
 		from templates
 		where templates.organization_id = OLD.id and templates.deleted = false
 	);
+
 	group_count := (
 		select count(*) as count
 		from groups
 		where groups.organization_id = OLD.id
 	);
+
 	member_count := (
 		select count(*) as count
 		from organization_members
 		where organization_members.organization_id = OLD.id
 	);
+
 	provisioner_keys_count := (
 		select count(*) as count
 		from provisioner_keys
@@ -55,6 +59,7 @@ begin
 		template_count,
 		provisioner_keys_count;
 	end if;
+
 	if (group_count) > 1 then
 		raise exception 'cannot delete organization: organization has % groups that must be deleted first',
 		group_count - 1;
@@ -67,6 +72,7 @@ begin
 		raise exception 'cannot delete organization: organization has % members that must be deleted first',
 		member_count - 1;
 	end if;
+
 	return NEW;
 end;
 $$;

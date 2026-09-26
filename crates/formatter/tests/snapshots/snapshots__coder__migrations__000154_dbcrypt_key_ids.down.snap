@@ -19,6 +19,7 @@ begin
 	) then
 		raise exception 'Cannot drop dbcrypt_keys table as there are still foreign key references to it from user_links.';
 	end if;
+
 	if exists (
 		select *
 		from git_auth_links

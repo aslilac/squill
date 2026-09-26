@@ -44,6 +44,7 @@ begin
 	) then
 		raise exception 'cannot enqueue message: user has disabled this notification';
 	end if;
+
 	return NEW;
 end;
 $$;

@@ -23,6 +23,7 @@ begin
 		raise exception 'Unhandled usage event type in aggregate_usage_event: %',
 		NEW.event_type;
 	end if;
+
 	insert into usage_events_daily (day, event_type, usage_data)
 	values
 		(
@@ -44,6 +45,7 @@ begin
 						+ coalesce((NEW.event_data ->> 'count')::bigint, 0)
 					)
 			end;
+
 	return NEW;
 end;
 $$;

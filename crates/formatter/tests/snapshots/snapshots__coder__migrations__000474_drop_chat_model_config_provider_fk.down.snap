@@ -26,6 +26,7 @@ begin
 	from chat_model_configs cmc
 		left join chat_providers cp on cp.provider = cmc.provider
 	where cp.provider is null;
+
 	alter table chat_model_configs
 		add constraint chat_model_configs_provider_fkey foreign key (
 			provider

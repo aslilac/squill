@@ -136,24 +136,30 @@ begin
 	if TG_OP = 'INSERT' and NEW.revision is not null then
 		raise exception 'chat_messages.revision must be assigned by trigger';
 	end if;
+
 	if TG_OP = 'UPDATE' then
 		if OLD.chat_id is distinct from NEW.chat_id then
 			raise exception 'chat_messages.chat_id is immutable';
 		end if;
+
 		if OLD.revision is distinct from NEW.revision then
 			raise exception 'chat_messages.revision must be assigned by trigger';
 		end if;
+
 		if OLD is not distinct from NEW then
 			return NEW;
 		end if;
 	end if;
+
 	select snapshot_version
 	into chat_snapshot_version
 	from chats
 	where id = NEW.chat_id;
+
 	if chat_snapshot_version is null then
 		raise exception 'chat % does not exist', NEW.chat_id;
 	end if;
+
 	new.revision = chat_snapshot_version;
 	return NEW;
 end;
@@ -245,7 +251,9 @@ begin
 	else
 		changed_chat_id = NEW.chat_id;
 	end if;
+
 	update chats set queue_version = snapshot_version where id = changed_chat_id;
+
 	if TG_OP = 'DELETE' then
 		return OLD;
 	end if;
@@ -280,12 +288,15 @@ begin
 	if OLD.retry_state_version is distinct from NEW.retry_state_version then
 		raise exception 'chats.retry_state_version must be assigned by trigger';
 	end if;
+
 	if NEW.generation_attempt is distinct from OLD.generation_attempt then
 		new.retry_state = null;
 	end if;
+
 	if NEW.retry_state is distinct from OLD.retry_state then
 		new.retry_state_version = NEW.snapshot_version;
 	end if;
+
 	return NEW;
 end;
 $$;

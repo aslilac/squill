@@ -43,10 +43,12 @@ begin
 		insert into user_status_changes (user_id, new_status, changed_at)
 		values (NEW.id, NEW.status, NEW.updated_at);
 	end if;
+
 	if OLD.deleted = false and NEW.deleted = true then
 		insert into user_deleted (user_id, deleted_at)
 		values (NEW.id, NEW.updated_at);
 	end if;
+
 	return NEW;
 end;
 $$;

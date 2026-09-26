@@ -288,3 +288,15 @@ fn plpgsql_trailing_comments() {
 		"do $$\ndeclare\n\tn int := 0; -- count\nbegin\n\tif n > 0 then -- positive\n\t\tperform 1; -- one\n\telse\n\t\tperform 2; -- two\n\tend if; -- done\nend\n$$;\n"
 	);
 }
+
+/// Blank lines between PL/pgSQL statements are the author's, kept (one
+/// at most); none after a block opens or before it closes.
+#[test]
+fn plpgsql_blank_lines_between_statements() {
+	assert_eq!(
+		format(
+			"do $$ declare a int := 1;\n\nb int := 2;\nbegin\n\nperform 1;\n\n\nperform 2;\nif a > 0 then perform 3;\n\nperform 4; end if;\n\nend $$;"
+		),
+		"do $$\ndeclare\n\ta int := 1;\n\n\tb int := 2;\nbegin\n\tperform 1;\n\n\tperform 2;\n\tif a > 0 then\n\t\tperform 3;\n\n\t\tperform 4;\n\tend if;\nend\n$$;\n"
+	);
+}
