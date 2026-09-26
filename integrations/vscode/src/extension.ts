@@ -1,4 +1,5 @@
-// squill for VS Code: a thin client for `squill lsp`.
+// squill for VS Code: a thin client for squill's language server,
+// `squill language-server start`.
 //
 // VS Code runs one formatter per document, so squill registers as the
 // formatter only for SQL. In other languages it contributes its
@@ -99,7 +100,7 @@ async function start() {
 	}
 	const serverOptions: ServerOptions = {
 		command,
-		args: ["lsp"],
+		args: ["language-server", "start"],
 		// Rules and ignore globs in a squill.toml are relative to it, but
 		// anything given relative to the working directory resolves from
 		// the workspace root, as it would in a terminal there.
@@ -121,7 +122,7 @@ async function start() {
 		client = undefined;
 		const message = err instanceof Error ? err.message : String(err);
 		void vscode.window.showErrorMessage(
-			`squill couldn't start \`${command} lsp\`: ${message}`,
+			`squill couldn't start \`${command} language-server start\`: ${message}`,
 		);
 	}
 }

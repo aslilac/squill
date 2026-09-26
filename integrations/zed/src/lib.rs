@@ -1,5 +1,5 @@
-//! squill for Zed: runs `squill lsp` for SQL, and for the languages
-//! squill formats embedded SQL in.
+//! squill for Zed: runs `squill language-server start` for SQL, and for
+//! the languages squill formats embedded SQL in.
 //!
 //! Which squill: `lsp.squill.binary.path` from Zed's settings, else the
 //! `squill` on the worktree's PATH (so the editor formats exactly as
@@ -107,7 +107,7 @@ impl zed::Extension for Squill {
 		let args = binary
 			.as_ref()
 			.and_then(|binary| binary.arguments.clone())
-			.unwrap_or_else(|| vec!["lsp".to_string()]);
+			.unwrap_or_else(|| vec!["language-server".to_string(), "start".to_string()]);
 		let command = match binary
 			.and_then(|binary| binary.path)
 			.or_else(|| worktree.which("squill"))

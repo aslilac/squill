@@ -18,7 +18,7 @@ default = [
 # an https URL locked in squill.lock). Pulls in wasmtime, whose build
 # needs cmake.
 external-grammars = ["embed/external-grammars", "dep:reqwest", "dep:sha2"]
-# `squill lsp`, a language server for editors.
+# `squill language-server start`, a language server for editors.
 lsp = ["dep:lsp-server", "dep:lsp-types", "dep:serde_json"]
 # The built-in grammars, one feature each: build with
 # `--no-default-features --features rust,go` for just those.

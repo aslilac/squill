@@ -29,15 +29,24 @@ use config::PartialOptions;
 /// tracks the workspace manifest without a second place to bump.
 const VERSION: &str = concat!("squill ", env!("CARGO_PKG_VERSION"));
 
+#[cfg(feature = "lsp")]
+const LANGUAGE_SERVER_USAGE: &str = "\
+Usage: squill language-server start
+
+Runs squill's language server on stdin/stdout, for editors: document
+formatting, and diagnostics for what squill leaves alone.
+";
+
 const USAGE: &str = "\
 squill — a SQL formatter
 
 Usage: squill fmt [OPTIONS] [PATHS...]
        squill init [--dialect <D>] [--yes]
-       squill lsp
+       squill language-server start
 
-`squill lsp` runs a language server on stdin/stdout, for editors:
-document formatting, and diagnostics for what squill leaves alone.
+`squill language-server start` runs a language server on stdin/stdout,
+for editors: document formatting, and diagnostics for what squill
+leaves alone.
 
 `squill init` writes a starter squill.toml for the project in the
 working directory: pick the languages whose embedded SQL to format
@@ -176,7 +185,21 @@ fn parse_args() -> Result<Invocation, String> {
 	match argv.next().as_deref() {
 		Some("fmt") => {}
 		#[cfg(feature = "lsp")]
-		Some("lsp") => return Ok(Invocation::Lsp),
+		Some("language-server") => {
+			return match (argv.next().as_deref(), argv.next()) {
+				(Some("start"), None) => Ok(Invocation::Lsp),
+				(Some("-h" | "--help"), None) => {
+					Ok(Invocation::Print(LANGUAGE_SERVER_USAGE.to_string()))
+				}
+				(None, _) => Err(LANGUAGE_SERVER_USAGE.to_string()),
+				(Some("start"), Some(extra)) => {
+					Err(format!("unknown argument `{extra}`\n\n{LANGUAGE_SERVER_USAGE}"))
+				}
+				(Some(other), _) => Err(format!(
+					"unknown language-server command `{other}`\n\n{LANGUAGE_SERVER_USAGE}"
+				)),
+			};
+		}
 		Some("init") => {
 			if argv.peek().is_some_and(|arg| arg == "-h" || arg == "--help") {
 				return Ok(Invocation::Print(init::USAGE.to_string()));

@@ -1443,7 +1443,7 @@ fn stdin_filepath_passes_through_what_it_would_not_format() {
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// Talk to `squill lsp` over stdio: send `messages` (each framed with a
+/// Talk to `squill language-server start` over stdio: send `messages` (each framed with a
 /// Content-Length header), then read everything it writes back.
 #[cfg(feature = "lsp")]
 fn lsp_session(
@@ -1452,7 +1452,7 @@ fn lsp_session(
 ) -> Vec<serde_json::Value> {
 	let mut child = squill()
 		.current_dir(dir)
-		.arg("lsp")
+		.args(["language-server", "start"])
 		.stdin(Stdio::piped())
 		.stdout(Stdio::piped())
 		.spawn()
@@ -1465,7 +1465,11 @@ fn lsp_session(
 	}
 	drop(stdin);
 	let output = child.wait_with_output().expect("wait");
-	assert!(output.status.success(), "squill lsp exited with {}", output.status);
+	assert!(
+		output.status.success(),
+		"the language server exited with {}",
+		output.status
+	);
 	let mut out = &output.stdout[..];
 	let mut replies = Vec::new();
 	while let Some(at) = out.windows(4).position(|w| w == b"\r\n\r\n") {

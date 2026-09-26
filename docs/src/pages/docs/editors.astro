@@ -52,7 +52,8 @@ formatter = &lbrace; command = "sh", args = ["-c", "rustfmt --edition 2024 | squ
 	<section>
 		<h2>Language server</h2>
 		<p>
-			<code>squill lsp</code> runs a language server on stdin and stdout. It
+			<code>squill language-server start</code> runs a language server on
+			stdin and stdout. It
 			formats documents the same way (by their path, config and rules
 			included), and it reports what squill leaves alone as warnings where
 			they are: statements it passed through verbatim, and embedded strings
@@ -62,7 +63,7 @@ formatter = &lbrace; command = "sh", args = ["-c", "rustfmt --edition 2024 | squ
 		<p>In Helix, register it and use it for SQL:</p>
 		<pre><code>[language-server.squill]
 command = "squill"
-args = ["lsp"]
+args = ["language-server", "start"]
 
 [[language]]
 name = "sql"
@@ -83,7 +84,7 @@ language-servers = ["rust-analyzer", &lbrace; name = "squill", only-features = [
 			squill&rsquo;s Zed extension, in{" "}
 			<a href="https://github.com/aslilac/squill/tree/trunk/integrations/zed"
 				><code>integrations/zed</code></a
-			>, runs <code>squill lsp</code> for SQL and the languages it formats
+			>, runs squill&rsquo;s language server for SQL and the languages it formats
 			embedded SQL in; install it with <strong>zed: install dev
 			extension</strong>, and see its README for settings. Without it, an
 			external formatter works too.
@@ -133,7 +134,7 @@ language-servers = ["rust-analyzer", &lbrace; name = "squill", only-features = [
 			squill&rsquo;s VS Code extension, in{" "}
 			<a href="https://github.com/aslilac/squill/tree/trunk/integrations/vscode"
 				><code>integrations/vscode</code></a
-			>, runs <code>squill lsp</code>: it formats SQL files, and a{" "}
+			>, runs squill&rsquo;s language server: it formats SQL files, and a{" "}
 			<code>source.formatSql</code> code action formats embedded SQL on save,
 			after the language&rsquo;s own formatter. Build it with{" "}
 			<code>pnpm install &amp;&amp; pnpm run build &amp;&amp; pnpm run package</code>{" "}

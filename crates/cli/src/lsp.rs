@@ -1,4 +1,5 @@
-//! `squill lsp`: a language server, for editors that speak LSP.
+//! `squill language-server start`: a language server, for editors that
+//! speak LSP.
 //!
 //! It offers whole-document formatting and publishes squill's
 //! diagnostics (statements passed through verbatim, embedded strings it
@@ -81,13 +82,13 @@ pub fn run() -> ExitCode {
 	let (connection, io_threads) = Connection::stdio();
 	let result = serve(connection);
 	if let Err(message) = result {
-		eprintln!("squill lsp: {message}");
+		eprintln!("squill language-server: {message}");
 		return ExitCode::from(1);
 	}
 	match io_threads.join() {
 		Ok(()) => ExitCode::SUCCESS,
 		Err(err) => {
-			eprintln!("squill lsp: {err}");
+			eprintln!("squill language-server: {err}");
 			ExitCode::from(1)
 		}
 	}
