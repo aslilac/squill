@@ -1,4 +1,5 @@
 ---
+import Code from "../../components/Code.astro";
 import Docs from "../../layouts/Docs.astro";
 ---
 
@@ -19,7 +20,7 @@ import Docs from "../../layouts/Docs.astro";
 			its embedded SQL formatted and a <code>*.sql.sqlite</code> file its
 			dialect. The file doesn&rsquo;t need to exist yet.
 		</p>
-		<pre><code>squill fmt --stdin-filepath src/db.rs &lt; src/db.rs</code></pre>
+		<Code lang="sh" code={`squill fmt --stdin-filepath src/db.rs < src/db.rs`} />
 		<p>
 			A buffer squill wouldn&rsquo;t format as a file comes back unchanged:
 			an <code>ignore</code>d or <a href="docs/frozen/">frozen</a> path, or a
@@ -35,18 +36,18 @@ import Docs from "../../layouts/Docs.astro";
 			<code>%&lbrace;buffer_name&rbrace;</code> passes the buffer&rsquo;s
 			path:
 		</p>
-		<pre><code>[[language]]
+		<Code lang="toml" file="languages.toml" code={`[[language]]
 name = "sql"
-formatter = &lbrace; command = "squill", args = ["fmt", "--stdin-filepath", "%&lbrace;buffer_name&rbrace;"] &rbrace;
-auto-format = true</code></pre>
+formatter = { command = "squill", args = ["fmt", "--stdin-filepath", "%{buffer_name}"] }
+auto-format = true`} />
 		<p>
 			A Helix formatter replaces the language server&rsquo;s, and runs alone.
 			For SQL embedded in another language, pipe that language&rsquo;s own
 			formatter into squill:
 		</p>
-		<pre><code>[[language]]
+		<Code lang="toml" file="languages.toml" code={`[[language]]
 name = "rust"
-formatter = &lbrace; command = "sh", args = ["-c", "rustfmt --edition 2024 | squill fmt --stdin-filepath \"$0\"", "%&lbrace;buffer_name&rbrace;"] &rbrace;</code></pre>
+formatter = { command = "sh", args = ["-c", "rustfmt --edition 2024 | squill fmt --stdin-filepath \\"$0\\"", "%{buffer_name}"] }`} />
 	</section>
 
 	<section>
@@ -61,21 +62,21 @@ formatter = &lbrace; command = "sh", args = ["-c", "rustfmt --edition 2024 | squ
 			to <code>squill.toml</code> apply without a restart.
 		</p>
 		<p>In Helix, register it and use it for SQL:</p>
-		<pre><code>[language-server.squill]
+		<Code lang="toml" file="languages.toml" code={`[language-server.squill]
 command = "squill"
 args = ["language-server", "start"]
 
 [[language]]
 name = "sql"
 language-servers = ["squill"]
-auto-format = true</code></pre>
+auto-format = true`} />
 		<p>
 			Next to another language&rsquo;s own server, it can contribute just its
 			diagnostics about embedded SQL, while that server keeps formatting:
 		</p>
-		<pre><code>[[language]]
+		<Code lang="toml" file="languages.toml" code={`[[language]]
 name = "rust"
-language-servers = ["rust-analyzer", &lbrace; name = "squill", only-features = ["diagnostics"] &rbrace;]</code></pre>
+language-servers = ["rust-analyzer", { name = "squill", only-features = ["diagnostics"] }]`} />
 	</section>
 
 	<section>
@@ -94,38 +95,38 @@ language-servers = ["rust-analyzer", &lbrace; name = "squill", only-features = [
 			<code>settings.json</code> set squill as an external formatter.{" "}
 			<code>&lbrace;buffer_path&rbrace;</code> passes the buffer&rsquo;s path:
 		</p>
-		<pre><code>&lbrace;
-  "languages": &lbrace;
-    "SQL": &lbrace;
-      "formatter": &lbrace;
-        "external": &lbrace;
+		<Code lang="jsonc" file="settings.json" code={`{
+  "languages": {
+    "SQL": {
+      "formatter": {
+        "external": {
           "command": "squill",
-          "arguments": ["fmt", "--stdin-filepath", "&lbrace;buffer_path&rbrace;"]
-        &rbrace;
-      &rbrace;
-    &rbrace;
-  &rbrace;
-&rbrace;</code></pre>
+          "arguments": ["fmt", "--stdin-filepath", "{buffer_path}"]
+        }
+      }
+    }
+  }
+}`} />
 		<p>
 			Zed runs a list of formatters in order, so for SQL embedded in another
 			language, keep its language server&rsquo;s formatting and follow it with
 			squill:
 		</p>
-		<pre><code>&lbrace;
-  "languages": &lbrace;
-    "Rust": &lbrace;
+		<Code lang="jsonc" file="settings.json" code={`{
+  "languages": {
+    "Rust": {
       "formatter": [
-        &lbrace; "language_server": &lbrace; "name": "rust-analyzer" &rbrace; &rbrace;,
-        &lbrace;
-          "external": &lbrace;
+        { "language_server": { "name": "rust-analyzer" } },
+        {
+          "external": {
             "command": "squill",
-            "arguments": ["fmt", "--stdin-filepath", "&lbrace;buffer_path&rbrace;"]
-          &rbrace;
-        &rbrace;
+            "arguments": ["fmt", "--stdin-filepath", "{buffer_path}"]
+          }
+        }
       ]
-    &rbrace;
-  &rbrace;
-&rbrace;</code></pre>
+    }
+  }
+}`} />
 	</section>
 
 	<section>
@@ -148,14 +149,14 @@ language-servers = ["rust-analyzer", &lbrace; name = "squill", only-features = [
 				>Custom Local Formatters</a
 			> extension can run it for SQL files:
 		</p>
-		<pre><code>&lbrace;
+		<Code lang="jsonc" file="settings.json" code={`{
   "customLocalFormatters.formatters": [
-    &lbrace; "command": "squill fmt --stdin", "languages": ["sql"] &rbrace;
+    { "command": "squill fmt --stdin", "languages": ["sql"] }
   ],
-  "[sql]": &lbrace;
+  "[sql]": {
     "editor.defaultFormatter": "jkillian.custom-local-formatters"
-  &rbrace;
-&rbrace;</code></pre>
+  }
+}`} />
 		<div class="note">
 			<p>
 				That extension can&rsquo;t pass the buffer&rsquo;s path, so squill

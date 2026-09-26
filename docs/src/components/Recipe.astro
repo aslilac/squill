@@ -5,7 +5,7 @@
 // shows them exactly as written and never needs syncing by hand.
 import { readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { highlight as shiki } from "./highlight.js";
+import { highlight as shiki, highlightHost } from "./highlight.js";
 
 const { name, lang } = Astro.props;
 
@@ -33,6 +33,19 @@ const after = all.find((file) => file.startsWith("after."));
 const labels = { cpp: "c++", csharp: "c#" };
 const label = (id) => labels[id] ?? id;
 const highlight = (code, as = lang) => shiki(code.trimEnd(), as);
+// Host code comes in two versions, its SQL highlighted or left as plain
+// string, for the page-wide toggle; a plain .sql recipe is SQL either way.
+const host = async (file) => {
+	if (lang === "sql") {
+		const html = await highlight(read(file));
+		return { sql: html, plain: html };
+	}
+	return highlightHost(read(file).trimEnd(), lang);
+};
+const panes = [
+	{ tab: "before", ...(await host(before)) },
+	{ tab: "after", ...(await host(after)) },
+];
 // What each config-side file is written in, for its caption and colors.
 const kind = (path) =>
 	path.endsWith(".scm") ? "query" : path.endsWith(".toml") ? "toml" : "yaml";
@@ -51,14 +64,77 @@ const kind = (path) =>
 			))
 		}
 	</div>
-	<div class="pair stacked">
+	<div class="pair stacked" data-tabs>
 		<figure>
-			<figcaption>before <span>{label(lang)}</span></figcaption>
-			<div set:html={await highlight(read(before))} />
-		</figure>
-		<figure>
-			<figcaption>after <span class="tidy">✓ squill fmt</span></figcaption>
-			<div set:html={await highlight(read(after))} />
+			<figcaption class="tabbar">
+				<span role="tablist">
+					{
+						panes.map(({ tab }) => (
+							<button
+								type="button"
+								role="tab"
+								data-tab={tab}
+								aria-selected={String(tab === "after")}
+							>
+								{tab}
+							</button>
+						))
+					}
+				</span>
+				<span class="tab-tools">
+					{
+						lang !== "sql" && (
+							<button type="button" class="sql-toggle" aria-pressed="true">
+								highlight sql
+							</button>
+						)
+					}
+					<span>{label(lang)}</span>
+				</span>
+			</figcaption>
+			{
+				panes.map(({ tab, sql, plain }) => (
+					<div role="tabpanel" data-panel={tab} hidden={tab !== "after"}>
+						<div class="sql-on" set:html={sql} />
+						<div class="sql-off" set:html={plain} />
+					</div>
+				))
+			}
 		</figure>
 	</div>
 </div>
+
+<script>
+	// Tabs switch within one recipe; the SQL toggle is page-wide, and
+	// remembered.
+	const root = document.documentElement;
+	const setPlain = (plain: boolean) => {
+		root.classList.toggle("plain-sql", plain);
+		for (const button of document.querySelectorAll(".sql-toggle")) {
+			button.setAttribute("aria-pressed", String(!plain));
+		}
+	};
+	try {
+		setPlain(localStorage.getItem("squill.plain-sql") === "1");
+	} catch {}
+	document.addEventListener("click", (event) => {
+		const target = event.target as Element;
+		const tab = target.closest<HTMLElement>("[data-tab]");
+		if (tab) {
+			const tabs = tab.closest("[data-tabs]")!;
+			for (const other of tabs.querySelectorAll("[data-tab]")) {
+				other.setAttribute("aria-selected", String(other === tab));
+			}
+			for (const panel of tabs.querySelectorAll<HTMLElement>("[data-panel]")) {
+				panel.hidden = panel.dataset.panel !== tab.dataset.tab;
+			}
+		}
+		if (target.closest(".sql-toggle")) {
+			const plain = !root.classList.contains("plain-sql");
+			setPlain(plain);
+			try {
+				localStorage.setItem("squill.plain-sql", plain ? "1" : "0");
+			} catch {}
+		}
+	});
+</script>

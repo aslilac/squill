@@ -1,4 +1,5 @@
 ---
+import Code from "../../components/Code.astro";
 import Docs from "../../layouts/Docs.astro";
 ---
 
@@ -15,9 +16,9 @@ import Docs from "../../layouts/Docs.astro";
 			whatever it is running on. Nothing has to know the machine&rsquo;s os or
 			architecture, which is what makes it the easy one to drop into CI.
 		</p>
-		<pre class="dark"><code>mise use -g github:aslilac/squill
+		<Code lang="sh" code={`mise use -g github:aslilac/squill
 
-squill fmt --check .</code></pre>
+squill fmt --check .`} />
 		<p>
 			Pin a version with <code>github:aslilac/squill@0.3.0</code>. mise verifies
 			GitHub artifact attestations and SLSA provenance on install.
@@ -30,9 +31,9 @@ squill fmt --check .</code></pre>
 			The flake exposes the binary as its default package, so there is no
 			install step at all if you only want to run it once.
 		</p>
-		<pre class="dark"><code>nix run github:aslilac/squill -- fmt --check .
+		<Code lang="sh" code={`nix run github:aslilac/squill -- fmt --check .
 
-nix shell github:aslilac/squill</code></pre>
+nix shell github:aslilac/squill`} />
 		<p>
 			It builds from source, so it covers platforms the release matrix does
 			not.
@@ -45,8 +46,7 @@ nix shell github:aslilac/squill</code></pre>
 			Cargo can clone the source, check out the release tag, and install the
 			binary in one command. This is the route that needs a Rust toolchain.
 		</p>
-		<pre
-			class="dark"><code>cargo install --git https://github.com/aslilac/squill.git --tag v0.3.0 cli --bin squill</code></pre>
+		<Code lang="sh" code={`cargo install --git https://github.com/aslilac/squill.git --tag v0.3.0 cli --bin squill`} />
 	</section>
 
 	<section>
@@ -56,10 +56,9 @@ nix shell github:aslilac/squill</code></pre>
 				href="https://github.com/aslilac/squill/releases">GitHub releases</a
 			>: Linux and Windows on x86_64 and arm64, and macOS on arm64.
 		</p>
-		<pre
-			class="dark"><code>curl -fsSL https://github.com/aslilac/squill/releases/download/v0.3.0/squill-v0.3.0-x86_64-unknown-linux-gnu.tar.gz | tar xz
+		<Code lang="sh" code={`curl -fsSL https://github.com/aslilac/squill/releases/download/v0.3.0/squill-v0.3.0-x86_64-unknown-linux-gnu.tar.gz | tar xz
 cp squill /usr/local/bin/
-squill fmt --check .</code></pre>
+squill fmt --check .`} />
 	</section>
 
 	<section>
@@ -69,7 +68,7 @@ squill fmt --check .</code></pre>
 			writes nothing, prints a diff for anything that would change, and exits 1
 			if there is anything to report.
 		</p>
-		<pre class="dark"><code>squill fmt --check .</code></pre>
+		<Code lang="sh" code={`squill fmt --check .`} />
 		<p>
 			Add <code>--strict</code> to also fail when a statement could not be
 			parsed and was passed through verbatim &mdash; useful once you expect

@@ -1,4 +1,5 @@
 ---
+import Code from "../components/Code.astro";
 import { codeToHtml } from "shiki";
 import Base from "../layouts/Base.astro";
 import { colors, shikiTheme } from "../playground/theme.js";
@@ -114,9 +115,9 @@ ${tail}</code></pre>`;
 
 	<section>
 		<h2>Get started</h2>
-		<pre class="dark"><code>mise use -g github:aslilac/squill
+		<Code lang="sh" code={`mise use -g github:aslilac/squill
 
-squill fmt --check .</code></pre>
+squill fmt --check .`} />
 		<p>
 			That is the short version; <a href="docs/install/">Install</a> covers Nix,
 			Cargo, and release archives, and what to run in CI.

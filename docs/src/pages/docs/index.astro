@@ -1,4 +1,5 @@
 ---
+import Code from "../../components/Code.astro";
 import Docs from "../../layouts/Docs.astro";
 ---
 
@@ -13,9 +14,9 @@ import Docs from "../../layouts/Docs.astro";
 			<a href="docs/install/">Install</a> covers mise, Nix, Cargo, and release
 			archives, plus what to run in CI. The short version:
 		</p>
-		<pre class="dark"><code>mise use -g github:aslilac/squill
+		<Code lang="sh" code={`mise use -g github:aslilac/squill
 
-squill fmt --check .</code></pre>
+squill fmt --check .`} />
 	</section>
 
 	<section>

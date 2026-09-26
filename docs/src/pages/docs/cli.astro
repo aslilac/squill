@@ -1,4 +1,5 @@
 ---
+import Code from "../../components/Code.astro";
 import Docs from "../../layouts/Docs.astro";
 ---
 
@@ -9,9 +10,9 @@ import Docs from "../../layouts/Docs.astro";
 >
 	<section>
 		<h2>Commands</h2>
-		<pre class="dark"><code>squill fmt [OPTIONS] [PATHS...]
-squill init [--dialect &lt;D&gt;] [--yaml] [--yes]
-squill language-server start</code></pre>
+		<Code lang="text" code={`squill fmt [OPTIONS] [PATHS...]
+squill init [--dialect <D>] [--yaml] [--yes]
+squill language-server start`} />
 		<ul>
 			<li>
 				<code>squill fmt</code> formats files, below.
@@ -165,8 +166,8 @@ squill language-server start</code></pre>
 			Whatever squill leaves alone, it says so on stderr, one line each, with
 			the place and the reason:
 		</p>
-		<pre><code>queries/report.sql:14:1: expected a statement, found `frobnicate` (statement passed through verbatim)
-src/db.rs:42:25: embedded SQL did not parse (expected a statement, found `frobnicate`); left unformatted</code></pre>
+		<Code lang="text" code={`queries/report.sql:14:1: expected a statement, found \`frobnicate\` (statement passed through verbatim)
+src/db.rs:42:25: embedded SQL did not parse (expected a statement, found \`frobnicate\`); left unformatted`} />
 		<p>
 			A summary line follows: how many files were checked, how many were (or
 			would be) reformatted, and how many diagnostics there were. A
@@ -208,7 +209,7 @@ src/db.rs:42:25: embedded SQL did not parse (expected a statement, found `frobni
 
 	<section>
 		<h2>In CI</h2>
-		<pre class="dark"><code>squill fmt --check --strict --locked .</code></pre>
+		<Code lang="sh" code={`squill fmt --check --strict --locked .`} />
 		<p>
 			<code>--check</code> fails on anything unformatted, <code>--strict</code>{" "}
 			on anything squill couldn&rsquo;t format, and <code>--locked</code> on a

@@ -1,4 +1,5 @@
 ---
+import Code from "../../components/Code.astro";
 import Docs from "../../layouts/Docs.astro";
 ---
 
@@ -183,7 +184,7 @@ import Docs from "../../layouts/Docs.astro";
 			<code>&lbrace;a,b&rbrace;</code> glob syntax. Patterns are relative to the
 			config file that declares them.
 		</p>
-		<pre><code>ignore = ["legacy/**", "*.gen.sql"]</code></pre>
+		<Code lang="toml" file="squill.toml" code={`ignore = ["legacy/**", "*.gen.sql"]`} />
 		<p>
 			A file named explicitly on the command line always formats, ignore
 			patterns included &mdash; if you asked for that file by name, you meant
@@ -207,14 +208,14 @@ import Docs from "../../layouts/Docs.astro";
 			brings in files by other names &mdash; a mixed-dialect tree needs no
 			second config:
 		</p>
-		<pre><code>dialect = "postgres"
+		<Code lang="toml" file="squill.toml" code={`dialect = "postgres"
 
 [[files]]
 include = ["**/*.sql.sqlite", "storage/sqlite/**"]
 dialect = "sqlite"
 
 [[files]]
-include = ["**/*.sql.postgres"]</code></pre>
+include = ["**/*.sql.postgres"]`} />
 		<h3>[[embedded]]</h3>
 		<p>
 			SQL inside host-language files. A rule names the tree-sitter{" "}
@@ -223,7 +224,7 @@ include = ["**/*.sql.postgres"]</code></pre>
 			whenever squill walks past them. See{" "}
 			<a href="docs/embedded/">embedded SQL</a> for the grammars and queries.
 		</p>
-		<pre><code>indent = "tabs"
+		<Code lang="toml" file="squill.toml" code={`indent = "tabs"
 
 [[embedded]]
 include = ["**/*.rs"]
@@ -234,7 +235,7 @@ dialect = "sqlite"
 include = ["web/**/*.ts", "web/**/*.tsx"]
 grammar = "typescript"
 indent = "spaces"
-indent-width = 2</code></pre>
+indent-width = 2`} />
 		<p>
 			A rule without a <code>grammar</code> only layers options &mdash; say, a
 			different dialect for one directory of a language another rule already
@@ -257,7 +258,7 @@ indent-width = 2</code></pre>
 			In <code>squill.yaml</code>, the top-level keys are a mapping and each
 			kind of rule is a list under its name. This is the rules example above:
 		</p>
-		<pre><code>dialect: postgres
+		<Code lang="yaml" file="squill.yaml" code={`dialect: postgres
 indent: tabs
 
 files:
@@ -271,7 +272,7 @@ embedded:
   - include: ["web/**/*.ts", "web/**/*.tsx"]
     grammar: typescript
     indent: spaces
-    indent-width: 2</code></pre>
+    indent-width: 2`} />
 		<p>
 			A file holds one YAML document. Grammars downloaded from https URLs are
 			locked in the same <code>squill.lock</code> either way.

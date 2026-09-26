@@ -1,4 +1,5 @@
 ---
+import Code from "../../components/Code.astro";
 import Docs from "../../layouts/Docs.astro";
 ---
 
@@ -17,9 +18,9 @@ import Docs from "../../layouts/Docs.astro";
 			untouched &mdash; squill never reprints host code, only the string
 			contents it was pointed at.
 		</p>
-		<pre><code>[[embedded]]
+		<Code lang="toml" file="squill.toml" code={`[[embedded]]
 include = ["**/*.rs"]
-grammar = "rust"</code></pre>
+grammar = "rust"`} />
 		<p>Built-in grammars, and what their default queries find:</p>
 		<ul>
 			<li>
@@ -141,14 +142,14 @@ grammar = "rust"</code></pre>
 			<code>@sql.sqlite</code> pin the dialect regardless of the{" "}
 			<code>dialect</code> setting.
 		</p>
-		<pre><code>[[embedded]]
+		<Code lang="toml" file="squill.toml" code={`[[embedded]]
 include = ["**/*.rs"]
 grammar = "rust"
-query = ".config/squill/rust.scm"</code></pre>
-		<pre><code>((macro_invocation
+query = ".config/squill/rust.scm"`} />
+		<Code lang="query" file=".config/squill/rust.scm" code={`((macro_invocation
    macro: (identifier) @_name
    (token_tree (raw_string_literal) @sql))
- (#eq? @_name "my_sql"))</code></pre>
+ (#eq? @_name "my_sql"))`} />
 		<p>
 			Captures whose names start with <code>_</code> are the usual tree-sitter
 			convention for "match this, but it isn't the thing I want" &mdash; squill
@@ -175,15 +176,15 @@ query = ".config/squill/rust.scm"</code></pre>
 			<code>tree-sitter-lua.wasm</code> holds <code>lua</code>. A loaded
 			grammar has no default query, so the rule needs one.
 		</p>
-		<pre><code>[[embedded]]
+		<Code lang="toml" file="squill.toml" code={`[[embedded]]
 include = ["**/*.lua"]
 grammar = ".config/squill/tree-sitter-lua.wasm"
 query = ".config/squill/lua.scm"
-dialect = "sqlite"</code></pre>
-		<pre><code>((function_call
+dialect = "sqlite"`} />
+		<Code lang="query" file=".config/squill/lua.scm" code={`((function_call
    name: (method_index_expression method: (identifier) @_m)
    arguments: (arguments . (string) @sql))
- (#eq? @_m "exec"))</code></pre>
+ (#eq? @_m "exec"))`} />
 		<p>
 			squill knows nothing about a loaded grammar&rsquo;s string syntax, so it
 			takes the conservative road. Capture either the string&rsquo;s content
@@ -198,10 +199,10 @@ dialect = "sqlite"</code></pre>
 			A grammar can also come straight from where it&rsquo;s published, as an{" "}
 			<code>https</code> URL naming the <code>.wasm</code> file:
 		</p>
-		<pre><code>[[embedded]]
+		<Code lang="toml" file="squill.toml" code={`[[embedded]]
 include = ["**/*.lua"]
 grammar = "https://github.com/tree-sitter-grammars/tree-sitter-lua/releases/download/v0.5.0/tree-sitter-lua.wasm"
-query = ".config/squill/lua.scm"</code></pre>
+query = ".config/squill/lua.scm"`} />
 		<p>
 			The first time squill downloads it, it records the grammar&rsquo;s
 			SHA-256 in a <code>squill.lock</code> beside the config; commit that

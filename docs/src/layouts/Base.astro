@@ -179,6 +179,8 @@ const topNav = [
 		}
 
 		.pair {
+			/* Dark panes in either scheme: scrollbars included. */
+			color-scheme: dark;
 			display: grid;
 			grid-template-columns: 1fr;
 			border: 1px solid var(--pane-edge);
@@ -268,6 +270,56 @@ const topNav = [
 			font-size: 0.85rem;
 			line-height: 1.6;
 			tab-size: 2;
+		}
+		/* Code blocks through the docs: a pane of their own, captioned with
+		   their file when they have one. */
+		.code-block {
+			margin: 1rem 0;
+		}
+		.code-block:not(.captioned) pre {
+			padding-top: 1.1rem;
+		}
+		/* Recipe tabs: before and after share one pane. */
+		.tabbar {
+			align-items: center;
+			gap: 1rem;
+		}
+		.tabbar button {
+			font: inherit;
+			letter-spacing: inherit;
+			text-transform: inherit;
+			color: inherit;
+			background: none;
+			border: 1px solid transparent;
+			border-radius: 999px;
+			padding: 0.15rem 0.6rem;
+			cursor: pointer;
+		}
+		.tabbar [role="tab"][aria-selected="true"] {
+			color: var(--pane-text);
+			border-color: var(--pane-edge);
+		}
+		.tabbar button:hover {
+			color: var(--pane-text);
+		}
+		.tab-tools {
+			display: flex;
+			align-items: center;
+			gap: 0.75rem;
+		}
+		.sql-toggle[aria-pressed="true"] {
+			color: var(--green);
+			border-color: var(--pane-edge);
+		}
+		.sql-off,
+		html.plain-sql .sql-on {
+			display: none;
+		}
+		html.plain-sql .sql-off {
+			display: block;
+		}
+		[role="tabpanel"][hidden] {
+			display: none;
 		}
 		/* A file's name in a pane's caption keeps its own case. */
 		.pair figcaption .filename {
