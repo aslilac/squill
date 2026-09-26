@@ -540,6 +540,16 @@ impl Lexer<'_> {
 			{
 				break;
 			}
+			// `=@name`: the operator run ends where an `@name` param starts.
+			// A second `@` stays in the operator, so `a@@b` is still `@@`.
+			if b == b'@'
+				&& self.options.at_params
+				&& self.pos > start
+				&& self.bytes[self.pos - 1] != b'@'
+				&& self.is_ident_start_at(1)
+			{
+				break;
+			}
 			self.bump(1);
 		}
 		let text = &self.bytes[start..self.pos];

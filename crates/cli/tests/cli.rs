@@ -1831,3 +1831,34 @@ fn init_writes_yaml_on_request() {
 	assert!(stderr.contains("squill.yaml already exists"), "{stderr}");
 	let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// C# code writes `@name` params, so `at-params` is on for the csharp
+/// grammar unless configured: `=@id` stays a comparison with a param.
+#[test]
+fn csharp_defaults_to_at_params() {
+	let dir = temp_dir("csharpat");
+	std::fs::write(
+		dir.join("squill.toml"),
+		"[[embedded]]\ninclude = [\"*.cs\"]\ngrammar = \"csharp\"\n",
+	)
+	.expect("write config");
+	let source = "class A {\n    void M() {\n        conn.Execute(\"\"\"\n            DELETE FROM t WHERE id=@id OR id IN @ids\n            \"\"\");\n    }\n}\n";
+	std::fs::write(dir.join("a.cs"), source).expect("write");
+	let output = squill()
+		.args(["fmt", "--strict", "--stdout"])
+		.arg(dir.join("a.cs"))
+		.output()
+		.expect("run");
+	assert!(
+		output.status.success(),
+		"{}",
+		String::from_utf8_lossy(&output.stderr)
+	);
+	assert!(
+		String::from_utf8_lossy(&output.stdout)
+			.contains("where id = @id or id in @ids"),
+		"{}",
+		String::from_utf8_lossy(&output.stdout)
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}

@@ -35,7 +35,10 @@ import Recipe from "../../../components/Recipe.astro";
 		</p>
 		<Recipe name="csharp-dapper" lang="csharp" />
 		<p>
-			Dapper&rsquo;s <code>@name</code> parameters pass through as written.
+			<code>@name</code> parameters are on for this grammar
+			(<code>at-params</code>), so they pass through as written &mdash;
+			written tight against an operator (<code>=@customerId</code>) too &mdash;
+			and so does Dapper&rsquo;s list expansion, <code>in @orderIds</code>.
 		</p>
 	</section>
 

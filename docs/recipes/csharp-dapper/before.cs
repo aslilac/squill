@@ -10,13 +10,13 @@ public sealed class OrderRepository(NpgsqlDataSource db)
             new { customerId });
     }
 
-    public async Task CancelAsync(int orderId)
+    public async Task CancelAsync(int customerId, int[] orderIds)
     {
         await using var conn = await db.OpenConnectionAsync();
         await conn.ExecuteAsync(
             """
-            UPDATE orders SET cancelled_at = now() WHERE id = @orderId AND shipped_at IS NULL
+            UPDATE orders SET cancelled_at = now() WHERE customer_id=@customerId AND id IN @orderIds AND shipped_at IS NULL
             """,
-            new { orderId });
+            new { customerId, orderIds });
     }
 }

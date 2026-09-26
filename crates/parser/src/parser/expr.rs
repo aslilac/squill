@@ -206,6 +206,13 @@ fn infix_loop(p: &mut Parser<'_>, checkpoint: usize, min_bp: u8) -> PResult {
 				p.bump(); // IN
 				if p.at(SyntaxKind::LParen) && at_subquery_start(p, 1) {
 					subquery(p)?;
+				} else if p.at(SyntaxKind::Param) {
+					// `x IN @ids`: Dapper's list parameter, which the driver
+					// expands into `(@ids1, @ids2, …)` before the database
+					// sees it.
+					p.start(SyntaxKind::Literal);
+					p.bump();
+					p.finish();
 				} else if sqlite && !p.at(SyntaxKind::LParen) {
 					// SQLite: `x IN some_table`, or a table-valued
 					// function, `x IN json_each(?)`.

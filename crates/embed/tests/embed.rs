@@ -562,6 +562,7 @@ fn gleam_smoke_test() {
 fn format_host(host: Host, query: &str, source: &str) -> embed::Embedded {
 	// The CLI's defaults for the host's placeholders.
 	let mut options = options();
+	options.at_params = host.uses_at_params();
 	options.question_params = host.uses_question_params();
 	options.pyformat_params = host.uses_pyformat_params();
 	let formatted =

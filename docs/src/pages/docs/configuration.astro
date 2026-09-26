@@ -101,9 +101,13 @@ import Docs from "../../layouts/Docs.astro";
 							>lex <a
 								href="https://docs.sqlc.dev/en/latest/howto/named_parameters.html"
 								>sqlc-style</a
-							> <code>@name</code> parameters</td
+							> and ADO.NET-style <code>@name</code> parameters, and
+							Dapper&rsquo;s <code>in @ids</code></td
 						>
-						<td><code>false</code></td>
+						<td
+							><code>false</code> (<code>true</code> for the{" "}
+							<code>csharp</code> grammar)</td
+						>
 					</tr>
 					<tr>
 						<td><code>question-params</code></td>

@@ -262,6 +262,40 @@ fn sqlc_at_params_are_opt_in() {
 	assert_eq!(tokens[0].kind, K::Operator);
 }
 
+/// With the option, a param written tight against an operator ends the
+/// operator (`=@a` is `=` then `@a`) — but a doubled `@` stays in it, so
+/// `a@@b` is still the text-search match.
+#[test]
+fn at_params_split_operators() {
+	use parser::lexer::LexOptions;
+	use parser::lexer::lex_with;
+	let lex = |source| {
+		lex_with(
+			source,
+			Postgres,
+			LexOptions { at_params: true, ..LexOptions::default() },
+		)
+		.iter()
+		.map(|t| (t.kind, t.text.to_string()))
+		.collect::<Vec<_>>()
+	};
+	let owned = |tokens: &[(K, &str)]| {
+		tokens.iter().map(|&(k, t)| (k, t.to_string())).collect::<Vec<_>>()
+	};
+	assert_eq!(
+		lex("a=@a"),
+		owned(&[(K::Ident, "a"), (K::Operator, "="), (K::Param, "@a")])
+	);
+	assert_eq!(
+		lex("b<>@b"),
+		owned(&[(K::Ident, "b"), (K::Operator, "<>"), (K::Param, "@b")])
+	);
+	assert_eq!(
+		lex("v@@q"),
+		owned(&[(K::Ident, "v"), (K::Operator, "@@"), (K::Ident, "q")])
+	);
+}
+
 // ---- SQLite ----
 
 #[test]

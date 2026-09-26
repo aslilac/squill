@@ -153,6 +153,7 @@ pub fn format_request(json: &str) -> String {
 				};
 				// And the CLI's host-conventional placeholders.
 				let options = formatter::Options {
+					at_params: host.uses_at_params(),
 					pyformat_params: host.uses_pyformat_params(),
 					question_params: host.uses_question_params(),
 					..options

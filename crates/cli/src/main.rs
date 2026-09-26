@@ -82,7 +82,9 @@ Options:
   --max-width <N>         Target line width (20 to 500), default 80
   --keyword-case <CASE>   lower (default) | upper
   --quote-idents <MODE>   as-needed (default) | always
-  --at-params             Treat sqlc-style @name as parameters (Postgres)
+  --at-params             Treat sqlc- and ADO.NET-style @name as
+                          parameters (Postgres; on by default for the
+                          csharp grammar)
   --question-params       Treat JDBC-style ? as parameters (Postgres; on
                           by default for java and kotlin grammars)
   --pyformat-params       Treat Python DB-API %s / %(name)s as
@@ -579,7 +581,10 @@ fn resolve(
 					},
 				};
 			// Host-conventional placeholders are on unless configured
-			// either way: JDBC's `?` on the JVM, psycopg's `%s` in Python.
+			// either way: JDBC's `?` on the JVM, psycopg's `%s` in Python,
+			// ADO.NET's `@name` in C#.
+			let mut at_set = config.options.at_params.is_some()
+				|| args.overrides.at_params.is_some();
 			let mut question_set = config.options.question_params.is_some()
 				|| args.overrides.question_params.is_some();
 			let mut pyformat_set = config.options.pyformat_params.is_some()
@@ -587,10 +592,14 @@ fn resolve(
 			for rule in &embedded {
 				rule.options.apply(&mut options);
 				indent_set |= rule.options.indent_style.is_some();
+				at_set |= rule.options.at_params.is_some();
 				question_set |= rule.options.question_params.is_some();
 				pyformat_set |= rule.options.pyformat_params.is_some();
 			}
 			if let config::GrammarSpec::Builtin(host) = spec {
+				if !at_set {
+					options.at_params = host.uses_at_params();
+				}
 				if !question_set {
 					options.question_params = host.uses_question_params();
 				}

@@ -69,7 +69,9 @@ grammar = "rust"</code></pre>
 				<code>csharp</code>: raw strings passed to EF Core&rsquo;s{" "}
 				<code class="boxed">migrationBuilder.Sql</code> and raw-SQL methods,
 				Dapper&rsquo;s query/execute family, or assigned to{" "}
-				<code class="boxed">CommandText</code>
+				<code class="boxed">CommandText</code>, with <code>@name</code>{" "}
+				params preserved (<code>at-params</code> is on for this grammar
+				unless configured)
 			</li>
 			<li>
 				<code>java</code>, <code>kotlin</code>: text blocks and raw strings

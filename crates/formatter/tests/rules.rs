@@ -558,3 +558,14 @@ fn merge_layout() {
 		"merge into customer_account ca\nusing recent_transactions t on t.customer_id = ca.customer_id\nwhen matched then\n\tupdate set balance = balance + transaction_value, updated_at = now()\nwhen not matched then\n\tinsert (customer_id, balance) values (t.customer_id, t.transaction_value);\n"
 	);
 }
+
+/// Dapper's list parameter, `in @ids`, which the driver expands into a
+/// list: kept as written, and a param tight against an operator is still
+/// a param.
+#[test]
+fn in_list_parameter() {
+	assert_eq!(
+		format("select * from t where id IN @ids and a=@a and b not in @bs;"),
+		"select * from t where id in @ids and a = @a and b not in @bs;\n"
+	);
+}
