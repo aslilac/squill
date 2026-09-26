@@ -458,3 +458,16 @@ fn reordering_stops_at_a_comment() {
 		"create table t (\n\ta text default '' /* why */ not null,\n\tb int\n);\n"
 	);
 }
+
+/// A formatted file ends with exactly one newline, however its source
+/// ended; an empty (or blank) file stays empty.
+#[test]
+fn files_end_with_exactly_one_newline() {
+	assert_eq!(format("SELECT 1"), "select 1\n");
+	assert_eq!(format("SELECT 1;"), "select 1;\n");
+	assert_eq!(format("SELECT 1;\n\n\n"), "select 1;\n");
+	assert_eq!(format("-- only a comment"), "-- only a comment\n");
+	assert_eq!(format("/* block */"), "/* block */\n");
+	assert_eq!(format(""), "");
+	assert_eq!(format("\n\n  \n"), "");
+}
