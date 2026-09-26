@@ -64,3 +64,62 @@ jobs:
 
       - run: cargo build --manifest-path integrations/zed/Cargo.toml --target wasm32-wasip2 --release
         name: Build
+
+  vscode:
+    name: VS Code extension
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        name: Checkout
+
+      - uses: pnpm/setup@v3
+        name: Configure pnpm
+        with:
+          runtime: node@24
+          cache: true
+
+      - run: pnpm run check
+        name: Type check
+        working-directory: integrations/vscode
+
+      - run: pnpm run build
+        name: Bundle
+        working-directory: integrations/vscode
+
+      - run: pnpm run package
+        name: Package
+        working-directory: integrations/vscode
+
+  docs:
+    name: Docs site
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        name: Checkout
+
+      - uses: dtolnay/rust-toolchain@stable
+        name: Configure Rust
+        with:
+          targets: wasm32-wasip1
+
+      # The playground's tree-sitter grammars are C, compiled to wasm with
+      # wasi-sdk's clang and libc (see docs/README.md).
+      - name: Install wasi-sdk
+        run: |
+          curl -sSfL https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-33/wasi-sdk-33.0-x86_64-linux.tar.gz | tar xz -C "$RUNNER_TEMP"
+          echo "WASI_SDK=$RUNNER_TEMP/wasi-sdk-33.0-x86_64-linux" >> "$GITHUB_ENV"
+
+      - uses: pnpm/setup@v3
+        name: Configure pnpm
+        with:
+          runtime: node@24
+          cache: true
+
+      # `prebuild` builds the playground's wasm first.
+      - run: pnpm run build
+        name: Build
+        working-directory: docs
