@@ -834,6 +834,18 @@ fn compile_query(
 	}
 	let query = Query::new(language, query_source)
 		.map_err(|err| EmbedError::Query(err.to_string()))?;
+	// A dialect squill doesn't know (or a typo of one) would match
+	// nothing, silently: refuse the query instead.
+	for name in query.capture_names() {
+		if name.starts_with("sql.")
+			&& sql_dialect(name, Dialect::default()).is_none()
+		{
+			return Err(EmbedError::Query(format!(
+				"unknown capture `@{name}`: SQL is captured as `@sql` (in the \
+				 configured dialect), `@sql.postgres`, or `@sql.sqlite`"
+			)));
+		}
+	}
 	// Anything the binding does not evaluate natively would be silently
 	// ignored: reject unknown custom predicates too.
 	for pattern in 0..query.pattern_count() {
@@ -876,6 +888,9 @@ pub fn count_sql(
 pub struct Located {
 	pub range: std::ops::Range<usize>,
 	pub dialect: Dialect,
+	/// The query named the dialect (`@sql.sqlite`), over the configured
+	/// one.
+	pub pinned: bool,
 }
 
 /// Every SQL string the query captures in `source`, in order, whether or
@@ -895,7 +910,7 @@ pub fn locate_sql(
 		let mut found: Vec<Located> = extraction
 			.captures(&tree, source)
 			.into_iter()
-			.map(|(range, dialect)| {
+			.map(|Captured { range, dialect, pinned }| {
 				let range = match codec {
 					Codec::Literal => {
 						let inner = literal_content(&source[range.clone()]);
@@ -903,7 +918,7 @@ pub fn locate_sql(
 					}
 					Codec::Content { .. } => range,
 				};
-				Located { range, dialect }
+				Located { range, dialect, pinned }
 			})
 			.collect();
 		found.sort_by_key(|located| (located.range.start, located.range.end));
@@ -960,12 +975,15 @@ pub fn format_embedded(
 			default_dialect: options.dialect,
 			codec: grammar.codec(),
 		};
-		for (node_range, dialect) in extraction.captures(&tree, source) {
+		for Captured { range: node_range, dialect, pinned } in
+			extraction.captures(&tree, source)
+		{
 			let snippet = Snippet {
 				source,
 				range: node_range.clone(),
 				grammar,
 				dialect,
+				pinned,
 				options,
 				indent,
 				body_warning: std::cell::RefCell::new(None),
@@ -1037,6 +1055,14 @@ pub fn format_embedded(
 	})
 }
 
+/// One SQL capture: where, in which dialect, and whether the query
+/// pinned that dialect rather than taking the configured one.
+struct Captured {
+	range: std::ops::Range<usize>,
+	dialect: Dialect,
+	pinned: bool,
+}
+
 /// How to find SQL in a parsed host file.
 struct Extraction<'a> {
 	query: &'a Query,
@@ -1047,12 +1073,8 @@ struct Extraction<'a> {
 
 impl Extraction<'_> {
 	/// Every SQL capture in `tree`: the byte range to rewrite, and the
-	/// dialect.
-	fn captures(
-		&self,
-		tree: &Tree,
-		source: &str,
-	) -> Vec<(std::ops::Range<usize>, Dialect)> {
+	/// dialect — pinned, when the capture names one (`@sql.sqlite`).
+	fn captures(&self, tree: &Tree, source: &str) -> Vec<Captured> {
 		let query = self.query;
 		let mut out = Vec::new();
 		let mut cursor = QueryCursor::new();
@@ -1069,7 +1091,7 @@ impl Extraction<'_> {
 						Codec::Literal => capture.node.byte_range(),
 						Codec::Content { .. } => content_range(capture.node),
 					};
-					out.push((range, dialect));
+					out.push(Captured { range, dialect, pinned: *name != "sql" });
 				}
 			}
 		}
@@ -1090,8 +1112,11 @@ impl Extraction<'_> {
 			return Ok(Vec::new());
 		}
 		let tree = ts.parse(text, None).ok_or(EmbedError::HostParse)?;
-		let captures: std::collections::HashSet<std::ops::Range<usize>> =
-			self.captures(&tree, text).into_iter().map(|(range, _)| range).collect();
+		let captures: std::collections::HashSet<std::ops::Range<usize>> = self
+			.captures(&tree, text)
+			.into_iter()
+			.map(|captured| captured.range)
+			.collect();
 		let mut failed = Vec::new();
 		let mut shift: isize = 0;
 		for (index, edit) in edits.iter().enumerate() {
@@ -1237,6 +1262,9 @@ struct Snippet<'a> {
 	range: std::ops::Range<usize>,
 	grammar: &'a Grammar,
 	dialect: Dialect,
+	/// Did the query set `dialect` (`@sql.sqlite`), over the configured
+	/// one?
+	pinned: bool,
 	options: &'a Options,
 	indent: Indent,
 	/// A procedural body in the SQL that didn't parse (so was left as
@@ -1336,8 +1364,17 @@ impl Snippet<'_> {
 		let tokens = parser::lexer::lex_with(sql, self.dialect, lex_options);
 		let parse = parser::parser::parse(&tokens, self.dialect);
 		if let Some(diagnostic) = parse.diagnostics.first() {
+			let dialect = match self.dialect {
+				Dialect::Postgres => "Postgres",
+				Dialect::Sqlite => "SQLite",
+			};
+			// A dialect the query chose, not the config: say so, or the
+			// configured one would look ignored.
+			let chosen =
+				if self.pinned { ", the dialect its query sets" } else { "" };
 			return Err(Rewrite::Warn(format!(
-				"embedded SQL did not parse ({}); left unformatted",
+				"embedded SQL did not parse as {dialect}{chosen} ({}); left \
+				 unformatted",
 				diagnostic.message
 			)));
 		}

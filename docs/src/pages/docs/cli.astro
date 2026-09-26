@@ -186,8 +186,10 @@ src/db.rs:24:26-24:68 postgres  SELECT count(*) FROM members`} />
 			<code>--json</code>, each line is an object instead &mdash;{" "}
 			<code>path</code>, <code>start</code> and <code>end</code> (byte
 			offsets), <code>line</code>, <code>column</code>,{" "}
-			<code>end_line</code>, <code>end_column</code>, and{" "}
-			<code>dialect</code> &mdash; for tools that want to know where the SQL
+			<code>end_line</code>, <code>end_column</code>,{" "}
+			<code>dialect</code>, and <code>pinned</code> (whether the query set
+			the dialect, which the plain output marks{" "}
+			<code>(from the query)</code>) &mdash; for tools that want to know where the SQL
 			is; these docs highlight the SQL in their recipes with it.
 		</p>
 	</section>

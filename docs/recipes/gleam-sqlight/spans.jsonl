@@ -1,4 +1,4 @@
-{"path":"after.gleam","start":277,"end":409,"line":11,"column":6,"end_line":17,"end_column":5,"dialect":"sqlite"}
-{"path":"after.gleam","start":551,"end":754,"line":26,"column":6,"end_line":34,"end_column":5,"dialect":"sqlite"}
-{"path":"before.gleam","start":277,"end":383,"line":11,"column":6,"end_line":11,"end_column":112,"dialect":"sqlite"}
-{"path":"before.gleam","start":525,"end":683,"line":20,"column":6,"end_line":20,"end_column":164,"dialect":"sqlite"}
+{"path":"after.gleam","start":277,"end":409,"line":11,"column":6,"end_line":17,"end_column":5,"dialect":"sqlite","pinned":true}
+{"path":"after.gleam","start":551,"end":754,"line":26,"column":6,"end_line":34,"end_column":5,"dialect":"sqlite","pinned":true}
+{"path":"before.gleam","start":277,"end":383,"line":11,"column":6,"end_line":11,"end_column":112,"dialect":"sqlite","pinned":true}
+{"path":"before.gleam","start":525,"end":683,"line":20,"column":6,"end_line":20,"end_column":164,"dialect":"sqlite","pinned":true}

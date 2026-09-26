@@ -1896,8 +1896,8 @@ fn locate_lists_the_sql() {
 	);
 	assert_eq!(
 		run(&["locate", "--json", "db.rs"]),
-		"{\"path\":\"db.rs\",\"start\":28,\"end\":36,\"line\":2,\"column\":20,\"end_line\":2,\"end_column\":28,\"dialect\":\"postgres\"}\n\
-		 {\"path\":\"db.rs\",\"start\":58,\"end\":68,\"line\":3,\"column\":18,\"end_line\":3,\"end_column\":28,\"dialect\":\"postgres\"}\n"
+		"{\"path\":\"db.rs\",\"start\":28,\"end\":36,\"line\":2,\"column\":20,\"end_line\":2,\"end_column\":28,\"dialect\":\"postgres\",\"pinned\":false}\n\
+		 {\"path\":\"db.rs\",\"start\":58,\"end\":68,\"line\":3,\"column\":18,\"end_line\":3,\"end_column\":28,\"dialect\":\"postgres\",\"pinned\":false}\n"
 	);
 	// Nothing is written.
 	assert!(

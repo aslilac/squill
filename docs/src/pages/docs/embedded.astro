@@ -153,9 +153,20 @@ grammar = "rust"`} />
 			>{" "}
 			file, found relative to the config. A capture
 			named <code>@sql</code> marks a string whose contents are SQL in the
-			configured dialect; <code>@sql.postgres</code> and{" "}
-			<code>@sql.sqlite</code> pin the dialect regardless of the{" "}
-			<code>dialect</code> setting.
+			configured dialect.
+		</p>
+		<p id="dialects">
+			A capture can name the dialect instead: <code>@sql.postgres</code>{" "}
+			or <code>@sql.sqlite</code> reads that string in that dialect,
+			whatever <code>dialect</code> says. It&rsquo;s for calls into a
+			library that only speaks one &mdash; the built-in queries read
+			sqlight&rsquo;s, GRDB&rsquo;s, and SQLite&rsquo;s C API&rsquo;s
+			strings as SQLite, and libpq&rsquo;s as Postgres, so a project whose{" "}
+			<code>dialect</code> is set for its other SQL still gets them right.{" "}
+			<a href="docs/cli/#locate"><code>squill locate</code></a> marks each
+			string whose dialect came from the query, and a warning about one
+			names the dialect it was read in. Any other <code>@sql.</code>{" "}
+			suffix is an error.
 		</p>
 		<Code lang="toml" file="squill.toml" code={`[[embedded]]
 include = ["**/*.rs"]

@@ -825,3 +825,35 @@ fn swift_multi_line_strings() {
 	);
 	assert!(formatted.warnings.is_empty(), "{:?}", formatted.warnings);
 }
+
+/// A capture names its dialect (`@sql.sqlite`) or takes the configured
+/// one (`@sql`); an unknown one is refused rather than matching nothing,
+/// and a pinned string's parse warning says whose dialect it was.
+#[test]
+fn dialect_captures() {
+	let unknown = format_embedded(
+		"",
+		&Host::Cpp.into(),
+		"((raw_string_content) @sql.mysql)",
+		&options(),
+		Indent::FromHost,
+	);
+	let Err(err) = unknown else { panic!("@sql.mysql accepted") };
+	assert!(err.to_string().contains("unknown capture `@sql.mysql`"), "{err}");
+
+	let source = "void f() {\n  sqlite3_exec(db, R\"(\n    frobnicate 1\n  )\", 0, 0, 0);\n  txn.exec(R\"(\n    frobnicate 2\n  )\");\n}\n";
+	let formatted = format_host(Host::Cpp, CPP_SQL_QUERY, source);
+	let messages: Vec<&str> =
+		formatted.warnings.iter().map(|w| w.message.as_str()).collect();
+	assert_eq!(messages.len(), 2, "{messages:?}");
+	assert!(
+		messages[0].starts_with(
+			"embedded SQL did not parse as SQLite, the dialect its query sets ("
+		),
+		"{messages:?}"
+	);
+	assert!(
+		messages[1].starts_with("embedded SQL did not parse as Postgres ("),
+		"{messages:?}"
+	);
+}

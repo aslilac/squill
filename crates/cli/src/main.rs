@@ -174,12 +174,15 @@ would rewrite it, and every plain SQL file whole. One line each:
     src/db.rs:12:9-17:9 postgres  select m.id, m.name…
 
 giving where the string's contents start and end (lines and columns,
-1-based, end exclusive), and the dialect they're read in.
+1-based, end exclusive), and the dialect they're read in — marked
+\"(from the query)\" when a capture like @sql.sqlite set it, over the
+configured dialect.
 
 Options:
   --json                  One JSON object per line instead: path, start
                           and end (byte offsets, end exclusive), line,
-                          column, end_line, end_column, and dialect
+                          column, end_line, end_column, dialect, and
+                          pinned (the query set the dialect)
   --stdin-filepath <PATH> Read stdin as the file at PATH
   --locked, --no-config, --ignore <GLOB>, --dialect <D>, --at-params,
   --question-params, --pyformat-params
@@ -980,6 +983,7 @@ fn locate_resolved(
 		Kind::Sql => Ok(vec![embed::Located {
 			range: 0..source.len(),
 			dialect: resolved.options.dialect,
+			pinned: false,
 		}]),
 	}
 }
@@ -1000,17 +1004,19 @@ fn print_located(
 		};
 		if json {
 			println!(
-				"{{\"path\":{},\"start\":{},\"end\":{},\"line\":{line},\"column\":{column},\"end_line\":{end_line},\"end_column\":{end_column},\"dialect\":\"{dialect}\"}}",
+				"{{\"path\":{},\"start\":{},\"end\":{},\"line\":{line},\"column\":{column},\"end_line\":{end_line},\"end_column\":{end_column},\"dialect\":\"{dialect}\",\"pinned\":{}}}",
 				json_string(label),
 				located.range.start,
 				located.range.end,
+				located.pinned,
 			);
 		} else {
 			let text = source[located.range.clone()].trim();
 			let first = text.lines().next().unwrap_or("");
 			let more = if first.len() < text.len() { "…" } else { "" };
+			let pinned = if located.pinned { " (from the query)" } else { "" };
 			println!(
-				"{label}:{line}:{column}-{end_line}:{end_column} {dialect}  {first}{more}"
+				"{label}:{line}:{column}-{end_line}:{end_column} {dialect}{pinned}  {first}{more}"
 			);
 		}
 	}
