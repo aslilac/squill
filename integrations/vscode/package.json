@@ -1,0 +1,87 @@
+{
+	"name": "squill",
+	"displayName": "squill",
+	"description": "A SQL formatter for Postgres and SQLite, including the SQL embedded in your code.",
+	"version": "0.2.3",
+	"publisher": "aslilac",
+	"license": "MPL-2.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/aslilac/squill.git",
+		"directory": "integrations/vscode"
+	},
+	"engines": {
+		"vscode": "^1.91.0"
+	},
+	"categories": [
+		"Formatters",
+		"Linters"
+	],
+	"keywords": [
+		"sql",
+		"postgres",
+		"sqlite",
+		"formatter"
+	],
+	"activationEvents": [
+		"onLanguage:sql",
+		"onLanguage:rust",
+		"onLanguage:go",
+		"onLanguage:python",
+		"onLanguage:javascript",
+		"onLanguage:javascriptreact",
+		"onLanguage:typescript",
+		"onLanguage:typescriptreact",
+		"onLanguage:gleam",
+		"onLanguage:cpp",
+		"onLanguage:csharp",
+		"onLanguage:java",
+		"onLanguage:kotlin"
+	],
+	"main": "./out/extension.js",
+	"contributes": {
+		"configuration": {
+			"title": "squill",
+			"properties": {
+				"squill.path": {
+					"type": "string",
+					"default": "squill",
+					"markdownDescription": "The `squill` executable: a name to look up on `PATH`, or a path to it."
+				},
+				"squill.trace.server": {
+					"type": "string",
+					"enum": [
+						"off",
+						"messages",
+						"verbose"
+					],
+					"default": "off",
+					"description": "Log the messages between VS Code and squill's language server."
+				}
+			}
+		},
+		"commands": [
+			{
+				"command": "squill.restartServer",
+				"title": "Restart Language Server",
+				"category": "squill"
+			}
+		]
+	},
+	"scripts": {
+		"build": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --target=node20 --minify",
+		"check": "tsc --noEmit",
+		"package": "vsce package --no-dependencies"
+	},
+	"dependencies": {
+		"vscode-languageclient": "~10.1.1"
+	},
+	"devDependencies": {
+		"@types/node": "^20.19.0",
+		"@types/vscode": "~1.91.0",
+		"@vscode/vsce": "^4.0.0",
+		"esbuild": "^0.28.2",
+		"typescript": "^7.0.2"
+	},
+	"packageManager": "pnpm@12.4.1+sha512.2e81e399d73fe8390dab25e06aa788ab7a5908248d2f5a370f82b481147a6a7a367bf8048f9a6fdb6460f21a66f0542dedb8b94ca2c8723596741920b1656d4c"
+}
