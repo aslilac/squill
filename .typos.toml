@@ -1,0 +1,4 @@
+[files]
+# Vendored third-party SQL, and the snapshots that carry it: real-world
+# names, not ours to respell.
+extend-exclude = ["corpus/", "crates/formatter/tests/snapshots/"]
