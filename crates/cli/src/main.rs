@@ -19,6 +19,8 @@ use rayon::prelude::*;
 mod config;
 mod frozen;
 mod init;
+#[cfg(feature = "lsp")]
+mod lsp;
 use config::PartialOptions;
 
 /// `squill <version>` — whatever cargo compiled this binary with, so it
@@ -30,6 +32,10 @@ squill — a SQL formatter
 
 Usage: squill fmt [OPTIONS] [PATHS...]
        squill init [--dialect <D>] [--yes]
+       squill lsp
+
+`squill lsp` runs a language server on stdin/stdout, for editors:
+document formatting, and diagnostics for what squill leaves alone.
 
 `squill init` writes a starter squill.toml for the project in the
 working directory: pick the languages whose embedded SQL to format
@@ -128,6 +134,7 @@ rewriting one. Unlike ignore, this applies to files named explicitly on
 the command line too — the point is that they are never rewritten.
 ";
 
+#[derive(Default)]
 struct Args {
 	check: bool,
 	stdout_mode: bool,
@@ -152,6 +159,8 @@ struct Args {
 enum Invocation {
 	Run(Box<Args>),
 	Init(init::InitArgs),
+	#[cfg(feature = "lsp")]
+	Lsp,
 	Print(String),
 }
 
@@ -159,6 +168,8 @@ fn parse_args() -> Result<Invocation, String> {
 	let mut argv = std::env::args().skip(1).peekable();
 	match argv.next().as_deref() {
 		Some("fmt") => {}
+		#[cfg(feature = "lsp")]
+		Some("lsp") => return Ok(Invocation::Lsp),
 		Some("init") => {
 			if argv.peek().is_some_and(|arg| arg == "-h" || arg == "--help") {
 				return Ok(Invocation::Print(init::USAGE.to_string()));
@@ -290,6 +301,16 @@ struct Caches {
 }
 
 impl Caches {
+	/// Drop everything read from config files (and the queries they
+	/// name), keeping loaded grammars: the language server re-reads
+	/// config for every request, but a wasm grammar is costly to load.
+	#[cfg_attr(not(feature = "lsp"), allow(dead_code))]
+	fn forget_config(&mut self) {
+		self.configs.clear();
+		self.nearest.clear();
+		self.queries.clear();
+	}
+
 	/// The nearest config at or above `dir`.
 	fn discover(&mut self, dir: &Path) -> Option<PathBuf> {
 		self
@@ -738,12 +759,32 @@ fn drop_frozen(
 	Ok(dropped)
 }
 
-/// One formatted source, with human-readable diagnostics.
+/// One formatted source, with its diagnostics.
 struct Outcome {
 	formatted: String,
-	/// `line:col: message` diagnostics (ErrorStatements + verbatim
-	/// fallbacks).
-	diagnostics: Vec<String>,
+	/// Statements passed through verbatim, embedded strings left alone.
+	diagnostics: Vec<Diagnostic>,
+}
+
+/// Something squill left unformatted, and where.
+struct Diagnostic {
+	/// Byte range in the source; `None` when it concerns the whole file.
+	range: Option<std::ops::Range<usize>>,
+	message: String,
+}
+
+impl Diagnostic {
+	/// `line:col: message`, or ` message` without a position, to follow
+	/// `path:`.
+	fn render(&self, source: &str) -> String {
+		match &self.range {
+			Some(range) => {
+				let (line, col) = line_col(source, range.start);
+				format!("{line}:{col}: {}", self.message)
+			}
+			None => format!(" {}", self.message),
+		}
+	}
 }
 
 fn format_source(source: &str, options: &Options) -> Outcome {
@@ -751,19 +792,22 @@ fn format_source(source: &str, options: &Options) -> Outcome {
 		parser::lexer::lex_with(source, options.dialect, options.lex_options());
 	let parse = parser::parser::parse(&tokens, options.dialect);
 	let result = formatter::format_cst(&parse.cst, options);
-	let mut diagnostics: Vec<String> = parse
+	let mut diagnostics: Vec<Diagnostic> = parse
 		.diagnostics
 		.iter()
-		.map(|d| {
-			let (line, col) = line_col(source, d.start);
-			format!("{line}:{col}: {} (statement passed through verbatim)", d.message)
+		.map(|d| Diagnostic {
+			range: Some(d.start..d.end),
+			message: format!("{} (statement passed through verbatim)", d.message),
 		})
 		.collect();
 	if result.fallback_statements > 0 {
-		diagnostics.push(format!(
-			"{} statement(s) passed through verbatim (formatter self-check)",
-			result.fallback_statements
-		));
+		diagnostics.push(Diagnostic {
+			range: None,
+			message: format!(
+				"{} statement(s) passed through verbatim (formatter self-check)",
+				result.fallback_statements
+			),
+		});
 	}
 	Outcome { formatted: result.text, diagnostics }
 }
@@ -786,10 +830,10 @@ fn format_resolved(
 			.map_err(|err| err.to_string())?;
 			let diagnostics = embedded
 				.warnings
-				.iter()
-				.map(|warning| {
-					let (line, col) = line_col(source, warning.offset);
-					format!("{line}:{col}: {}", warning.message)
+				.into_iter()
+				.map(|warning| Diagnostic {
+					range: Some(warning.offset..warning.end),
+					message: warning.message,
 				})
 				.collect();
 			Ok(Outcome { formatted: embedded.text, diagnostics })
@@ -940,6 +984,8 @@ fn main() -> ExitCode {
 	let args = match parse_args() {
 		Ok(Invocation::Run(args)) => *args,
 		Ok(Invocation::Init(args)) => return init::run(args),
+		#[cfg(feature = "lsp")]
+		Ok(Invocation::Lsp) => return lsp::run(),
 		Ok(Invocation::Print(message)) => {
 			println!("{message}");
 			return ExitCode::SUCCESS;
@@ -990,7 +1036,7 @@ fn main() -> ExitCode {
 			}
 		};
 		for diagnostic in &outcome.diagnostics {
-			eprintln!("{label}:{diagnostic}");
+			eprintln!("{label}:{}", diagnostic.render(&source));
 		}
 		if args.check {
 			if outcome.formatted != source {
@@ -1118,7 +1164,7 @@ fn main() -> ExitCode {
 		};
 		let path = result.path.display().to_string();
 		for diagnostic in &result.outcome.diagnostics {
-			eprintln!("{path}:{diagnostic}");
+			eprintln!("{path}:{}", diagnostic.render(&result.source));
 			diagnostics += 1;
 		}
 		if result.outcome.formatted != result.source {

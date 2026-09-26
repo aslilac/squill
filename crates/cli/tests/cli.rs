@@ -1442,3 +1442,111 @@ fn stdin_filepath_passes_through_what_it_would_not_format() {
 	assert_eq!((code, out.as_str()), (Some(0), "select 1;\n"));
 	let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Talk to `squill lsp` over stdio: send `messages` (each framed with a
+/// Content-Length header), then read everything it writes back.
+#[cfg(feature = "lsp")]
+fn lsp_session(
+	dir: &std::path::Path,
+	messages: &[serde_json::Value],
+) -> Vec<serde_json::Value> {
+	let mut child = squill()
+		.current_dir(dir)
+		.arg("lsp")
+		.stdin(Stdio::piped())
+		.stdout(Stdio::piped())
+		.spawn()
+		.expect("spawn");
+	let mut stdin = child.stdin.take().expect("stdin");
+	for message in messages {
+		let body = message.to_string();
+		write!(stdin, "Content-Length: {}\r\n\r\n{body}", body.len())
+			.expect("write");
+	}
+	drop(stdin);
+	let output = child.wait_with_output().expect("wait");
+	assert!(output.status.success(), "squill lsp exited with {}", output.status);
+	let mut out = &output.stdout[..];
+	let mut replies = Vec::new();
+	while let Some(at) = out.windows(4).position(|w| w == b"\r\n\r\n") {
+		let header = std::str::from_utf8(&out[..at]).expect("header");
+		let length: usize = header
+			.lines()
+			.find_map(|line| line.strip_prefix("Content-Length: "))
+			.expect("content length")
+			.trim()
+			.parse()
+			.expect("length");
+		let body = &out[at + 4..at + 4 + length];
+		replies.push(serde_json::from_slice(body).expect("json"));
+		out = &out[at + 4 + length..];
+	}
+	replies
+}
+
+/// The language server formats a document by its path, the way
+/// --stdin-filepath would, and publishes squill's diagnostics.
+#[cfg(feature = "lsp")]
+#[test]
+fn language_server_formats_and_reports() {
+	use serde_json::json;
+	let dir = temp_dir("lsp");
+	std::fs::write(dir.join("squill.toml"), RUST_RULE).expect("write config");
+	let uri = |name: &str| format!("file://{}", dir.join(name).display());
+	let open = |name: &str, language: &str, text: &str| {
+		json!({"jsonrpc": "2.0", "method": "textDocument/didOpen", "params": {
+			"textDocument": {"uri": uri(name), "languageId": language, "version": 1, "text": text}
+		}})
+	};
+	let replies = lsp_session(
+		&dir,
+		&[
+			json!({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"capabilities": {}}}),
+			json!({"jsonrpc": "2.0", "method": "initialized", "params": {}}),
+			open("q.sql", "sql", "SELECT   1"),
+			json!({"jsonrpc": "2.0", "id": 2, "method": "textDocument/formatting", "params": {
+				"textDocument": {"uri": uri("q.sql")},
+				"options": {"tabSize": 4, "insertSpaces": false}
+			}}),
+			// Embedded SQL that doesn't parse: a published warning.
+			open(
+				"bad.rs",
+				"rust",
+				"fn f() {\n    sqlx::query!(r#\"select (\n\"#);\n}\n",
+			),
+			json!({"jsonrpc": "2.0", "id": 3, "method": "shutdown"}),
+			json!({"jsonrpc": "2.0", "method": "exit"}),
+		],
+	);
+	let reply = |id: i64| {
+		replies.iter().find(|reply| reply["id"] == id).expect("reply").clone()
+	};
+	assert_eq!(
+		reply(1)["result"]["capabilities"]["documentFormattingProvider"],
+		true
+	);
+	assert_eq!(reply(1)["result"]["serverInfo"]["name"], "squill");
+	let edits = &reply(2)["result"];
+	assert_eq!(edits[0]["newText"], "select 1\n", "{edits}");
+	assert_eq!(edits[0]["range"]["end"], json!({"line": 0, "character": 10}));
+
+	let published: Vec<_> = replies
+		.iter()
+		.filter(|reply| reply["method"] == "textDocument/publishDiagnostics")
+		.filter(|reply| reply["params"]["uri"] == uri("bad.rs"))
+		.collect();
+	let diagnostics =
+		&published.last().expect("diagnostics for bad.rs")["params"]["diagnostics"];
+	assert_eq!(diagnostics[0]["severity"], 2, "{diagnostics}");
+	assert_eq!(
+		diagnostics[0]["range"]["start"],
+		json!({"line": 1, "character": 17})
+	);
+	assert!(
+		diagnostics[0]["message"]
+			.as_str()
+			.is_some_and(|message| message.contains("did not parse")),
+		"{diagnostics}"
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}

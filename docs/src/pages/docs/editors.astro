@@ -50,6 +50,34 @@ formatter = &lbrace; command = "sh", args = ["-c", "rustfmt --edition 2024 | squ
 	</section>
 
 	<section>
+		<h2>Language server</h2>
+		<p>
+			<code>squill lsp</code> runs a language server on stdin and stdout. It
+			formats documents the same way (by their path, config and rules
+			included), and it reports what squill leaves alone as warnings where
+			they are: statements it passed through verbatim, and embedded strings
+			it declined to rewrite. Config is re-read for every request, so edits
+			to <code>squill.toml</code> apply without a restart.
+		</p>
+		<p>In Helix, register it and use it for SQL:</p>
+		<pre><code>[language-server.squill]
+command = "squill"
+args = ["lsp"]
+
+[[language]]
+name = "sql"
+language-servers = ["squill"]
+auto-format = true</code></pre>
+		<p>
+			Next to another language&rsquo;s own server, it can contribute just its
+			diagnostics about embedded SQL, while that server keeps formatting:
+		</p>
+		<pre><code>[[language]]
+name = "rust"
+language-servers = ["rust-analyzer", &lbrace; name = "squill", only-features = ["diagnostics"] &rbrace;]</code></pre>
+	</section>
+
+	<section>
 		<h2>Zed</h2>
 		<p>
 			Install the SQL extension for syntax support, then in{" "}

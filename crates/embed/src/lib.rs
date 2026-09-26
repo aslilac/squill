@@ -704,6 +704,8 @@ pub struct Embedded {
 pub struct Warning {
 	/// Byte offset of the capture in the original source.
 	pub offset: usize,
+	/// Where the capture ends (exclusive).
+	pub end: usize,
 	pub message: String,
 }
 
@@ -801,7 +803,11 @@ pub fn format_embedded(
 			match snippet.rewrite() {
 				Rewrite::Skip => {}
 				Rewrite::Warn(message) => {
-					warnings.push(Warning { offset: node_range.start, message });
+					warnings.push(Warning {
+						offset: node_range.start,
+						end: node_range.end,
+						message,
+					});
 				}
 				Rewrite::Replace(replacement) => {
 					if replacement != source[node_range.clone()] {
@@ -841,6 +847,7 @@ pub fn format_embedded(
 				let edit = edits.remove(index);
 				warnings.push(Warning {
 					offset: edit.range.start,
+					end: edit.range.end,
 					message: format!(
 						"formatting this string would change how the {} file \
 						 parses; left unformatted",
