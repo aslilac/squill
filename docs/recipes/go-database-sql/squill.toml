@@ -1,0 +1,3 @@
+[[embedded]]
+include = ["**/*.go"]
+grammar = "go"

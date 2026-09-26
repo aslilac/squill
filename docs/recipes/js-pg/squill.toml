@@ -1,0 +1,7 @@
+[[embedded]]
+include = ["**/*.ts"]
+grammar = "typescript"
+
+[[embedded]]
+include = ["**/*.tsx"]
+grammar = "tsx"

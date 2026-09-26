@@ -1,0 +1,3 @@
+[[embedded]]
+include = ["**/*.rs"]
+grammar = "rust"

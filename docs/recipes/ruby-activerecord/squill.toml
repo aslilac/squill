@@ -1,0 +1,6 @@
+[[embedded]]
+include = ["**/*.rb"]
+grammar = "https://github.com/tree-sitter/tree-sitter-ruby/releases/download/v0.23.1/tree-sitter-ruby.wasm"
+query = ".config/squill/ruby.scm"
+# ActiveRecord binds ? placeholders.
+question-params = true

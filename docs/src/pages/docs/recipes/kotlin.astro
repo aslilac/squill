@@ -1,0 +1,44 @@
+---
+import Docs from "../../../layouts/Docs.astro";
+import Recipe from "../../../components/Recipe.astro";
+---
+
+<Docs
+	page="recipes/kotlin"
+	title="Kotlin"
+	lede="Spring's JdbcTemplate, JDBC, and Exposed work out of the box."
+>
+	<section>
+		<h2>Which strings squill rewrites</h2>
+		<p>
+			Raw strings (<code>"""</code>) without templates. squill puts the
+			quotes on their own lines and lays the query out one clause per line
+			between them. Plain strings are left exactly as written, and so is any
+			string with a <code>$name</code> or <code>${"${…}"}</code> template in
+			it &mdash; SQL with holes in it isn&rsquo;t SQL squill can parse.
+		</p>
+		<p>
+			The built-in <code>kotlin</code> grammar&rsquo;s default query finds a
+			raw string passed straight to a JDBC, Spring, or Exposed call:{" "}
+			<code>query</code>, <code>update</code>, <code>exec</code>,{" "}
+			<code>prepareStatement</code>, and the rest &mdash; with or without{" "}
+			<code>.trimIndent()</code> on the end. JDBC&rsquo;s <code>?</code>{" "}
+			placeholders parse as parameters for this grammar without any
+			configuration.
+		</p>
+	</section>
+
+	<section>
+		<h2>Spring JdbcTemplate</h2>
+		<Recipe name="kotlin-spring" lang="kotlin" />
+	</section>
+
+	<section>
+		<h2>Exposed</h2>
+		<p>
+			Exposed&rsquo;s <code>exec</code> is in the default query, in both
+			forms:
+		</p>
+		<Recipe name="kotlin-exposed" lang="kotlin" />
+	</section>
+</Docs>

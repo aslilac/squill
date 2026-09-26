@@ -1,0 +1,82 @@
+---
+import Docs from "../../../layouts/Docs.astro";
+import Recipe from "../../../components/Recipe.astro";
+---
+
+<Docs
+	page="recipes/rust"
+	title="Rust"
+	lede="sqlx works out of the box; rusqlite and postgres take a few lines of query."
+>
+	<section>
+		<h2>Which strings squill rewrites</h2>
+		<p>
+			Raw strings (<code>r"&hellip;"</code>, <code>r#"&hellip;"#</code>) are
+			always fair game: they take newlines and quotes as written, so squill
+			lays the query out one clause per line. A plain string joins them once
+			it already spans lines, and comes out as a raw string. A plain string
+			on one line is left exactly as written &mdash; to have squill format a
+			short query, write it as a raw string.
+		</p>
+		<p>
+			The indent character comes from the file, so a spaces-indented crate
+			stays spaces. squill&rsquo;s own indent width is 2; set{" "}
+			<code>indent-width = 4</code> in the rule to match rustfmt&rsquo;s.
+		</p>
+	</section>
+
+	<section>
+		<h2>sqlx</h2>
+		<p>
+			The built-in <code>rust</code> grammar&rsquo;s default query finds{" "}
+			<code>query!</code>, <code>query_as!</code>,{" "}
+			<code>query_scalar!</code>, and <code>query_unchecked!</code>, and the{" "}
+			<code>query</code>, <code>query_as</code>, and{" "}
+			<code>query_scalar</code> functions, however they&rsquo;re imported. No
+			query file needed:
+		</p>
+		<Recipe name="rust-sqlx" lang="rust" />
+		<p>
+			Quoted identifiers are never touched, so sqlx&rsquo;s type overrides
+			(<code>"role: Role"</code>, <code>"count!"</code>) survive as written.
+		</p>
+		<div class="note">
+			<p>
+				With sqlx&rsquo;s offline mode, the <code>.sqlx</code> cache is keyed
+				by each query&rsquo;s exact text: run <code>cargo sqlx prepare</code>{" "}
+				after the first format. And sqlx checksums every migration it has
+				applied, so a reformatted old migration stops the app from starting
+				&mdash; <a href="docs/frozen/">freeze</a> <code>migrations/</code>{" "}
+				instead of formatting it wholesale.
+			</p>
+		</div>
+	</section>
+
+	<section>
+		<h2>rusqlite</h2>
+		<p>
+			rusqlite&rsquo;s queries are methods on a <code>Connection</code>, which
+			the default query doesn&rsquo;t look for. Point the rule at a query of
+			your own, and set the dialect, since rusqlite is SQLite:
+		</p>
+		<Recipe name="rust-rusqlite" lang="rust" />
+	</section>
+
+	<section>
+		<h2>postgres and tokio-postgres</h2>
+		<p>
+			The same shape, with the <code>Client</code> method names and the
+			default Postgres dialect:
+		</p>
+		<Recipe name="rust-postgres" lang="rust" />
+		<p>
+			A rule&rsquo;s <code>query</code> replaces the grammar&rsquo;s default
+			rather than adding to it. A crate that also uses sqlx&rsquo;s macros
+			needs their patterns in the same file; the defaults are{" "}
+			<a
+				href="https://github.com/aslilac/squill/blob/trunk/crates/embed/src/lib.rs"
+				>in squill&rsquo;s source</a
+			>, ready to copy.
+		</p>
+	</section>
+</Docs>

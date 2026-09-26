@@ -1,0 +1,71 @@
+---
+import Docs from "../../../layouts/Docs.astro";
+import Recipe from "../../../components/Recipe.astro";
+---
+
+<Docs
+	page="recipes/csharp"
+	title="C#"
+	lede="Dapper, EF Core, and ADO.NET work out of the box."
+>
+	<section>
+		<h2>Which strings squill rewrites</h2>
+		<p>
+			Raw string literals (<code>"""</code>, C# 11 and later) that already
+			span lines: the quotes sit on their own lines, and squill lays the
+			query out between them at the closing quotes&rsquo; indent, which is
+			where C# measures a raw string&rsquo;s indentation from.
+		</p>
+		<p>
+			Everything else is left exactly as written: plain strings, verbatim
+			strings (<code>@"&hellip;"</code>), and raw strings on a single line.
+			Interpolated strings (<code>$"&hellip;"</code>,{" "}
+			<code>$"""&hellip;"""</code>) never are &mdash; SQL with holes in it
+			isn&rsquo;t SQL squill can parse. To have squill format a query, write
+			it as a multi-line raw string.
+		</p>
+	</section>
+
+	<section>
+		<h2>Dapper</h2>
+		<p>
+			The built-in <code>csharp</code> grammar&rsquo;s default query knows
+			Dapper&rsquo;s query and execute methods, generic
+			(<code>QueryAsync&lt;Order&gt;</code>) or not. No query file needed:
+		</p>
+		<Recipe name="csharp-dapper" lang="csharp" />
+		<p>
+			Dapper&rsquo;s <code>@name</code> parameters pass through as written.
+		</p>
+	</section>
+
+	<section>
+		<h2>EF Core</h2>
+		<p>
+			The default query finds raw strings passed to{" "}
+			<code>migrationBuilder.Sql</code> and to the methods that take a plain
+			string, <code>FromSqlRaw</code> and <code>ExecuteSqlRaw</code> and
+			their async forms, and <code>SqlQueryRaw&lt;T&gt;</code>.
+		</p>
+		<Recipe name="csharp-efcore" lang="csharp" />
+		<p>
+			Two things to know. <code>FromSql</code> and <code>ExecuteSql</code>{" "}
+			take an interpolated string, which squill leaves alone. And the{" "}
+			<code>Raw</code> methods&rsquo;{" "}
+			<code>{"{0}"}</code> placeholders aren&rsquo;t SQL: squill reports
+			those strings as unparsable rather than guess. Named parameters
+			(<code>@cutoff</code>, bound with a <code>DbParameter</code>) format
+			fine, as above.
+		</p>
+	</section>
+
+	<section>
+		<h2>ADO.NET</h2>
+		<p>
+			A raw string assigned to <code>CommandText</code> is found on any
+			command, Npgsql&rsquo;s and Microsoft.Data.Sqlite&rsquo;s alike. Set
+			the dialect to match the database:
+		</p>
+		<Recipe name="csharp-adonet" lang="csharp" />
+	</section>
+</Docs>

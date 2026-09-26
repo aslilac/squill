@@ -1,0 +1,60 @@
+---
+import Docs from "../../../layouts/Docs.astro";
+import Recipe from "../../../components/Recipe.astro";
+---
+
+<Docs
+	page="recipes/lua"
+	title="Lua"
+	lede="No built-in grammar: load tree-sitter-lua from its release, and bring a query for your driver."
+>
+	<section>
+		<h2>Loading the grammar</h2>
+		<p>
+			squill doesn&rsquo;t compile Lua in, so the rule names the grammar by
+			its release URL. The first run downloads it and records its SHA-256 in
+			a <code>squill.lock</code> beside the config; commit that, and run CI
+			with <code>squill fmt --locked</code>. A loaded grammar has no default
+			query, so every rule brings one. See{" "}
+			<a href="docs/embedded/#grammars">bringing your own grammar</a> for how both work.
+		</p>
+	</section>
+
+	<section>
+		<h2>Which strings squill rewrites</h2>
+		<p>
+			squill knows nothing about a loaded grammar&rsquo;s strings, so it only
+			rewrites one that already spans lines. In Lua that means long strings,{" "}
+			<code>[[&hellip;]]</code> or <code>[==[&hellip;]==]</code>: a quoted
+			string can&rsquo;t hold a raw newline, so it&rsquo;s never rewritten,
+			and neither is a long string on one line. Write a query you want
+			formatted as a long string over several lines.
+		</p>
+		<p>
+			A long string holding a backslash is left as written and reported.
+			Lua doesn&rsquo;t read escapes there, but squill can&rsquo;t know that
+			about a loaded grammar, so it doesn&rsquo;t guess. A query built with{" "}
+			<code>..</code> isn&rsquo;t one string, and is never matched.
+		</p>
+	</section>
+
+	<section>
+		<h2>lsqlite3</h2>
+		<p>
+			The query takes the first string argument of the database methods that
+			run SQL, with or without parentheses. lsqlite3 is SQLite, so the rule
+			sets the dialect:
+		</p>
+		<Recipe name="lua-lsqlite3" lang="lua" />
+	</section>
+
+	<section>
+		<h2>pgmoon</h2>
+		<p>
+			The same shape for <code>pg:query</code>, in the default Postgres
+			dialect. LuaSQL&rsquo;s <code>conn:execute</code> works the same way
+			with its method name in the list.
+		</p>
+		<Recipe name="lua-pgmoon" lang="lua" />
+	</section>
+</Docs>

@@ -1,0 +1,56 @@
+---
+import Docs from "../../../layouts/Docs.astro";
+import Recipe from "../../../components/Recipe.astro";
+---
+
+<Docs
+	page="recipes/cpp"
+	title="C++"
+	lede="sqlite3, libpq, and libpqxx work out of the box, the C APIs each in their own dialect."
+>
+	<section>
+		<h2>Which strings squill rewrites</h2>
+		<p>
+			Raw string literals (<code>R"(&hellip;)"</code>, with or without a
+			delimiter like <code>R"sql(&hellip;)sql"</code>) that already span
+			lines. squill lays the query out one clause per line between the
+			delimiters. Plain strings, and raw strings on a single line, are left
+			exactly as written &mdash; to have squill format a query, write it as
+			a raw string with its SQL on lines of its own.
+		</p>
+		<p>
+			The built-in <code>cpp</code> grammar&rsquo;s default query knows which
+			database each C API talks to, so sqlite3&rsquo;s calls format as SQLite
+			and libpq&rsquo;s as Postgres, whatever the configured dialect.
+		</p>
+	</section>
+
+	<section>
+		<h2>sqlite3</h2>
+		<p>
+			<code>sqlite3_prepare</code>, <code>sqlite3_prepare_v2</code>,{" "}
+			<code>sqlite3_prepare_v3</code>, and <code>sqlite3_exec</code>:
+		</p>
+		<Recipe name="cpp-sqlite" lang="cpp" />
+	</section>
+
+	<section>
+		<h2>libpq</h2>
+		<p>
+			<code>PQexec</code>, <code>PQexecParams</code>, <code>PQprepare</code>,
+			and <code>PQsendQuery</code>:
+		</p>
+		<Recipe name="cpp-libpq" lang="cpp" />
+	</section>
+
+	<section>
+		<h2>libpqxx</h2>
+		<p>
+			The default query finds pqxx&rsquo;s <code>exec</code> and{" "}
+			<code>query</code> families in the configured dialect, with template
+			arguments (<code>tx.query&lt;int, std::string&gt;(&hellip;)</code>) or
+			without:
+		</p>
+		<Recipe name="cpp-libpqxx" lang="cpp" />
+	</section>
+</Docs>

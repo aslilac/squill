@@ -17,10 +17,33 @@ const groups = [
 	{
 		heading: "Reference",
 		items: [
+			{ href: "docs/cli/", label: "Command line", key: "cli" },
 			{ href: "docs/configuration/", label: "Configuration", key: "configuration" },
 			{ href: "docs/embedded/", label: "Embedded SQL", key: "embedded" },
 			{ href: "docs/frozen/", label: "Frozen paths", key: "frozen" },
 		],
+	},
+	{
+		// Built-in grammars first, then the ones loaded from a URL.
+		heading: "Recipes",
+		items: [
+			["rust", "Rust"],
+			["go", "Go"],
+			["python", "Python"],
+			["javascript", "JavaScript & TypeScript"],
+			["gleam", "Gleam"],
+			["csharp", "C#"],
+			["java", "Java"],
+			["kotlin", "Kotlin"],
+			["cpp", "C++"],
+			["lua", "Lua"],
+			["ruby", "Ruby"],
+			["elixir", "Elixir"],
+		].map(([slug, label]) => ({
+			href: `docs/recipes/${slug}/`,
+			label,
+			key: `recipes/${slug}`,
+		})),
 	},
 ];
 ---

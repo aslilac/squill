@@ -1,0 +1,3 @@
+[[embedded]]
+include = ["**/*.kt"]
+grammar = "kotlin"

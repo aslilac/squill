@@ -7,7 +7,7 @@ import Docs from "../../layouts/Docs.astro";
 	title="Embedded SQL"
 	lede="How squill finds SQL inside host code, what it will and won't rewrite, and how to point it somewhere new."
 >
-	<section>
+	<section id="built-ins">
 		<h2>What gets formatted</h2>
 		<p>
 			An <a href="docs/configuration/#rules"><code>[[embedded]]</code> rule</a>{" "}
@@ -80,13 +80,18 @@ grammar = "rust"</code></pre>
 			</li>
 		</ul>
 		<p>
+			The <a href="docs/recipes/rust/">recipes</a> show each of these at
+			work, library by library, along with queries for the libraries the
+			defaults don&rsquo;t cover.
+		</p>
+		<p>
 			A file named explicitly on the command line that no rule covers formats
 			as plain SQL &mdash; unless it is in a language squill has a grammar for,
 			in which case squill stops and shows the rule to add.
 		</p>
 	</section>
 
-	<section>
+	<section id="strings">
 		<h2>Which strings are eligible</h2>
 		<p>
 			Only <em>multiline string syntaxes</em> are rewritten: Rust raw strings,
@@ -124,7 +129,7 @@ grammar = "rust"</code></pre>
 		</p>
 	</section>
 
-	<section>
+	<section id="queries">
 		<h2>Writing your own query</h2>
 		<p>
 			A rule&rsquo;s <code>query</code> replaces its grammar&rsquo;s default
@@ -158,7 +163,7 @@ query = ".config/squill/rust.scm"</code></pre>
 		</p>
 	</section>
 
-	<section>
+	<section id="grammars">
 		<h2>Bringing your own grammar</h2>
 		<p>
 			Any language with a tree-sitter grammar works: build it to wasm with{" "}
@@ -186,7 +191,7 @@ dialect = "sqlite"</code></pre>
 			never when it holds a backslash that might be an escape. The re-parse
 			check catches the rest.
 		</p>
-		<h3>From a URL</h3>
+		<h3 id="urls">From a URL</h3>
 		<p>
 			A grammar can also come straight from where it&rsquo;s published, as an{" "}
 			<code>https</code> URL naming the <code>.wasm</code> file:
@@ -208,7 +213,7 @@ query = ".config/squill/lua.scm"</code></pre>
 		</p>
 	</section>
 
-	<section>
+	<section id="indentation">
 		<h2>Indentation</h2>
 		<p>
 			Embedded SQL is anchored to the host statement&rsquo;s indentation and,

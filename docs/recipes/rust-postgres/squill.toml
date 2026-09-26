@@ -1,0 +1,4 @@
+[[embedded]]
+include = ["**/*.rs"]
+grammar = "rust"
+query = ".config/squill/postgres.scm"

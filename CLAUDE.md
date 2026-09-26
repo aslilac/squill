@@ -20,6 +20,8 @@ cargo run -p corpus-report -- --summary                 # corpus coverage number
 
 Snapshot tests use `insta` (formatter snapshots cover every file of every corpus under `corpus/`, named `<corpus>__<path>`). After an intentional formatting change, review/accept with `cargo insta review` (or `INSTA_UPDATE=always cargo test ...` then inspect the diff).
 
+Docs recipes (`docs/recipes/<name>/`: a `squill.toml`, maybe a query, `before.*` and `after.*`) are shown on the site by `docs/src/components/Recipe.astro` and checked by `crates/cli/tests/recipes.rs` — regenerate `after` with `squill fmt --stdout before.<ext>` from inside the recipe directory when formatting changes. Recipes whose grammar is an https URL (they carry a `squill.lock`) run only with `cargo test -p cli --test recipes -- --ignored`.
+
 JS lives in one pnpm workspace rooted at the repo (`docs/` and `integrations/vscode/`, one lockfile). Docs site (`docs/`, Astro + Monaco playground): `pnpm dev` / `pnpm build`. The pre-step (`scripts/build-wasm.sh`) compiles `crates/playground` to wasm; it needs the `wasm32-wasip1` target plus a C toolchain for the tree-sitter grammars. `nix develop` supplies both (see `flake.nix`); otherwise add the target with `rustup` and install wasi-sdk at `~/.local/wasi-sdk` (see `docs/README.md`).
 
 ## Architecture

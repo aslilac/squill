@@ -1,0 +1,4 @@
+[[embedded]]
+include = ["**/*.cs"]
+grammar = "csharp"
+dialect = "sqlite"

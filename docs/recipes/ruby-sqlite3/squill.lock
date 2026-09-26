@@ -1,0 +1,5 @@
+# Written by squill: the SHA-256 of each grammar the squill
+# config downloads, which later downloads must match. Commit it.
+
+[grammars]
+"https://github.com/tree-sitter/tree-sitter-ruby/releases/download/v0.23.1/tree-sitter-ruby.wasm" = "09a96427d7c72f0613ed470cd9812223fc4a91d6a9c025c0235cc6bd59ff96f4"

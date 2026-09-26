@@ -1,0 +1,2 @@
+# sqlc's @name parameters, as in `where id = @id`.
+at-params = true

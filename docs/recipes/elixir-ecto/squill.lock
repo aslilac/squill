@@ -1,0 +1,5 @@
+# Written by squill: the SHA-256 of each grammar the squill
+# config downloads, which later downloads must match. Commit it.
+
+[grammars]
+"https://github.com/elixir-lang/tree-sitter-elixir/releases/download/v0.3.5/tree-sitter-elixir.wasm" = "1818ae0d7343f880abb0b7932c9a815f09896ca67b3e126096a2dd7677d1477b"

@@ -1,0 +1,72 @@
+---
+import Docs from "../../../layouts/Docs.astro";
+import Recipe from "../../../components/Recipe.astro";
+---
+
+<Docs
+	page="recipes/ruby"
+	title="Ruby"
+	lede="Heredocs passed to ActiveRecord, the pg gem, or sqlite3, via tree-sitter-ruby loaded from its release."
+>
+	<section>
+		<h2>Loading the grammar</h2>
+		<p>
+			squill doesn&rsquo;t compile Ruby in, so the rule names the grammar by
+			its release URL. The first run downloads it and records its SHA-256 in
+			a <code>squill.lock</code> beside the config; commit that, and run CI
+			with <code>squill fmt --locked</code>. A loaded grammar has no default
+			query, so every rule brings one. See{" "}
+			<a href="docs/embedded/#grammars">bringing your own grammar</a> for how both work.
+		</p>
+	</section>
+
+	<section>
+		<h2>Which strings squill rewrites</h2>
+		<p>
+			Squiggly heredocs (<code>&lt;&lt;~SQL</code>) are the form to use.
+			Ruby strips their common indentation, so squill can lay the query out
+			at the statement&rsquo;s indent and the string still means the same
+			SQL. <code>&lt;&lt;-SQL</code> works too. A bare{" "}
+			<code>&lt;&lt;SQL</code> doesn&rsquo;t: its terminator has to stay in
+			the first column, so squill leaves it alone and reports it.
+		</p>
+		<p>
+			A heredoc&rsquo;s body isn&rsquo;t inside the call in Ruby&rsquo;s tree;
+			it follows the whole statement. So the queries below match the
+			statement, then the body that comes right after it, and they only
+			cover a heredoc passed first (or first in an array). A body with{" "}
+			<code>#&lbrace;&rbrace;</code> interpolation or an escape is more than
+			one node, and never matches. Pass values as binds instead. In a
+			single-quoted heredoc (<code>&lt;&lt;~'SQL'</code>), a backslash is
+			left as written and reported, since squill can&rsquo;t tell it
+			isn&rsquo;t an escape.
+		</p>
+	</section>
+
+	<section>
+		<h2>ActiveRecord and pg</h2>
+		<p>
+			One query covers ActiveRecord&rsquo;s raw-SQL methods (migrations&rsquo;{" "}
+			<code>execute</code>, <code>find_by_sql</code>, the connection&rsquo;s{" "}
+			<code>select_*</code> and <code>exec_*</code>) and the pg gem&rsquo;s{" "}
+			<code>exec</code> family. ActiveRecord binds <code>?</code>{" "}
+			placeholders, so the rule turns on <code>question-params</code>. Leave
+			it off if you only use <code>$1</code>, since in Postgres{" "}
+			<code>?</code> is also a jsonb operator.
+		</p>
+		<Recipe name="ruby-activerecord" lang="ruby" />
+		<p>
+			Rails records which migrations have run by version, not by content, so
+			reformatting an old one is safe.
+		</p>
+	</section>
+
+	<section>
+		<h2>sqlite3</h2>
+		<p>
+			The sqlite3 gem&rsquo;s <code>Database</code> methods, in the SQLite
+			dialect:
+		</p>
+		<Recipe name="ruby-sqlite3" lang="ruby" />
+	</section>
+</Docs>

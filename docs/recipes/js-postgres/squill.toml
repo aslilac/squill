@@ -1,0 +1,3 @@
+[[embedded]]
+include = ["**/*.ts"]
+grammar = "typescript"

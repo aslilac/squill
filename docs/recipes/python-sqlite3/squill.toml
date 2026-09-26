@@ -1,0 +1,4 @@
+[[embedded]]
+include = ["**/*.py"]
+grammar = "python"
+dialect = "sqlite"

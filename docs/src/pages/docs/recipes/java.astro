@@ -1,0 +1,60 @@
+---
+import Docs from "../../../layouts/Docs.astro";
+import Recipe from "../../../components/Recipe.astro";
+---
+
+<Docs
+	page="recipes/java"
+	title="Java"
+	lede="JDBC and Spring's JdbcTemplate work out of the box, ? placeholders and all."
+>
+	<section>
+		<h2>Which strings squill rewrites</h2>
+		<p>
+			Text blocks (<code>"""</code>, Java 15 and later). Java strips a text
+			block&rsquo;s common indentation, so squill can lay the query out one
+			clause per line without changing what the database sees beyond
+			whitespace. Plain strings, and queries built up with <code>+</code>,
+			are left exactly as written &mdash; to have squill format a query,
+			write it as a text block. A text block holding an escape
+			(<code>\n</code>, <code>\"</code>) is reported rather than rewritten.
+		</p>
+		<p>
+			The built-in <code>java</code> grammar&rsquo;s default query finds a
+			text block passed straight to a JDBC, JPA, or <code>JdbcTemplate</code>{" "}
+			method. One assigned to a variable or a constant first is out of its
+			sight. JDBC&rsquo;s <code>?</code> placeholders parse as parameters
+			for this grammar without any configuration.
+		</p>
+	</section>
+
+	<section>
+		<h2>JDBC</h2>
+		<p>
+			<code>prepareStatement</code>, <code>prepareCall</code>,{" "}
+			<code>executeQuery</code>, <code>executeUpdate</code>,{" "}
+			<code>execute</code>, and <code>addBatch</code>:
+		</p>
+		<Recipe name="java-jdbc" lang="java" />
+	</section>
+
+	<section>
+		<h2>Spring JdbcTemplate</h2>
+		<p>
+			<code>query</code>, <code>queryForObject</code>,{" "}
+			<code>queryForList</code>, <code>update</code>,{" "}
+			<code>batchUpdate</code>, and the rest of the family. The single-line
+			string at the end stays as written:
+		</p>
+		<Recipe name="java-spring" lang="java" />
+		<div class="note">
+			<p>
+				Named parameters (<code>:customerId</code>, as{" "}
+				<code>NamedParameterJdbcTemplate</code> and JPA use them) and
+				JPA&rsquo;s numbered <code>?1</code> don&rsquo;t parse in the
+				Postgres dialect yet. squill reports those queries and leaves them as
+				written.
+			</p>
+		</div>
+	</section>
+</Docs>

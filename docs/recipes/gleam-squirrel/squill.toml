@@ -1,0 +1,2 @@
+# squirrel generates a sql.gleam beside each sql/ directory; leave it be.
+ignore = ["src/**/sql.gleam"]

@@ -1,0 +1,5 @@
+[[embedded]]
+include = ["**/*.rs"]
+grammar = "rust"
+query = ".config/squill/rusqlite.scm"
+dialect = "sqlite"

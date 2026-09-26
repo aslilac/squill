@@ -1,0 +1,5 @@
+# Written by squill: the SHA-256 of each grammar the squill
+# config downloads, which later downloads must match. Commit it.
+
+[grammars]
+"https://github.com/tree-sitter-grammars/tree-sitter-lua/releases/download/v0.5.0/tree-sitter-lua.wasm" = "df08a1704e504c70b8dba4a3e6f8e0c99a4fb94e1b1693d2969f53141d09f0d4"

@@ -1,0 +1,56 @@
+---
+// One recipe from docs/recipes/<name>: its config and query files, then
+// its before and after. The files are the ones crates/cli/tests/recipes.rs
+// checks — `after` is squill's real output for `before` — so the page
+// shows them exactly as written and never needs syncing by hand.
+import { readFileSync, readdirSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { codeToHtml } from "shiki";
+import { shikiTheme } from "../playground/theme.js";
+
+const { name, lang } = Astro.props;
+
+// Astro runs from docs/, next to the recipes.
+const dir = resolve(process.cwd(), "recipes", name);
+const read = (path) => readFileSync(join(dir, path), "utf8");
+
+// Every file the reader would write, in the order they'd write them:
+// the config, then any queries. squill.lock is squill's to write.
+const files = readdirSync(dir, { recursive: true, withFileTypes: true })
+	.filter((entry) => entry.isFile())
+	.map((entry) => join(entry.parentPath, entry.name).slice(dir.length + 1))
+	.filter((path) => path.startsWith("squill.") || path.endsWith(".scm"))
+	.filter((path) => path !== "squill.lock")
+	.sort(
+		(a, b) =>
+			Number(!a.startsWith("squill.")) - Number(!b.startsWith("squill.")) ||
+			a.localeCompare(b),
+	);
+
+const all = readdirSync(dir);
+const before = all.find((file) => file.startsWith("before."));
+const after = all.find((file) => file.startsWith("after."));
+const highlight = (code) =>
+	codeToHtml(code.replace(/\n$/, ""), { lang, theme: shikiTheme });
+---
+
+<div class="recipe">
+	{
+		files.map((path) => (
+			<>
+				<p class="filename">{path}</p>
+				<pre><code>{read(path).replace(/\n$/, "")}</code></pre>
+			</>
+		))
+	}
+	<div class="pair stacked">
+		<figure>
+			<figcaption>before <span>{lang}</span></figcaption>
+			<div set:html={await highlight(read(before))} />
+		</figure>
+		<figure>
+			<figcaption>after <span class="tidy">✓ squill fmt</span></figcaption>
+			<div set:html={await highlight(read(after))} />
+		</figure>
+	</div>
+</div>

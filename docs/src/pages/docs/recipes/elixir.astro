@@ -1,0 +1,64 @@
+---
+import Docs from "../../../layouts/Docs.astro";
+import Recipe from "../../../components/Recipe.astro";
+---
+
+<Docs
+	page="recipes/elixir"
+	title="Elixir"
+	lede="Heredocs and ~S sigils passed to Ecto or Exqlite, via tree-sitter-elixir loaded from its release."
+>
+	<section>
+		<h2>Loading the grammar</h2>
+		<p>
+			squill doesn&rsquo;t compile Elixir in, so the rule names the grammar
+			by its release URL. The first run downloads it and records its SHA-256
+			in a <code>squill.lock</code> beside the config; commit that, and run
+			CI with <code>squill fmt --locked</code>. A loaded grammar has no
+			default query, so every rule brings one. See{" "}
+			<a href="docs/embedded/#grammars">bringing your own grammar</a> for how both work.
+		</p>
+	</section>
+
+	<section>
+		<h2>Which strings squill rewrites</h2>
+		<p>
+			squill only rewrites a string from a loaded grammar that already spans
+			lines: in Elixir, a <code>"""</code> heredoc, a <code>~S"""</code>{" "}
+			sigil, or a plain string written over several lines. A one-line string
+			is left as written.
+		</p>
+		<p>
+			The queries below take a string only when its content is a single
+			node. Interpolation (<code>#&lbrace;&rbrace;</code>) or an escape splits
+			it, so those strings never match; pass values as parameters instead.
+			The same goes for sigils: only <code>~S</code>, which never
+			interpolates, is taken. <code>~S"""</code> is the natural choice for a
+			migration, since backslashes in it are literal.
+		</p>
+	</section>
+
+	<section>
+		<h2>Ecto</h2>
+		<p>
+			<code>Repo.query!</code>, <code>Ecto.Adapters.SQL.query!</code>, and a
+			migration&rsquo;s <code>execute</code>, in the default Postgres
+			dialect:
+		</p>
+		<Recipe name="elixir-ecto" lang="elixir" />
+		<p>
+			Ecto records which migrations have run by version, not by content, so
+			reformatting an old one is safe. With <code>ecto_sqlite3</code>, set{" "}
+			<code>dialect = "sqlite"</code> in the rule.
+		</p>
+	</section>
+
+	<section>
+		<h2>Exqlite</h2>
+		<p>
+			<code>Exqlite.Sqlite3</code>&rsquo;s <code>execute</code> and{" "}
+			<code>prepare</code>, in the SQLite dialect:
+		</p>
+		<Recipe name="elixir-exqlite" lang="elixir" />
+	</section>
+</Docs>

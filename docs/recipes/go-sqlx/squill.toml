@@ -1,0 +1,6 @@
+[[embedded]]
+include = ["**/*.go"]
+grammar = "go"
+query = ".config/squill/sqlx.scm"
+# sqlx's Rebind turns `?` into `$1`, `$2`, … for Postgres.
+question-params = true

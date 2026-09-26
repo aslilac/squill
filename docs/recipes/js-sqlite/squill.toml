@@ -1,0 +1,4 @@
+[[embedded]]
+include = ["**/*.ts"]
+grammar = "typescript"
+dialect = "sqlite"

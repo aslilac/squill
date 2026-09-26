@@ -1,0 +1,3 @@
+[[embedded]]
+include = ["**/*.py"]
+grammar = "python"

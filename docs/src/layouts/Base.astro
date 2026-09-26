@@ -200,8 +200,16 @@ const topNav = [
 		.pair figure + figure {
 			background: var(--pane-deep);
 		}
+		/* Before above after, for code whose lines are too long to share
+		   the width: the docs' recipes. */
+		.pair.stacked {
+			grid-template-columns: 1fr;
+		}
+		.pair.stacked figure + figure {
+			border-top: 1px solid var(--pane-edge);
+		}
 		@media (min-width: 900px) {
-			.pair figure:first-child {
+			.pair:not(.stacked) figure:first-child {
 				border-right: 1px solid var(--pane-edge);
 			}
 		}
@@ -242,8 +250,11 @@ const topNav = [
 			line-height: 1.7;
 			tab-size: 2;
 		}
+		/* No ligatures: code on these pages is there to be copied, and
+		   JetBrains Mono would draw Ruby's <<-SQL as a guillemet and a dash. */
 		code {
 			font-family: "JetBrains Mono", monospace;
+			font-variant-ligatures: none;
 		}
 		/* Code blocks that aren't the dark hero style — the config snippets
 		   through the docs. Sized to match pre.dark, and sitting a hair
@@ -257,6 +268,19 @@ const topNav = [
 			font-size: 0.85rem;
 			line-height: 1.6;
 			tab-size: 2;
+		}
+		/* A file's name, over the pre that holds it. */
+		.filename {
+			font-family: "JetBrains Mono", monospace;
+			font-size: 0.75rem;
+			color: var(--muted);
+			margin: 1.25rem 0 0.35rem;
+		}
+		.filename + pre {
+			margin-top: 0;
+		}
+		.recipe .pair {
+			margin-top: 1.25rem;
 		}
 		pre.dark {
 			background: var(--pane);

@@ -1,0 +1,95 @@
+---
+import Docs from "../../../layouts/Docs.astro";
+import Recipe from "../../../components/Recipe.astro";
+---
+
+<Docs
+	page="recipes/go"
+	title="Go"
+	lede="database/sql and pgx work out of the box, sqlx takes a query file, and sqlc is plain SQL."
+>
+	<section>
+		<h2>Which strings squill rewrites</h2>
+		<p>
+			Backtick strings are always fair game: they take newlines as written, so
+			squill lays the query out one clause per line. A double-quoted string
+			joins them once it already spans lines (an escaped <code>\n</code>{" "}
+			counts), and comes out as a backtick string. A double-quoted string on
+			one line is left exactly as written &mdash; to have squill format a short
+			query, write it in backticks. A query built with <code>+</code> is
+			several strings, not one, and none of them is touched.
+		</p>
+		<p>
+			squill only formats string literals passed straight to a call. A query
+			kept in a <code>const</code> and passed by name isn&rsquo;t found by the
+			default query; pass the literal, or{" "}
+			<a href="docs/embedded/#queries">write a query</a> that
+			matches your constants.
+		</p>
+	</section>
+
+	<section>
+		<h2>database/sql and pgx</h2>
+		<p>
+			The built-in <code>go</code> grammar&rsquo;s default query finds string
+			arguments of <code>Query</code>, <code>QueryRow</code>, and{" "}
+			<code>Exec</code> and their <code>Context</code> variants on any
+			receiver, which covers <code>*sql.DB</code>, <code>*sql.Tx</code>, and
+			pgx&rsquo;s <code>Conn</code> and <code>Pool</code> alike. No query file
+			needed:
+		</p>
+		<Recipe name="go-database-sql" lang="go" />
+		<p>
+			With a SQLite driver (<code>modernc.org/sqlite</code>,{" "}
+			<code>mattn/go-sqlite3</code>), set <code>dialect = "sqlite"</code> in
+			the rule; that is also what makes <code>?</code> placeholders parse. As
+			Postgres, a query with <code>?</code> is reported and left as written.
+		</p>
+	</section>
+
+	<section>
+		<h2>sqlx</h2>
+		<p>
+			jmoiron/sqlx adds its own methods &mdash; <code>Select</code>,{" "}
+			<code>Get</code>, <code>MustExec</code>, <code>Rebind</code>, and more
+			&mdash; which the default query doesn&rsquo;t look for. A rule&rsquo;s{" "}
+			<code>query</code> replaces the default rather than adding to it, so this
+			one lists database/sql&rsquo;s methods too:
+		</p>
+		<Recipe name="go-sqlx" lang="go" />
+		<p>
+			<code>question-params</code> lets <code>?</code> placeholders parse as
+			Postgres, for queries written portably and passed through{" "}
+			<code>Rebind</code>. Leave it off if you write <code>$1</code>{" "}
+			throughout.
+		</p>
+		<div class="note">
+			<p>
+				sqlx&rsquo;s named parameters (<code>:name</code>, for{" "}
+				<code>NamedExec</code> and <code>NamedQuery</code>) aren&rsquo;t
+				Postgres syntax, so squill reports those queries and leaves them as
+				written. As SQLite they parse fine: <code>:name</code> is one of
+				SQLite&rsquo;s own parameter forms.
+			</p>
+		</div>
+	</section>
+
+	<section>
+		<h2>sqlc</h2>
+		<p>
+			sqlc&rsquo;s queries live in <code>.sql</code> files, which squill
+			formats with no rule at all. The <code>-- name:</code> annotations are
+			comments, and stay on their own line above each query. Turn on{" "}
+			<code>at-params</code> if you use sqlc&rsquo;s <code>@name</code>{" "}
+			shorthand, so squill reads it as a parameter rather than as
+			Postgres&rsquo;s <code>@</code> operator; <code>sqlc.arg()</code> and{" "}
+			<code>sqlc.narg()</code> are ordinary function calls either way.
+		</p>
+		<Recipe name="go-sqlc" lang="sql" />
+		<p>
+			sqlc copies each query&rsquo;s text into the Go it generates, so run{" "}
+			<code>sqlc generate</code> after formatting, or <code>sqlc diff</code>{" "}
+			in CI will notice.
+		</p>
+	</section>
+</Docs>
