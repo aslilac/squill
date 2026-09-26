@@ -62,8 +62,9 @@ begin
 	select token
 	into new_token
 	from worker_read_write_locks
-	where lock_name = OLD.lock_name and lock_key = OLD.lock_key limit
-		1 for update;
+	where lock_name = OLD.lock_name and lock_key = OLD.lock_key
+	limit 1
+	for update;
 	if not FOUND then
 		delete from worker_read_write_locks_mode
 		where

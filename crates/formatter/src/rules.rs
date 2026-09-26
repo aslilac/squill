@@ -1955,12 +1955,17 @@ impl Lowerer {
 		let mut seen_end = false;
 		let mut tight_dot = false;
 		let mut label = Label::default();
+		// A loop's query (`for r in select ...`): one group, so a short
+		// query stays on one line.
+		let mut query = Vec::new();
 		for element in node.children_with_tokens() {
 			match element {
 				SyntaxElement::Token(token) if token.kind().is_trivia() => {
-					self.trivia(&mut docs, token)
+					let docs = if query.is_empty() { &mut docs } else { &mut query };
+					self.trivia(docs, token)
 				}
 				SyntaxElement::Token(token) => {
+					flush_query(&mut docs, &mut query);
 					let lower = token.text().to_ascii_lowercase();
 					// `1..3` ranges: dots attach tight (the lexer may
 					// split them as `1`, `.`, `.3`).
@@ -1989,8 +1994,19 @@ impl Lowerer {
 							| SyntaxKind::PlException
 					);
 					let statement = is_pl_statement(child.kind());
+					let clause = is_clause_level(child.kind());
+					if !clause {
+						flush_query(&mut docs, &mut query);
+					}
 					let doc = self.node(child);
-					if arm {
+					if clause {
+						if !query.is_empty() {
+							query.push(soft_line_or_space());
+						} else if !first {
+							docs.push(space());
+						}
+						self.push(&mut query, doc);
+					} else if arm {
 						if indent_arms {
 							self.push(&mut docs, indent(concat([hard_line(), doc])));
 						} else {
@@ -2011,6 +2027,7 @@ impl Lowerer {
 				}
 			}
 		}
+		flush_query(&mut docs, &mut query);
 		concat(docs)
 	}
 
@@ -2216,14 +2233,19 @@ impl Lowerer {
 
 	fn space_flow(&mut self, node: &SyntaxNode, pos: IdentPos) -> Doc {
 		let mut docs = Vec::new();
+		// Consecutive query clauses (a cursor's `for select ...`): one
+		// group, so a short query stays on one line.
+		let mut query = Vec::new();
 		let mut tight = false;
 		let mut first = true;
 		for element in node.children_with_tokens() {
 			match element {
 				SyntaxElement::Token(token) if token.kind().is_trivia() => {
-					self.trivia(&mut docs, token)
+					let docs = if query.is_empty() { &mut docs } else { &mut query };
+					self.trivia(docs, token)
 				}
 				SyntaxElement::Token(token) => {
+					flush_query(&mut docs, &mut query);
 					let no_space_before = tight
 						|| matches!(
 							token.kind(),
@@ -2252,7 +2274,19 @@ impl Lowerer {
 					self.push(&mut docs, leaf);
 					first = false;
 				}
+				SyntaxElement::Node(child) if is_clause_level(child.kind()) => {
+					if !query.is_empty() {
+						query.push(soft_line_or_space());
+					} else if !first && !tight {
+						docs.push(space());
+					}
+					tight = false;
+					let doc = self.node(child);
+					self.push(&mut query, doc);
+					first = false;
+				}
 				SyntaxElement::Node(child) => {
+					flush_query(&mut docs, &mut query);
 					if !first && !tight {
 						docs.push(space());
 					}
@@ -2263,6 +2297,7 @@ impl Lowerer {
 				}
 			}
 		}
+		flush_query(&mut docs, &mut query);
 		concat(docs)
 	}
 
@@ -2323,6 +2358,13 @@ fn is_pl_statement(kind: SyntaxKind) -> bool {
 				| SyntaxKind::ErrorStatement
 				| SyntaxKind::EmptyStmt
 		)
+}
+
+/// Close a run of query clauses: into `docs`, as one group.
+fn flush_query(docs: &mut Vec<Doc>, query: &mut Vec<Doc>) {
+	if !query.is_empty() {
+		docs.push(group(concat(std::mem::take(query))));
+	}
 }
 
 /// A PL/pgSQL `<<label>>` opening a block or loop: written tight, on a

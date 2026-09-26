@@ -37,10 +37,7 @@ begin
 	from users
 	where id = NEW.user_id
 	for update;
-	select count(*)
-	into skill_count
-	from user_skills
-	where user_id = NEW.user_id;
+	select count(*) into skill_count from user_skills where user_id = NEW.user_id;
 	if skill_count >= skill_limit then
 		raise exception 'user has reached the personal skill limit'
 		using ERRCODE = 'check_violation',

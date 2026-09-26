@@ -90,10 +90,7 @@ fn plpgsql_control_flow_layout() {
          declare\n\
          \tn int := 0;\n\
          begin\n\
-         \tselect count(*)\n\
-         \tinto n\n\
-         \tfrom t\n\
-         \twhere id = NEW.id;\n\
+         \tselect count(*) into n from t where id = NEW.id;\n\
          \tif n > 10 then\n\
          \t\traise exception 'too many';\n\
          \telsif n > 5 then\n\
@@ -265,5 +262,17 @@ fn unparsable_bodies_are_reported() {
 	assert!(
 		found[1].1.contains("SQL function body left as written"),
 		"{found:?}"
+	);
+}
+
+/// A query inside PL/pgSQL (a loop's, a cursor's, or a statement on its
+/// own) stays on one line when it fits, like one at the top level.
+#[test]
+fn plpgsql_queries_stay_on_one_line_when_they_fit() {
+	assert_eq!(
+		format(
+			"do $$ declare c cursor for select * from t; begin for r in select * from t where id = 1 loop null; end loop; end $$;"
+		),
+		"do $$\ndeclare\n\tc cursor for select * from t;\nbegin\n\tfor r in select * from t where id = 1 loop\n\t\tnull;\n\tend loop;\nend\n$$;\n"
 	);
 }

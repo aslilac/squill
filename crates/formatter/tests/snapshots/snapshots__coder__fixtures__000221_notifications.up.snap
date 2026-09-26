@@ -6,8 +6,7 @@ do $$
 declare
 	template text;
 begin
-	select 'You successfully did {{.thing}}!'
-	into template;
+	select 'You successfully did {{.thing}}!' into template;
 	insert into notification_templates (
 		id,
 		name,

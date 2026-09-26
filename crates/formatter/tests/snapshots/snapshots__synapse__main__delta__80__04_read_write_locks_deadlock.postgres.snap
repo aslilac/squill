@@ -44,17 +44,17 @@ begin
 	into mode_row_token
 	from worker_read_write_locks_mode
 	where
-		lock_name = OLD.lock_name
-		and lock_key = OLD.lock_key
-		and token = OLD.token for update;
+		lock_name = OLD.lock_name and lock_key = OLD.lock_key and token = OLD.token
+	for update;
 	if not FOUND then
 		return NEW;
 	end if;
 	select token
 	into new_token
 	from worker_read_write_locks
-	where lock_name = OLD.lock_name and lock_key = OLD.lock_key limit
-		1 for update skip locked;
+	where lock_name = OLD.lock_name and lock_key = OLD.lock_key
+	limit 1
+	for update skip locked;
 	if not FOUND then
 		delete from worker_read_write_locks_mode
 		where
