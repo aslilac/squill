@@ -29,6 +29,9 @@ const files = readdirSync(dir, { recursive: true, withFileTypes: true })
 const all = readdirSync(dir);
 const before = all.find((file) => file.startsWith("before."));
 const after = all.find((file) => file.startsWith("after."));
+// How a language is named in a pane's corner, where shiki's id differs.
+const labels = { cpp: "c++", csharp: "c#" };
+const label = (id) => labels[id] ?? id;
 const highlight = (code, as = lang) => shiki(code.replace(/\n$/, ""), as);
 // What each config-side file is written in, for its caption and colors.
 const kind = (path) =>
@@ -50,7 +53,7 @@ const kind = (path) =>
 	</div>
 	<div class="pair stacked">
 		<figure>
-			<figcaption>before <span>{lang}</span></figcaption>
+			<figcaption>before <span>{label(lang)}</span></figcaption>
 			<div set:html={await highlight(read(before))} />
 		</figure>
 		<figure>
