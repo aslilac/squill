@@ -324,6 +324,22 @@ impl Caches {
 		}
 	}
 
+	// With no built-in grammars compiled in, `Builtin` cannot occur.
+	#[cfg_attr(
+		not(any(
+			feature = "rust",
+			feature = "go",
+			feature = "python",
+			feature = "javascript",
+			feature = "typescript",
+			feature = "gleam",
+			feature = "cpp",
+			feature = "csharp",
+			feature = "java",
+			feature = "kotlin"
+		)),
+		allow(unreachable_code)
+	)]
 	fn grammar(
 		&mut self,
 		spec: &config::GrammarSpec,

@@ -7,18 +7,28 @@
 //! raw strings; single-line ones stay byte-identical, as do f-strings
 //! and `${}` templates (SQL with holes).
 
-#[cfg(feature = "cpp")]
+// Exercises every built-in grammar: only with all of them compiled in.
+#![cfg(all(
+	feature = "rust",
+	feature = "go",
+	feature = "python",
+	feature = "javascript",
+	feature = "typescript",
+	feature = "gleam",
+	feature = "cpp",
+	feature = "csharp",
+	feature = "java",
+	feature = "kotlin"
+))]
+
 use embed::CPP_SQL_QUERY;
-#[cfg(feature = "csharp")]
 use embed::CSHARP_SQL_QUERY;
 use embed::GLEAM_SQL_QUERY;
 use embed::GO_DB_QUERY;
 use embed::Host;
 use embed::Indent;
-#[cfg(feature = "java")]
 use embed::JAVA_SQL_QUERY;
 use embed::JS_SQL_QUERY;
-#[cfg(feature = "kotlin")]
 use embed::KOTLIN_SQL_QUERY;
 use embed::PYTHON_DB_QUERY;
 use embed::RUST_SQLX_QUERY;
@@ -564,7 +574,6 @@ fn format_host(host: Host, query: &str, source: &str) -> embed::Embedded {
 	formatted
 }
 
-#[cfg(feature = "csharp")]
 #[test]
 fn csharp_raw_strings() {
 	let source = r#"class M {
@@ -605,7 +614,6 @@ fn csharp_raw_strings() {
 	assert!(formatted.warnings.is_empty(), "{:?}", formatted.warnings);
 }
 
-#[cfg(feature = "cpp")]
 #[test]
 fn cpp_raw_strings() {
 	let source = "void f() {\n  sqlite3_prepare_v2(db, R\"sql(\n    SELECT a FROM t LIMIT 1\n  )sql\", -1, &s, 0);\n  txn.exec(R\"(select   1)\");\n}\n";
@@ -617,7 +625,6 @@ fn cpp_raw_strings() {
 	);
 }
 
-#[cfg(feature = "java")]
 #[test]
 fn java_text_blocks() {
 	let source = "class A {\n    void m() {\n        conn.prepareStatement(\"\"\"\n            SELECT id FROM users WHERE org = ?\n            \"\"\");\n        conn.prepareStatement(\"\"\"\n            SELECT id \\\n            FROM users\n            \"\"\");\n    }\n}\n";
@@ -636,7 +643,6 @@ fn java_text_blocks() {
 	assert!(formatted.warnings[0].message.contains("backslash"));
 }
 
-#[cfg(feature = "kotlin")]
 #[test]
 fn kotlin_raw_strings() {
 	let source = "fun m() {\n    db.query(\"\"\"\n        SELECT id FROM users\n    \"\"\", mapper)\n    db.query(\"\"\"\n        SELECT id FROM $table\n    \"\"\")\n}\n";
@@ -695,7 +701,6 @@ fn procedural_bodies_anchor_but_their_strings_do_not() {
 	assert!(formatted.text.contains("$$one\ntwo$$"), "{}", formatted.text);
 }
 
-#[cfg(feature = "csharp")]
 #[test]
 fn column_zero_strings_take_the_files_indent_character() {
 	// No anchor indentation to copy: the file's own indentation decides,

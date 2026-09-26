@@ -314,7 +314,7 @@ pub fn run(args: InitArgs) -> ExitCode {
 	ExitCode::SUCCESS
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "go", feature = "python"))]
 mod tests {
 	use super::*;
 

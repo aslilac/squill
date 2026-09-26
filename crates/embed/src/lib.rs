@@ -26,6 +26,24 @@
 //! supported, keeping the no-regex rule — `#match?` is rejected up
 //! front.
 
+// A build with only some grammars leaves codec paths unused; the full
+// build keeps every lint strict.
+#![cfg_attr(
+	not(all(
+		feature = "rust",
+		feature = "go",
+		feature = "python",
+		feature = "javascript",
+		feature = "typescript",
+		feature = "gleam",
+		feature = "cpp",
+		feature = "csharp",
+		feature = "java",
+		feature = "kotlin"
+	)),
+	allow(dead_code, unused_imports, unused_variables, unreachable_patterns)
+)]
+
 use formatter::Options;
 use parser::Dialect;
 use streaming_iterator::StreamingIterator;
@@ -39,13 +57,20 @@ use tree_sitter::Tree;
 /// The host languages with built-in grammars.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Host {
+	#[cfg(feature = "rust")]
 	Rust,
+	#[cfg(feature = "go")]
 	Go,
+	#[cfg(feature = "python")]
 	Python,
+	#[cfg(feature = "javascript")]
 	JavaScript,
+	#[cfg(feature = "typescript")]
 	TypeScript,
 	/// TypeScript with JSX (`.tsx`) — a distinct grammar, same codec.
+	#[cfg(feature = "typescript")]
 	Tsx,
+	#[cfg(feature = "gleam")]
 	Gleam,
 	#[cfg(feature = "cpp")]
 	Cpp,
@@ -60,12 +85,19 @@ pub enum Host {
 impl Host {
 	/// Every built-in grammar this build carries.
 	pub const ALL: &[Host] = &[
+		#[cfg(feature = "rust")]
 		Host::Rust,
+		#[cfg(feature = "go")]
 		Host::Go,
+		#[cfg(feature = "python")]
 		Host::Python,
+		#[cfg(feature = "javascript")]
 		Host::JavaScript,
+		#[cfg(feature = "typescript")]
 		Host::TypeScript,
+		#[cfg(feature = "typescript")]
 		Host::Tsx,
+		#[cfg(feature = "gleam")]
 		Host::Gleam,
 		#[cfg(feature = "cpp")]
 		Host::Cpp,
@@ -80,12 +112,19 @@ impl Host {
 	/// The name a config file uses for this grammar.
 	pub fn name(self) -> &'static str {
 		match self {
+			#[cfg(feature = "rust")]
 			Host::Rust => "rust",
+			#[cfg(feature = "go")]
 			Host::Go => "go",
+			#[cfg(feature = "python")]
 			Host::Python => "python",
+			#[cfg(feature = "javascript")]
 			Host::JavaScript => "javascript",
+			#[cfg(feature = "typescript")]
 			Host::TypeScript => "typescript",
+			#[cfg(feature = "typescript")]
 			Host::Tsx => "tsx",
+			#[cfg(feature = "gleam")]
 			Host::Gleam => "gleam",
 			#[cfg(feature = "cpp")]
 			Host::Cpp => "cpp",
@@ -105,12 +144,19 @@ impl Host {
 	/// File extensions conventionally written in this language.
 	pub fn extensions(self) -> &'static [&'static str] {
 		match self {
+			#[cfg(feature = "rust")]
 			Host::Rust => &["rs"],
+			#[cfg(feature = "go")]
 			Host::Go => &["go"],
+			#[cfg(feature = "python")]
 			Host::Python => &["py"],
+			#[cfg(feature = "javascript")]
 			Host::JavaScript => &["js", "mjs", "cjs", "jsx"],
+			#[cfg(feature = "typescript")]
 			Host::TypeScript => &["ts", "mts", "cts"],
+			#[cfg(feature = "typescript")]
 			Host::Tsx => &["tsx"],
+			#[cfg(feature = "gleam")]
 			Host::Gleam => &["gleam"],
 			#[cfg(feature = "cpp")]
 			Host::Cpp => &["cc", "cpp", "cxx", "hh", "hpp", "hxx"],
@@ -126,10 +172,17 @@ impl Host {
 	/// The extraction query used when a config names none.
 	pub fn default_query(self) -> &'static str {
 		match self {
+			#[cfg(feature = "rust")]
 			Host::Rust => RUST_SQLX_QUERY,
+			#[cfg(feature = "go")]
 			Host::Go => GO_DB_QUERY,
+			#[cfg(feature = "python")]
 			Host::Python => PYTHON_DB_QUERY,
-			Host::JavaScript | Host::TypeScript | Host::Tsx => JS_SQL_QUERY,
+			#[cfg(feature = "javascript")]
+			Host::JavaScript => JS_SQL_QUERY,
+			#[cfg(feature = "typescript")]
+			Host::TypeScript | Host::Tsx => JS_SQL_QUERY,
+			#[cfg(feature = "gleam")]
 			Host::Gleam => GLEAM_SQL_QUERY,
 			#[cfg(feature = "cpp")]
 			Host::Cpp => CPP_SQL_QUERY,
@@ -144,12 +197,19 @@ impl Host {
 
 	fn language(self) -> Language {
 		match self {
+			#[cfg(feature = "rust")]
 			Host::Rust => tree_sitter_rust::LANGUAGE.into(),
+			#[cfg(feature = "go")]
 			Host::Go => tree_sitter_go::LANGUAGE.into(),
+			#[cfg(feature = "python")]
 			Host::Python => tree_sitter_python::LANGUAGE.into(),
+			#[cfg(feature = "javascript")]
 			Host::JavaScript => tree_sitter_javascript::LANGUAGE.into(),
+			#[cfg(feature = "typescript")]
 			Host::TypeScript => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
+			#[cfg(feature = "typescript")]
 			Host::Tsx => tree_sitter_typescript::LANGUAGE_TSX.into(),
+			#[cfg(feature = "gleam")]
 			Host::Gleam => tree_sitter_gleam::LANGUAGE.into(),
 			#[cfg(feature = "cpp")]
 			Host::Cpp => tree_sitter_cpp::LANGUAGE.into(),
@@ -175,15 +235,29 @@ impl Host {
 		}
 	}
 
+	/// psycopg-style `%s` / `%(name)s` placeholders are Python's.
+	fn uses_pyformat_params(self) -> bool {
+		match self {
+			#[cfg(feature = "python")]
+			Host::Python => true,
+			_ => false,
+		}
+	}
+
 	fn codec(self) -> Codec {
 		match self {
-			Host::Rust
-			| Host::Go
-			| Host::Python
-			| Host::JavaScript
-			| Host::TypeScript
-			| Host::Tsx
-			| Host::Gleam => Codec::Literal,
+			#[cfg(feature = "rust")]
+			Host::Rust => Codec::Literal,
+			#[cfg(feature = "go")]
+			Host::Go => Codec::Literal,
+			#[cfg(feature = "python")]
+			Host::Python => Codec::Literal,
+			#[cfg(feature = "javascript")]
+			Host::JavaScript => Codec::Literal,
+			#[cfg(feature = "typescript")]
+			Host::TypeScript | Host::Tsx => Codec::Literal,
+			#[cfg(feature = "gleam")]
+			Host::Gleam => Codec::Literal,
 			// Raw strings: a backslash is just a backslash.
 			#[cfg(feature = "cpp")]
 			Host::Cpp => Codec::Content { backslash_escapes: false },
@@ -389,6 +463,7 @@ pub mod wasm {
 /// sqlx's `query!` / `query_as!` / `query_scalar!` / `query_unchecked!`
 /// macros, and the first argument of its `query` / `query_as` /
 /// `query_scalar` functions (any path whose last segment matches).
+#[cfg(feature = "rust")]
 pub const RUST_SQLX_QUERY: &str = r#"
 ((macro_invocation
    macro: [
@@ -414,6 +489,7 @@ pub const RUST_SQLX_QUERY: &str = r#"
 
 /// Default extraction query for Go: string arguments of `.Query`-family
 /// method calls (`database/sql` style).
+#[cfg(feature = "go")]
 pub const GO_DB_QUERY: &str = r#"
 ((call_expression
    function: (selector_expression field: (field_identifier) @_method)
@@ -427,6 +503,7 @@ pub const GO_DB_QUERY: &str = r#"
 /// Default extraction query for Python: the first string argument of
 /// `.execute`-family method calls (sqlite3 / psycopg / asyncpg style)
 /// and of SQLAlchemy's `text(...)`.
+#[cfg(feature = "python")]
 pub const PYTHON_DB_QUERY: &str = r#"
 ((call
    function: (attribute attribute: (identifier) @_method)
@@ -445,6 +522,7 @@ pub const PYTHON_DB_QUERY: &str = r#"
 /// or template-literal argument of `.query` / `.execute` / `.prepare`
 /// method calls (pg, mysql2, better-sqlite3 style), plus `sql`-tagged
 /// template literals (postgres.js style).
+#[cfg(any(feature = "javascript", feature = "typescript"))]
 pub const JS_SQL_QUERY: &str = r#"
 ((call_expression
    function: (member_expression property: (property_identifier) @_method)
@@ -461,6 +539,7 @@ pub const JS_SQL_QUERY: &str = r#"
 /// `query` / `exec` / `execute` calls, module-qualified (`sqlight.query`,
 /// `pog.query`) or bare. `sqlight` is a SQLite library, so its calls
 /// carry that dialect; everything else uses the session dialect.
+#[cfg(feature = "gleam")]
 pub const GLEAM_SQL_QUERY: &str = r#"
 ((function_call
    function: (field_access record: (identifier) @_mod field: (label) @_fn)
@@ -1058,7 +1137,8 @@ impl Snippet<'_> {
 		// psycopg-style `%s` / `%(name)s` placeholders must survive
 		// byte-exact; lex them as params. (JDBC's `?` is configurable,
 		// so it arrives in `options`; see `Host::uses_question_params`.)
-		format_options.pyformat_params = self.grammar.host() == Some(Host::Python);
+		format_options.pyformat_params =
+			self.grammar.host().is_some_and(Host::uses_pyformat_params);
 		// The author chose a multi-line literal: keep statements
 		// clause-per-line, never collapsed onto one line.
 		format_options.always_break_statements = true;
@@ -1179,6 +1259,7 @@ fn decode(host: Host, literal: &str) -> Result<Decoded, Rewrite> {
 				.ok_or(Rewrite::Skip)
 		};
 	match host {
+		#[cfg(feature = "rust")]
 		Host::Rust => {
 			if let Some(rest) = literal.strip_prefix('r') {
 				let hashes = rest.chars().take_while(|&c| c == '#').count();
@@ -1194,6 +1275,7 @@ fn decode(host: Host, literal: &str) -> Result<Decoded, Rewrite> {
 				})
 			}
 		}
+		#[cfg(feature = "go")]
 		Host::Go => {
 			if literal.starts_with('`') {
 				Ok(Decoded {
@@ -1209,6 +1291,7 @@ fn decode(host: Host, literal: &str) -> Result<Decoded, Rewrite> {
 				})
 			}
 		}
+		#[cfg(feature = "python")]
 		Host::Python => {
 			let prefix_len =
 				literal.chars().take_while(|c| c.is_ascii_alphabetic()).count();
@@ -1237,19 +1320,11 @@ fn decode(host: Host, literal: &str) -> Result<Decoded, Rewrite> {
 			// Single-quoted syntax: single-line territory, untouched.
 			Err(Rewrite::Skip)
 		}
-		Host::JavaScript | Host::TypeScript | Host::Tsx => {
-			// Only template literals; `${}` substitutions are SQL with
-			// holes and stay byte-identical. Plain '...'/"..." strings
-			// are single-line syntax, also untouched.
-			let body = strip(literal, "`", "`")?;
-			if has_template_substitution(&body) {
-				return Err(Rewrite::Skip);
-			}
-			Ok(Decoded {
-				content: unescape(&body, EscapeMode::Js).ok_or_else(unknown_escape)?,
-				kind: LiteralKind::JsTemplate,
-			})
-		}
+		#[cfg(feature = "javascript")]
+		Host::JavaScript => decode_js(literal),
+		#[cfg(feature = "typescript")]
+		Host::TypeScript | Host::Tsx => decode_js(literal),
+		#[cfg(feature = "gleam")]
 		Host::Gleam => {
 			let body = strip(literal, "\"", "\"")?;
 			Ok(Decoded {
@@ -1262,6 +1337,28 @@ fn decode(host: Host, literal: &str) -> Result<Decoded, Rewrite> {
 		#[allow(unreachable_patterns)]
 		_ => Err(Rewrite::Skip),
 	}
+}
+
+/// Decode a JS/TS literal. Only template literals; `${}` substitutions
+/// are SQL with holes and stay byte-identical. Plain '...'/"..."
+/// strings are single-line syntax, also untouched.
+fn decode_js(literal: &str) -> Result<Decoded, Rewrite> {
+	let Some(body) =
+		literal.strip_prefix('`').and_then(|rest| rest.strip_suffix('`'))
+	else {
+		return Err(Rewrite::Skip);
+	};
+	if has_template_substitution(body) {
+		return Err(Rewrite::Skip);
+	}
+	let content = unescape(body, EscapeMode::Js).ok_or_else(|| {
+		Rewrite::Warn(
+			"string holds an escape sequence squill cannot decode; left \
+			 unformatted"
+				.to_string(),
+		)
+	})?;
+	Ok(Decoded { content, kind: LiteralKind::JsTemplate })
 }
 
 /// Does a template-literal body contain an unescaped `${`?

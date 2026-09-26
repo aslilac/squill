@@ -8,13 +8,29 @@ license.workspace = true
 workspace = true
 
 [features]
-default = ["wasm"]
+default = [
+	"wasm",
+	"rust", "go", "python", "javascript", "typescript", "gleam",
+	"cpp", "csharp", "java", "kotlin",
+]
 # Load tree-sitter grammars compiled to wasm (`grammar = "x.wasm"`).
 # Pulls in wasmtime, whose build needs cmake.
 wasm = ["embed/wasm"]
+# The built-in grammars, one feature each: build with
+# `--no-default-features --features rust,go` for just those.
+rust = ["embed/rust"]
+go = ["embed/go"]
+python = ["embed/python"]
+javascript = ["embed/javascript"]
+typescript = ["embed/typescript"]
+gleam = ["embed/gleam"]
+cpp = ["embed/cpp"]
+csharp = ["embed/csharp"]
+java = ["embed/java"]
+kotlin = ["embed/kotlin"]
 
 [dependencies]
-embed = { workspace = true, features = ["cpp", "csharp", "java", "kotlin"] }
+embed.workspace = true
 parser.workspace = true
 formatter.workspace = true
 globset = "0.4"
