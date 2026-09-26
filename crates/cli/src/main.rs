@@ -41,19 +41,20 @@ const USAGE: &str = "\
 squill — a SQL formatter
 
 Usage: squill fmt [OPTIONS] [PATHS...]
-       squill init [--dialect <D>] [--yes]
+       squill init [--dialect <D>] [--yaml] [--yes]
        squill language-server start
 
 `squill language-server start` runs a language server on stdin/stdout,
 for editors: document formatting, and diagnostics for what squill
 leaves alone.
 
-`squill init` writes a starter squill.toml for the project in the
-working directory: pick the languages whose embedded SQL to format
-(the ones already holding SQL come checked) and their dialects.
+`squill init` writes a starter squill.toml (or, with --yaml,
+squill.yaml) for the project in the working directory: pick the
+languages whose embedded SQL to format (the ones already holding SQL
+come checked) and their dialects.
 
 Formats the given files in place (directories are searched
-recursively): .sql files, plus whatever squill.toml's [[files]] and
+recursively): .sql files, plus whatever the config's [[files]] and
 [[embedded]] rules include. Reads stdin when --stdin is given.
 
 Options:
@@ -76,7 +77,8 @@ Options:
                           `*`, `**`, `?`, `[abc]`, `{a,b}` globs)
   --dialect <D>           postgres (default) | sqlite
   --indent <STYLE>        tabs (default) | spaces
-  --indent-width <N>      Indent width (and tab measure), default 2
+  --indent-width <N>      Indent width (and tab measure, 1 to 16),
+                          default 2
   --max-width <N>         Target line width (20 to 500), default 80
   --keyword-case <CASE>   lower (default) | upper
   --quote-idents <MODE>   as-needed (default) | always
@@ -98,10 +100,10 @@ Options:
 
 Configuration: the nearest squill.toml or .config/squill.toml (or
 squill.yaml / squill.yml, same keys) at or above each formatted file
-supplies defaults. Top-level keys: dialect,
-indent, indent-width, max-width, keyword-case, quote-idents, at-params,
-question-params, pyformat-params, ignore and frozen (arrays of glob
-patterns), frozen-ref, and frozen-fetch. Explicit flags override the
+supplies defaults. Top-level keys: dialect, indent, indent-width,
+max-width, keyword-case, quote-idents, at-params, question-params,
+pyformat-params, ignore and frozen (arrays of glob patterns),
+frozen-ref, and frozen-fetch. Explicit flags override the
 config. The search upward stops at a git repository root, a mount
 point, or a symlinked directory, so a config outside a checkout never
 reaches inside it. Directory recursion honors .gitignore and skips
@@ -128,7 +130,8 @@ a tree-sitter grammar and query:
 Built-in grammars: rust, go, python, javascript, typescript, tsx,
 gleam, cpp, csharp, java, kotlin — each with a default query. Any
 other language works with a grammar built by `tree-sitter build
---wasm` (grammar = \"grammars/tree-sitter-lua.wasm\") and a query.
+--wasm` (grammar = \"grammars/tree-sitter-lua.wasm\", or an https
+URL, whose SHA-256 is locked in squill.lock) and a query.
 Queries capture the SQL string as @sql (or @sql.postgres /
 @sql.sqlite to fix its dialect); only #eq?, #not-eq?, and #any-of?
 predicates are supported.
@@ -266,11 +269,13 @@ fn parse_args() -> Result<Invocation, String> {
 					Some(config::parse_indent(&value(&mut argv, "--indent")?)?)
 			}
 			"--indent-width" => {
-				args.overrides.indent_width = Some(
-					value(&mut argv, "--indent-width")?
-						.parse()
-						.map_err(|_| "--indent-width needs a number".to_string())?,
-				)
+				let width: u8 = value(&mut argv, "--indent-width")?
+					.parse()
+					.map_err(|_| "--indent-width needs a number".to_string())?;
+				if !(1..=16).contains(&width) {
+					return Err("--indent-width expects 1 to 16".to_string());
+				}
+				args.overrides.indent_width = Some(width);
 			}
 			"--max-width" => {
 				let width: u16 = value(&mut argv, "--max-width")?

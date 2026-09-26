@@ -28,9 +28,9 @@ pub const USAGE: &str = "\
 Usage: squill init [OPTIONS]
 
 Writes a squill.toml (or squill.yaml) for the project in the working
-directory. squill
-lists the languages it has grammars for — checking the ones where it
-finds SQL already — and asks which to format, and in which dialect.
+directory. squill lists the languages it has grammars for — checking
+the ones where it finds SQL already — and asks which to format, and
+in which dialect.
 
 Options:
   --dialect <D>   postgres (default) | sqlite: the dialect every answer

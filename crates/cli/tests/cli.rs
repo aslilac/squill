@@ -220,6 +220,16 @@ fn max_width_flag_applies() {
 		.status()
 		.expect("run");
 	assert_eq!(status.code(), Some(2), "out-of-range width is an error");
+
+	for width in ["0", "99"] {
+		let status = squill()
+			.args(["fmt", "--stdin", "--indent-width", width])
+			.stdin(Stdio::piped())
+			.stdout(Stdio::piped())
+			.status()
+			.expect("run");
+		assert_eq!(status.code(), Some(2), "--indent-width {width} accepted");
+	}
 }
 
 #[test]

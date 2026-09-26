@@ -733,3 +733,45 @@ fn unparsable_function_bodies_in_embedded_sql_are_reported() {
 		formatted.warnings
 	);
 }
+
+/// Calls the default queries once missed: a generic call after `await`
+/// in TypeScript, generic Dapper methods in C#, templated pqxx methods
+/// in C++, and `.trimIndent()`ed raw strings in Kotlin.
+#[test]
+fn generic_and_wrapped_calls_are_found() {
+	let cases = [
+		(
+			Host::TypeScript,
+			JS_SQL_QUERY,
+			"async function f() {\n  const r = await pool.query<Row>(`SELECT  1`);\n}\n",
+			"await pool.query<Row>(`\n  select 1\n  `);",
+		),
+		(
+			Host::CSharp,
+			CSHARP_SQL_QUERY,
+			"class A {\n    void M() {\n        conn.QueryAsync<Order>(\"\"\"\n            SELECT  1\n            \"\"\");\n    }\n}\n",
+			"conn.QueryAsync<Order>(\"\"\"\n        select 1\n        \"\"\");",
+		),
+		(
+			Host::Cpp,
+			CPP_SQL_QUERY,
+			"void f() {\n  tx.query<int>(R\"(\n    SELECT  1\n  )\");\n}\n",
+			"tx.query<int>(R\"(\n  select 1\n  )\");",
+		),
+		(
+			Host::Kotlin,
+			KOTLIN_SQL_QUERY,
+			"fun m() {\n    exec(\"\"\"\n        SELECT  1\n    \"\"\".trimIndent())\n}\n",
+			"exec(\"\"\"\n    select 1\n    \"\"\".trimIndent())",
+		),
+	];
+	for (host, query, source, expected) in cases {
+		let formatted = format_host(host, query, source);
+		assert!(
+			formatted.text.contains(expected),
+			"{}: {}",
+			host.name(),
+			formatted.text
+		);
+	}
+}

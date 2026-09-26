@@ -537,11 +537,17 @@ pub const PYTHON_DB_QUERY: &str = r#"
 /// Default extraction query for JavaScript/TypeScript: the first string
 /// or template-literal argument of `.query` / `.execute` / `.prepare`
 /// method calls (pg, mysql2, better-sqlite3 style), plus `sql`-tagged
-/// template literals (postgres.js style).
+/// template literals (postgres.js style). TypeScript reads a generic call
+/// right after `await` (`await pool.query<Row>(…)`) as a call of the whole
+/// `await` expression, so that shape is matched too.
 #[cfg(any(feature = "javascript", feature = "typescript"))]
 pub const JS_SQL_QUERY: &str = r#"
 ((call_expression
-   function: (member_expression property: (property_identifier) @_method)
+   function: [
+     (member_expression property: (property_identifier) @_method)
+     (await_expression
+       (member_expression property: (property_identifier) @_method))
+   ]
    arguments: (arguments . [(string) (template_string)] @sql))
  (#any-of? @_method "query" "execute" "prepare"))
 
@@ -577,7 +583,8 @@ pub const GLEAM_SQL_QUERY: &str = r#"
 
 /// Default extraction query for C++: raw-string (`R"(...)"`) arguments
 /// of sqlite3, libpq, and libpqxx calls. The C APIs name their dialect;
-/// pqxx-style `exec`/`query` calls use the configured one.
+/// pqxx-style `exec`/`query` calls, templated (`tx.query<int>`) or not,
+/// use the configured one.
 #[cfg(feature = "cpp")]
 pub const CPP_SQL_QUERY: &str = r#"
 ((call_expression
@@ -593,23 +600,30 @@ pub const CPP_SQL_QUERY: &str = r#"
 
 ((call_expression
    function: [
-     (field_expression field: (field_identifier) @_fn)
+     (field_expression field: [
+       (field_identifier) @_fn
+       (template_method name: (field_identifier) @_fn)
+     ])
      (qualified_identifier name: (identifier) @_fn)
    ]
    arguments: (argument_list (raw_string_literal (raw_string_content) @sql)))
  (#any-of? @_fn
    "exec" "exec0" "exec1" "exec_n" "exec_params" "exec_params0"
-   "exec_params1" "exec_prepared" "prepare" "query" "query_value"))
+   "exec_params1" "exec_prepared" "prepare" "query" "query1" "query01"
+   "query_n" "query_value" "for_query" "stream"))
 "#;
 
 /// Default extraction query for C#: raw-string (`"""`) arguments of EF
 /// Core migrations and raw-SQL calls, ADO.NET's `CommandText`, and
-/// Dapper's query/execute family. Interpolated raw strings (`$"""`) are
+/// Dapper's query/execute family, generic (`QueryAsync<Order>`) or not. Interpolated raw strings (`$"""`) are
 /// a different node and never match.
 #[cfg(feature = "csharp")]
 pub const CSHARP_SQL_QUERY: &str = r#"
 ((invocation_expression
-   function: (member_access_expression name: (identifier) @_method)
+   function: (member_access_expression name: [
+     (identifier) @_method
+     (generic_name (identifier) @_method)
+   ])
    arguments: (argument_list
      (argument (raw_string_literal (raw_string_content) @sql))))
  (#any-of? @_method
@@ -647,8 +661,8 @@ pub const JAVA_SQL_QUERY: &str = r#"
 "#;
 
 /// Default extraction query for Kotlin: raw-string (`"""`) arguments of
-/// JDBC, Spring, and Exposed calls. A raw string with `$` templates has
-/// several content nodes and never matches.
+/// JDBC, Spring, and Exposed calls, bare or `.trimIndent()`ed. A raw
+/// string with `$` templates has several content nodes and never matches.
 #[cfg(feature = "kotlin")]
 pub const KOTLIN_SQL_QUERY: &str = r#"
 ((call_expression
@@ -664,6 +678,24 @@ pub const KOTLIN_SQL_QUERY: &str = r#"
    "execute" "addBatch" "createQuery" "createNativeQuery"
    "query" "queryForObject" "queryForList" "queryForMap"
    "update" "batchUpdate" "exec"))
+
+((call_expression
+   [
+     (identifier) @_method
+     (navigation_expression (identifier) @_method .)
+   ]
+   (value_arguments
+     (value_argument
+       (call_expression
+         (navigation_expression
+           (multiline_string_literal . (string_content) @sql .)
+           (identifier) @_trim)))))
+ (#any-of? @_method
+   "prepareStatement" "prepareCall" "executeQuery" "executeUpdate"
+   "execute" "addBatch" "createQuery" "createNativeQuery"
+   "query" "queryForObject" "queryForList" "queryForMap"
+   "update" "batchUpdate" "exec")
+ (#eq? @_trim "trimIndent"))
 "#;
 
 /// Where an embedded snippet takes its indent character from.
