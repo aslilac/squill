@@ -1,6 +1,6 @@
 # coder/coder SQL corpus
 
-Vendored snapshot of the SQL files from [coder/coder](https://github.com/coder/coder), used as the grammar-coverage corpus for the parser and formatter (see `cargo run -p cli --bin corpus-report`).
+Vendored snapshot of the SQL files from [coder/coder](https://github.com/coder/coder), used as the grammar-coverage corpus for the parser and formatter (see `cargo run -p corpus-report`).
 
 - **Upstream commit:** `36e36e204864b114e7524e26f0f9435f37849449`
 - **Vendored:** 2026-07-17
