@@ -81,6 +81,15 @@ grammar = "rust"`} />
 				(<code>question-params</code> is on for these grammars unless
 				configured)
 			</li>
+			<li>
+				<code>swift</code>: <code>"""</code> strings passed to GRDB as its{" "}
+				<code class="boxed">sql:</code> argument (as SQLite), or first to
+				SQLite.swift&rsquo;s <code class="boxed">run</code>/<code
+					class="boxed">execute</code
+				>/<code class="boxed">prepare</code>/<code class="boxed">scalar</code
+				>, PostgresNIO&rsquo;s <code class="boxed">query</code>, or
+				SQLKit&rsquo;s <code class="boxed">raw</code>
+			</li>
 		</ul>
 		<p>
 			The <a href="docs/recipes/rust/">recipes</a> show each of these at
@@ -99,7 +108,8 @@ grammar = "rust"`} />
 		<p>
 			Only <em>multiline string syntaxes</em> are rewritten: Rust raw strings,
 			Go backticks, Python triple quotes, JS template literals, Gleam strings,
-			C++ and C# raw strings, Java text blocks, and Kotlin raw strings. Those
+			C++ and C# raw strings, Java text blocks, Kotlin raw strings, and Swift
+			multi-line strings. Those
 			already support a vertical layout, so squill puts the quotes on their own
 			lines and formats one clause per line.
 		</p>
@@ -114,8 +124,8 @@ grammar = "rust"`} />
 			<p>
 				Strings with interpolation holes are never touched &mdash; Python
 				f-strings, <code>$&lbrace;&hellip;&rbrace;</code> in JS templates,
-				C#&rsquo;s <code>$"""</code>, and Kotlin&rsquo;s <code>$name</code>{" "}
-				templates. SQL with a hole in it is not SQL squill can parse, so it
+				C#&rsquo;s <code>$"""</code>, Kotlin&rsquo;s <code>$name</code>{" "}
+				templates, and Swift&rsquo;s <code>\(&hellip;)</code>. SQL with a hole in it is not SQL squill can parse, so it
 				leaves it exactly as written.
 			</p>
 		</div>

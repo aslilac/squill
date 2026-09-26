@@ -12,7 +12,7 @@ workspace = true
 # playground, or anyone after a tiny binary) carries only what it needs.
 default = [
 	"rust", "go", "python", "javascript", "typescript", "gleam",
-	"cpp", "csharp", "java", "kotlin",
+	"cpp", "csharp", "java", "kotlin", "swift",
 ]
 rust = ["dep:tree-sitter-rust"]
 go = ["dep:tree-sitter-go"]
@@ -25,6 +25,7 @@ cpp = ["dep:tree-sitter-cpp"]
 csharp = ["dep:tree-sitter-c-sharp"]
 java = ["dep:tree-sitter-java"]
 kotlin = ["dep:tree-sitter-kotlin-ng"]
+swift = ["dep:tree-sitter-swift"]
 # Load tree-sitter grammars compiled to wasm at runtime (pulls in
 # wasmtime). Off for the playground, which is itself wasm.
 external-grammars = ["tree-sitter/wasm"]
@@ -41,6 +42,7 @@ tree-sitter-go = { version = "0.25.0", optional = true }
 tree-sitter-java = { version = "0.23", optional = true }
 tree-sitter-javascript = { version = "0.25.0", optional = true }
 tree-sitter-kotlin-ng = { version = "1.1", optional = true }
+tree-sitter-swift = { version = "0.7.3", optional = true }
 tree-sitter-python = { version = "0.25.0", optional = true }
 tree-sitter-rust = { version = "0.24.2", optional = true }
 tree-sitter-typescript = { version = "0.23.2", optional = true }

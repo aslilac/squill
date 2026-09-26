@@ -1,0 +1,3 @@
+[[embedded]]
+include = ["**/*.swift"]
+grammar = "swift"

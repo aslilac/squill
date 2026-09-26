@@ -87,6 +87,7 @@ fn display_name(host: embed::Host) -> &'static str {
 		"csharp" => "C#",
 		"java" => "Java",
 		"kotlin" => "Kotlin",
+		"swift" => "Swift",
 		other => other,
 	}
 }

@@ -18,7 +18,8 @@
 	feature = "cpp",
 	feature = "csharp",
 	feature = "java",
-	feature = "kotlin"
+	feature = "kotlin",
+	feature = "swift",
 ))]
 
 use embed::CPP_SQL_QUERY;
@@ -32,6 +33,7 @@ use embed::JS_SQL_QUERY;
 use embed::KOTLIN_SQL_QUERY;
 use embed::PYTHON_DB_QUERY;
 use embed::RUST_SQLX_QUERY;
+use embed::SWIFT_SQL_QUERY;
 use embed::format_embedded;
 use formatter::Options;
 use parser::lexer::LexOptions;
@@ -779,4 +781,47 @@ fn generic_and_wrapped_calls_are_found() {
 			formatted.text
 		);
 	}
+}
+
+/// Swift: `"""` strings — GRDB's `sql:` arguments as SQLite, SQLite.swift
+/// and PostgresNIO calls in the configured dialect. Interpolated and
+/// escaped strings, and single-line ones, are never touched.
+#[test]
+fn swift_multi_line_strings() {
+	let source = r#"func f() throws {
+    try db.execute(sql: """
+        SELECT id FROM t WHERE a = ? AND b = :name
+        """, arguments: [1])
+    let n = try Int.fetchOne(db, sql: "SELECT   1")
+    try conn.run("""
+        select   \(x)
+        """)
+    let rows = try await client.query("""
+        SELECT id FROM users WHERE org = $1 ORDER BY id
+        """, logger: logger)
+}
+"#;
+	let formatted = format_host(Host::Swift, SWIFT_SQL_QUERY, source);
+	assert_eq!(
+		formatted.text,
+		r#"func f() throws {
+    try db.execute(sql: """
+    select id
+    from t
+    where a = ? and b = :name
+    """, arguments: [1])
+    let n = try Int.fetchOne(db, sql: "SELECT   1")
+    try conn.run("""
+        select   \(x)
+        """)
+    let rows = try await client.query("""
+    select id
+    from users
+    where org = $1
+    order by id
+    """, logger: logger)
+}
+"#
+	);
+	assert!(formatted.warnings.is_empty(), "{:?}", formatted.warnings);
 }

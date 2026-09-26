@@ -140,13 +140,13 @@ a tree-sitter grammar and query:
     dialect = \"sqlite\"
 
 Built-in grammars: rust, go, python, javascript, typescript, tsx,
-gleam, cpp, csharp, java, kotlin — each with a default query. Any
-other language works with a grammar built by `tree-sitter build
+gleam, cpp, csharp, java, kotlin, swift — each with a default query.
+Any other language works with a grammar built by `tree-sitter build
 --wasm` (grammar = \"grammars/tree-sitter-lua.wasm\", or an https
-URL, whose SHA-256 is locked in squill.lock) and a query.
-Queries capture the SQL string as @sql (or @sql.postgres /
-@sql.sqlite to fix its dialect); only #eq?, #not-eq?, and #any-of?
-predicates are supported.
+URL, whose SHA-256 is locked in squill.lock) and a query. Queries
+capture the SQL string as @sql (or @sql.postgres / @sql.sqlite to
+fix its dialect); only #eq?, #not-eq?, and #any-of? predicates are
+supported.
 
 Embedded SQL copies the host file's own indent character unless an
 indent style is configured, so a spaces-indented file never gains tabs
@@ -479,7 +479,8 @@ impl Caches {
 			feature = "cpp",
 			feature = "csharp",
 			feature = "java",
-			feature = "kotlin"
+			feature = "kotlin",
+			feature = "swift"
 		)),
 		allow(unreachable_code)
 	)]

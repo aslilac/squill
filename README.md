@@ -31,7 +31,7 @@ Cargo can clone the source, checkout the latest release tag, and install the bin
 cargo install --git https://github.com/aslilac/squill.git --tag v0.3.0 cli --bin squill
 ```
 
-Every built-in grammar for embedded SQL is its own cargo feature (`rust`, `go`, `python`, `javascript`, `typescript`, `gleam`, `cpp`, `csharp`, `java`, `kotlin`), as is `external-grammars`, which loads grammars from `.wasm` files at runtime (and needs `cmake` to build). All are on by default; for a smaller binary, pick just the ones you need:
+Every built-in grammar for embedded SQL is its own cargo feature (`rust`, `go`, `python`, `javascript`, `typescript`, `gleam`, `cpp`, `csharp`, `java`, `kotlin`, `swift`), as is `external-grammars`, which loads grammars from `.wasm` files at runtime (and needs `cmake` to build). All are on by default; for a smaller binary, pick just the ones you need:
 
 ```sh
 cargo install --git https://github.com/aslilac/squill.git --tag v0.3.0 cli --bin squill --no-default-features --features rust,go
@@ -56,7 +56,8 @@ Set in the nearest `squill.toml` or `.config/squill.toml` (or `squill.yaml` / `s
 | `max-width` | `--max-width` | target line width, 20 to 500 | `80` |
 | `keyword-case` | `--keyword-case` | `lower` \| `upper` | `lower` |
 | `quote-idents` | `--quote-idents` | `as-needed` \| `always` | `as-needed` |
-| `at-params` | `--at-params` | lex [sqlc-style](https://docs.sqlc.dev/en/latest/howto/named_parameters.html) `@name` parameters | `false` |
+| `trailing-semicolons` | `--trailing-semicolons` | `always` \| `none`: whether the last statement ends in `;` | `always` (`none` for embedded SQL) |
+| `at-params` | `--at-params` | lex [sqlc-style](https://docs.sqlc.dev/en/latest/howto/named_parameters.html) and ADO.NET-style `@name` parameters | `false` (`true` for the `csharp` grammar) |
 | `question-params` | `--question-params` | lex JDBC-style `?` parameters in Postgres | `false` (`true` for `java` and `kotlin` grammars) |
 | `pyformat-params` | `--pyformat-params` | lex Python DB-API `%s` / `%(name)s` parameters | `false` (`true` for the `python` grammar) |
 | `ignore` | `--ignore` | glob patterns to skip when recursing | `[]` |
@@ -125,7 +126,7 @@ indent = "spaces"
 indent-width = 2
 ```
 
-Built-in grammars, each with a default query: `rust` (sqlx's `query!`-family macros and `query`/`query_as`/`query_scalar` functions), `go` (`database/sql` calls), `python` (`.execute`-family and `text(...)`, with `%s` / `%(name)s` params preserved), `javascript`/`typescript`/`tsx` (`.query`/`.execute`/`.prepare` and `sql`-tagged templates), `gleam` (`sqlight.query` as SQLite, `pog.query` etc. as the configured dialect), `cpp` (raw strings passed to sqlite3, libpq, and libpqxx), `csharp` (raw strings in EF Core migrations, raw-SQL and Dapper calls, and `CommandText`), and `java`/`kotlin` (text blocks and raw strings passed to JDBC, JPA, Spring, and Exposed calls, with `?` placeholders preserved).
+Built-in grammars, each with a default query: `rust` (sqlx's `query!`-family macros and `query`/`query_as`/`query_scalar` functions), `go` (`database/sql` calls), `python` (`.execute`-family and `text(...)`, with `%s` / `%(name)s` params preserved), `javascript`/`typescript`/`tsx` (`.query`/`.execute`/`.prepare` and `sql`-tagged templates), `gleam` (`sqlight.query` as SQLite, `pog.query` etc. as the configured dialect), `cpp` (raw strings passed to sqlite3, libpq, and libpqxx), `csharp` (raw strings in EF Core migrations, raw-SQL and Dapper calls, and `CommandText`), `java`/`kotlin` (text blocks and raw strings passed to JDBC, JPA, Spring, and Exposed calls, with `?` placeholders preserved), and `swift` (`"""` strings passed to GRDB as SQLite, and to SQLite.swift, PostgresNIO, and SQLKit calls).
 
 Any other language works with a grammar compiled to wasm (`tree-sitter build --wasm`, or the `.wasm` many grammars publish with each release) and a query of your own:
 

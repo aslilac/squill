@@ -31,6 +31,7 @@ const LANGUAGES = [
 	"csharp",
 	"java",
 	"kotlin",
+	"swift",
 ];
 
 let client: LanguageClient | undefined;

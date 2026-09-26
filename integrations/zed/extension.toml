@@ -24,6 +24,7 @@ languages = [
 	"CSharp",
 	"Java",
 	"Kotlin",
+	"Swift",
 ]
 
 [language_servers.squill.language_ids]
@@ -39,3 +40,4 @@ languages = [
 "CSharp" = "csharp"
 "Java" = "java"
 "Kotlin" = "kotlin"
+"Swift" = "swift"

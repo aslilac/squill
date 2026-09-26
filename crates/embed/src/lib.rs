@@ -12,7 +12,7 @@
 //! - **Literal** (the original built-ins: Rust, Go, Python, JS/TS,
 //!   Gleam): the capture is the whole string literal, decoded and
 //!   re-encoded by a hand-written codec per host.
-//! - **Content** (C++, C#, Java, Kotlin, and every wasm grammar): the
+//! - **Content** (C++, C#, Java, Kotlin, Swift, and every wasm grammar): the
 //!   capture is the string's *content* node, between the delimiters.
 //!   It is taken verbatim, formatted only when it already spans lines
 //!   (proof the syntax allows raw newlines), and never when it holds a
@@ -39,7 +39,8 @@
 		feature = "cpp",
 		feature = "csharp",
 		feature = "java",
-		feature = "kotlin"
+		feature = "kotlin",
+		feature = "swift"
 	)),
 	allow(dead_code, unused_imports, unused_variables, unreachable_patterns)
 )]
@@ -80,6 +81,8 @@ pub enum Host {
 	Java,
 	#[cfg(feature = "kotlin")]
 	Kotlin,
+	#[cfg(feature = "swift")]
+	Swift,
 }
 
 impl Host {
@@ -107,6 +110,8 @@ impl Host {
 		Host::Java,
 		#[cfg(feature = "kotlin")]
 		Host::Kotlin,
+		#[cfg(feature = "swift")]
+		Host::Swift,
 	];
 
 	/// The name a config file uses for this grammar.
@@ -134,6 +139,8 @@ impl Host {
 			Host::Java => "java",
 			#[cfg(feature = "kotlin")]
 			Host::Kotlin => "kotlin",
+			#[cfg(feature = "swift")]
+			Host::Swift => "swift",
 		}
 	}
 
@@ -166,6 +173,8 @@ impl Host {
 			Host::Java => &["java"],
 			#[cfg(feature = "kotlin")]
 			Host::Kotlin => &["kt", "kts"],
+			#[cfg(feature = "swift")]
+			Host::Swift => &["swift"],
 		}
 	}
 
@@ -192,6 +201,8 @@ impl Host {
 			Host::Java => JAVA_SQL_QUERY,
 			#[cfg(feature = "kotlin")]
 			Host::Kotlin => KOTLIN_SQL_QUERY,
+			#[cfg(feature = "swift")]
+			Host::Swift => SWIFT_SQL_QUERY,
 		}
 	}
 
@@ -219,6 +230,8 @@ impl Host {
 			Host::Java => tree_sitter_java::LANGUAGE.into(),
 			#[cfg(feature = "kotlin")]
 			Host::Kotlin => tree_sitter_kotlin_ng::LANGUAGE.into(),
+			#[cfg(feature = "swift")]
+			Host::Swift => tree_sitter_swift::LANGUAGE.into(),
 		}
 	}
 
@@ -278,6 +291,8 @@ impl Host {
 			Host::CSharp => Codec::Content { backslash_escapes: false },
 			#[cfg(feature = "kotlin")]
 			Host::Kotlin => Codec::Content { backslash_escapes: false },
+			#[cfg(feature = "swift")]
+			Host::Swift => Codec::Content { backslash_escapes: true },
 			// Text blocks process escapes.
 			#[cfg(feature = "java")]
 			Host::Java => Codec::Content { backslash_escapes: true },
@@ -293,6 +308,7 @@ impl Host {
 		feature = "csharp",
 		feature = "java",
 		feature = "kotlin",
+		feature = "swift",
 		feature = "external-grammars"
 	)),
 	allow(dead_code)
@@ -707,6 +723,35 @@ pub const KOTLIN_SQL_QUERY: &str = r#"
    "query" "queryForObject" "queryForList" "queryForMap"
    "update" "batchUpdate" "exec")
  (#eq? @_trim "trimIndent"))
+"#;
+
+/// Default extraction query for Swift: multi-line (`"""`) string
+/// arguments. One labeled `sql:` is GRDB's, and SQLite; the first,
+/// unlabeled argument of `run` / `execute` / `prepare` / `scalar`
+/// (SQLite.swift), `query` (PostgresNIO), or `raw` (SQLKit) uses the
+/// configured dialect. A string with a `\(…)` interpolation or an escape
+/// has several content nodes and never matches; raw strings (`#"""`)
+/// aren't taken.
+#[cfg(feature = "swift")]
+pub const SWIFT_SQL_QUERY: &str = r#"
+((value_argument
+   name: (value_argument_label (simple_identifier) @_label)
+   value: (multi_line_string_literal . (multi_line_str_text) @sql.sqlite .))
+ (#eq? @_label "sql"))
+
+((call_expression
+   [
+     (simple_identifier) @_fn
+     (navigation_expression
+       suffix: (navigation_suffix suffix: (simple_identifier) @_fn))
+   ]
+   (call_suffix
+     (value_arguments
+       .
+       (value_argument
+         !name
+         value: (multi_line_string_literal . (multi_line_str_text) @sql .)))))
+ (#any-of? @_fn "run" "execute" "prepare" "scalar" "query" "raw"))
 "#;
 
 /// Where an embedded snippet takes its indent character from.

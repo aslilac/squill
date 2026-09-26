@@ -36,7 +36,8 @@
 		"onLanguage:cpp",
 		"onLanguage:csharp",
 		"onLanguage:java",
-		"onLanguage:kotlin"
+		"onLanguage:kotlin",
+		"onLanguage:swift"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
