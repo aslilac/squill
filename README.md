@@ -90,6 +90,10 @@ That last step is why CI works unchanged. A `pull_request` checkout has no base-
 
 `--no-frozen-fetch` (or `frozen-fetch = false`) keeps squill off the network, for an offline or air-gapped build. A normal clone still works, because `git clone` already recorded the remote's HEAD. When nothing authoritative is available, squill stops and asks for `frozen-ref` rather than inferring one.
 
+### Editors
+
+Editors pipe the buffer through `squill fmt --stdin-filepath <path>`, which formats it as that file would be formatted on disk (config, rules, embedded SQL and all). Setups for Helix, Zed, and VS Code are in the [editor docs](https://mckayla.dev/squill/docs/editors/).
+
 ### Rules
 
 Rules scope settings to paths. Each needs an `include` list of globs (relative to the config, like `ignore`); every rule whose `include` matches a file applies, in file order, later rules winning key by key.

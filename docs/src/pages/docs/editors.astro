@@ -1,0 +1,120 @@
+---
+import Docs from "../../layouts/Docs.astro";
+---
+
+<Docs
+	page="editors"
+	title="Editors"
+	lede="Format on save: squill as your editor's SQL formatter, and for the SQL inside your other code."
+>
+	<section>
+		<h2>How it works</h2>
+		<p>
+			Editors hand a formatter the buffer on stdin and read the result back
+			from stdout. Tell squill which file the buffer is with{" "}
+			<code>--stdin-filepath</code>, and it formats it exactly as{" "}
+			<code>squill fmt</code> would format that file on disk: the nearest{" "}
+			<code>squill.toml</code> applies, and so do its{" "}
+			<a href="docs/configuration/#rules">rules</a>, so a Rust buffer gets
+			its embedded SQL formatted and a <code>*.sql.sqlite</code> file its
+			dialect. The file doesn&rsquo;t need to exist yet.
+		</p>
+		<pre><code>squill fmt --stdin-filepath src/db.rs &lt; src/db.rs</code></pre>
+		<p>
+			A buffer squill wouldn&rsquo;t format as a file comes back unchanged:
+			an <code>ignore</code>d or <a href="docs/frozen/">frozen</a> path, or a
+			host-language file no <code>[[embedded]]</code> rule covers. So it is
+			safe to turn on for every file of a language, in every project.
+		</p>
+	</section>
+
+	<section>
+		<h2>Helix</h2>
+		<p>
+			In <code>languages.toml</code>, set squill as the SQL formatter.{" "}
+			<code>%&lbrace;buffer_name&rbrace;</code> passes the buffer&rsquo;s
+			path:
+		</p>
+		<pre><code>[[language]]
+name = "sql"
+formatter = &lbrace; command = "squill", args = ["fmt", "--stdin-filepath", "%&lbrace;buffer_name&rbrace;"] &rbrace;
+auto-format = true</code></pre>
+		<p>
+			A Helix formatter replaces the language server&rsquo;s, and runs alone.
+			For SQL embedded in another language, pipe that language&rsquo;s own
+			formatter into squill:
+		</p>
+		<pre><code>[[language]]
+name = "rust"
+formatter = &lbrace; command = "sh", args = ["-c", "rustfmt --edition 2024 | squill fmt --stdin-filepath \"$0\"", "%&lbrace;buffer_name&rbrace;"] &rbrace;</code></pre>
+	</section>
+
+	<section>
+		<h2>Zed</h2>
+		<p>
+			Install the SQL extension for syntax support, then in{" "}
+			<code>settings.json</code> set squill as an external formatter.{" "}
+			<code>&lbrace;buffer_path&rbrace;</code> passes the buffer&rsquo;s path:
+		</p>
+		<pre><code>&lbrace;
+  "languages": &lbrace;
+    "SQL": &lbrace;
+      "formatter": &lbrace;
+        "external": &lbrace;
+          "command": "squill",
+          "arguments": ["fmt", "--stdin-filepath", "&lbrace;buffer_path&rbrace;"]
+        &rbrace;
+      &rbrace;
+    &rbrace;
+  &rbrace;
+&rbrace;</code></pre>
+		<p>
+			Zed runs a list of formatters in order, so for SQL embedded in another
+			language, keep its language server&rsquo;s formatting and follow it with
+			squill:
+		</p>
+		<pre><code>&lbrace;
+  "languages": &lbrace;
+    "Rust": &lbrace;
+      "formatter": [
+        &lbrace; "language_server": &lbrace; "name": "rust-analyzer" &rbrace; &rbrace;,
+        &lbrace;
+          "external": &lbrace;
+            "command": "squill",
+            "arguments": ["fmt", "--stdin-filepath", "&lbrace;buffer_path&rbrace;"]
+          &rbrace;
+        &rbrace;
+      ]
+    &rbrace;
+  &rbrace;
+&rbrace;</code></pre>
+	</section>
+
+	<section>
+		<h2>VS Code</h2>
+		<p>
+			VS Code has no built-in way to run a command-line formatter. Until
+			squill has an extension of its own, the{" "}
+			<a
+				href="https://marketplace.visualstudio.com/items?itemName=jkillian.custom-local-formatters"
+				>Custom Local Formatters</a
+			> extension can run it for SQL files:
+		</p>
+		<pre><code>&lbrace;
+  "customLocalFormatters.formatters": [
+    &lbrace; "command": "squill fmt --stdin", "languages": ["sql"] &rbrace;
+  ],
+  "[sql]": &lbrace;
+    "editor.defaultFormatter": "jkillian.custom-local-formatters"
+  &rbrace;
+&rbrace;</code></pre>
+		<div class="note">
+			<p>
+				That extension can&rsquo;t pass the buffer&rsquo;s path, so squill
+				reads the <code>squill.toml</code> at the workspace root: its
+				top-level settings apply, but not its rules, and SQL embedded in other
+				languages isn&rsquo;t formatted.
+			</p>
+		</div>
+	</section>
+</Docs>
