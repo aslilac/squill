@@ -1,10 +1,8 @@
 name: Package VS Code extension
 
-# Run by hand when the extension changes. It doesn't rebuild squill: each
-# platform's .vsix bundles the binary from squill's latest release. The
-# packages are left as workflow artifacts to publish; this deliberately
-# creates no GitHub release, whose assets tools like the Zed extension
-# expect to be squill's.
+# Run by hand when the extension changes. One package for every
+# platform: the extension downloads squill itself when it isn't
+# installed. The package is left as a workflow artifact to publish.
 on:
   workflow_dispatch:
 
@@ -24,34 +22,12 @@ jobs:
           runtime: node@24
           cache: true
 
-      - run: gh release download --repo ${{ github.repository }} --pattern 'squill-v*' --dir squill-release
-        name: Download squill's latest release
-        env:
-          GH_TOKEN: ${{ github.token }}
-
       - run: |
           mkdir -p dist
           cd integrations/vscode
           pnpm run build
-          for pair in \
-            x86_64-unknown-linux-gnu:linux-x64 \
-            aarch64-unknown-linux-gnu:linux-arm64 \
-            x86_64-pc-windows-msvc:win32-x64 \
-            aarch64-pc-windows-msvc:win32-arm64 \
-            aarch64-apple-darwin:darwin-arm64
-          do
-            target="${pair%%:*}"
-            platform="${pair#*:}"
-            rm -rf bin && mkdir bin
-            archive="$(ls ../../squill-release/squill-v*-"$target".*)"
-            case "$archive" in
-              *.zip) unzip -q "$archive" -d bin ;;
-              *) tar -xzf "$archive" -C bin ;;
-            esac
-            pnpm exec vsce package --no-dependencies --target "$platform" \
-              --out "../../dist/squill-vscode-$platform.vsix"
-          done
-        name: Package, one per platform
+          pnpm run package --out ../../dist/
+        name: Package
 
       - uses: actions/upload-artifact@v7
         name: Upload

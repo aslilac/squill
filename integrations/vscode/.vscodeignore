@@ -1,6 +1,5 @@
 **
 !out/extension.js
-!bin/**
 !package.json
 !README.md
 !LICENSE

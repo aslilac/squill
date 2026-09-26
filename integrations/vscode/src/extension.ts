@@ -8,6 +8,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
+import { downloadedSquill } from "./download";
 import {
 	LanguageClient,
 	type LanguageClientOptions,
@@ -32,10 +33,10 @@ const LANGUAGES = [
 ];
 
 let client: LanguageClient | undefined;
-let extensionPath = "";
+let extensionContext: vscode.ExtensionContext;
 
 export async function activate(context: vscode.ExtensionContext) {
-	extensionPath = context.extensionPath;
+	extensionContext = context;
 	context.subscriptions.push(
 		vscode.commands.registerCommand("squill.restartServer", restart),
 		vscode.workspace.onDidChangeConfiguration((event) => {
@@ -52,9 +53,9 @@ export async function deactivate() {
 }
 
 // Which squill: `squill.path` when set; else the `squill` on PATH, so
-// the editor formats exactly as the CLI and CI do; else the binary this
-// platform's build of the extension bundles.
-function findSquill(): string | undefined {
+// the editor formats exactly as the CLI and CI do; else one downloaded
+// from squill's latest release.
+async function findSquill(): Promise<string | undefined> {
 	const configured = vscode.workspace
 		.getConfiguration("squill")
 		.get<string>("path");
@@ -67,8 +68,7 @@ function findSquill(): string | undefined {
 			return path.join(dir, executable);
 		}
 	}
-	const bundled = path.join(extensionPath, "bin", executable);
-	return isExecutable(bundled) ? bundled : undefined;
+	return downloadedSquill(extensionContext);
 }
 
 function isExecutable(file: string): boolean {
@@ -81,10 +81,19 @@ function isExecutable(file: string): boolean {
 }
 
 async function start() {
-	const command = findSquill();
+	let command: string | undefined;
+	try {
+		command = await findSquill();
+	} catch (err) {
+		const message = err instanceof Error ? err.message : String(err);
+		void vscode.window.showErrorMessage(
+			`squill isn't on your PATH, and downloading it failed: ${message}. Install it, or set squill.path to point at it.`,
+		);
+		return;
+	}
 	if (!command) {
 		void vscode.window.showErrorMessage(
-			"squill isn't installed: it's not on your PATH, and this build of the extension doesn't bundle it. Install it, or set squill.path to point at it.",
+			"squill isn't on your PATH, and there's no prebuilt squill for this platform to download. Install it, or set squill.path to point at it.",
 		);
 		return;
 	}
