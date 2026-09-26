@@ -80,6 +80,7 @@
             packages = [
               rust
               pkgs.cmake
+              pkgs.typos
               pkgs.nodejs_24
               pkgs.corepack
             ];

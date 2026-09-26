@@ -4,9 +4,9 @@
 //! one: the type, then COLLATE, NOT NULL, the key constraints, and the
 //! DEFAULT or GENERATED value last. That is pg_dump's order with NOT
 //! NULL pulled up next to the type, and with the inline key constraints
-//! — which pg_dump never writes, preferring separate ALTER TABLEs —
-//! slotted in ahead of the value, the way `id uuid primary key default
-//! gen_random_uuid()` already reads.
+//! — which pg_dump never writes, preferring separate ALTER TABLE
+//! statements — slotted in ahead of the value, the way `id uuid primary
+//! key default gen_random_uuid()` already reads.
 //!
 //! Same two-view contract as [`crate::attr_order`]: the lowerer permutes
 //! the CST elements, the safety oracle permutes the token stream, and

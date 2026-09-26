@@ -721,8 +721,7 @@ fn embedded_warnings_are_diagnostics() {
 	let dir = temp_dir("embedwarn");
 	std::fs::write(dir.join("squill.toml"), RUST_RULE).expect("write config");
 	let file = dir.join("q.rs");
-	let source =
-		"fn f() {\n    sqlx::query!(r#\"selec nonsense\n    from\"#);\n}\n";
+	let source = "fn f() {\n    sqlx::query!(r#\"select (\n    from\"#);\n}\n";
 	std::fs::write(&file, source).expect("write");
 	let output = squill().arg("fmt").arg(&file).output().expect("run");
 	assert!(output.status.success());

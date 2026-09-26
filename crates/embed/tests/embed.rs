@@ -294,8 +294,7 @@ fn rust_query_functions_use_the_session_dialect() {
 
 #[test]
 fn unparsable_sql_is_reported_not_rewritten() {
-	let source =
-		"fn f() {\n    sqlx::query!(r#\"selec nonsense\n    from\"#);\n}\n";
+	let source = "fn f() {\n    sqlx::query!(r#\"select (\n    from\"#);\n}\n";
 	let formatted = format_embedded(
 		source,
 		&Host::Rust.into(),
@@ -711,7 +710,7 @@ fn procedural_bodies_anchor_but_their_strings_do_not() {
 fn column_zero_strings_take_the_files_indent_character() {
 	// No anchor indentation to copy: the file's own indentation decides,
 	// so a spaces-indented file never gains tabs.
-	let source = "class A {\n    void M() {\n        c.Query(\n\"\"\"\n    SELECT key, userId, rating, played, playCount, isFavorite, playbackPositionTicks, lastPlayedDate FROM UserDatas\n\"\"\");\n    }\n}\n";
+	let source = "class A {\n    void M() {\n        c.Query(\n\"\"\"\n    SELECT key, userId, rating, played, playCount, isFavorite, playbackPositionTicks, lastPlayedDate FROM UserRatings\n\"\"\");\n    }\n}\n";
 	let formatted = format_host(Host::CSharp, CSHARP_SQL_QUERY, source);
 	assert!(!formatted.text.contains('\t'), "{}", formatted.text);
 	assert!(
