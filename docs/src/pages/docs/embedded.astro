@@ -136,7 +136,12 @@ grammar = "rust"`} />
 		<h2>Writing your own query</h2>
 		<p>
 			A rule&rsquo;s <code>query</code> replaces its grammar&rsquo;s default
-			with a tree-sitter query file, found relative to the config. A capture
+			with a{" "}
+			<a
+				href="https://tree-sitter.github.io/tree-sitter/using-parsers/queries/1-syntax.html"
+				>tree-sitter query</a
+			>{" "}
+			file, found relative to the config. A capture
 			named <code>@sql</code> marks a string whose contents are SQL in the
 			configured dialect; <code>@sql.postgres</code> and{" "}
 			<code>@sql.sqlite</code> pin the dialect regardless of the{" "}
@@ -158,10 +163,62 @@ query = ".config/squill/rust.scm"`} />
 			query captures, file by file, so you can check it before formatting
 			anything.
 		</p>
+		<h3>Learning the query language</h3>
+		<p>
+			A query is a pattern over a file&rsquo;s syntax tree, so writing one
+			starts with seeing that tree:
+		</p>
+		<ol>
+			<li>
+				Paste some code into the{" "}
+				<a href="https://tree-sitter.github.io/tree-sitter/7-playground.html"
+					>tree-sitter playground</a
+				>{" "}
+				to see its node and field names, and try a query live. For a grammar
+				the playground doesn&rsquo;t have,{" "}
+				<code class="boxed">tree-sitter parse file.ext</code> prints the same tree.
+			</li>
+			<li>
+				Write the pattern: tree-sitter&rsquo;s docs cover the{" "}
+				<a
+					href="https://tree-sitter.github.io/tree-sitter/using-parsers/queries/1-syntax.html"
+					>syntax</a
+				>{" "}
+				(nodes, fields, captures) and the{" "}
+				<a
+					href="https://tree-sitter.github.io/tree-sitter/using-parsers/queries/2-operators.html"
+					>operators</a
+				>{" "}
+				&mdash; alternations like <code class="boxed">[(string) (raw_string)]</code>, and
+				the <code class="boxed">.</code> anchor, which the default queries use to take
+				only a call&rsquo;s first argument.
+			</li>
+			<li>
+				Filter with{" "}
+				<a
+					href="https://tree-sitter.github.io/tree-sitter/using-parsers/queries/3-predicates-and-directives.html"
+					>predicates</a
+				>, within the three squill supports (below).
+			</li>
+			<li>
+				Check it with{" "}
+				<a href="docs/cli/#locate"><code class="boxed">squill locate</code></a>. The{" "}
+				<a href="docs/recipes/rust/">recipes</a> are worked examples, and
+				the default queries are{" "}
+				<a
+					href="https://github.com/aslilac/squill/blob/trunk/crates/embed/src/lib.rs"
+					>in squill&rsquo;s source</a
+				>.
+			</li>
+		</ol>
 		<h3>Supported predicates</h3>
 		<p>
-			<code>#eq?</code>, <code>#not-eq?</code>, and <code>#any-of?</code>.
-			Regex predicates (<code>#match?</code>, <code>#not-match?</code>) are
+			<code>#eq?</code>, <code>#not-eq?</code>, and <code>#any-of?</code>{" "}
+			&mdash; three of the{" "}
+			<a
+				href="https://tree-sitter.github.io/tree-sitter/using-parsers/queries/3-predicates-and-directives.html"
+				>predicates tree-sitter defines</a
+			>. Regex predicates (<code>#match?</code>, <code>#not-match?</code>) are
 			rejected up front, and so is any other custom predicate: a predicate the
 			engine does not evaluate would silently widen your query to match things
 			you never intended, so squill refuses the query instead of quietly
