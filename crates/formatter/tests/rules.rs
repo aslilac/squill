@@ -542,3 +542,19 @@ fn tablesample_and_sql_json() {
 		"select json_object('a': 1, 'b' value 2 null on null) from t;\n"
 	);
 }
+
+/// MERGE: one line when it fits, else a clause per line with each WHEN
+/// branch on its own, breaking after `then` when a branch doesn't fit.
+#[test]
+fn merge_layout() {
+	assert_eq!(
+		format("MERGE INTO t USING s ON t.id = s.id WHEN MATCHED THEN DO NOTHING;"),
+		"merge into t using s on t.id = s.id when matched then do nothing;\n"
+	);
+	assert_eq!(
+		format(
+			"MERGE INTO customer_account ca USING recent_transactions t ON t.customer_id = ca.customer_id WHEN MATCHED THEN UPDATE SET balance = balance + transaction_value, updated_at = now() WHEN NOT MATCHED THEN INSERT (customer_id, balance) VALUES (t.customer_id, t.transaction_value);"
+		),
+		"merge into customer_account ca\nusing recent_transactions t on t.customer_id = ca.customer_id\nwhen matched then\n\tupdate set balance = balance + transaction_value, updated_at = now()\nwhen not matched then\n\tinsert (customer_id, balance) values (t.customer_id, t.transaction_value);\n"
+	);
+}

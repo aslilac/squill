@@ -394,6 +394,8 @@ impl Parser<'_> {
 			dml::update_stmt(self)
 		} else if self.at_kw("delete") {
 			dml::delete_stmt(self)
+		} else if self.at_kw("merge") {
+			dml::merge_stmt(self)
 		} else if self
 			.toks
 			.get(self.pos)

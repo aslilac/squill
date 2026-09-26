@@ -73,6 +73,7 @@ pub(crate) fn lower_statement(
 		| SyntaxKind::InsertStmt
 		| SyntaxKind::UpdateStmt
 		| SyntaxKind::DeleteStmt
+		| SyntaxKind::MergeStmt
 		| SyntaxKind::DdlStmt
 		| SyntaxKind::PlBlock
 		| SyntaxKind::PlIf
@@ -307,7 +308,8 @@ impl Lowerer {
 			// DML nested in CTE bodies.
 			SyntaxKind::InsertStmt
 			| SyntaxKind::UpdateStmt
-			| SyntaxKind::DeleteStmt => {
+			| SyntaxKind::DeleteStmt
+			| SyntaxKind::MergeStmt => {
 				let mut docs = Vec::new();
 				self.dml_flow(&mut docs, node);
 				group(concat(docs))
@@ -321,6 +323,7 @@ impl Lowerer {
 			| SyntaxKind::UsingClause
 			| SyntaxKind::OnConflictClause
 			| SyntaxKind::ReturningClause => self.kw_clause(node),
+			SyntaxKind::MergeWhenClause => self.merge_when(node),
 			SyntaxKind::SetItem => self.space_flow(node, IdentPos::ColumnOrTable),
 			SyntaxKind::ColumnDef => self.column_def(node),
 			SyntaxKind::ElementList => self.paren_block(node),
@@ -920,6 +923,25 @@ impl Lowerer {
 			}
 		}
 		clause(head, content)
+	}
+
+	/// A MERGE's `WHEN [NOT] MATCHED ... THEN action`: the action stays on
+	/// the `then` line when it fits, else goes on its own indented line.
+	fn merge_when(&mut self, node: &SyntaxNode) -> Doc {
+		let elements: Vec<SyntaxElement> = node.children_with_tokens().collect();
+		let then = elements
+			.iter()
+			.position(|element| {
+				element
+					.as_token()
+					.is_some_and(|token| token.text().eq_ignore_ascii_case("then"))
+			})
+			.map_or(elements.len(), |at| at + 1);
+		let mut head = Vec::new();
+		self.dml_flow_elements(&mut head, &elements[..then], &[], false);
+		let mut action = Vec::new();
+		self.dml_flow_elements(&mut action, &elements[then..], &[], false);
+		clause(head, action)
 	}
 
 	/// PL/pgSQL `INTO [STRICT] target, ...`: the head is exactly `into`
@@ -2284,6 +2306,7 @@ fn is_pl_statement(kind: SyntaxKind) -> bool {
 				| SyntaxKind::InsertStmt
 				| SyntaxKind::UpdateStmt
 				| SyntaxKind::DeleteStmt
+				| SyntaxKind::MergeStmt
 				| SyntaxKind::DdlStmt
 				| SyntaxKind::ErrorStatement
 				| SyntaxKind::EmptyStmt
@@ -2316,6 +2339,7 @@ fn is_clause_level(kind: SyntaxKind) -> bool {
 			| SyntaxKind::UsingClause
 			| SyntaxKind::OnConflictClause
 			| SyntaxKind::ReturningClause
+			| SyntaxKind::MergeWhenClause
 	)
 }
 

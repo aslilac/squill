@@ -1,5 +1,5 @@
-//! DML statement grammar: INSERT, UPDATE, DELETE, and WITH-prefixed
-//! variants (including data-modifying CTEs).
+//! DML statement grammar: INSERT, UPDATE, DELETE, MERGE, and
+//! WITH-prefixed variants (including data-modifying CTEs).
 
 use super::PResult;
 use super::Parser;
@@ -44,6 +44,8 @@ pub(crate) fn with_statement(p: &mut Parser<'_>) -> PResult {
 		SyntaxKind::UpdateStmt
 	} else if p.at_kw("delete") {
 		SyntaxKind::DeleteStmt
+	} else if p.at_kw("merge") {
+		SyntaxKind::MergeStmt
 	} else {
 		SyntaxKind::SelectStmt
 	};
@@ -52,6 +54,7 @@ pub(crate) fn with_statement(p: &mut Parser<'_>) -> PResult {
 		SyntaxKind::InsertStmt => insert_body(p)?,
 		SyntaxKind::UpdateStmt => update_body(p)?,
 		SyntaxKind::DeleteStmt => delete_body(p)?,
+		SyntaxKind::MergeStmt => merge_body(p)?,
 		_ => {
 			super::grammar::query_tail(p)?;
 		}
@@ -77,6 +80,14 @@ pub(crate) fn update_stmt(p: &mut Parser<'_>) -> PResult {
 	Ok(())
 }
 
+pub(crate) fn merge_stmt(p: &mut Parser<'_>) -> PResult {
+	p.start(SyntaxKind::MergeStmt);
+	merge_body(p)?;
+	end_statement(p)?;
+	p.finish();
+	Ok(())
+}
+
 pub(crate) fn delete_stmt(p: &mut Parser<'_>) -> PResult {
 	p.start(SyntaxKind::DeleteStmt);
 	delete_body(p)?;
@@ -93,6 +104,9 @@ pub(crate) fn dml_in_parens(p: &mut Parser<'_>) -> PResult {
 	} else if p.at_kw("update") {
 		p.start(SyntaxKind::UpdateStmt);
 		update_body(p)?;
+	} else if p.at_kw("merge") {
+		p.start(SyntaxKind::MergeStmt);
+		merge_body(p)?;
 	} else {
 		p.start(SyntaxKind::DeleteStmt);
 		delete_body(p)?;
@@ -204,6 +218,74 @@ fn delete_body(p: &mut Parser<'_>) -> PResult {
 	if p.at_kw("returning") {
 		returning_clause(p)?;
 	}
+	Ok(())
+}
+
+/// `MERGE INTO target [AS alias] USING source ON condition`, one or more
+/// WHEN clauses, and (Postgres 17) RETURNING.
+fn merge_body(p: &mut Parser<'_>) -> PResult {
+	p.expect_kws(&["merge", "into"])?;
+	p.eat_kw("only");
+	dml_target(p)?;
+	p.start(SyntaxKind::UsingClause);
+	p.expect_kw("using")?;
+	from_item(p)?;
+	p.start(SyntaxKind::JoinCondition);
+	p.expect_kw("on")?;
+	expr(p, 0)?;
+	p.finish();
+	p.finish();
+	if !p.at_kw("when") {
+		return Err(p.error("expected `WHEN`"));
+	}
+	while p.at_kw("when") {
+		merge_when(p)?;
+	}
+	if p.at_kw("returning") {
+		returning_clause(p)?;
+	}
+	Ok(())
+}
+
+/// `WHEN [NOT] MATCHED [BY SOURCE | BY TARGET] [AND condition] THEN`
+/// `UPDATE SET ... | DELETE | INSERT ... | DO NOTHING`.
+fn merge_when(p: &mut Parser<'_>) -> PResult {
+	p.start(SyntaxKind::MergeWhenClause);
+	p.expect_kw("when")?;
+	p.eat_kw("not");
+	p.expect_kw("matched")?;
+	if p.eat_kw("by") && !p.eat_kw("source") {
+		p.expect_kw("target")?;
+	}
+	if p.eat_kw("and") {
+		expr(p, 0)?;
+	}
+	p.expect_kw("then")?;
+	if p.eat_kw("update") {
+		set_clause(p)?;
+	} else if p.eat_kw("delete") {
+	} else if p.eat_kw("do") {
+		p.expect_kw("nothing")?;
+	} else {
+		p.expect_kw("insert")?;
+		if p.at(SyntaxKind::LParen) {
+			p.start(SyntaxKind::ElementList);
+			paren_name_list(p)?;
+			p.finish();
+		}
+		if p.eat_kw("overriding") {
+			if !p.eat_kw("system") {
+				p.expect_kw("user")?;
+			}
+			p.expect_kw("value")?;
+		}
+		if p.eat_kw("default") {
+			p.expect_kw("values")?;
+		} else {
+			super::grammar::values_clause(p)?;
+		}
+	}
+	p.finish();
 	Ok(())
 }
 

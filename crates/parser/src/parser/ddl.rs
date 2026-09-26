@@ -64,7 +64,6 @@ pub(crate) const DDL_STARTERS: &[&str] = &[
 	"show",
 	"execute",
 	"call",
-	"merge",
 	"copy",
 	"import",
 	"pragma",

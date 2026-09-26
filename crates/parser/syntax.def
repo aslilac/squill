@@ -63,6 +63,9 @@ node EmptyStmt
 node InsertStmt
 node UpdateStmt
 node DeleteStmt
+node MergeStmt
+# `WHEN [NOT] MATCHED ... THEN action` in a MERGE.
+node MergeWhenClause
 node SetClause
 node SetItem
 node OnConflictClause

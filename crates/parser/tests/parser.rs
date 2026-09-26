@@ -398,3 +398,30 @@ fn postgres_odds_and_ends() {
 	assert!(!parse(&tokens, Dialect::Postgres).diagnostics.is_empty());
 	assert_eq!(parse_sqlite_ok("SELECT a IS b, c IS NOT d FROM t;").len(), 1);
 }
+
+#[test]
+fn merge_statements() {
+	for sql in [
+		"MERGE INTO t USING s ON t.id = s.id WHEN MATCHED THEN DELETE;",
+		"MERGE INTO t AS x USING (SELECT 1 AS id) s ON x.id = s.id \
+		 WHEN MATCHED AND s.id > 0 THEN UPDATE SET a = s.a \
+		 WHEN NOT MATCHED BY SOURCE THEN DELETE \
+		 WHEN NOT MATCHED BY TARGET THEN INSERT (id) VALUES (s.id) \
+		 WHEN NOT MATCHED THEN DO NOTHING RETURNING merge_action(), x.*;",
+		"MERGE INTO t USING s ON true WHEN NOT MATCHED THEN INSERT DEFAULT VALUES;",
+		"MERGE INTO t USING s ON true WHEN NOT MATCHED THEN \
+		 INSERT OVERRIDING SYSTEM VALUE VALUES (1);",
+	] {
+		assert_eq!(
+			top_level_kinds(&parse_ok(sql)),
+			[SyntaxKind::MergeStmt],
+			"{sql}"
+		);
+	}
+	assert_eq!(
+		top_level_kinds(&parse_ok(
+			"WITH s AS (SELECT 1) MERGE INTO t USING s ON true WHEN MATCHED THEN DELETE;"
+		)),
+		[SyntaxKind::MergeStmt]
+	);
+}
