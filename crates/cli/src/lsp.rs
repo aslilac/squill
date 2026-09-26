@@ -7,6 +7,13 @@
 //! `frozen` all apply, and a host file's embedded SQL formats too.
 //! Config is re-read for every request, so editing `squill.toml` takes
 //! effect without a restart; loaded wasm grammars stay cached.
+//!
+//! Two affordances for editors that run one formatter per file (VS
+//! Code): a `source.formatSql` code action applies the same edit, so it
+//! can run on save after another language's formatter; and a client can
+//! pass `{"formattingSelector": [...document filters]}` as initialization
+//! options, and squill registers as a formatter for just those documents
+//! (dynamically, when the client supports it) instead of for all.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -19,6 +26,12 @@ use lsp_server::Message;
 use lsp_server::Notification;
 use lsp_server::Request;
 use lsp_server::Response;
+use lsp_types::CodeAction;
+use lsp_types::CodeActionKind;
+use lsp_types::CodeActionOptions;
+use lsp_types::CodeActionOrCommand;
+use lsp_types::CodeActionParams;
+use lsp_types::CodeActionProviderCapability;
 use lsp_types::DiagnosticSeverity;
 use lsp_types::DidChangeTextDocumentParams;
 use lsp_types::DidCloseTextDocumentParams;
@@ -30,12 +43,15 @@ use lsp_types::Position;
 use lsp_types::PositionEncodingKind;
 use lsp_types::PublishDiagnosticsParams;
 use lsp_types::Range;
+use lsp_types::Registration;
+use lsp_types::RegistrationParams;
 use lsp_types::ServerCapabilities;
 use lsp_types::ServerInfo;
 use lsp_types::TextDocumentSyncCapability;
 use lsp_types::TextDocumentSyncKind;
 use lsp_types::TextEdit;
 use lsp_types::Uri;
+use lsp_types::WorkspaceEdit;
 use lsp_types::notification::Notification as _;
 use lsp_types::request::Request as _;
 
@@ -88,6 +104,23 @@ fn serve(connection: Connection) -> Result<(), String> {
 		.as_ref()
 		.and_then(|general| general.position_encodings.as_ref())
 		.is_some_and(|encodings| encodings.contains(&PositionEncodingKind::UTF8));
+	// Formatting for only the documents the client asked about, when it
+	// asked and can take a dynamic registration; everywhere otherwise.
+	let formatting_selector = params
+		.initialization_options
+		.as_ref()
+		.and_then(|options| options.get("formattingSelector"))
+		.filter(|selector| selector.is_array())
+		.cloned()
+		.filter(|_| {
+			params
+				.capabilities
+				.text_document
+				.as_ref()
+				.and_then(|text| text.formatting.as_ref())
+				.and_then(|formatting| formatting.dynamic_registration)
+				.unwrap_or(false)
+		});
 	let capabilities = ServerCapabilities {
 		position_encoding: Some(if utf8 {
 			PositionEncodingKind::UTF8
@@ -97,7 +130,15 @@ fn serve(connection: Connection) -> Result<(), String> {
 		text_document_sync: Some(TextDocumentSyncCapability::Kind(
 			TextDocumentSyncKind::FULL,
 		)),
-		document_formatting_provider: Some(OneOf::Left(true)),
+		document_formatting_provider: formatting_selector
+			.is_none()
+			.then_some(OneOf::Left(true)),
+		code_action_provider: Some(CodeActionProviderCapability::Options(
+			CodeActionOptions {
+				code_action_kinds: Some(vec![format_sql_kind()]),
+				..CodeActionOptions::default()
+			},
+		)),
 		..ServerCapabilities::default()
 	};
 	let result = serde_json::json!({
@@ -117,7 +158,29 @@ fn serve(connection: Connection) -> Result<(), String> {
 		cwd: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
 		utf8,
 	};
+	if let Some(selector) = formatting_selector {
+		let registration = Registration {
+			id: "squill-formatting".to_string(),
+			method: lsp_types::request::Formatting::METHOD.to_string(),
+			register_options: Some(
+				serde_json::json!({ "documentSelector": selector }),
+			),
+		};
+		server.send(
+			Request::new(
+				"squill-register-formatting".to_string().into(),
+				lsp_types::request::RegisterCapability::METHOD.to_string(),
+				RegistrationParams { registrations: vec![registration] },
+			)
+			.into(),
+		)?;
+	}
 	server.main_loop()
+}
+
+/// `source.formatSql`: squill's formatting, as a code action.
+fn format_sql_kind() -> CodeActionKind {
+	CodeActionKind::new("source.formatSql")
 }
 
 impl Server {
@@ -160,6 +223,19 @@ impl Server {
 							message,
 						),
 					},
+					Err(err) => Response::new_err(
+						request.id,
+						ErrorCode::InvalidParams as i32,
+						err.to_string(),
+					),
+				}
+			}
+			lsp_types::request::CodeActionRequest::METHOD => {
+				match serde_json::from_value::<CodeActionParams>(request.params) {
+					Ok(params) => {
+						let actions = self.code_actions(&params);
+						Response::new_ok(request.id, actions)
+					}
 					Err(err) => Response::new_err(
 						request.id,
 						ErrorCode::InvalidParams as i32,
@@ -263,6 +339,42 @@ impl Server {
 			end: self.position(&document.text, document.text.len()),
 		};
 		Ok(vec![TextEdit::new(whole, outcome.formatted)])
+	}
+
+	/// "Format SQL with squill", when it would change something and the
+	/// client wants source actions. A failure is no action, not an error:
+	/// code actions are asked for constantly, and the diagnostics already
+	/// say what went wrong.
+	fn code_actions(
+		&mut self,
+		params: &CodeActionParams,
+	) -> Vec<CodeActionOrCommand> {
+		let wanted = params.context.only.as_ref().is_none_or(|only| {
+			only.iter().any(|kind| {
+				let kind = kind.as_str();
+				kind == "source" || format_sql_kind().as_str().starts_with(kind)
+			})
+		});
+		if !wanted {
+			return Vec::new();
+		}
+		let uri = &params.text_document.uri;
+		let Ok(edits) = self.format(uri) else {
+			return Vec::new();
+		};
+		if edits.is_empty() {
+			return Vec::new();
+		}
+		let action = CodeAction {
+			title: "Format SQL with squill".to_string(),
+			kind: Some(format_sql_kind()),
+			edit: Some(WorkspaceEdit {
+				changes: Some(HashMap::from([(uri.clone(), edits)])),
+				..WorkspaceEdit::default()
+			}),
+			..CodeAction::default()
+		};
+		vec![CodeActionOrCommand::CodeAction(action)]
 	}
 
 	fn publish_diagnostics(&mut self, uri: &Uri) -> Result<(), String> {

@@ -1550,3 +1550,69 @@ fn language_server_formats_and_reports() {
 	);
 	let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// For clients that run one formatter per file: formatting registered
+/// for just the documents asked about, and a `source.formatSql` code
+/// action to run after another language's formatter.
+#[cfg(feature = "lsp")]
+#[test]
+fn language_server_serves_one_formatter_editors() {
+	use serde_json::json;
+	let dir = temp_dir("lspselector");
+	std::fs::write(dir.join("squill.toml"), RUST_RULE).expect("write config");
+	let uri = format!("file://{}", dir.join("q.rs").display());
+	let replies = lsp_session(
+		&dir,
+		&[
+			json!({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
+				"capabilities": {"textDocument": {"formatting": {"dynamicRegistration": true}}},
+				"initializationOptions": {"formattingSelector": [{"language": "sql"}]}
+			}}),
+			json!({"jsonrpc": "2.0", "method": "initialized", "params": {}}),
+			json!({"jsonrpc": "2.0", "method": "textDocument/didOpen", "params": {
+				"textDocument": {"uri": uri, "languageId": "rust", "version": 1, "text": RS_FIXTURE}
+			}}),
+			json!({"jsonrpc": "2.0", "id": 2, "method": "textDocument/codeAction", "params": {
+				"textDocument": {"uri": uri},
+				"range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 0}},
+				"context": {"diagnostics": [], "only": ["source.formatSql"]}
+			}}),
+			// Asked only for other kinds: nothing.
+			json!({"jsonrpc": "2.0", "id": 3, "method": "textDocument/codeAction", "params": {
+				"textDocument": {"uri": uri},
+				"range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 0}},
+				"context": {"diagnostics": [], "only": ["quickfix"]}
+			}}),
+			json!({"jsonrpc": "2.0", "id": 4, "method": "shutdown"}),
+			json!({"jsonrpc": "2.0", "method": "exit"}),
+		],
+	);
+	let reply = |id: i64| {
+		replies.iter().find(|reply| reply["id"] == id).expect("reply").clone()
+	};
+	let capabilities = &reply(1)["result"]["capabilities"];
+	assert!(
+		capabilities["documentFormattingProvider"].is_null(),
+		"{capabilities}"
+	);
+	let registration = replies
+		.iter()
+		.find(|reply| reply["method"] == "client/registerCapability")
+		.expect("a registration");
+	assert_eq!(
+		registration["params"]["registrations"][0]["registerOptions"]["documentSelector"],
+		json!([{"language": "sql"}])
+	);
+
+	let action = &reply(2)["result"][0];
+	assert_eq!(action["kind"], "source.formatSql");
+	let edit = &action["edit"]["changes"][uri.as_str()][0]["newText"];
+	assert!(
+		edit
+			.as_str()
+			.is_some_and(|text| text.contains("select id, name\n        from users")),
+		"{action}"
+	);
+	assert_eq!(reply(3)["result"], json!([]));
+	let _ = std::fs::remove_dir_all(&dir);
+}
