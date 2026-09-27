@@ -14,6 +14,27 @@ export const colors = {
 	selection: "#3a3348",
 };
 
+// The site's panes follow its light or dark theme, so there the palette
+// is CSS variables (Base.astro gives each a light and a dark value).
+// shiki only takes literal colors, so highlight with the dark theme and
+// swap each of its colors for its variable afterwards.
+const variables = {
+	fg: "--code-fg",
+	keyword: "--code-keyword",
+	string: "--code-string",
+	number: "--code-number",
+	comment: "--code-comment",
+	func: "--code-func",
+};
+const byHex = new Map(
+	Object.entries(variables).map(([name, variable]) => [
+		colors[name].toLowerCase(),
+		`var(${variable})`,
+	]),
+);
+export const themed = (html) =>
+	html.replace(/#[0-9a-f]{6}\b/gi, (hex) => byHex.get(hex.toLowerCase()) ?? hex);
+
 export const shikiTheme = {
 	name: "squill-dark",
 	type: "dark",

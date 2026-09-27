@@ -1,5 +1,5 @@
 import { createHighlighter } from "shiki";
-import { colors, shikiTheme } from "../playground/theme.js";
+import { colors, shikiTheme, themed } from "../playground/theme.js";
 
 // A TextMate grammar for tree-sitter queries (.scm), which shiki doesn't
 // bundle. Small on purpose: it colors what a reader scans for — node
@@ -44,7 +44,7 @@ async function loaded(lang) {
 
 export async function highlight(code, lang) {
 	const h = await loaded(lang);
-	return h.codeToHtml(code, { lang, theme: shikiTheme.name });
+	return themed(h.codeToHtml(code, { lang, theme: shikiTheme.name }));
 }
 
 // Host code with SQL in its strings, twice over: once with the SQL
@@ -193,5 +193,7 @@ function render(pieces) {
 	const body = lines
 		.map((line) => `<span class="line">${line.join("")}</span>`)
 		.join("\n");
-	return `<pre class="shiki squill-dark" style="color:${colors.fg}"><code>${body}</code></pre>`;
+	return themed(
+		`<pre class="shiki squill-dark" style="color:${colors.fg}"><code>${body}</code></pre>`,
+	);
 }

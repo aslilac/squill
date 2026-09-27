@@ -84,12 +84,19 @@ const topNav = [
 			--muted: light-dark(#6f6878, #8a8296);
 			--inset: light-dark(#faf8fd, #191520);
 			/* The docs sidebar's rail, and its links' pills on it. */
-			--rail: light-dark(#ece7f2, #0f0c14);
-			--rail-pill: light-dark(#f8f6fb, #211c2a);
-			--pane: #1c1824;
-			--pane-deep: #191520;
-			--pane-edge: #322b3e;
-			--pane-text: #cfc7db;
+			--rail: light-dark(var(--paper), #0f0c14);
+			--rail-pill: light-dark(#e9e3f0, #211c2a);
+			/* Code panes, and the highlighting in them. */
+			--pane: light-dark(#fbfafd, #1c1824);
+			--pane-deep: light-dark(#f7f4fa, #191520);
+			--pane-edge: light-dark(#e2dcea, #322b3e);
+			--pane-text: light-dark(#3a3246, #cfc7db);
+			--code-fg: var(--pane-text);
+			--code-keyword: light-dark(#6b4fc8, #a58fe0);
+			--code-string: light-dark(#23794d, #63b98a);
+			--code-number: light-dark(#a15c12, #d9a05c);
+			--code-comment: light-dark(#8a8296, #6f6878);
+			--code-func: light-dark(#3565b0, #7ba3e0);
 			--green: oklch(0.68 0.13 155);
 		}
 		/* A theme pinned in the theme menu; otherwise the system's. */
@@ -203,8 +210,6 @@ const topNav = [
 		}
 
 		.pair {
-			/* Dark panes in either scheme: scrollbars included. */
-			color-scheme: dark;
 			display: grid;
 			grid-template-columns: 1fr;
 			border: 1px solid var(--pane-edge);
@@ -244,7 +249,7 @@ const topNav = [
 			font-size: 0.65rem;
 			letter-spacing: 0.1em;
 			text-transform: uppercase;
-			color: #6f6878;
+			color: var(--code-comment);
 			padding: 0.85rem 1.25rem 0.2rem;
 			display: flex;
 			justify-content: space-between;
@@ -270,6 +275,8 @@ const topNav = [
 			margin: 0;
 			padding: 0.5rem 1.25rem 1.25rem;
 			overflow-x: auto;
+			scrollbar-width: thin;
+			scrollbar-color: var(--pane-edge) transparent;
 			background: transparent !important;
 			font-family: "JetBrains Mono", monospace;
 			font-size: 13px;

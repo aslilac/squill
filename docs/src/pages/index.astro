@@ -2,7 +2,7 @@
 import Code from "../components/Code.astro";
 import { codeToHtml } from "shiki";
 import Base from "../layouts/Base.astro";
-import { colors, shikiTheme } from "../playground/theme.js";
+import { colors, shikiTheme, themed } from "../playground/theme.js";
 
 // The formatted pane is squill's real output for the input pane
 // (Rust host, default options) — keep them in sync if either changes.
@@ -43,7 +43,7 @@ const sql = (code) => codeToHtml(code, { lang: "sql", theme: shikiTheme });
 const inner = (html) =>
 	html.replace(/^[\s\S]*?<code[^>]*>/, "").replace(/<\/code>[\s\S]*$/, "");
 
-const beforeHtml = await rust(before);
+const beforeHtml = themed(await rust(before));
 
 // In the formatted pane, splice real SQL highlighting into the query
 // body (in an editor that's a language plugin's job; here it's done by
@@ -58,9 +58,9 @@ const body = inner(await sql(lines.slice(open + 1, close).join("\n")));
 const tail = inner(
 	await rust(['\t\tr#"', ...lines.slice(close)].join("\n")),
 ).replace(/^<span class="line">[\s\S]*?<\/span>\n/, "");
-const afterHtml = `<pre class="shiki squill-dark" style="color:${colors.fg}"><code>${head}
+const afterHtml = themed(`<pre class="shiki squill-dark" style="color:${colors.fg}"><code>${head}
 ${body}
-${tail}</code></pre>`;
+${tail}</code></pre>`);
 
 ---
 
