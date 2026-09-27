@@ -5,7 +5,7 @@
 // writes the keys that would do it into the config pane. The choices are
 // page-wide — every live recipe on the page follows them — and last
 // until the page reloads, so the docs always open on the defaults.
-import { loadSquill } from "../playground/wasm.js";
+import { charSpans, loadSquill } from "../playground/wasm.js";
 
 // The style options changed from the recipe's own, by request key.
 const overrides = {};
@@ -145,16 +145,6 @@ async function update(recipe) {
 	plainPane.innerHTML = html.plain;
 	if (config) config.innerHTML = configHtml;
 	setStatus(recipe, "");
-}
-
-// The wasm module reports byte offsets; the highlighter counts UTF-16
-// units.
-function charSpans(text, spans) {
-	const bytes = new TextEncoder().encode(text);
-	const decoder = new TextDecoder();
-	const at = (byte) =>
-		decoder.decode(bytes.subarray(0, Math.min(byte, bytes.length))).length;
-	return spans.map(([start, end]) => [at(start), at(end)]);
 }
 
 // The recipe's config with the overrides written in: into the rule that

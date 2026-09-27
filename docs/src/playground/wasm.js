@@ -15,6 +15,16 @@ const moduleFor = (host) =>
 		? "squill"
 		: `squill-${host === "tsx" ? "typescript" : host}`;
 
+// The module reports byte offsets (a response's `spans`); JS strings
+// count UTF-16 units. Converts `[start, end]` pairs into `text`.
+export function charSpans(text, spans) {
+	const bytes = new TextEncoder().encode(text);
+	const decoder = new TextDecoder();
+	const at = (byte) =>
+		decoder.decode(bytes.subarray(0, Math.min(byte, bytes.length))).length;
+	return spans.map(([start, end]) => [at(start), at(end)]);
+}
+
 // Load `host`'s module, once per page; resolves to `format(request)`,
 // which returns the parsed response plus how long formatting took (`ms`).
 export function loadSquill(host) {

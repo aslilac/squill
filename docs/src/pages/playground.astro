@@ -33,6 +33,7 @@ const baseHref = import.meta.env.BASE_URL;
 				<span class="wordmark">squill</span>
 			</a>
 			<span class="sub">playground</span>
+			<select id="language" title="Language" aria-label="Language"></select>
 			<select id="example" title="Example" aria-label="Example"></select>
 			<div class="spacer"></div>
 			<button id="copy" class="button" title="Copy formatted output"
@@ -151,20 +152,17 @@ const baseHref = import.meta.env.BASE_URL;
 		<script>
 			import * as monaco from "monaco-editor";
 			import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
-			import { createHighlighter } from "shiki";
-			import { examples } from "../playground/examples.js";
+			import {
+				highlight,
+				highlightHost,
+			} from "../components/highlight.js";
+			import { examples, languages } from "../playground/examples.js";
 			import {
 				gleamConfiguration,
 				gleamLanguage,
 			} from "../playground/gleam-monarch.js";
-			import {
-				colors,
-				lightColors,
-				shikiTheme,
-				themed,
-			} from "../playground/theme.js";
-			import { sqlGrammar } from "../playground/sql-grammar.js";
-			import { loadSquill } from "../playground/wasm.js";
+			import { colors, lightColors } from "../playground/theme.js";
+			import { charSpans, loadSquill } from "../playground/wasm.js";
 
 			self.MonacoEnvironment = { getWorker: () => new EditorWorker() };
 
@@ -222,12 +220,19 @@ const baseHref = import.meta.env.BASE_URL;
 			const gear = document.getElementById("gear");
 			const settingsPopover = document.getElementById("settings");
 
-			for (const [index, example] of examples.entries()) {
-				const option = document.createElement("option");
-				option.value = String(index);
-				option.textContent = example.label;
-				exampleSelect.append(option);
+			const languageSelect = document.getElementById("language");
+			for (const language of languages) {
+				languageSelect.append(new Option(language.label, language.host));
 			}
+			// Examples are presets: one sets the language and the code. The
+			// placeholder stands in once the language is picked by hand.
+			exampleSelect.append(new Option("Examples…", ""));
+			exampleSelect.options[0].disabled = true;
+			for (const [index, example] of examples.entries()) {
+				exampleSelect.append(new Option(example.label, String(index)));
+			}
+			const languageOf = (host) =>
+				languages.find((language) => language.host === host);
 
 			const options = {
 				dialect: "postgres",
@@ -242,10 +247,12 @@ const baseHref = import.meta.env.BASE_URL;
 				pyformat_params: false,
 			};
 			let lastGoodOutput = "";
-			let current = examples[0];
+			let current = languageOf(examples[0].host);
+			languageSelect.value = current.host;
+			exampleSelect.value = "0";
 
 			const editor = monaco.editor.create(document.getElementById("editor"), {
-				value: current.source,
+				value: examples[0].source,
 				language: current.monacoLang,
 				theme: editorTheme(),
 				minimap: { enabled: false },
@@ -260,21 +267,15 @@ const baseHref = import.meta.env.BASE_URL;
 				wordWrap: "off",
 			});
 
-			const [highlighter] = await Promise.all([
-				createHighlighter({
-					themes: [shikiTheme],
-					langs: [sqlGrammar, "rust", "go", "python", "typescript", "gleam"],
-				}),
-				loadSquill(current.host),
-			]);
-
 			// Each host's formatter is its own module (see wasm.js), loaded
-			// the first time an example needs it.
+			// the first time a language needs it.
+			let version = 0;
 			async function render() {
-				const example = current;
-				const format = await loadSquill(example.host);
-				// Another example was picked while this one's module loaded.
-				if (example !== current) return;
+				const language = current;
+				const run = ++version;
+				const format = await loadSquill(language.host);
+				// Another language was picked while this one's module loaded.
+				if (run !== version) return;
 				const request = {
 					source: editor.getValue(),
 					host: current.host,
@@ -290,23 +291,47 @@ const baseHref = import.meta.env.BASE_URL;
 					return;
 				}
 				msBadge.textContent = `${Math.ceil(result.ms)} ms`;
-				if (result.output != null && result.diagnostics.length === 0) {
-					lastGoodOutput = result.output;
-					outputPane.innerHTML = themed(
-						highlighter.codeToHtml(result.output, {
-							lang: current.shikiLang,
-							theme: "squill-dark",
-						}),
-					);
-					consoleOut.textContent = "—";
-					statusBadge.textContent = "✓ formatted in ";
-					statusBadge.className = "tidy";
-				} else {
+				if (result.output == null) {
 					// Keep the last good output visible; report in the console.
 					consoleOut.textContent =
 						result.diagnostics.join("\n") || "unknown error";
-					statusBadge.textContent = `✗ ${result.diagnostics.length} issue(s)`;
+					statusBadge.textContent = "✗ error";
 					statusBadge.className = "bad";
+					return;
+				}
+				// Host code shows its SQL highlighted as SQL: squill says
+				// where it is.
+				const output = result.output;
+				const html =
+					language.host === "sql"
+						? await highlight(output, "sql")
+						: (
+								await highlightHost(
+									output,
+									language.shikiLang,
+									charSpans(output, result.spans),
+								)
+							).sql;
+				if (run !== version) return;
+				lastGoodOutput = output;
+				outputPane.innerHTML = html;
+				// Statements or strings squill left as written come back as
+				// diagnostics, beside the output.
+				const found = language.host === "sql" || result.spans.length > 0;
+				consoleOut.textContent = result.diagnostics.length
+					? result.diagnostics.join("\n")
+					: found
+						? "—"
+						: `${language.label}'s default query found no SQL here.`;
+				if (result.diagnostics.length > 0) {
+					statusBadge.textContent = `⚠ ${result.diagnostics.length} left as written · `;
+					statusBadge.className = "warn";
+				} else if (!found) {
+					statusBadge.textContent = "no SQL found · ";
+					statusBadge.className = "warn";
+				} else {
+					statusBadge.textContent = "✓ formatted in ";
+					statusBadge.className = "tidy";
 				}
 			}
 
@@ -328,24 +353,38 @@ const baseHref = import.meta.env.BASE_URL;
 
 			// An example turns on the `*-params` options its driver needs, as
 			// its recipe's config would, and the rest off.
-			function applyParams() {
+			function applyParams(example) {
 				for (const key of [
 					"at_params",
 					"question_params",
 					"colon_params",
 					"pyformat_params",
 				]) {
-					options[key] = current.params?.[key] ?? false;
+					options[key] = example.params?.[key] ?? false;
 					settingsPopover.querySelector(`[data-opt="${key}"]`).checked =
 						options[key];
 				}
 			}
 
-			exampleSelect.addEventListener("change", () => {
-				current = examples[Number(exampleSelect.value)];
-				applyParams();
+			function setLanguage(host) {
+				current = languageOf(host);
+				languageSelect.value = host;
 				monaco.editor.setModelLanguage(editor.getModel(), current.monacoLang);
-				editor.setValue(current.source); // triggers render via the change event
+			}
+
+			exampleSelect.addEventListener("change", () => {
+				const example = examples[Number(exampleSelect.value)];
+				applyParams(example);
+				setLanguage(example.host);
+				editor.setValue(example.source); // triggers render via the change event
+			});
+
+			// A language picked by hand keeps the code (yours, pasted in) and
+			// the options; only an example brings its own.
+			languageSelect.addEventListener("change", () => {
+				setLanguage(languageSelect.value);
+				exampleSelect.value = "";
+				render();
 			});
 
 			copyButton.addEventListener("click", async () => {
@@ -391,6 +430,7 @@ const baseHref = import.meta.env.BASE_URL;
 				--violet-solid: oklch(0.53 0.17 293);
 				--ok: light-dark(oklch(0.5 0.13 155), oklch(0.68 0.13 155));
 				--bad: light-dark(oklch(0.55 0.18 25), oklch(0.7 0.15 25));
+				--caution: light-dark(oklch(0.55 0.12 75), oklch(0.78 0.12 80));
 				--gutter: light-dark(#b5aec0, #4a4453);
 			}
 			* {
@@ -476,10 +516,26 @@ const baseHref = import.meta.env.BASE_URL;
 				stroke: currentColor;
 			}
 
-			/* The theme menu's button, the toolbar's size. */
+			/* The theme menu's button, dressed like the toolbar's other
+			   icon buttons rather than the site's round one. */
 			.toolbar .theme-switcher .theme-button {
-				width: 1.9rem;
-				height: 1.9rem;
+				width: auto;
+				height: auto;
+				padding: 0.3rem 0.45rem;
+				border: 1px solid var(--edge);
+				border-radius: 7px;
+				background: var(--pane);
+				color: var(--pane-text);
+			}
+			.toolbar .theme-switcher .theme-button:hover,
+			.toolbar .theme-switcher .theme-button[aria-expanded="true"] {
+				border-color: var(--violet-solid);
+				background: var(--pane);
+				color: var(--pane-text);
+			}
+			.toolbar .theme-switcher .theme-button svg {
+				width: 15px;
+				height: 15px;
 			}
 
 			.settings-wrap {
@@ -603,6 +659,9 @@ const baseHref = import.meta.env.BASE_URL;
 			}
 			.tidy {
 				color: var(--ok);
+			}
+			.warn {
+				color: var(--caution);
 			}
 			.bad {
 				color: var(--bad);
