@@ -1,6 +1,9 @@
 ---
 import Code from "../../components/Code.astro";
+import CodeTabs from "../../components/CodeTabs.astro";
 import Docs from "../../layouts/Docs.astro";
+const version = "v0.3.0";
+const release = `https://github.com/aslilac/squill/releases/download/${version}`;
 ---
 
 <Docs
@@ -25,7 +28,7 @@ squill fmt --check .`} />
 		</p>
 	</section>
 
-	<section>
+	<section id="nix">
 		<h2>Nix</h2>
 		<p>
 			The flake exposes the binary as its default package, so there is no
@@ -40,7 +43,7 @@ nix shell github:aslilac/squill`} />
 		</p>
 	</section>
 
-	<section>
+	<section id="cargo">
 		<h2>Cargo</h2>
 		<p>
 			Cargo can clone the source, check out the release tag, and install the
@@ -54,10 +57,60 @@ nix shell github:aslilac/squill`} />
 		<p>
 			Every tag publishes archives to <a
 				href="https://github.com/aslilac/squill/releases">GitHub releases</a
-			>: Linux and Windows on x86_64 and arm64, and macOS on arm64.
+			>: Linux and Windows on x86_64 and arm64, and macOS on arm64. The tab
+			for the machine you&rsquo;re reading this on opens first.
 		</p>
-		<Code lang="sh" code={`curl -fsSL https://github.com/aslilac/squill/releases/download/v0.3.0/squill-v0.3.0-x86_64-unknown-linux-gnu.tar.gz | sudo tar xz -C /usr/local/bin/
-squill fmt --check .`} />
+		<CodeTabs
+			tabs={[
+				...[
+					["x86_64", "x86_64"],
+					["arm64", "aarch64"],
+				].map(([arch, target]) => ({
+					id: `linux-${arch}`,
+					label: `linux ${arch}`,
+					os: "linux",
+					arch,
+					lang: "sh",
+					code: `curl -fsSL ${release}/squill-${version}-${target}-unknown-linux-gnu.tar.gz \\
+	| sudo tar xz -C /usr/local/bin/
+squill --version`,
+				})),
+				{
+					id: "macos-arm64",
+					label: "macos arm64",
+					os: "macos",
+					arch: "arm64",
+					lang: "sh",
+					code: `sudo mkdir -p /usr/local/bin
+curl -fsSL ${release}/squill-${version}-aarch64-apple-darwin.tar.gz \\
+	| sudo tar xz -C /usr/local/bin/
+squill --version`,
+				},
+				...[
+					["x86_64", "x86_64"],
+					["arm64", "aarch64"],
+				].map(([arch, target]) => ({
+					id: `windows-${arch}`,
+					label: `windows ${arch}`,
+					os: "windows",
+					arch,
+					lang: "powershell",
+					code: `$url = "${release}/squill-${version}-${target}-pc-windows-msvc.zip"
+$dir = "$env:LOCALAPPDATA\\Programs\\squill"
+Invoke-WebRequest $url -OutFile "$env:TEMP\\squill.zip"
+Expand-Archive "$env:TEMP\\squill.zip" -DestinationPath $dir -Force
+# Put it on your PATH (new terminals pick it up):
+[Environment]::SetEnvironmentVariable("Path",
+	[Environment]::GetEnvironmentVariable("Path", "User") + ";$dir", "User")`,
+				})),
+			]}
+			selected="linux-x86_64"
+		/>
+		<p>
+			There&rsquo;s no build for Intel Macs; <a href="docs/install/#nix"
+				>Nix</a
+			> or <a href="docs/install/#cargo">Cargo</a> builds one from source.
+		</p>
 	</section>
 
 	<section>

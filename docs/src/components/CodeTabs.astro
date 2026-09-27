@@ -1,0 +1,99 @@
+---
+// Code blocks behind tabs, in the recipes' pane: one tab per variant
+// (a platform's install command, say). A tab may name the `os` and
+// `arch` it's for; the one matching the reader's machine opens first,
+// else the first tab for their os, else `selected`.
+import { highlight } from "./highlight.js";
+
+const { tabs, selected = tabs[0].id } = Astro.props;
+const panes = await Promise.all(
+	tabs.map(async (tab) => ({ ...tab, html: await highlight(tab.code.trim(), tab.lang) })),
+);
+---
+
+<div class="pair stacked code-block captioned" data-code-tabs>
+	<figure>
+		<figcaption class="tabbar">
+			<span role="tablist">
+				{
+					panes.map((tab) => (
+						<button
+							type="button"
+							role="tab"
+							data-tab={tab.id}
+							data-os={tab.os}
+							data-arch={tab.arch}
+							aria-selected={String(tab.id === selected)}
+						>
+							{tab.label}
+						</button>
+					))
+				}
+			</span>
+		</figcaption>
+		{
+			panes.map((tab) => (
+				<div role="tabpanel" data-panel={tab.id} hidden={tab.id !== selected}>
+					<div set:html={tab.html} />
+				</div>
+			))
+		}
+	</figure>
+</div>
+
+<script>
+	function select(group: Element, tab: Element) {
+		for (const other of group.querySelectorAll("[data-tab]")) {
+			other.setAttribute("aria-selected", String(other === tab));
+		}
+		for (const panel of group.querySelectorAll<HTMLElement>("[data-panel]")) {
+			panel.hidden = panel.dataset.panel !== (tab as HTMLElement).dataset.tab;
+		}
+	}
+
+	type Platform = { os: string; arch: string };
+
+	// Best guess at the reader's os and architecture. Chromium says both
+	// outright (the architecture on request); elsewhere the os comes from
+	// the user agent, and the architecture only when it says arm.
+	async function platform(): Promise<Platform> {
+		const hints = (navigator as { userAgentData?: any }).userAgentData;
+		const said = `${hints?.platform ?? ""} ${navigator.platform} ${navigator.userAgent}`;
+		const os = /win/i.test(said)
+			? "windows"
+			: /mac/i.test(said)
+				? "macos"
+				: /linux|x11|cros/i.test(said)
+					? "linux"
+					: "";
+		let arch = "";
+		try {
+			const { architecture } = await hints?.getHighEntropyValues([
+				"architecture",
+			]);
+			if (architecture) arch = architecture === "arm" ? "arm64" : "x86_64";
+		} catch {}
+		if (!arch && /aarch64|arm64|armv8/i.test(said)) arch = "arm64";
+		return { os, arch: arch || "x86_64" };
+	}
+
+	const groups = document.querySelectorAll("[data-code-tabs]");
+	for (const group of groups) {
+		group.addEventListener("click", (event) => {
+			const tab = (event.target as Element).closest("[data-tab]");
+			if (tab) select(group, tab);
+		});
+	}
+	if ([...groups].some((group) => group.querySelector("[data-os]"))) {
+		platform().then(({ os, arch }) => {
+			if (!os) return;
+			for (const group of groups) {
+				const tabs = [...group.querySelectorAll<HTMLElement>("[data-os]")];
+				const match =
+					tabs.find((tab) => tab.dataset.os === os && tab.dataset.arch === arch) ??
+					tabs.find((tab) => tab.dataset.os === os);
+				if (match) select(group, match);
+			}
+		});
+	}
+</script>
