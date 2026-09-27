@@ -516,8 +516,8 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 			// first or last item.
 			const AIM_SLACK = 40;
 			// Draw the triangle: faint while the pointer moves, stronger
-			// while it holds a language back. For watching it work.
-			const SHOW_AIM = true;
+			// while it holds a language back. For watching it work; off.
+			const SHOW_AIM = false;
 			const choicesColumn = panel.querySelector(".picker-frameworks");
 			const aim = panel.querySelector(".picker-aim");
 			const aimShape = aim.querySelector("polygon");
