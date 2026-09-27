@@ -21,11 +21,18 @@ import Docs from "../../layouts/Docs.astro";
 		<Code lang="toml" file="squill.toml" code={`[[embedded]]
 include = ["**/*.rs"]
 grammar = "rust"`} />
-		<p>Built-in grammars, and what their default queries find:</p>
-		<ul>
+		<p>
+			Built-in grammars, and what their default queries find. In a rule, each
+			is named in lowercase: <code>rust</code>, <code>go</code>,{" "}
+			<code>python</code>, <code>javascript</code>, <code>typescript</code>,{" "}
+			<code>tsx</code>, <code>gleam</code>, <code>cpp</code>,{" "}
+			<code>csharp</code>, <code>java</code>, <code>kotlin</code>, and{" "}
+			<code>swift</code>.
+		</p>
+		<ul class="lang-list">
 			<li>
-				<img style="height: 16px; vertical-align: -2px;" src="langs/rust.svg" alt="" />
-				<code>rust</code>: sqlx&rsquo;s <code class="boxed">query!</code>,{" "}
+				<img src="langs/rust.svg" alt="" />
+				Rust: sqlx&rsquo;s <code class="boxed">query!</code>,{" "}
 				<code class="boxed">query_as!</code>, <code class="boxed"
 					>query_scalar!</code
 				>, <code class="boxed">query_unchecked!</code> macros and{" "}
@@ -34,58 +41,63 @@ grammar = "rust"`} />
 				> functions
 			</li>
 			<li>
-				<img style="height: 16px; vertical-align: -2px;" src="langs/go.svg" alt="" />
-				<code>go</code>: <code class="boxed">Query</code>,{" "}
+				<img src="langs/go.svg" alt="" />
+				Go: <code class="boxed">Query</code>,{" "}
 				<code class="boxed">QueryRow</code>, <code class="boxed">Exec</code> and
 				their <code class="boxed">Context</code> variants
 			</li>
 			<li>
-				<img style="height: 16px; vertical-align: -2px;" src="langs/python.svg" alt="" />
-				<code>python</code>: <code class="boxed">execute</code>-family methods
+				<img src="langs/python.svg" alt="" />
+				Python: <code class="boxed">execute</code>-family methods
 				and SQLAlchemy&rsquo;s <code class="boxed">text(...)</code>, with{" "}
 				<code>%s</code> / <code>%(name)s</code> params preserved under{" "}
 				<code>pyformat-params</code>
 			</li>
 			<li>
-				<img style="height: 16px; vertical-align: -2px;" src="langs/javascript.svg" alt="" />
-				<img style="height: 16px; vertical-align: -2px;" src="langs/typescript.svg" alt="" />
-				<code>javascript</code>, <code>typescript</code>, <code>tsx</code>:{" "}
+				<img src="langs/typescript.svg" alt="" />
+				JavaScript, TypeScript, and TSX:{" "}
 				<code class="boxed">.query</code>/<code class="boxed">.execute</code>/<code
 					class="boxed">.prepare</code
 				> calls and <code class="boxed">sql`&hellip;`</code> tagged templates
 			</li>
 			<li>
-				<img style="height: 16px; vertical-align: -2px;" src="langs/gleam.svg" alt="" />
-				<code>gleam</code>: <code class="boxed">sqlight</code> (as SQLite) and{" "}
+				<img src="langs/gleam.svg" alt="" />
+				Gleam: <code class="boxed">sqlight</code> (as SQLite) and{" "}
 				<code class="boxed">pog</code> (as the configured dialect)
 			</li>
 			<li>
-				<img style="height: 16px; vertical-align: -2px;" src="langs/cpp.svg" alt="" />
-				<code>cpp</code>: raw strings passed to <code class="boxed"
+				<img src="langs/cpp.svg" alt="" />
+				C++: raw strings passed to <code class="boxed"
 					>sqlite3_prepare*</code
 				>/<code class="boxed">sqlite3_exec</code> (as SQLite), libpq&rsquo;s{" "}
 				<code class="boxed">PQexec</code>-family (as Postgres), and libpqxx-style{" "}
 				<code class="boxed">exec</code>/<code class="boxed">query</code> methods
 			</li>
 			<li>
-				<img style="height: 16px; vertical-align: -2px;" src="langs/csharp.svg" alt="" />
-				<code>csharp</code>: raw strings passed to EF Core&rsquo;s{" "}
+				<img src="langs/csharp.svg" alt="" />
+				C#: raw strings passed to EF Core&rsquo;s{" "}
 				<code class="boxed">migrationBuilder.Sql</code> and raw-SQL methods,
 				Dapper&rsquo;s query/execute family, or assigned to{" "}
 				<code class="boxed">CommandText</code>, with <code>@name</code>{" "}
 				params preserved under <code>at-params</code>
 			</li>
 			<li>
-				<img style="height: 16px; vertical-align: -2px;" src="langs/java.svg" alt="" />
-				<img style="height: 16px; vertical-align: -2px;" src="langs/kotlin.svg" alt="" />
-				<code>java</code>, <code>kotlin</code>: text blocks and raw strings
-				passed to JDBC, JPA, Spring <code class="boxed">JdbcTemplate</code>, or
-				Exposed calls, with JDBC&rsquo;s <code>?</code> placeholders preserved
-				under <code>question-params</code>
+				<img src="langs/java.svg" alt="" />
+				Java: text blocks passed to JDBC, JPA, or Spring{" "}
+				<code class="boxed">JdbcTemplate</code> calls, with JDBC&rsquo;s{" "}
+				<code>?</code> placeholders preserved under{" "}
+				<code>question-params</code>
 			</li>
 			<li>
-				<img style="height: 16px; vertical-align: -2px;" src="langs/swift.svg" alt="" />
-				<code>swift</code>: <code>"""</code> strings passed to GRDB as its{" "}
+				<img src="langs/kotlin.svg" alt="" />
+				Kotlin: raw strings passed to JDBC, Spring{" "}
+				<code class="boxed">JdbcTemplate</code>, or Exposed calls, with or
+				without <code class="boxed">.trimIndent()</code>, and the same{" "}
+				<code>question-params</code> for <code>?</code>
+			</li>
+			<li>
+				<img src="langs/swift.svg" alt="" />
+				Swift: <code>"""</code> strings passed to GRDB as its{" "}
 				<code class="boxed">sql:</code> argument (as SQLite), or first to
 				SQLite.swift&rsquo;s <code class="boxed">run</code>/<code
 					class="boxed">execute</code

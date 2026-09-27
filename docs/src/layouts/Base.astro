@@ -107,6 +107,23 @@ const topNav = [
 			--code-func: light-dark(#3565b0, #7ba3e0);
 			--green: oklch(0.68 0.13 155);
 		}
+		/* Lists led by a language's icon: the icon is the marker, with room
+		   between it and the text, which wraps clear of it. */
+		ul.lang-list {
+			list-style: none;
+			padding-left: 0;
+		}
+		.lang-list li {
+			position: relative;
+			padding-left: 1.75rem;
+		}
+		.lang-list li > img {
+			position: absolute;
+			left: 0;
+			top: 0.5em;
+			width: 16px;
+			height: 16px;
+		}
 		/* Language icons are Catppuccin Mocha, a dark palette: on a light
 		   page they're deepened a little to keep their contrast. */
 		:root[data-theme="light"] img[src^="langs/"] {
