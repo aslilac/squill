@@ -1,4 +1,4 @@
 {"path":"after.lua","start":193,"end":329,"line":7,"column":21,"end_line":12,"end_column":3,"dialect":"postgres","pinned_dialect":false}
 {"path":"after.lua","start":398,"end":513,"line":16,"column":23,"end_line":21,"end_column":3,"dialect":"postgres","pinned_dialect":false}
-{"path":"before.lua","start":193,"end":325,"line":7,"column":21,"end_line":9,"end_column":3,"dialect":"postgres","pinned_dialect":false}
-{"path":"before.lua","start":394,"end":505,"line":13,"column":23,"end_line":15,"end_column":3,"dialect":"postgres","pinned_dialect":false}
+{"path":"before.lua","start":193,"end":337,"line":7,"column":21,"end_line":11,"end_column":3,"dialect":"postgres","pinned_dialect":false}
+{"path":"before.lua","start":406,"end":523,"line":15,"column":23,"end_line":18,"end_column":3,"dialect":"postgres","pinned_dialect":false}

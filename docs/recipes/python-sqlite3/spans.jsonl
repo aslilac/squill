@@ -1,6 +1,6 @@
 {"path":"after.py","start":86,"end":476,"line":5,"column":25,"end_line":17,"end_column":5,"dialect":"sqlite","pinned_dialect":false}
 {"path":"after.py","start":584,"end":747,"line":22,"column":12,"end_line":27,"end_column":9,"dialect":"sqlite","pinned_dialect":false}
 {"path":"after.py","start":888,"end":972,"line":34,"column":12,"end_line":38,"end_column":9,"dialect":"sqlite","pinned_dialect":false}
-{"path":"before.py","start":86,"end":417,"line":5,"column":25,"end_line":8,"end_column":5,"dialect":"sqlite","pinned_dialect":false}
-{"path":"before.py","start":525,"end":646,"line":13,"column":12,"end_line":13,"end_column":133,"dialect":"sqlite","pinned_dialect":false}
-{"path":"before.py","start":787,"end":837,"line":20,"column":12,"end_line":20,"end_column":62,"dialect":"sqlite","pinned_dialect":false}
+{"path":"before.py","start":86,"end":453,"line":5,"column":25,"end_line":11,"end_column":5,"dialect":"sqlite","pinned_dialect":false}
+{"path":"before.py","start":561,"end":706,"line":16,"column":12,"end_line":18,"end_column":37,"dialect":"sqlite","pinned_dialect":false}
+{"path":"before.py","start":847,"end":897,"line":25,"column":12,"end_line":25,"end_column":62,"dialect":"sqlite","pinned_dialect":false}

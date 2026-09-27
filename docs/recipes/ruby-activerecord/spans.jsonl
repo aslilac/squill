@@ -2,5 +2,5 @@
 {"path":"after.rb","start":445,"end":570,"line":17,"column":32,"end_line":22,"end_column":5,"dialect":"postgres","pinned_dialect":false}
 {"path":"after.rb","start":648,"end":800,"line":26,"column":42,"end_line":32,"end_column":5,"dialect":"postgres","pinned_dialect":false}
 {"path":"before.rb","start":84,"end":313,"line":3,"column":19,"end_line":6,"end_column":5,"dialect":"postgres","pinned_dialect":false}
-{"path":"before.rb","start":417,"end":532,"line":12,"column":32,"end_line":14,"end_column":5,"dialect":"postgres","pinned_dialect":false}
-{"path":"before.rb","start":610,"end":748,"line":18,"column":42,"end_line":20,"end_column":5,"dialect":"postgres","pinned_dialect":false}
+{"path":"before.rb","start":417,"end":540,"line":12,"column":32,"end_line":15,"end_column":5,"dialect":"postgres","pinned_dialect":false}
+{"path":"before.rb","start":618,"end":772,"line":19,"column":42,"end_line":23,"end_column":5,"dialect":"postgres","pinned_dialect":false}

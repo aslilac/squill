@@ -8,7 +8,8 @@ pub fn overdue(db: pog.Connection, cutoff: pog.Timestamp) {
     decode.success(#(id, email))
   }
   pog.query(
-    "SELECT i.id, c.email FROM invoices i JOIN customers c ON c.id = i.customer_id WHERE i.due_at < $1 AND i.paid_at IS NULL ORDER BY i.due_at",
+    "SELECT i.id, c.email FROM invoices i JOIN customers c ON c.id = i.customer_id
+        WHERE i.due_at < $1 AND i.paid_at IS NULL ORDER BY i.due_at",
   )
   |> pog.parameter(pog.timestamp(cutoff))
   |> pog.returning(decoder)
@@ -21,7 +22,9 @@ pub fn top_posters(db: pog.Connection, since: pog.Date) {
     use posts <- decode.field(1, decode.int)
     decode.success(#(name, posts))
   }
-  "SELECT u.name, count(*) AS posts FROM posts p JOIN users u ON u.id = p.author_id WHERE p.created_at >= $1 GROUP BY u.name HAVING count(*) > 10 ORDER BY posts DESC"
+  "SELECT u.name, count(*) AS posts FROM posts p JOIN users u ON u.id = p.author_id
+      WHERE p.created_at >= $1 GROUP BY u.name HAVING count(*) > 10
+      ORDER BY posts DESC"
   |> pog.query
   |> pog.parameter(pog.calendar_date(since))
   |> pog.returning(decoder)

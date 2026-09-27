@@ -1,7 +1,10 @@
 pub async fn active_members(pool: &PgPool, team: Uuid) -> sqlx::Result<Vec<Member>> {
     sqlx::query_as!(
         Member,
-        r#"SELECT m.id, m.name, m.role AS "role: Role" FROM members m JOIN teams t ON t.id = m.team_id WHERE t.id = $1 AND m.deactivated_at IS NULL ORDER BY m.name"#,
+        r#"SELECT m.id, m.name, m.role AS "role: Role"
+            FROM members m JOIN teams t ON t.id = m.team_id
+            WHERE t.id = $1 AND m.deactivated_at IS NULL
+            ORDER BY m.name"#,
         team,
     )
     .fetch_all(pool)

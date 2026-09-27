@@ -5,13 +5,16 @@ assert(pg:connect())
 
 local function drafts_for(author_id)
   return pg:query([[
-    SELECT p.id, p.title, p.updated_at FROM posts p WHERE p.author_id = $1 AND p.published_at IS NULL ORDER BY p.updated_at DESC
+    SELECT p.id, p.title, p.updated_at FROM posts p
+      WHERE p.author_id = $1 AND p.published_at IS NULL
+      ORDER BY p.updated_at DESC
   ]], author_id)
 end
 
 local function publish(id)
   return pg:query([==[
-    UPDATE posts SET published_at = now() WHERE id = $1 AND published_at IS NULL RETURNING id, published_at
+    UPDATE posts SET published_at = now() WHERE id = $1
+      AND published_at IS NULL RETURNING id, published_at
   ]==], id)
 end
 

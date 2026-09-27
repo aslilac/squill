@@ -8,13 +8,16 @@ public class MemberRepository {
 
     public List<Member> activeIn(UUID teamId) {
         return jdbc.query("""
-            SELECT m.id, m.name, m.role FROM members m WHERE m.team_id = ? AND m.deactivated_at IS NULL ORDER BY m.name
+            SELECT m.id, m.name, m.role FROM members m
+            WHERE m.team_id = ? AND m.deactivated_at IS NULL
+            ORDER BY m.name
             """, MEMBER, teamId);
     }
 
     public int deactivate(UUID memberId) {
         return jdbc.update("""
-            UPDATE members SET deactivated_at = now() WHERE id = ? AND deactivated_at IS NULL
+            UPDATE members SET deactivated_at = now()
+            WHERE id = ? AND deactivated_at IS NULL
             """, memberId);
     }
 

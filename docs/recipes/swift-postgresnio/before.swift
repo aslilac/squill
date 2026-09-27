@@ -3,7 +3,9 @@ import PostgresNIO
 
 func remindOverdue(_ client: PostgresClient, logger: Logger) async throws {
     let rows = try await client.query("""
-        SELECT i.id, i.total, c.email FROM invoices i JOIN customers c ON c.id = i.customer_id WHERE i.due_at < now() AND i.paid_at IS NULL ORDER BY i.due_at
+        SELECT i.id, i.total, c.email FROM invoices i
+        JOIN customers c ON c.id = i.customer_id WHERE i.due_at < now()
+        AND i.paid_at IS NULL ORDER BY i.due_at
         """, logger: logger)
     for try await (id, total, email) in rows.decode((Int, Decimal, String).self) {
         logger.info("\(email) owes \(total) on invoice \(id)")

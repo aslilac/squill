@@ -3,7 +3,8 @@ package store
 func (s *Store) OpenOrders(ctx context.Context, customerID int64) ([]Order, error) {
 	rows, err := s.db.QueryContext(
 		ctx,
-		`SELECT o.id, o.total_cents, o.created_at FROM orders o WHERE o.customer_id = $1 AND o.status = 'open' ORDER BY o.created_at DESC`,
+		`SELECT o.id, o.total_cents, o.created_at FROM orders o
+			WHERE o.customer_id = $1 AND o.status = 'open' ORDER BY o.created_at DESC`,
 		customerID,
 	)
 	if err != nil {

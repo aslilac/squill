@@ -1,4 +1,4 @@
 {"path":"after.kt","start":96,"end":303,"line":3,"column":12,"end_line":10,"end_column":9,"dialect":"postgres","pinned_dialect":false}
 {"path":"after.kt","start":561,"end":673,"line":19,"column":12,"end_line":23,"end_column":9,"dialect":"postgres","pinned_dialect":false}
-{"path":"before.kt","start":96,"end":263,"line":3,"column":12,"end_line":5,"end_column":9,"dialect":"postgres","pinned_dialect":false}
-{"path":"before.kt","start":521,"end":617,"line":14,"column":12,"end_line":16,"end_column":9,"dialect":"postgres","pinned_dialect":false}
+{"path":"before.kt","start":96,"end":287,"line":3,"column":12,"end_line":7,"end_column":9,"dialect":"postgres","pinned_dialect":false}
+{"path":"before.kt","start":545,"end":641,"line":16,"column":12,"end_line":18,"end_column":9,"dialect":"postgres","pinned_dialect":false}

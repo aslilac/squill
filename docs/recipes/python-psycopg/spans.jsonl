@@ -1,6 +1,6 @@
 {"path":"after.py","start":109,"end":381,"line":4,"column":16,"end_line":11,"end_column":13,"dialect":"postgres","pinned_dialect":false}
 {"path":"after.py","start":575,"end":702,"line":20,"column":16,"end_line":24,"end_column":13,"dialect":"postgres","pinned_dialect":false}
 {"path":"after.py","start":814,"end":841,"line":31,"column":22,"end_line":31,"end_column":49,"dialect":"postgres","pinned_dialect":false}
-{"path":"before.py","start":109,"end":295,"line":4,"column":16,"end_line":4,"end_column":202,"dialect":"postgres","pinned_dialect":false}
-{"path":"before.py","start":489,"end":604,"line":13,"column":16,"end_line":16,"end_column":13,"dialect":"postgres","pinned_dialect":false}
-{"path":"before.py","start":716,"end":743,"line":23,"column":22,"end_line":23,"end_column":49,"dialect":"postgres","pinned_dialect":false}
+{"path":"before.py","start":109,"end":343,"line":4,"column":16,"end_line":7,"end_column":52,"dialect":"postgres","pinned_dialect":false}
+{"path":"before.py","start":537,"end":652,"line":16,"column":16,"end_line":19,"end_column":13,"dialect":"postgres","pinned_dialect":false}
+{"path":"before.py","start":764,"end":791,"line":26,"column":22,"end_line":26,"end_column":49,"dialect":"postgres","pinned_dialect":false}

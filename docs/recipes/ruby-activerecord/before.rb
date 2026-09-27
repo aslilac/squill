@@ -10,13 +10,16 @@ end
 class Article < ApplicationRecord
   def self.search(term)
     find_by_sql([<<~SQL, term])
-      SELECT id, title FROM articles WHERE search @@ plainto_tsquery('english', ?) ORDER BY published_at DESC
+      SELECT id, title FROM articles WHERE search @@ plainto_tsquery('english', ?)
+        ORDER BY published_at DESC
     SQL
   end
 
   def self.monthly_counts
     rows = connection.select_rows(<<~SQL)
-      SELECT date_trunc('month', published_at) AS month, count(*) FROM articles WHERE published_at IS NOT NULL GROUP BY 1 ORDER BY 1
+      SELECT date_trunc('month', published_at) AS month, count(*)
+        FROM articles WHERE published_at IS NOT NULL
+        GROUP BY 1 ORDER BY 1
     SQL
     rows.to_h
   end

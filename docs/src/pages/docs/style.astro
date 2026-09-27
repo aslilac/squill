@@ -70,7 +70,11 @@ DELETE FROM sessions WHERE expires_at < now() - interval '7 days';`}
 			watch them break in turn.
 		</p>
 		<StyleExample
-			input={`SELECT u.id, u.name, u.email, o.name AS org_name, count(p.id) AS project_count FROM users u JOIN orgs o ON o.id = u.org_id LEFT JOIN projects p ON p.owner_id = u.id AND p.archived_at IS NULL WHERE u.deleted_at IS NULL AND (u.role = 'admin' OR u.role = 'owner') GROUP BY u.id, o.name ORDER BY project_count DESC LIMIT 20;`}
+			input={`SELECT u.id, u.name, u.email, o.name AS org_name, count(p.id) AS project_count
+FROM users u JOIN orgs o ON o.id = u.org_id LEFT JOIN projects p ON p.owner_id = u.id
+AND p.archived_at IS NULL WHERE u.deleted_at IS NULL
+AND (u.role = 'admin' OR u.role = 'owner') GROUP BY u.id, o.name
+ORDER BY project_count DESC LIMIT 20;`}
 		/>
 	</section>
 
@@ -83,7 +87,10 @@ DELETE FROM sessions WHERE expires_at < now() - interval '7 days';`}
 			on its own line. A subquery short enough to stay inline does.
 		</p>
 		<StyleExample
-			input={`SELECT name, CASE WHEN score >= 90 THEN 'great' WHEN score >= 70 THEN 'good' ELSE 'needs work' END AS grade FROM reviews WHERE reviewer_id IN (SELECT id FROM users WHERE team = 'platform');`}
+			input={`SELECT name, CASE WHEN score >= 90 THEN 'great'
+WHEN score >= 70 THEN 'good' ELSE 'needs work' END AS grade
+FROM reviews WHERE reviewer_id IN (SELECT id FROM users
+WHERE team = 'platform');`}
 		/>
 	</section>
 
@@ -96,7 +103,10 @@ DELETE FROM sessions WHERE expires_at < now() - interval '7 days';`}
 			margin.
 		</p>
 		<StyleExample
-			input={`WITH recent AS (SELECT user_id, max(created_at) AS last_seen FROM sessions WHERE created_at > now() - interval '30 days' GROUP BY user_id) SELECT u.name, r.last_seen FROM users u JOIN recent r ON r.user_id = u.id;`}
+			input={`WITH recent AS (SELECT user_id, max(created_at) AS last_seen
+FROM sessions WHERE created_at > now() - interval '30 days'
+GROUP BY user_id) SELECT u.name, r.last_seen FROM users u
+JOIN recent r ON r.user_id = u.id;`}
 		/>
 	</section>
 
@@ -110,9 +120,12 @@ DELETE FROM sessions WHERE expires_at < now() - interval '7 days';`}
 			margin.
 		</p>
 		<StyleExample
-			input={`INSERT INTO settings (user_id, key, value, updated_at) VALUES ($1, $2, $3, now()) ON CONFLICT (user_id, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at;
+			input={`INSERT INTO settings (user_id, key, value, updated_at)
+VALUES ($1, $2, $3, now()) ON CONFLICT (user_id, key) DO UPDATE
+SET value = excluded.value, updated_at = excluded.updated_at;
 
-UPDATE workspaces SET last_used_at = now(), build_count = build_count + 1 WHERE id = $1 RETURNING id, last_used_at;`}
+UPDATE workspaces SET last_used_at = now(), build_count = build_count + 1
+WHERE id = $1 RETURNING id, last_used_at;`}
 		/>
 	</section>
 
@@ -123,9 +136,13 @@ UPDATE workspaces SET last_used_at = now(), build_count = build_count + 1 WHERE 
 			index&rsquo;s clauses are indented under the line that names it.
 		</p>
 		<StyleExample
-			input={`CREATE TABLE workspace_agents (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), workspace_id uuid NOT NULL REFERENCES workspaces (id) ON DELETE CASCADE, name text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), UNIQUE (workspace_id, name));
+			input={`CREATE TABLE workspace_agents (id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspaces (id) ON DELETE CASCADE,
+  name text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (workspace_id, name));
 
-CREATE INDEX workspace_agents_workspace_id_idx ON workspace_agents (workspace_id) WHERE deleted_at IS NULL;`}
+CREATE INDEX workspace_agents_workspace_id_idx ON workspace_agents (workspace_id)
+WHERE deleted_at IS NULL;`}
 		/>
 	</section>
 
@@ -139,7 +156,8 @@ CREATE INDEX workspace_agents_workspace_id_idx ON workspace_agents (workspace_id
 		<StyleExample
 			input={`-- The newest build per workspace.
 SELECT DISTINCT ON (workspace_id) workspace_id, id, -- the build itself
-  created_at FROM builds /* every build, not just finished ones */ ORDER BY workspace_id, created_at DESC;`}
+  created_at FROM builds /* every build, not just finished ones */
+ORDER BY workspace_id, created_at DESC;`}
 		/>
 	</section>
 
@@ -151,7 +169,9 @@ SELECT DISTINCT ON (workspace_id) workspace_id, id, -- the build itself
 			identifier, like the trigger record <code>NEW</code>.
 		</p>
 		<StyleExample
-			input={`CREATE FUNCTION touch_updated_at() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.updated_at IS NULL THEN NEW.updated_at := now(); END IF; RETURN NEW; END; $$;`}
+			input={`CREATE FUNCTION touch_updated_at() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN IF NEW.updated_at IS NULL THEN NEW.updated_at := now(); END IF;
+RETURN NEW; END; $$;`}
 		/>
 	</section>
 
@@ -164,7 +184,8 @@ SELECT DISTINCT ON (workspace_id) workspace_id, id, -- the build itself
 			<code>"always"</code>, every identifier is quoted.
 		</p>
 		<StyleExample
-			input={`SELECT "id", "User"."Name", "order" FROM "users" JOIN "User" ON "User"."id" = "users"."user_id";`}
+			input={`SELECT "id", "User"."Name", "order" FROM "users"
+JOIN "User" ON "User"."id" = "users"."user_id";`}
 		/>
 	</section>
 

@@ -1,7 +1,10 @@
 async fn overdue(client: &Client, cutoff: SystemTime) -> Result<Vec<Row>, Error> {
     client
         .query(
-            r"SELECT i.id, i.total, c.email FROM invoices i JOIN customers c ON c.id = i.customer_id WHERE i.due_at < $1 AND i.paid_at IS NULL ORDER BY i.due_at",
+            r"SELECT i.id, i.total, c.email FROM invoices i
+                JOIN customers c ON c.id = i.customer_id
+                WHERE i.due_at < $1 AND i.paid_at IS NULL
+                ORDER BY i.due_at",
             &[&cutoff],
         )
         .await

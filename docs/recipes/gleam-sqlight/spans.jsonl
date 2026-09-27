@@ -1,4 +1,4 @@
 {"path":"after.gleam","start":277,"end":409,"line":11,"column":6,"end_line":17,"end_column":5,"dialect":"sqlite","pinned_dialect":true}
 {"path":"after.gleam","start":551,"end":754,"line":26,"column":6,"end_line":34,"end_column":5,"dialect":"sqlite","pinned_dialect":true}
-{"path":"before.gleam","start":277,"end":383,"line":11,"column":6,"end_line":11,"end_column":112,"dialect":"sqlite","pinned_dialect":true}
-{"path":"before.gleam","start":525,"end":683,"line":20,"column":6,"end_line":20,"end_column":164,"dialect":"sqlite","pinned_dialect":true}
+{"path":"before.gleam","start":277,"end":391,"line":11,"column":6,"end_line":12,"end_column":59,"dialect":"sqlite","pinned_dialect":true}
+{"path":"before.gleam","start":533,"end":727,"line":21,"column":6,"end_line":24,"end_column":30,"dialect":"sqlite","pinned_dialect":true}

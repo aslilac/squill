@@ -1,4 +1,4 @@
 {"path":"after.rb","start":86,"end":415,"line":4,"column":25,"end_line":16,"end_column":1,"dialect":"sqlite","pinned_dialect":false}
 {"path":"after.rb","start":467,"end":595,"line":19,"column":28,"end_line":24,"end_column":3,"dialect":"sqlite","pinned_dialect":false}
-{"path":"before.rb","start":86,"end":402,"line":4,"column":25,"end_line":7,"end_column":1,"dialect":"sqlite","pinned_dialect":false}
-{"path":"before.rb","start":454,"end":578,"line":10,"column":28,"end_line":12,"end_column":3,"dialect":"sqlite","pinned_dialect":false}
+{"path":"before.rb","start":86,"end":426,"line":4,"column":25,"end_line":10,"end_column":1,"dialect":"sqlite","pinned_dialect":false}
+{"path":"before.rb","start":478,"end":608,"line":13,"column":28,"end_line":16,"end_column":3,"dialect":"sqlite","pinned_dialect":false}

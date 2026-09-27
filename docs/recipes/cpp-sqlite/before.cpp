@@ -3,7 +3,9 @@ std::vector<Note> recent_notes(sqlite3* db, std::int64_t since) {
     int rc = sqlite3_prepare_v2(
         db,
         R"sql(
-            SELECT id, title, updated_at FROM notes WHERE updated_at > ?1 AND archived = 0 ORDER BY updated_at DESC LIMIT 50
+            SELECT id, title, updated_at FROM notes
+            WHERE updated_at > ?1 AND archived = 0
+            ORDER BY updated_at DESC LIMIT 50
         )sql",
         -1, &stmt, nullptr);
     if (rc != SQLITE_OK) throw sqlite_error(db);
