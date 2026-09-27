@@ -23,8 +23,9 @@ import Recipe from "../../../components/Recipe.astro";
 			The built-in <code>java</code> grammar&rsquo;s default query finds a
 			text block passed straight to a JDBC, JPA, or <code>JdbcTemplate</code>{" "}
 			method. One assigned to a variable or a constant first is out of its
-			sight. JDBC&rsquo;s <code>?</code> placeholders parse as parameters
-			for this grammar without any configuration.
+			sight. Set <code>question-params = true</code> in the rule, as below,
+			so JDBC&rsquo;s <code>?</code> placeholders parse as parameters rather
+			than Postgres operators.
 		</p>
 	</section>
 

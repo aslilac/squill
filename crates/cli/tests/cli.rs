@@ -1196,10 +1196,9 @@ fn wasm_grammars_need_a_query() {
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// JDBC's `?` is on for Java and Kotlin unless configured; elsewhere
-/// it is opt-in, by key or flag.
+/// JDBC's `?` is opt-in, by key or flag, in Java as anywhere else.
 #[test]
-fn question_params_default_by_grammar_and_configure() {
+fn question_params_are_configured() {
 	let dir = temp_dir("questionparams");
 	let java = "class A {\n    void m() {\n        conn.prepareStatement(\"\"\"\n            SELECT id FROM users WHERE org = ?\n            \"\"\");\n    }\n}\n";
 	std::fs::write(dir.join("A.java"), java).expect("write");
@@ -1207,20 +1206,20 @@ fn question_params_default_by_grammar_and_configure() {
 		.expect("write");
 	let rule = "[[embedded]]\ninclude = [\"*.java\"]\ngrammar = \"java\"\n";
 
-	// Off by the rule: the `?` no longer lexes, so the string is left
-	// alone and reported.
-	std::fs::write(
-		dir.join("squill.toml"),
-		format!("{rule}question-params = false\n"),
-	)
-	.expect("write config");
+	// Off by default: the `?` doesn't lex as a parameter, so the string
+	// is left alone and reported.
+	std::fs::write(dir.join("squill.toml"), rule).expect("write config");
 	let output =
 		squill().arg("fmt").arg(dir.join("A.java")).output().expect("run");
 	assert!(String::from_utf8_lossy(&output.stderr).contains("did not parse"));
 	assert_eq!(std::fs::read_to_string(dir.join("A.java")).expect("read"), java);
 
-	// The grammar's default.
-	std::fs::write(dir.join("squill.toml"), rule).expect("write config");
+	// On by the rule.
+	std::fs::write(
+		dir.join("squill.toml"),
+		format!("{rule}question-params = true\n"),
+	)
+	.expect("write config");
 	let output = squill().arg("fmt").arg(&dir).output().expect("run");
 	assert!(output.status.success());
 	assert!(
@@ -1228,7 +1227,7 @@ fn question_params_default_by_grammar_and_configure() {
 			.expect("read")
 			.contains("        where org = ?\n"),
 	);
-	// Not for plain SQL, where it takes the key or the flag.
+	// Not for plain SQL, which the rule doesn't cover: it takes the flag.
 	assert_eq!(
 		std::fs::read_to_string(dir.join("q.sql")).expect("read"),
 		"SELECT id FROM users WHERE org = ?;\n"
@@ -1317,10 +1316,9 @@ fn init_in_an_empty_project() {
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// psycopg's `%s` is on for Python unless configured; elsewhere it is
-/// opt-in, by key or flag.
+/// psycopg's `%s` is opt-in, by key or flag, in Python as anywhere else.
 #[test]
-fn pyformat_params_default_by_grammar_and_configure() {
+fn pyformat_params_are_configured() {
 	let dir = temp_dir("pyformatparams");
 	let python = "def f(cur):\n    cur.execute(\"\"\"SELECT id FROM users WHERE org = %(org)s\"\"\")\n";
 	std::fs::write(dir.join("q.py"), python).expect("write");
@@ -1328,12 +1326,8 @@ fn pyformat_params_default_by_grammar_and_configure() {
 		.expect("write");
 	let rule = "[[embedded]]\ninclude = [\"*.py\"]\ngrammar = \"python\"\n";
 
-	// Off by the rule: the placeholder no longer lexes as one.
-	std::fs::write(
-		dir.join("squill.toml"),
-		format!("{rule}pyformat-params = false\n"),
-	)
-	.expect("write config");
+	// Off by default: the placeholder doesn't lex as one.
+	std::fs::write(dir.join("squill.toml"), rule).expect("write config");
 	let output = squill().arg("fmt").arg(dir.join("q.py")).output().expect("run");
 	assert!(
 		String::from_utf8_lossy(&output.stderr).contains("did not parse"),
@@ -1342,8 +1336,12 @@ fn pyformat_params_default_by_grammar_and_configure() {
 	);
 	assert_eq!(std::fs::read_to_string(dir.join("q.py")).expect("read"), python);
 
-	// The grammar's default.
-	std::fs::write(dir.join("squill.toml"), rule).expect("write config");
+	// On by the rule.
+	std::fs::write(
+		dir.join("squill.toml"),
+		format!("{rule}pyformat-params = true\n"),
+	)
+	.expect("write config");
 	let status = squill().arg("fmt").arg(dir.join("q.py")).status().expect("run");
 	assert!(status.success());
 	assert!(
@@ -1832,23 +1830,29 @@ fn init_writes_yaml_on_request() {
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// C# code writes `@name` params, so `at-params` is on for the csharp
-/// grammar unless configured: `=@id` stays a comparison with a param.
+/// No grammar turns a `*-params` option on by itself: Dapper's `@name`
+/// in C# needs `at-params`, like anywhere else.
 #[test]
-fn csharp_defaults_to_at_params() {
+fn params_are_off_until_configured() {
 	let dir = temp_dir("csharpat");
-	std::fs::write(
-		dir.join("squill.toml"),
-		"[[embedded]]\ninclude = [\"*.cs\"]\ngrammar = \"csharp\"\n",
-	)
-	.expect("write config");
 	let source = "class A {\n    void M() {\n        conn.Execute(\"\"\"\n            DELETE FROM t WHERE id=@id OR id IN @ids\n            \"\"\");\n    }\n}\n";
 	std::fs::write(dir.join("a.cs"), source).expect("write");
-	let output = squill()
-		.args(["fmt", "--strict", "--stdout"])
-		.arg(dir.join("a.cs"))
-		.output()
-		.expect("run");
+	let rule = "[[embedded]]\ninclude = [\"*.cs\"]\ngrammar = \"csharp\"\n";
+	std::fs::write(dir.join("squill.toml"), rule).expect("write config");
+	let run = || {
+		squill()
+			.args(["fmt", "--strict", "--stdout"])
+			.arg(dir.join("a.cs"))
+			.output()
+			.expect("run")
+	};
+	let output = run();
+	assert_eq!(output.status.code(), Some(1));
+	assert_eq!(String::from_utf8_lossy(&output.stdout), source);
+
+	std::fs::write(dir.join("squill.toml"), format!("{rule}at-params = true\n"))
+		.expect("write config");
+	let output = run();
 	assert!(
 		output.status.success(),
 		"{}",

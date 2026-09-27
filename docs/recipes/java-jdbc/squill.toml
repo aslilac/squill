@@ -1,3 +1,5 @@
 [[embedded]]
 include = ["**/*.java"]
 grammar = "java"
+# JDBC binds `?` placeholders.
+question-params = true

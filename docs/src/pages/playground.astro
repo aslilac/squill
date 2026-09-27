@@ -103,6 +103,14 @@ const baseHref = import.meta.env.BASE_URL;
 						<input data-opt="at_params" type="checkbox" />
 						at-params
 					</label>
+					<label class="row">
+						<input data-opt="question_params" type="checkbox" />
+						question-params
+					</label>
+					<label class="row">
+						<input data-opt="pyformat_params" type="checkbox" />
+						pyformat-params
+					</label>
 				</div>
 			</div>
 		</header>
@@ -264,6 +272,8 @@ const baseHref = import.meta.env.BASE_URL;
 				keyword_case: "lower",
 				quote_idents: "as-needed",
 				at_params: false,
+				question_params: false,
+				pyformat_params: false,
 			};
 			let lastGoodOutput = "";
 			let current = examples[0];
@@ -340,8 +350,19 @@ const baseHref = import.meta.env.BASE_URL;
 				debounce = setTimeout(render, 100);
 			});
 
+			// An example turns on the `*-params` options its driver needs, as
+			// its recipe's config would, and the rest off.
+			function applyParams() {
+				for (const key of ["at_params", "question_params", "pyformat_params"]) {
+					options[key] = current.params?.[key] ?? false;
+					settingsPopover.querySelector(`[data-opt="${key}"]`).checked =
+						options[key];
+				}
+			}
+
 			exampleSelect.addEventListener("change", () => {
 				current = examples[Number(exampleSelect.value)];
+				applyParams();
 				monaco.editor.setModelLanguage(editor.getModel(), current.monacoLang);
 				editor.setValue(current.source); // triggers render via the change event
 			});

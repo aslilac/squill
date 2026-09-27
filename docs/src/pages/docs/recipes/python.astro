@@ -19,9 +19,10 @@ import Recipe from "../../../components/Recipe.astro";
 			<code>&lbrace;hole&rbrace;</code> in it isn&rsquo;t SQL squill can parse.
 		</p>
 		<p>
-			<code>pyformat-params</code> is on for the <code>python</code> grammar
-			unless you configure it, so the DB-API&rsquo;s <code>%s</code> and{" "}
-			<code>%(name)s</code> placeholders read as parameters.
+			Set <code>pyformat-params = true</code> in the rule when your driver
+			uses the DB-API&rsquo;s <code>%s</code> and <code>%(name)s</code>{" "}
+			placeholders, as psycopg does, so they read as parameters rather than
+			modulo.
 		</p>
 	</section>
 

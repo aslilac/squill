@@ -43,9 +43,8 @@ grammar = "rust"`} />
 				<img style="height: 16px; vertical-align: -2px;" src="langs/python.svg" alt="" />
 				<code>python</code>: <code class="boxed">execute</code>-family methods
 				and SQLAlchemy&rsquo;s <code class="boxed">text(...)</code>, with{" "}
-				<code>%s</code> / <code>%(name)s</code> params preserved
-				(<code>pyformat-params</code> is on for this grammar unless
-				configured)
+				<code>%s</code> / <code>%(name)s</code> params preserved under{" "}
+				<code>pyformat-params</code>
 			</li>
 			<li>
 				<img style="height: 16px; vertical-align: -2px;" src="langs/typescript.svg" alt="" />
@@ -71,15 +70,13 @@ grammar = "rust"`} />
 				<code class="boxed">migrationBuilder.Sql</code> and raw-SQL methods,
 				Dapper&rsquo;s query/execute family, or assigned to{" "}
 				<code class="boxed">CommandText</code>, with <code>@name</code>{" "}
-				params preserved (<code>at-params</code> is on for this grammar
-				unless configured)
+				params preserved under <code>at-params</code>
 			</li>
 			<li>
 				<code>java</code>, <code>kotlin</code>: text blocks and raw strings
 				passed to JDBC, JPA, Spring <code class="boxed">JdbcTemplate</code>, or
 				Exposed calls, with JDBC&rsquo;s <code>?</code> placeholders preserved
-				(<code>question-params</code> is on for these grammars unless
-				configured)
+				under <code>question-params</code>
 			</li>
 			<li>
 				<code>swift</code>: <code>"""</code> strings passed to GRDB as its{" "}

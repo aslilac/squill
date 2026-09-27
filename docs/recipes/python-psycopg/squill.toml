@@ -1,3 +1,5 @@
 [[embedded]]
 include = ["**/*.py"]
 grammar = "python"
+# psycopg binds `%s` and `%(name)s` placeholders.
+pyformat-params = true

@@ -235,41 +235,6 @@ impl Host {
 		}
 	}
 
-	/// Does code in this language conventionally write JDBC-style `?`
-	/// placeholders? Callers use it as the default for
-	/// `Options::question_params` when nothing is configured.
-	pub fn uses_question_params(self) -> bool {
-		match self {
-			#[cfg(feature = "java")]
-			Host::Java => true,
-			#[cfg(feature = "kotlin")]
-			Host::Kotlin => true,
-			_ => false,
-		}
-	}
-
-	/// Does code in this language conventionally write `@name`
-	/// placeholders (ADO.NET providers, Dapper, EF Core)? Callers use it
-	/// as the default for `Options::at_params` when nothing is configured.
-	pub fn uses_at_params(self) -> bool {
-		match self {
-			#[cfg(feature = "csharp")]
-			Host::CSharp => true,
-			_ => false,
-		}
-	}
-
-	/// Does code in this language conventionally write psycopg-style
-	/// `%s` / `%(name)s` placeholders? Callers use it as the default for
-	/// `Options::pyformat_params` when nothing is configured.
-	pub fn uses_pyformat_params(self) -> bool {
-		match self {
-			#[cfg(feature = "python")]
-			Host::Python => true,
-			_ => false,
-		}
-	}
-
 	fn codec(self) -> Codec {
 		match self {
 			#[cfg(feature = "rust")]

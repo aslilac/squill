@@ -22,9 +22,10 @@ import Recipe from "../../../components/Recipe.astro";
 			raw string passed straight to a JDBC, Spring, or Exposed call:{" "}
 			<code>query</code>, <code>update</code>, <code>exec</code>,{" "}
 			<code>prepareStatement</code>, and the rest &mdash; with or without{" "}
-			<code>.trimIndent()</code> on the end. JDBC&rsquo;s <code>?</code>{" "}
-			placeholders parse as parameters for this grammar without any
-			configuration.
+			<code>.trimIndent()</code> on the end. Set{" "}
+			<code>question-params = true</code> in the rule, as below, so
+			JDBC&rsquo;s <code>?</code> placeholders parse as parameters rather
+			than Postgres operators.
 		</p>
 	</section>
 

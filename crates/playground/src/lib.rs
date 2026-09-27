@@ -27,6 +27,8 @@ struct RequestOptions {
 	quote_idents: Option<String>,
 	trailing_semicolons: Option<String>,
 	at_params: Option<bool>,
+	question_params: Option<bool>,
+	pyformat_params: Option<bool>,
 }
 
 #[derive(Serialize)]
@@ -78,6 +80,12 @@ fn build_options(req: &RequestOptions) -> formatter::Options {
 	}
 	if let Some(at_params) = req.at_params {
 		options.at_params = at_params;
+	}
+	if let Some(question_params) = req.question_params {
+		options.question_params = question_params;
+	}
+	if let Some(pyformat_params) = req.pyformat_params {
+		options.pyformat_params = pyformat_params;
 	}
 	options
 }
@@ -158,19 +166,12 @@ pub fn format_request(json: &str) -> String {
 					configured_style: request.options.indent.is_some(),
 					configured_width: request.options.indent_width.is_some(),
 				};
-				// And the CLI's host-conventional placeholders, and no
-				// final `;` unless asked for.
+				// And no final `;` unless asked for.
 				let trailing_semicolons = match request.options.trailing_semicolons {
 					Some(_) => options.trailing_semicolons,
 					None => formatter::TrailingSemicolons::None,
 				};
-				let options = formatter::Options {
-					trailing_semicolons,
-					at_params: host.uses_at_params(),
-					pyformat_params: host.uses_pyformat_params(),
-					question_params: host.uses_question_params(),
-					..options
-				};
+				let options = formatter::Options { trailing_semicolons, ..options };
 				format_host(&request.source, host, query, &options, indent)
 			} else {
 				Response {

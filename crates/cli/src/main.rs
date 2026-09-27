@@ -642,40 +642,17 @@ fn resolve(
 						}
 					},
 				};
-			// Host-conventional placeholders are on unless configured
-			// either way: JDBC's `?` on the JVM, psycopg's `%s` in Python,
-			// ADO.NET's `@name` in C#.
-			let mut at_set = config.options.at_params.is_some()
-				|| args.overrides.at_params.is_some();
-			// And embedded SQL goes without a final `;` unless configured.
+			// Embedded SQL goes without a final `;` unless configured.
 			let mut semicolons_set = config.options.trailing_semicolons.is_some()
 				|| args.overrides.trailing_semicolons.is_some();
-			let mut question_set = config.options.question_params.is_some()
-				|| args.overrides.question_params.is_some();
-			let mut pyformat_set = config.options.pyformat_params.is_some()
-				|| args.overrides.pyformat_params.is_some();
 			for rule in &embedded {
 				rule.options.apply(&mut options);
 				indent.configured_style |= rule.options.indent_style.is_some();
 				indent.configured_width |= rule.options.indent_width.is_some();
-				at_set |= rule.options.at_params.is_some();
 				semicolons_set |= rule.options.trailing_semicolons.is_some();
-				question_set |= rule.options.question_params.is_some();
-				pyformat_set |= rule.options.pyformat_params.is_some();
 			}
 			if !semicolons_set {
 				options.trailing_semicolons = formatter::TrailingSemicolons::None;
-			}
-			if let config::GrammarSpec::Builtin(host) = spec {
-				if !at_set {
-					options.at_params = host.uses_at_params();
-				}
-				if !question_set {
-					options.question_params = host.uses_question_params();
-				}
-				if !pyformat_set {
-					options.pyformat_params = host.uses_pyformat_params();
-				}
 			}
 			kind = Some(Kind::Embedded { grammar, query });
 		} else if is_sql_file(path) || !files.is_empty() {

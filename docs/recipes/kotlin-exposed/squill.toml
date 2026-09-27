@@ -1,3 +1,5 @@
 [[embedded]]
 include = ["**/*.kt"]
 grammar = "kotlin"
+# Exposed binds `?` placeholders.
+question-params = true

@@ -1,3 +1,5 @@
 [[embedded]]
 include = ["**/*.cs"]
 grammar = "csharp"
+# Dapper binds `@name` placeholders.
+at-params = true

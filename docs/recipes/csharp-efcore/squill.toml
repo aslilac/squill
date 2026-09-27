@@ -1,3 +1,5 @@
 [[embedded]]
 include = ["**/*.cs"]
 grammar = "csharp"
+# EF Core binds `@name` placeholders.
+at-params = true

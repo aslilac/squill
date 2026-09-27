@@ -566,19 +566,24 @@ fn gleam_smoke_test() {
 
 /// Format with a host's default query, returning text and warnings.
 fn format_host(host: Host, query: &str, source: &str) -> embed::Embedded {
-	// The CLI's defaults for the host's placeholders.
-	let mut options = options();
-	options.at_params = host.uses_at_params();
-	options.question_params = host.uses_question_params();
-	options.pyformat_params = host.uses_pyformat_params();
+	format_host_with(host, query, source, &options())
+}
+
+/// Format with a host's default query and the given options.
+fn format_host_with(
+	host: Host,
+	query: &str,
+	source: &str,
+	options: &Options,
+) -> embed::Embedded {
 	let formatted =
-		format_embedded(source, &host.into(), query, &options, Indent::FROM_HOST)
+		format_embedded(source, &host.into(), query, options, Indent::FROM_HOST)
 			.expect("format");
 	let twice = format_embedded(
 		&formatted.text,
 		&host.into(),
 		query,
-		&options,
+		options,
 		Indent::FROM_HOST,
 	)
 	.expect("format");
@@ -640,7 +645,10 @@ fn cpp_raw_strings() {
 #[test]
 fn java_text_blocks() {
 	let source = "class A {\n    void m() {\n        conn.prepareStatement(\"\"\"\n            SELECT id FROM users WHERE org = ?\n            \"\"\");\n        conn.prepareStatement(\"\"\"\n            SELECT id \\\n            FROM users\n            \"\"\");\n    }\n}\n";
-	let formatted = format_host(Host::Java, JAVA_SQL_QUERY, source);
+	// JDBC's `?` placeholders, as a Java project would configure.
+	let options = Options { question_params: true, ..options() };
+	let formatted =
+		format_host_with(Host::Java, JAVA_SQL_QUERY, source, &options);
 	assert!(
 		formatted.text.contains(
 			"prepareStatement(\"\"\"\n        select id\n        from users\n        where org = ?\n        \"\"\");"

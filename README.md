@@ -57,9 +57,9 @@ Set in the nearest `squill.toml` or `.config/squill.toml` (or `squill.yaml` / `s
 | `keyword-case` | `--keyword-case` | `lower` \| `upper` | `lower` |
 | `quote-idents` | `--quote-idents` | `as-needed` \| `always` | `as-needed` |
 | `trailing-semicolons` | `--trailing-semicolons` | `always` \| `none`: whether the last statement ends in `;` | `always` (`none` for embedded SQL) |
-| `at-params` | `--at-params` | lex [sqlc-style](https://docs.sqlc.dev/en/latest/howto/named_parameters.html) and ADO.NET-style `@name` parameters | `false` (`true` for the `csharp` grammar) |
-| `question-params` | `--question-params` | lex JDBC-style `?` parameters in Postgres | `false` (`true` for `java` and `kotlin` grammars) |
-| `pyformat-params` | `--pyformat-params` | lex Python DB-API `%s` / `%(name)s` parameters | `false` (`true` for the `python` grammar) |
+| `at-params` | `--at-params` | lex [sqlc-style](https://docs.sqlc.dev/en/latest/howto/named_parameters.html) and ADO.NET-style `@name` parameters | `false` |
+| `question-params` | `--question-params` | lex JDBC-style `?` parameters in Postgres | `false` |
+| `pyformat-params` | `--pyformat-params` | lex Python DB-API `%s` / `%(name)s` parameters | `false` |
 | `ignore` | `--ignore` | glob patterns to skip when recursing | `[]` |
 | `frozen` | `--frozen` | glob patterns that are immutable once on the baseline ref | `[]` |
 | `frozen-ref` | `--frozen-ref` | the baseline ref `frozen` compares against | discovered from the remote |
@@ -126,7 +126,7 @@ indent = "spaces"
 indent-width = 2
 ```
 
-Built-in grammars, each with a default query: `rust` (sqlx's `query!`-family macros and `query`/`query_as`/`query_scalar` functions), `go` (`database/sql` calls), `python` (`.execute`-family and `text(...)`, with `%s` / `%(name)s` params preserved), `javascript`/`typescript`/`tsx` (`.query`/`.execute`/`.prepare` and `sql`-tagged templates), `gleam` (`sqlight.query` as SQLite, `pog.query` etc. as the configured dialect), `cpp` (raw strings passed to sqlite3, libpq, and libpqxx), `csharp` (raw strings in EF Core migrations, raw-SQL and Dapper calls, and `CommandText`), `java`/`kotlin` (text blocks and raw strings passed to JDBC, JPA, Spring, and Exposed calls, with `?` placeholders preserved), and `swift` (`"""` strings passed to GRDB as SQLite, and to SQLite.swift, PostgresNIO, and SQLKit calls).
+Built-in grammars, each with a default query: `rust` (sqlx's `query!`-family macros and `query`/`query_as`/`query_scalar` functions), `go` (`database/sql` calls), `python` (`.execute`-family and `text(...)`, with `%s` / `%(name)s` params preserved under `pyformat-params`), `javascript`/`typescript`/`tsx` (`.query`/`.execute`/`.prepare` and `sql`-tagged templates), `gleam` (`sqlight.query` as SQLite, `pog.query` etc. as the configured dialect), `cpp` (raw strings passed to sqlite3, libpq, and libpqxx), `csharp` (raw strings in EF Core migrations, raw-SQL and Dapper calls, and `CommandText`), `java`/`kotlin` (text blocks and raw strings passed to JDBC, JPA, Spring, and Exposed calls, with `?` placeholders preserved under `question-params`), and `swift` (`"""` strings passed to GRDB as SQLite, and to SQLite.swift, PostgresNIO, and SQLKit calls).
 
 Any other language works with a grammar compiled to wasm (`tree-sitter build --wasm`, or the `.wasm` many grammars publish with each release) and a query of your own:
 

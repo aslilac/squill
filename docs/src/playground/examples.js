@@ -1,6 +1,7 @@
 // Playground examples: one messy-but-real snippet per mode. `host` is
-// the wasm request host, `monacoLang` drives the input editor, and
-// `shikiLang` highlights the formatted output.
+// the wasm request host, `monacoLang` drives the input editor,
+// `shikiLang` highlights the formatted output, and `params` turns on the
+// `*-params` options the example's driver needs.
 
 export const examples = [
 	{
@@ -53,6 +54,8 @@ pub async fn delete_rule(pool: &PgPool, team: Uuid, id: Uuid) -> sqlx::Result<()
 	{
 		label: "Python + psycopg",
 		host: "python",
+		// psycopg's `%s` placeholders: what the recipe configures.
+		params: { pyformat_params: true },
 		monacoLang: "python",
 		shikiLang: "python",
 		source: `def load_users(cur, org, status):

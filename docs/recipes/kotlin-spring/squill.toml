@@ -1,3 +1,5 @@
 [[embedded]]
 include = ["**/*.kt"]
 grammar = "kotlin"
+# JdbcTemplate binds `?` placeholders.
+question-params = true
