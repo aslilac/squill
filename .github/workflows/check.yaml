@@ -54,15 +54,6 @@ jobs:
       - run: cargo test
         name: Test
 
-  prettier:
-    name: Prettier
-
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v7
-        name: Checkout
-
   zed:
     name: Zed extension
 
