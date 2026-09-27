@@ -24,12 +24,12 @@ interface State {
 
 interface Release {
 	tag_name: string;
-	assets: {
+	assets: Array<{
 		name: string;
 		browser_download_url: string;
 		// `sha256:<hex>`, computed by GitHub when the asset was uploaded.
 		digest?: string | null;
-	}[];
+	}>;
 }
 
 // This platform's release archive: the target in its name, and what's
