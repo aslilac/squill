@@ -40,10 +40,16 @@ formatting, and diagnostics for what squill leaves alone.
 const USAGE: &str = "\
 squill — a SQL formatter
 
-Usage: squill fmt [OPTIONS] [PATHS...]
+Usage: squill [fmt] [OPTIONS] [PATHS...]
        squill locate [--json] [OPTIONS] [PATHS...]
        squill init [--dialect <D>] [--yaml] [--yes]
        squill language-server start
+       squill help [COMMAND]
+       squill version
+
+fmt is the default command: `squill .` formats the working directory,
+and `squill -` formats stdin. (A file named like a command needs the
+`fmt`, or a path: `squill ./init`.)
 
 `squill language-server start` runs a language server on stdin/stdout,
 for editors: document formatting, and diagnostics for what squill
@@ -226,12 +232,63 @@ enum Invocation {
 	Print(String),
 }
 
+/// The usage text for `squill help <command>` and `<command> --help`.
+fn command_usage(command: &str) -> Option<&'static str> {
+	match command {
+		"fmt" | "help" | "version" => Some(USAGE),
+		"locate" => Some(LOCATE_USAGE),
+		"init" => Some(init::USAGE),
+		#[cfg(feature = "lsp")]
+		"language-server" => Some(LANGUAGE_SERVER_USAGE),
+		_ => None,
+	}
+}
+
+/// Could this first argument be meant as a path rather than a command?
+/// Anything path-like is; a bare word only when there's a file by that
+/// name, so a mistyped command (`squill fmtt`) is reported as one.
+fn is_path_like(arg: &str) -> bool {
+	arg.starts_with('-')
+		|| arg.contains(['/', '.', std::path::MAIN_SEPARATOR])
+		|| std::path::Path::new(arg).exists()
+}
+
 fn parse_args() -> Result<Invocation, String> {
 	let mut argv = std::env::args().skip(1).peekable();
 	let mut locate = false;
-	match argv.next().as_deref() {
+	// `fmt` is the default command: `squill .`, `squill -`, and
+	// `squill --check src/` all format, and leave their first argument for
+	// fmt to read.
+	let first = argv.peek().cloned();
+	let command = match first.as_deref() {
+		Some(
+			"fmt" | "locate" | "language-server" | "init" | "help" | "version" | "-h"
+			| "--help" | "-V" | "--version",
+		)
+		| None => argv.next(),
+		Some(other) if is_path_like(other) => Some("fmt".to_string()),
+		Some(other) => return Err(format!("unknown command `{other}`\n\n{USAGE}")),
+	};
+	match command.as_deref() {
 		Some("fmt") => {}
 		Some("locate") => locate = true,
+		Some("help") => {
+			return match (argv.next(), argv.next()) {
+				(None, _) => Ok(Invocation::Print(USAGE.to_string())),
+				(Some(command), None) => command_usage(&command)
+					.map(|usage| Invocation::Print(usage.to_string()))
+					.ok_or_else(|| format!("unknown command `{command}`\n\n{USAGE}")),
+				(Some(_), Some(extra)) => {
+					Err(format!("unknown argument `{extra}`\n\n{USAGE}"))
+				}
+			};
+		}
+		Some("version") => {
+			return match argv.next() {
+				None => Ok(Invocation::Print(VERSION.to_string())),
+				Some(extra) => Err(format!("unknown argument `{extra}`\n\n{USAGE}")),
+			};
+		}
 		#[cfg(feature = "lsp")]
 		Some("language-server") => {
 			return match (argv.next().as_deref(), argv.next()) {

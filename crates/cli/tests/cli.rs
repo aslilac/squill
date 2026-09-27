@@ -2024,3 +2024,63 @@ fn configured_indent_beats_the_hosts() {
 	}
 	let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// `fmt` is the default command: a path, `-`, or a flag first means fmt.
+#[test]
+fn fmt_is_the_default_command() {
+	let dir = temp_dir("implicitfmt");
+	std::fs::write(dir.join("q.sql"), "SELECT   1;\n").expect("write");
+
+	// `squill --check .`, from inside the directory: the file would change.
+	let output =
+		squill().current_dir(&dir).args(["--check", "."]).output().expect("run");
+	assert_eq!(output.status.code(), Some(1));
+	// `squill .` formats it.
+	let status = squill().current_dir(&dir).arg(".").status().expect("run");
+	assert!(status.success());
+	assert_eq!(
+		std::fs::read_to_string(dir.join("q.sql")).expect("read"),
+		"select 1;\n"
+	);
+	// `squill -` reads stdin.
+	let mut child = squill()
+		.arg("-")
+		.stdin(Stdio::piped())
+		.stdout(Stdio::piped())
+		.spawn()
+		.expect("spawn");
+	child
+		.stdin
+		.take()
+		.expect("stdin")
+		.write_all(b"SELECT   2;\n")
+		.expect("write");
+	let output = child.wait_with_output().expect("wait");
+	assert_eq!(String::from_utf8_lossy(&output.stdout), "select 2;\n");
+	// A bare word that isn't a command or a file is a mistyped command.
+	let output = squill().current_dir(&dir).arg("fmtt").output().expect("run");
+	assert_eq!(output.status.code(), Some(2));
+	assert!(
+		String::from_utf8_lossy(&output.stderr).contains("unknown command `fmtt`"),
+		"{}",
+		String::from_utf8_lossy(&output.stderr)
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// `squill help` and `squill version` answer like `--help` and
+/// `--version`; `squill help <command>` like `<command> --help`.
+#[test]
+fn help_and_version_commands() {
+	let stdout = |args: &[&str]| {
+		let output = squill().args(args).output().expect("run");
+		assert!(output.status.success(), "{args:?}");
+		String::from_utf8_lossy(&output.stdout).into_owned()
+	};
+	assert_eq!(stdout(&["version"]), stdout(&["--version"]));
+	assert_eq!(stdout(&["help"]), stdout(&["--help"]));
+	assert_eq!(stdout(&["help", "locate"]), stdout(&["locate", "--help"]));
+	assert_eq!(stdout(&["help", "init"]), stdout(&["init", "--help"]));
+	let output = squill().args(["help", "frobnicate"]).output().expect("run");
+	assert_eq!(output.status.code(), Some(2));
+}

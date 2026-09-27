@@ -42,6 +42,7 @@ cargo install --git https://github.com/aslilac/squill.git --tag v0.3.0 cli --bin
 ```sh
 squill init         # write a starter squill.toml: pick languages to format embedded SQL in, and dialects
 squill fmt --check .
+squill .            # fmt is the default command: `squill .`, `squill -` (stdin), `squill --check .`
 ```
 
 ### Options

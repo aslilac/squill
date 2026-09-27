@@ -10,13 +10,19 @@ import Docs from "../../layouts/Docs.astro";
 >
 	<section>
 		<h2>Commands</h2>
-		<Code lang="text" code={`squill fmt [OPTIONS] [PATHS...]
+		<Code lang="text" code={`squill [fmt] [OPTIONS] [PATHS...]
 squill locate [--json] [OPTIONS] [PATHS...]
 squill init [--dialect <D>] [--yaml] [--yes]
-squill language-server start`} />
+squill language-server start
+squill help [COMMAND]
+squill version`} />
 		<ul>
 			<li>
-				<code>squill fmt</code> formats files, below.
+				<code>squill fmt</code> formats files, below. It&rsquo;s the default
+				command, so <code>squill .</code> formats the working directory,{" "}
+				<code>squill -</code> formats stdin, and{" "}
+				<code>squill --check .</code> checks. A file named like a command
+				needs the <code>fmt</code>, or a path: <code>squill ./init</code>.
 			</li>
 			<li>
 				<code>squill locate</code> lists where the SQL is, <a
@@ -30,6 +36,11 @@ squill language-server start`} />
 			<li>
 				<code>squill language-server start</code> serves editors over stdin
 				and stdout &mdash; see <a href="docs/editors/">editors</a>.
+			</li>
+			<li>
+				<code>squill help</code> and <code>squill version</code> are{" "}
+				<code>--help</code> and <code>--version</code>;{" "}
+				<code>squill help locate</code> is <code>squill locate --help</code>.
 			</li>
 		</ul>
 	</section>
