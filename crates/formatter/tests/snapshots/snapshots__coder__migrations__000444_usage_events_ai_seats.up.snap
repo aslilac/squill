@@ -43,7 +43,7 @@ begin
 				then jsonb_build_object(
 					'count',
 					coalesce((usage_events_daily.usage_data ->> 'count')::bigint, 0)
-					+ coalesce((NEW.event_data ->> 'count')::bigint, 0)
+						+ coalesce((NEW.event_data ->> 'count')::bigint, 0)
 				)
 			-- Heartbeat events: keep the max value seen that day
 			when NEW.event_type in ('hb_ai_seats_v1')

@@ -30,7 +30,7 @@ where
 		order by
 			-- Ensure that human-initiated jobs are prioritized over prebuilds.
 			potential_job.initiator_id
-			= 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid asc,
+				= 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid asc,
 			potential_job.created_at asc
 		for update skip locked
 		limit 1

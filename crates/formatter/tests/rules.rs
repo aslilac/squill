@@ -630,3 +630,52 @@ fn on_conflict_do_update_lays_out_like_an_update() {
 		 on conflict (organization_id, lower(email)) where deleted_at is null do nothing;\n"
 	);
 }
+
+#[test]
+fn broken_list_items_indent_their_operator_lines() {
+	// A set item's continuation hangs under it, not level with the next
+	// item; a chain of one operator breaks at every link.
+	assert_eq!(
+		format(
+			"update boundary_usage_stats set allowed_requests = boundary_usage_stats.allowed_requests + EXCLUDED.allowed_requests, updated_at = now();"
+		),
+		"update boundary_usage_stats\n\
+		 set\n\
+		 \tallowed_requests = boundary_usage_stats.allowed_requests\n\
+		 \t\t+ EXCLUDED.allowed_requests,\n\
+		 \tupdated_at = now();\n"
+	);
+	assert_eq!(
+		format(
+			"select (select count(*) from notes where id > $1) + (select count(*) from cards where id > $1) + (select count(*) from revlog where id > $1);"
+		),
+		"select\n\
+		 \t(select count(*) from notes where id > $1)\n\
+		 \t\t+ (select count(*) from cards where id > $1)\n\
+		 \t\t+ (select count(*) from revlog where id > $1);\n"
+	);
+	// The right operand of another operator indents again, so the lines
+	// show which binds tighter.
+	assert_eq!(
+		format(
+			"select date_trunc('hour', s.minute_bucket) + trunc(date_part('minute', s.minute_bucket) / 30) * 30 * '1 minute'::interval as time_bucket from t;"
+		),
+		"select\n\
+		 \tdate_trunc('hour', s.minute_bucket)\n\
+		 \t\t+ trunc(date_part('minute', s.minute_bucket) / 30)\n\
+		 \t\t\t* 30\n\
+		 \t\t\t* '1 minute'::interval as time_bucket\n\
+		 from t;\n"
+	);
+	// A `where` condition is the clause's only content: flush, as before.
+	assert_eq!(
+		format(
+			"select a from t where boundary_usage_stats.allowed_requests_total = 1 and boundary_usage_stats.denied_requests_total = 2;"
+		),
+		"select a\n\
+		 from t\n\
+		 where\n\
+		 \tboundary_usage_stats.allowed_requests_total = 1\n\
+		 \tand boundary_usage_stats.denied_requests_total = 2;\n"
+	);
+}

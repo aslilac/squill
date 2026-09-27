@@ -16,7 +16,7 @@ values
 		'Workspace Created',
 		E'Workspace ''{{.Labels.workspace}}'' has been created',
 		E'Hello {{.UserName}},\n\n'
-		|| E'The workspace **{{.Labels.workspace}}** has been created from the template **{{.Labels.template}}** using version **{{.Labels.version}}**.',
+			|| E'The workspace **{{.Labels.workspace}}** has been created from the template **{{.Labels.template}}** using version **{{.Labels.version}}**.',
 		'Workspace Events',
 		'[
 		{

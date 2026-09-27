@@ -62,7 +62,7 @@ where
 	-- 'null' is the default value for the id_token_claims field
 	-- jsonb 'null' is not the same as SQL NULL. Strip these out.
 	jsonb_typeof(claims -> 'merged_claims')
-	!= 'null'
+		!= 'null'
 	and login_type = 'oidc'
 	and case
 		when @organization_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid

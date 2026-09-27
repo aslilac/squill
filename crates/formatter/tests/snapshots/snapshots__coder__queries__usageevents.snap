@@ -45,7 +45,7 @@ with
 						-- The parentheses around @now::timestamptz are necessary to
 						-- avoid sqlc from generating an extra argument.
 						or potential_event.publish_started_at
-						< (@now::timestamptz) - interval '1 hour'
+							< (@now::timestamptz) - interval '1 hour'
 					)
 					-- Do not publish events older than 30 days. Tallyman will
 					-- always permanently reject these events anyways. This is to
@@ -53,7 +53,7 @@ with
 					-- Metronome will only deduplicate events within 34 days.
 					-- Also, the same parentheses thing here as above.
 					and potential_event.created_at
-					> (@now::timestamptz) - interval '30 days'
+						> (@now::timestamptz) - interval '30 days'
 				order by potential_event.created_at asc
 				for update skip locked
 				limit 100
@@ -111,5 +111,8 @@ where
 	-- Parentheses are necessary to avoid sqlc from generating an extra
 	-- argument.
 	and day
-	between date_trunc('day', (@start_date::timestamptz) at time zone 'UTC')::date
-	and date_trunc('day', (@end_date::timestamptz) at time zone 'UTC')::date;
+		between date_trunc(
+			'day',
+			(@start_date::timestamptz) at time zone 'UTC'
+		)::date
+		and date_trunc('day', (@end_date::timestamptz) at time zone 'UTC')::date;

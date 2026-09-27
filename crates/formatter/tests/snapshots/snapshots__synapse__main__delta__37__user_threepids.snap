@@ -67,7 +67,7 @@ where
 		where
 			lower(u.address) = duplicate_addresses.address
 			and u.added_at
-			!= max_ts -- NOT the most recently created
+				!= max_ts -- NOT the most recently created
 	);
 
 

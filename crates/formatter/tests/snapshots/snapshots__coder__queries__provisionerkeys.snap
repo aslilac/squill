@@ -33,15 +33,15 @@ where
 	and
 	-- exclude reserved built-in key
 	id
-	!= '00000000-0000-0000-0000-000000000001'::uuid
+		!= '00000000-0000-0000-0000-000000000001'::uuid
 	and
 	-- exclude reserved user-auth key
 	id
-	!= '00000000-0000-0000-0000-000000000002'::uuid
+		!= '00000000-0000-0000-0000-000000000002'::uuid
 	and
 	-- exclude reserved psk key
 	id
-	!= '00000000-0000-0000-0000-000000000003'::uuid;
+		!= '00000000-0000-0000-0000-000000000003'::uuid;
 
 -- name: ListProvisionerKeysByOrganization :many
 select * from provisioner_keys where organization_id = $1;

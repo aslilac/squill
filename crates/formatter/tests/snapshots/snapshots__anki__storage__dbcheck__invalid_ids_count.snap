@@ -3,8 +3,6 @@ source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
 select
-	(select count(*) from notes where id > :cutoff) + (
-		select count(*)
-		from cards
-		where id > :cutoff
-	) + (select count(*) from revlog where id > :cutoff);
+	(select count(*) from notes where id > :cutoff)
+		+ (select count(*) from cards where id > :cutoff)
+		+ (select count(*) from revlog where id > :cutoff);

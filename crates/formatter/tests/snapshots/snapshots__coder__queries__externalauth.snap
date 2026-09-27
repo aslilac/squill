@@ -63,4 +63,4 @@ where
 	and
 	-- Required for sqlc to generate a parameter for the oauth_refresh_token_key_id
 	@oauth_refresh_token_key_id::text
-	= @oauth_refresh_token_key_id::text;
+		= @oauth_refresh_token_key_id::text;

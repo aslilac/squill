@@ -190,7 +190,7 @@ select
 	(w.owner_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0') as is_prebuild,
 	-- All agents must have ready_at set (terminal startup state)
 	count(*) filter (where wa.ready_at is null)
-	= 0 as all_agents_ready,
+		= 0 as all_agents_ready,
 	-- Latest ready_at across all agents (for duration calculation)
 	max(wa.ready_at)::timestamptz as last_agent_ready_at,
 	-- Worst status: error > timeout > ready

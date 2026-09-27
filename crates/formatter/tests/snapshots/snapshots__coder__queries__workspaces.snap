@@ -190,7 +190,7 @@ with
 							and
 							-- ILIKE is case insensitive
 							workspace_build_parameters.name
-							ilike any(@has_param)
+								ilike any(@has_param)
 					)
 				else true
 			end
@@ -206,7 +206,7 @@ with
 								on lower(workspace_build_parameters.name) = build_params.name
 								and lower(workspace_build_parameters.value) = build_params.value
 								and workspace_build_parameters.workspace_build_id
-								= latest_build.id
+									= latest_build.id
 					)
 				else true
 			end
@@ -267,15 +267,15 @@ with
 							and
 							-- Filter out deleted sub agents.
 							workspace_agents.deleted
-							= false
+								= false
 							and (
 								case
 									when workspace_agents.first_connected_at is null
 										then case
 											when workspace_agents.connection_timeout_seconds > 0
 											and now() - workspace_agents.created_at
-											> workspace_agents.connection_timeout_seconds
-											* interval '1 second'
+												> workspace_agents.connection_timeout_seconds
+													* interval '1 second'
 												then 'timeout'
 											else 'connecting'
 										end
@@ -284,14 +284,14 @@ with
 										then 'disconnected'
 									when now() - workspace_agents.last_connected_at
 									> interval '1 second'
-									* @agent_inactive_disconnect_timeout_seconds::bigint
+										* @agent_inactive_disconnect_timeout_seconds::bigint
 										then 'disconnected'
 									when workspace_agents.last_connected_at is not null
 										then 'connected'
 									else null
 								end
 							)
-							= any(@has_agent_statuses::text[])
+								= any(@has_agent_statuses::text[])
 					)
 					> 0
 				else true
@@ -608,7 +608,7 @@ where
 	and
 	-- Do not overwrite with older data
 	last_used_at
-	< @last_used_at;
+		< @last_used_at;
 
 -- name: GetDeploymentWorkspaceStats :one
 with
@@ -852,13 +852,13 @@ where
 			and workspace_builds.deadline > @now::timestamptz
 			and templates.time_til_autostop_notify > 0
 			and workspace_builds.deadline
-			<= (@now::timestamptz) + (
-				interval '1 millisecond' * (
-					templates.time_til_autostop_notify / 1000000
+				<= (@now::timestamptz) + (
+					interval '1 millisecond' * (
+						templates.time_til_autostop_notify / 1000000
+					)
 				)
-			)
 			and workspace_builds.notified_autostop_deadline
-			!= workspace_builds.deadline
+				!= workspace_builds.deadline
 			and
 			-- Keep the reminder unless the user is active AND an activity bump can
 			-- still move the deadline out of the lead window. This block is the
@@ -881,11 +881,11 @@ where
 				or (
 					workspace_builds.max_deadline != '0001-01-01 00:00:00+00'::timestamptz
 					and workspace_builds.max_deadline
-					<= (@now::timestamptz) + (
-						interval '1 millisecond' * (
-							templates.time_til_autostop_notify / 1000000
+						<= (@now::timestamptz) + (
+							interval '1 millisecond' * (
+								templates.time_til_autostop_notify / 1000000
+							)
 						)
-					)
 				)
 			)
 		)

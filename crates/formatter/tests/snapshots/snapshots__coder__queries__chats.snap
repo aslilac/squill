@@ -164,7 +164,7 @@ with
 		select
 			target_chat.id,
 			coalesce((select max(ranked.next_pin_order) from ranked), 0)
-			+ 1 as pin_order
+				+ 1 as pin_order
 		from target_chat
 	)
 update chats c
@@ -540,7 +540,7 @@ where
 							else cds.pull_request_state
 						end
 					)
-					= any(@pull_request_statuses::text[])
+						= any(@pull_request_statuses::text[])
 			)
 		else true
 	end
@@ -596,7 +596,7 @@ where
 					where
 						cds.chat_id = chats_expanded.id
 						and to_tsvector('simple', cds.pull_request_title)
-						@@ websearch_to_tsquery('simple', @search)
+							@@ websearch_to_tsquery('simple', @search)
 				)
 				-- The WHERE clause must repeat the predicate of the partial index
 				-- idx_chat_messages_search_tsv so the planner can use it. Additional
@@ -815,10 +815,10 @@ with
 					chats.last_model_config_id
 				)
 				or chats.last_reasoning_effort
-				is distinct from coalesce(
-					batch.last_reasoning_effort,
-					chats.last_reasoning_effort
-				)
+					is distinct from coalesce(
+						batch.last_reasoning_effort,
+						chats.last_reasoning_effort
+					)
 			)
 	)
 insert into chat_messages (
@@ -2528,7 +2528,7 @@ select
 			current_lease.chat_id = chats_expanded.id
 			and current_lease.runner_id = chats_expanded.runner_id
 			and current_lease.heartbeat_at
-			> now() - (interval '1 second' * @stale_seconds::int)
+				> now() - (interval '1 second' * @stale_seconds::int)
 	) as heartbeat_stale
 from chats_expanded
 	left join chat_heartbeats
@@ -2551,7 +2551,7 @@ where
 				current_lease.chat_id = chats_expanded.id
 				and current_lease.runner_id = chats_expanded.runner_id
 				and current_lease.heartbeat_at
-				> now() - (interval '1 second' * @stale_seconds::int)
+					> now() - (interval '1 second' * @stale_seconds::int)
 		)
 	)
 order by chats_expanded.updated_at asc, chats_expanded.id asc
@@ -2606,7 +2606,7 @@ where
 		'requires_action'::chat_status
 	)
 	and coalesce(activity.last_activity_at, chats_expanded.created_at)
-	< @archive_cutoff::timestamptz
+		< @archive_cutoff::timestamptz
 order by chats_expanded.created_at asc
 limit @limit_count::int;
 
@@ -2906,19 +2906,19 @@ set
 		),
 		0
 	)
-	- 1
+		- 1
 where
 	target.id = @id::bigint
 	and target.chat_id = @chat_id::uuid
 	and target.position
-	> coalesce(
-		(
-			select min(position)
-			from chat_queued_messages
-			where chat_id = @chat_id::uuid
-		),
-		target.position
-	);
+		> coalesce(
+			(
+				select min(position)
+				from chat_queued_messages
+				where chat_id = @chat_id::uuid
+			),
+			target.position
+		);
 
 -- name: UpsertChatHeartbeat :exec
 -- Upserts a heartbeat row for the (chat_id, runner_id) lease. Uses
@@ -3003,13 +3003,13 @@ with
 			c.archived = false
 			and c.pin_order = 0
 			and c.parent_chat_id
-			is null -- roots only
+				is null -- roots only
 			-- Redundant filter helps the planner use the partial index on created_at.
 			and c.created_at < @archive_cutoff::timestamptz
 			-- New active statuses must be added here to prevent archiving.
 			and c.status not in ('running', 'requires_action')
 			and coalesce(activity.last_activity_at, c.created_at)
-			< @archive_cutoff::timestamptz
+				< @archive_cutoff::timestamptz
 		-- Sorting by created_at lets Postgres drive the scan from the
 		-- partial index instead of evaluating every LATERAL subquery
 		-- before sorting. All candidates are past the cutoff, so the

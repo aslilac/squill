@@ -35,7 +35,7 @@ where
 	or
 	-- ...or that only matches a user that was deleted.
 	users.deleted
-	= true;
+		= true;
 
 -- name: GetUsersByIDs :many
 -- This shouldn't check for deleted, because it's frequently used

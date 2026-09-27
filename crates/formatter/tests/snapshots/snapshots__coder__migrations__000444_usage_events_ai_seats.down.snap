@@ -40,7 +40,7 @@ begin
 				then jsonb_build_object(
 					'count',
 					coalesce((usage_events_daily.usage_data ->> 'count')::bigint, 0)
-					+ coalesce((NEW.event_data ->> 'count')::bigint, 0)
+						+ coalesce((NEW.event_data ->> 'count')::bigint, 0)
 				)
 		end;
 

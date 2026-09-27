@@ -63,7 +63,7 @@ with
 			status = 'leased'::notification_message_status,
 			status_reason = 'Leased by notifier ' || sqlc.arg('notifier_id')::uuid,
 			leased_until = now()
-			+ concat(sqlc.arg('lease_seconds')::int, ' seconds')::interval
+				+ concat(sqlc.arg('lease_seconds')::int, ' seconds')::interval
 		where
 			id in (
 				select nm.id

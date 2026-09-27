@@ -69,7 +69,7 @@ values
 					-- The last converted stream id is the smallest unconverted stream id minus
 					-- one.
 					min(stream_id)
-					- 1,
+						- 1,
 					-- If there is no unconverted stream id, the last converted stream id is the
 					-- largest stream id.
 					-- Otherwise, pick 1, since stream ids start at 2.

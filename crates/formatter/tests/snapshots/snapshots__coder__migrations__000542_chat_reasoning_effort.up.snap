@@ -86,10 +86,10 @@ from (
 update chat_model_configs
 set
 	options = options
-	|| jsonb_build_object(
-		'reasoning_effort',
-		jsonb_build_object('default', legacy.effort, 'max', legacy.effort)
-	)
+		|| jsonb_build_object(
+			'reasoning_effort',
+			jsonb_build_object('default', legacy.effort, 'max', legacy.effort)
+		)
 from (
 	select
 		id,

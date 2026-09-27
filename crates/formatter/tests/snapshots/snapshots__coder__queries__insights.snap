@@ -218,7 +218,7 @@ with
 			-- Since we can't fully rely on this, we check for "any connection
 			-- within this bucket". A better solution here would be preferable.
 			max(connection_count)
-			> 0 as has_connection
+				> 0 as has_connection
 		from workspace_agent_stats
 		where
 			created_at >= @start_time::timestamptz
@@ -299,7 +299,7 @@ with
 				-- Primary join condition.
 				and tus.template_id = apps.template_id
 				and tus.app_usage_mins
-				? apps.slug -- Key exists in object.
+					? apps.slug -- Key exists in object.
 	),
 	-- Group the app insights by interval, user and unique app. This
 	-- allows us to deduplicate a user using the same app across
@@ -475,7 +475,7 @@ with
 			(
 				@end_time::timestamptz
 			)
-			- '1 microsecond'::interval,
+				- '1 microsecond'::interval,
 			(@interval_days::int || ' day')::interval
 		) as d
 	)
@@ -491,7 +491,7 @@ from ts
 	left join template_usage_stats as tus
 		on tus.start_time >= ts.from_
 		and tus.start_time
-		< ts.to_ -- End time exclusion criteria optimization for index.
+			< ts.to_ -- End time exclusion criteria optimization for index.
 		and tus.end_time <= ts.to_
 		and case
 			when coalesce(array_length(@template_ids::uuid[], 1), 0) > 0
@@ -555,8 +555,9 @@ with
 			-- Truncate the minute to the nearest half hour, this is the bucket size
 			-- for the data.
 			date_trunc('hour', s.minute_bucket)
-			+ trunc(date_part('minute', s.minute_bucket) / 30) * 30
-			* '1 minute'::interval as time_bucket,
+				+ trunc(date_part('minute', s.minute_bucket) / 30)
+					* 30
+					* '1 minute'::interval as time_bucket,
 			w.template_id,
 			fas.user_id,
 			-- Both app stats and agent stats track web terminal usage, but
@@ -597,8 +598,9 @@ with
 			-- Truncate the minute to the nearest half hour, this is the bucket size
 			-- for the data.
 			date_trunc('hour', created_at)
-			+ trunc(date_part('minute', created_at) / 30) * 30
-			* '1 minute'::interval as time_bucket,
+				+ trunc(date_part('minute', created_at) / 30)
+					* 30
+					* '1 minute'::interval as time_bucket,
 			template_id,
 			user_id,
 			-- Store each unique minute bucket for later merge between datasets.
@@ -646,7 +648,7 @@ with
 			-- Since we can't fully rely on this, we check for "any connection
 			-- during this half-hour". A better solution here would be preferable.
 			max(connection_count)
-			> 0 as has_connection
+				> 0 as has_connection
 		from workspace_agent_stats
 		where
 			-- created_at >= @start_time::timestamptz

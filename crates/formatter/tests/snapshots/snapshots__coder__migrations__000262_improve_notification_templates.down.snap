@@ -35,14 +35,14 @@ where id = 'f44d9314-ad03-4bc8-95d0-5cad491da6b6';
 update notification_templates
 set
 	body_template = E'Hi {{.UserName}}\n\n'
-	|| E'The template **{{.Labels.name}}** was deleted by **{{ .Labels.initiator }}**.'
+		|| E'The template **{{.Labels.name}}** was deleted by **{{ .Labels.initiator }}**.'
 where id = '29a09665-2a4c-403f-9648-54301670e7be';
 
 update notification_templates
 set
 	body_template = E'Hi {{.UserName}}\n'
-	|| E'Your workspace **{{.Labels.name}}** has been updated automatically to the latest template version ({{.Labels.template_version_name}}).\n'
-	|| E'Reason for update: **{{.Labels.template_version_message}}**'
+		|| E'Your workspace **{{.Labels.name}}** has been updated automatically to the latest template version ({{.Labels.template_version_name}}).\n'
+		|| E'Reason for update: **{{.Labels.template_version_message}}**'
 where id = 'c34a0c09-0704-4cac-bd1c-0c0146811c2b';
 
 update notification_templates
@@ -58,16 +58,16 @@ where id = 'f517da0b-cdc9-410f-ab89-a86107c420ed';
 update notification_templates
 set
 	body_template = E'Hi {{.UserName}}\n\n'
-	|| E'Your workspace **{{.Labels.name}}** has been marked as [**dormant**](https://coder.com/docs/templates/schedule#dormancy-threshold-enterprise) because of {{.Labels.reason}}.\n'
-	|| E'Dormant workspaces are [automatically deleted](https://coder.com/docs/templates/schedule#dormancy-auto-deletion-enterprise) after {{.Labels.timeTilDormant}} of inactivity.\n'
-	|| E'To prevent deletion, use your workspace with the link below.'
+		|| E'Your workspace **{{.Labels.name}}** has been marked as [**dormant**](https://coder.com/docs/templates/schedule#dormancy-threshold-enterprise) because of {{.Labels.reason}}.\n'
+		|| E'Dormant workspaces are [automatically deleted](https://coder.com/docs/templates/schedule#dormancy-auto-deletion-enterprise) after {{.Labels.timeTilDormant}} of inactivity.\n'
+		|| E'To prevent deletion, use your workspace with the link below.'
 where id = '0ea69165-ec14-4314-91f1-69566ac3c5a0';
 
 update notification_templates
 set
 	body_template = E'Hi {{.UserName}}\n\n'
-	|| E'Your workspace **{{.Labels.name}}** has been marked for **deletion** after {{.Labels.timeTilDormant}} of [dormancy](https://coder.com/docs/templates/schedule#dormancy-auto-deletion-enterprise) because of {{.Labels.reason}}.\n'
-	|| E'To prevent deletion, use your workspace with the link below.'
+		|| E'Your workspace **{{.Labels.name}}** has been marked for **deletion** after {{.Labels.timeTilDormant}} of [dormancy](https://coder.com/docs/templates/schedule#dormancy-auto-deletion-enterprise) because of {{.Labels.reason}}.\n'
+		|| E'To prevent deletion, use your workspace with the link below.'
 where id = '51ce2fdf-c9ca-4be1-8d70-628674f9bc42';
 
 update notification_templates

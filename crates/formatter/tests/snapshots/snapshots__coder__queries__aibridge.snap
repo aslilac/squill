@@ -256,7 +256,7 @@ with
 			and model = @model::text
 			and coalesce(client, 'Unknown') = @client::text
 			and ended_at
-			is not null -- incomplete interceptions are not included in summaries
+				is not null -- incomplete interceptions are not included in summaries
 			and ended_at >= @ended_at_after::timestamptz
 			and ended_at < @ended_at_before::timestamptz
 	),
@@ -390,13 +390,11 @@ with
 -- Cumulative count.
 select
 	(
-		(select count(*) from model_thoughts) + (
-			select count(*)
-			from tool_usages
-		) + (select count(*) from token_usages) + (
-			select count(*)
-			from user_prompts
-		) + (select count(*) from interceptions)
+		(select count(*) from model_thoughts)
+		+ (select count(*) from tool_usages)
+		+ (select count(*) from token_usages)
+		+ (select count(*) from user_prompts)
+		+ (select count(*) from interceptions)
 	)::bigint as total_deleted;
 
 -- name: CountAIBridgeSessions :one

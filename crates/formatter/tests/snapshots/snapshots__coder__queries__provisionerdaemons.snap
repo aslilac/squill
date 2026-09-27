@@ -42,7 +42,7 @@ select
 		when (
 			coalesce(sqlc.narg('offline')::bool, false) = true
 			or 'offline'::provisioner_daemon_status
-			= any(@statuses::provisioner_daemon_status[])
+				= any(@statuses::provisioner_daemon_status[])
 		)
 		and (
 			pd.last_seen_at is null
@@ -173,7 +173,7 @@ where
 			and (
 				coalesce(sqlc.narg('offline')::bool, false) = true
 				or 'offline'::provisioner_daemon_status
-				= any(@statuses::provisioner_daemon_status[])
+					= any(@statuses::provisioner_daemon_status[])
 			)
 		)
 	)
@@ -184,12 +184,12 @@ where
 		or (
 			current_job.id is not null
 			and 'busy'::provisioner_daemon_status
-			= any(@statuses::provisioner_daemon_status[])
+				= any(@statuses::provisioner_daemon_status[])
 		)
 		or (
 			current_job.id is null
 			and 'idle'::provisioner_daemon_status
-			= any(@statuses::provisioner_daemon_status[])
+				= any(@statuses::provisioner_daemon_status[])
 		)
 		or (
 			'offline'::provisioner_daemon_status

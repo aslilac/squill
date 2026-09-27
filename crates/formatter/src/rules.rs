@@ -1899,22 +1899,55 @@ impl Lowerer {
 	/// Binary-ish expressions: `and`/`or` chains flatten with the operator
 	/// leading each soft line; other operators get a soft line before the
 	/// operator run.
+	///
+	/// As an item of a comma list (a select or set list, arguments, a
+	/// values row), the operator lines indent one level past the first
+	/// operand, so they don't read as the next item. Not when the last
+	/// operand hugs (`+ case`, `+ (`): its own lines already indent.
 	fn binary_expr(&mut self, node: &SyntaxNode) -> Doc {
 		let chain_op = bool_chain_op(node);
 		let mut docs = Vec::new();
-		self.binary_parts(&mut docs, node, chain_op.as_deref());
-		group(concat(docs))
+		let mut first_operand = None;
+		self.binary_parts(
+			&mut docs,
+			node,
+			chain_op.as_deref(),
+			false,
+			&mut first_operand,
+		);
+		let elements: Vec<_> = node.children_with_tokens().collect();
+		let hugs = chain_op.is_none()
+			&& !is_chain(node)
+			&& hug_op_index(&elements).is_some();
+		match first_operand {
+			Some(split) if !hugs && indents_continuation(node) => {
+				let rest = docs.split_off(split);
+				group(concat([concat(docs), indent(concat(rest))]))
+			}
+			_ => group(concat(docs)),
+		}
 	}
 
+	/// A chain of one operator (`a || b || c`, parsed `(a || b) || c`)
+	/// flattens into one run, so every link breaks alike. `nested` is true
+	/// for the links inside, whose last operand isn't the chain's and so
+	/// never hugs. `first_operand` is set to where the docs after the
+	/// leftmost operand begin.
 	fn binary_parts(
 		&mut self,
 		docs: &mut Vec<Doc>,
 		node: &SyntaxNode,
 		chain_op: Option<&str>,
+		nested: bool,
+		first_operand: &mut Option<usize>,
 	) {
 		let elements: Vec<_> = node.children_with_tokens().collect();
-		let hug_op =
-			if chain_op.is_none() { hug_op_index(&elements) } else { None };
+		let hug_op = if chain_op.is_none() && !nested && !is_chain(node) {
+			hug_op_index(&elements)
+		} else {
+			None
+		};
+		let operator = binary_operator(node);
 		let mut first = true;
 		let mut after_op = false;
 		for (index, element) in elements.into_iter().enumerate() {
@@ -1937,13 +1970,13 @@ impl Lowerer {
 					first = false;
 				}
 				SyntaxElement::Node(child) => {
-					// Flatten same-operator boolean chains.
+					// Flatten same-operator chains.
 					let flatten = first
-						&& chain_op.is_some()
+						&& operator.is_some()
 						&& child.kind() == SyntaxKind::BinaryExpr
-						&& bool_chain_op(child).as_deref() == chain_op;
+						&& binary_operator(child) == operator;
 					if flatten {
-						self.binary_parts(docs, child, chain_op);
+						self.binary_parts(docs, child, chain_op, true, first_operand);
 					} else {
 						if after_op {
 							docs.push(space());
@@ -1952,6 +1985,7 @@ impl Lowerer {
 						}
 						let doc = self.node(child);
 						self.push(docs, doc);
+						first_operand.get_or_insert(docs.len());
 					}
 					after_op = false;
 					first = false;
@@ -2505,6 +2539,56 @@ fn is_clause_level(kind: SyntaxKind) -> bool {
 			| SyntaxKind::ReturningClause
 			| SyntaxKind::MergeWhenClause
 	)
+}
+
+/// Does a broken expression here indent its operator lines? As one
+/// item of a comma list (the value of a select or set item, an ordering
+/// or grouping term, an element of a list with commas in it) they'd
+/// otherwise read as the next item; as a PL/pgSQL assignment's value, as
+/// the next statement; and as the right operand of another operator
+/// (`a + b * c`), as links of the outer chain.
+fn indents_continuation(node: &SyntaxNode) -> bool {
+	node.parent().is_some_and(|parent| {
+		(parent.kind() == SyntaxKind::BinaryExpr
+			&& parent.children().next().is_some_and(|first| first != node))
+			|| matches!(
+				parent.kind(),
+				SyntaxKind::SelectItem
+					| SyntaxKind::SetItem
+					| SyntaxKind::PlAssign
+					| SyntaxKind::OrderingTerm
+					| SyntaxKind::GroupingElement
+			) || parent
+			.children_with_tokens()
+			.any(|element| element.kind() == SyntaxKind::Comma)
+	})
+}
+
+/// A BinaryExpr's operator, lowercased (`||`, `and`, `is not distinct
+/// from`), when it is one.
+fn binary_operator(node: &SyntaxNode) -> Option<String> {
+	if node.kind() != SyntaxKind::BinaryExpr {
+		return None;
+	}
+	let words: Vec<String> = node
+		.children_with_tokens()
+		.filter_map(|element| element.into_token())
+		.filter(|token| !token.kind().is_trivia())
+		.map(|token| token.text().to_ascii_lowercase())
+		.collect();
+	(!words.is_empty()).then(|| words.join(" "))
+}
+
+/// Is this BinaryExpr the last link of a chain of its operator (`a || b
+/// || c`)? Such a chain breaks at every link, so its last operand
+/// doesn't hug.
+fn is_chain(node: &SyntaxNode) -> bool {
+	let operator = binary_operator(node);
+	operator.is_some()
+		&& node
+			.children()
+			.next()
+			.is_some_and(|first| binary_operator(first) == operator)
 }
 
 /// The `and`/`or` keyword when this BinaryExpr is a boolean chain link.

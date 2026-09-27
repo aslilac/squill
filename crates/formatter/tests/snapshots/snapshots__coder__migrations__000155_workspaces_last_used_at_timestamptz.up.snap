@@ -4,5 +4,5 @@ expression: formatted
 ---
 alter table only workspaces
 	alter column last_used_at set data type timestamptz using last_used_at::timestamp
-	at time zone 'UTC',
+		at time zone 'UTC',
 	alter column last_used_at set default '0001-01-01 00:00:00+00:00'::timestamptz;

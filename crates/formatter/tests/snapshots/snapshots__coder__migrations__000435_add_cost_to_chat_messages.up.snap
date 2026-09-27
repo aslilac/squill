@@ -12,11 +12,11 @@ with
 				coalesce(msg.input_tokens, 0)::numeric
 				* coalesce(pricing.input_price, 0)
 				+ coalesce(msg.output_tokens, 0)::numeric
-				* coalesce(pricing.output_price, 0)
+					* coalesce(pricing.output_price, 0)
 				+ coalesce(msg.cache_read_tokens, 0)::numeric
-				* coalesce(pricing.cache_read_price, 0)
+					* coalesce(pricing.cache_read_price, 0)
 				+ coalesce(msg.cache_creation_tokens, 0)::numeric
-				* coalesce(pricing.cache_write_price, 0)
+					* coalesce(pricing.cache_write_price, 0)
 			)::bigint as total_cost_micros
 		from chat_messages as msg
 			join chat_model_configs as cfg on cfg.id = msg.model_config_id

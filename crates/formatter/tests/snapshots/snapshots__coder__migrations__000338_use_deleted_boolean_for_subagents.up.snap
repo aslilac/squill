@@ -44,7 +44,7 @@ begin
 		and workspace_agents.name = NEW.name
 		and workspace_agents.id != NEW.id
 		and workspace_agents.deleted
-		= false; -- Ensure we only count non-deleted agents.
+			= false; -- Ensure we only count non-deleted agents.
 
 	-- If there's already an agent with this name, raise an error
 	if agents_with_name > 0 then

@@ -42,7 +42,7 @@ where
 		else deleted = sqlc.narg('deleted')
 	end
 	and id
-	= any (select organization_id from organization_members where user_id = $1);
+		= any (select organization_id from organization_members where user_id = $1);
 
 -- name: GetOrganizationResourceCountByID :one
 select
