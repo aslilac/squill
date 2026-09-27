@@ -67,12 +67,16 @@ const panes = [
 const kind = (path) =>
 	path.endsWith(".scm") ? "query" : path.endsWith(".toml") ? "toml" : "yaml";
 
-// Live recipes: where the playground's wasm module has the grammar, the
-// after pane can be reformatted in the browser with other style options,
-// and the config pane shows the keys that would do it. Found from the
+// Live recipes: where there's a playground wasm module for the grammar
+// (every built-in has one; see scripts/build-wasm.sh), the after pane can
+// be reformatted in the browser with other style options, and the config
+// pane shows the keys that would do it. Found from the
 // config: the rule covering `before`, its grammar and query, and every
 // option it (or the top level) sets.
-const LIVE_HOSTS = ["rust", "go", "python", "javascript", "typescript", "tsx", "gleam"];
+const LIVE_HOSTS = [
+	"rust", "go", "python", "javascript", "typescript", "tsx", "gleam",
+	"cpp", "csharp", "java", "kotlin", "swift",
+];
 const configPath = files.find((path) => path === "squill.toml");
 const extension = before.split(".").pop();
 const live = (() => {

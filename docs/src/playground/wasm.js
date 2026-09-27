@@ -1,17 +1,31 @@
-// The squill wasm module (crates/playground), behind a minimal WASI stub,
-// shared by the playground and the docs' live recipes. No wasm-bindgen:
-// JSON in, JSON out, through three exported functions.
+// The squill wasm modules (crates/playground), behind a minimal WASI
+// stub, shared by the playground and the docs' live recipes. No
+// wasm-bindgen: JSON in, JSON out, through three exported functions.
+//
+// There's a module per grammar (scripts/build-wasm.sh), each carrying
+// the whole formatter, so a page downloads only the grammar it formats:
+// sql.wasm for plain SQL, rust.wasm for Rust, and so on.
 
-let loading;
+const loading = new Map();
 
-// Load the module once per page; resolves to `format(request)`, which
-// returns the parsed response plus how long formatting took (`ms`).
-export function loadSquill() {
-	loading ??= instantiate();
-	return loading;
+// The module that formats `host`: TypeScript's grammar crate carries TSX
+// too.
+const moduleFor = (host) => (host === "tsx" ? "typescript" : host);
+
+// Load `host`'s module, once per page; resolves to `format(request)`,
+// which returns the parsed response plus how long formatting took (`ms`).
+export function loadSquill(host) {
+	const module = moduleFor(host);
+	if (!loading.has(module)) {
+		const compiled = WebAssembly.compileStreaming(fetch(`wasm/${module}.wasm`));
+		loading.set(module, compiled.then(instantiate));
+	}
+	return loading.get(module);
 }
 
-async function instantiate() {
+// A compiled module's `format(request)`; also used at build time, in
+// Node, with the module read from disk.
+export async function instantiate(module) {
 	let memory;
 	const dataView = () => new DataView(memory.buffer);
 	const handlers = {
@@ -45,7 +59,6 @@ async function instantiate() {
 		},
 	};
 
-	const module = await WebAssembly.compileStreaming(fetch("playground.wasm"));
 	const wasi = {};
 	for (const imp of WebAssembly.Module.imports(module)) {
 		if (imp.module !== "wasi_snapshot_preview1") continue;

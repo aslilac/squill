@@ -1,5 +1,5 @@
-// Recipe view menus, and live recipes: a recipe whose grammar the
-// playground's wasm module has carries its source, config, and options
+// Recipe view menus, and live recipes: a recipe whose grammar has a
+// playground wasm module carries its source, config, and options
 // (Recipe.astro's `data-live`). Its menu reformats the after pane with
 // other style options, and
 // writes the keys that would do it into the config pane. The choices are
@@ -105,7 +105,7 @@ async function update(recipe) {
 
 	setStatus(recipe, "loading the formatter…");
 	const [format, { highlight, highlightHost }] = await Promise.all([
-		loadSquill(),
+		loadSquill(live.host),
 		import("./highlight.js"),
 	]);
 	const result = format({

@@ -138,7 +138,7 @@ const baseHref = import.meta.env.BASE_URL;
 					</div>
 				</div>
 				<div id="output" class="output">
-					<div class="loading">loading squill.wasm…</div>
+					<div class="loading">loading the formatter…</div>
 				</div>
 			</section>
 		</main>
@@ -259,15 +259,21 @@ const baseHref = import.meta.env.BASE_URL;
 				wordWrap: "off",
 			});
 
-			const [highlighter, format] = await Promise.all([
+			const [highlighter] = await Promise.all([
 				createHighlighter({
 					themes: [shikiTheme],
 					langs: ["sql", "rust", "go", "python", "typescript", "gleam"],
 				}),
-				loadSquill(),
+				loadSquill(current.host),
 			]);
 
-			function render() {
+			// Each host's formatter is its own module (see wasm.js), loaded
+			// the first time an example needs it.
+			async function render() {
+				const example = current;
+				const format = await loadSquill(example.host);
+				// Another example was picked while this one's module loaded.
+				if (example !== current) return;
 				const request = {
 					source: editor.getValue(),
 					host: current.host,

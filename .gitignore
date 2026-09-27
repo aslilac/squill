@@ -1,7 +1,7 @@
 .astro/
 .direnv/
 dist/
-docs/public/playground.wasm
+docs/public/wasm/
 node_modules/
 target/
 .DS_Store

@@ -8,12 +8,30 @@ publish = false
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[dependencies]
-# Only the grammars the playground offers: the larger built-ins would
-# triple the download.
-embed = { workspace = true, features = [
+[features]
+# One module per grammar keeps each page's download small: the docs build
+# (scripts/build-wasm.sh) compiles this crate once with no features, for
+# plain SQL, and once per grammar. The default, every grammar, is for
+# tests and clippy.
+default = [
 	"rust", "go", "python", "javascript", "typescript", "gleam",
-] }
+	"cpp", "csharp", "java", "kotlin", "swift",
+]
+embedded = ["dep:embed"]
+rust = ["embedded", "embed/rust"]
+go = ["embedded", "embed/go"]
+python = ["embedded", "embed/python"]
+javascript = ["embedded", "embed/javascript"]
+typescript = ["embedded", "embed/typescript"]
+gleam = ["embedded", "embed/gleam"]
+cpp = ["embedded", "embed/cpp"]
+csharp = ["embedded", "embed/csharp"]
+java = ["embedded", "embed/java"]
+kotlin = ["embedded", "embed/kotlin"]
+swift = ["embedded", "embed/swift"]
+
+[dependencies]
+embed = { workspace = true, optional = true }
 formatter = { workspace = true }
 parser = { workspace = true }
 serde = { version = "1", features = ["derive"] }

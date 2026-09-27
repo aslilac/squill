@@ -2,6 +2,9 @@
 //! host language) behind a tiny JSON-over-C-ABI surface, compiled to
 //! `wasm32-wasip1` and loaded in the browser with a minimal WASI stub.
 //! No wasm-bindgen — the whole interface is three exported functions.
+//!
+//! Built once per grammar (see the crate's features), so a request for a
+//! host this build doesn't carry is an unknown host.
 
 use serde::Deserialize;
 use serde::Serialize;
@@ -9,11 +12,11 @@ use serde::Serialize;
 #[derive(Deserialize)]
 struct Request {
 	source: String,
-	/// `"sql"`, or an embed host: `rust`, `go`, `python`, `javascript`,
-	/// `typescript`, `tsx`, `gleam`.
+	/// `"sql"`, or an embed host by its config name (`rust`, `tsx`, …).
 	host: String,
 	/// A tree-sitter query to find the SQL with, instead of the host's
 	/// default (a docs recipe's own query file).
+	#[cfg_attr(not(feature = "embedded"), allow(dead_code))]
 	query: Option<String>,
 	#[serde(default)]
 	options: RequestOptions,
@@ -101,6 +104,7 @@ fn build_options(req: &RequestOptions) -> formatter::Options {
 	options
 }
 
+#[cfg(feature = "embedded")]
 fn embed_host(name: &str) -> Option<(embed::Host, &'static str)> {
 	let host = embed::Host::from_name(name)?;
 	Some((host, host.default_query()))
@@ -141,6 +145,7 @@ fn format_sql(source: &str, options: &formatter::Options) -> Response {
 	Response { output: Some(result.text), diagnostics, spans }
 }
 
+#[cfg(feature = "embedded")]
 fn format_host(
 	source: &str,
 	host: embed::Host,
@@ -186,27 +191,8 @@ pub fn format_request(json: &str) -> String {
 			let options = build_options(&request.options);
 			if request.host == "sql" {
 				format_sql(&request.source, &options)
-			} else if let Some((host, default_query)) = embed_host(&request.host) {
-				let query = request.query.as_deref().unwrap_or(default_query);
-				// Same rule as the CLI: indent options the caller named win,
-				// otherwise the host file's own indentation does.
-				let indent = embed::Indent {
-					configured_style: request.options.indent.is_some(),
-					configured_width: request.options.indent_width.is_some(),
-				};
-				// And no final `;` unless asked for.
-				let trailing_semicolons = match request.options.trailing_semicolons {
-					Some(_) => options.trailing_semicolons,
-					None => formatter::TrailingSemicolons::None,
-				};
-				let options = formatter::Options { trailing_semicolons, ..options };
-				format_host(&request.source, host, query, &options, indent)
 			} else {
-				Response {
-					output: None,
-					diagnostics: vec![format!("unknown host `{}`", request.host)],
-					spans: Vec::new(),
-				}
+				format_embedded(&request, options)
 			}
 		}
 		Err(err) => Response {
@@ -219,6 +205,42 @@ pub fn format_request(json: &str) -> String {
 		r#"{"output":null,"diagnostics":["response serialization failed"],"spans":[]}"#
 			.into()
 	})
+}
+
+fn unknown_host(request: &Request) -> Response {
+	Response {
+		output: None,
+		diagnostics: vec![format!("unknown host `{}`", request.host)],
+		spans: Vec::new(),
+	}
+}
+
+#[cfg(not(feature = "embedded"))]
+fn format_embedded(request: &Request, _: formatter::Options) -> Response {
+	unknown_host(request)
+}
+
+#[cfg(feature = "embedded")]
+fn format_embedded(request: &Request, options: formatter::Options) -> Response {
+	match embed_host(&request.host) {
+		Some((host, default_query)) => {
+			let query = request.query.as_deref().unwrap_or(default_query);
+			// Same rule as the CLI: indent options the caller named win,
+			// otherwise the host file's own indentation does.
+			let indent = embed::Indent {
+				configured_style: request.options.indent.is_some(),
+				configured_width: request.options.indent_width.is_some(),
+			};
+			// And no final `;` unless asked for.
+			let trailing_semicolons = match request.options.trailing_semicolons {
+				Some(_) => options.trailing_semicolons,
+				None => formatter::TrailingSemicolons::None,
+			};
+			let options = formatter::Options { trailing_semicolons, ..options };
+			format_host(&request.source, host, query, &options, indent)
+		}
+		None => unknown_host(request),
+	}
 }
 
 /// The C ABI the browser talks to. The workspace denies `unsafe_code`;
@@ -283,6 +305,7 @@ mod tests {
 		assert!(response.contains("SELECT 1;"), "{response}");
 	}
 
+	#[cfg(feature = "rust")]
 	#[test]
 	fn embedded_rust_formats() {
 		let request = serde_json::json!({
@@ -293,6 +316,7 @@ mod tests {
 		assert!(response.contains("from users"), "{response}");
 	}
 
+	#[cfg(feature = "rust")]
 	#[test]
 	fn spans_say_where_the_sql_is() {
 		let request = serde_json::json!({
