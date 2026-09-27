@@ -740,7 +740,7 @@ impl Lowerer {
 						SyntaxKind::QuotedIdent => {
 							name_leaf(token, IdentPos::ColumnOrTable)
 						}
-						_ => token_leaf(token),
+						_ => word_leaf(token),
 					};
 					self.push(current, leaf);
 					if segments.is_empty() {
@@ -888,7 +888,7 @@ impl Lowerer {
 						SyntaxKind::QuotedIdent => {
 							name_leaf(token, IdentPos::ColumnOrTable)
 						}
-						_ => token_leaf(token),
+						_ => word_leaf(token),
 					};
 					self.push(docs, leaf);
 					first = false;
@@ -1150,7 +1150,7 @@ impl Lowerer {
 			}
 			SyntaxElement::Token(token) => {
 				items.sep(docs);
-				self.push(docs, token_leaf(token));
+				self.push(docs, word_leaf(token));
 			}
 			SyntaxElement::Node(child) => {
 				items.sep(docs);
@@ -2381,7 +2381,7 @@ impl Lowerer {
 					);
 					let leaf = match token.kind() {
 						SyntaxKind::QuotedIdent => name_leaf(token, pos),
-						_ => token_leaf(token),
+						_ => word_leaf(token),
 					};
 					self.push(&mut docs, leaf);
 					first = false;
@@ -2665,6 +2665,77 @@ fn token_leaf(token: &SyntaxToken) -> Doc {
 	match token.kind() {
 		SyntaxKind::Ident => keyword(token.text()),
 		_ => raw_leaf(token),
+	}
+}
+
+/// A bare word the formatter knows is a name, though it sits in a run of
+/// tokens it would otherwise case as keywords: a name spelled like an
+/// unreserved keyword (`key`, `value`, `type`) keeps its case.
+enum NameWord {
+	/// An item of an insert's column list, or of a join's `using (…)`: a
+	/// column, quoted like one.
+	Column,
+	/// A name in a tolerant token run (DDL): half of a qualified name
+	/// (`t.value`), the column after `column` (`add column value`), or the
+	/// new name after `rename … to`.
+	Tolerant,
+}
+
+fn name_word(token: &SyntaxToken) -> Option<NameWord> {
+	if token.kind() != SyntaxKind::Ident {
+		return None;
+	}
+	let parent = token.parent();
+	let significant: Vec<&SyntaxToken> = parent
+		.children_with_tokens()
+		.filter_map(|element| element.into_token())
+		.filter(|t| !t.kind().is_trivia())
+		.collect();
+	// An insert's column list is nothing but names: no nodes in it.
+	if parent.kind() == SyntaxKind::ElementList
+		&& parent.children().next().is_none()
+	{
+		return Some(NameWord::Column);
+	}
+	let at =
+		significant.iter().position(|t| t.text_range() == token.text_range())?;
+	let prev = at.checked_sub(1).map(|i| significant[i]);
+	let next = significant.get(at + 1);
+	let is_word = |t: &SyntaxToken, word: &str| {
+		t.kind() == SyntaxKind::Ident && t.text().eq_ignore_ascii_case(word)
+	};
+	if parent.kind() == SyntaxKind::JoinCondition
+		&& significant.first().is_some_and(|t| is_word(t, "using"))
+		&& at > 0
+	{
+		return Some(NameWord::Column);
+	}
+	// The column after `column`, past an `if [not] exists`.
+	let guard =
+		|t: &SyntaxToken| ["if", "not", "exists"].iter().any(|w| is_word(t, w));
+	let mut before = at;
+	while before > 0 && guard(significant[before - 1]) {
+		before -= 1;
+	}
+	let after_column =
+		!guard(token) && before > 0 && is_word(significant[before - 1], "column");
+	let named = after_column
+		|| prev.is_some_and(|t| t.kind() == SyntaxKind::Dot)
+		|| next.is_some_and(|t| t.kind() == SyntaxKind::Dot)
+		|| (prev.is_some_and(|t| is_word(t, "to"))
+			&& significant[..at].iter().any(|t| is_word(t, "rename")));
+	named.then_some(NameWord::Tolerant)
+}
+
+/// Leaf for a bare word in a token run: a name when [`name_word`] is sure
+/// it's one, a keyword for casing otherwise.
+fn word_leaf(token: &SyntaxToken) -> Doc {
+	match name_word(token) {
+		Some(NameWord::Column) => name_leaf(token, IdentPos::ColumnOrTable),
+		// A tolerant run is only sure enough of a name to leave its case
+		// alone, not to change its quoting.
+		Some(NameWord::Tolerant) => text(token.text()),
+		None => token_leaf(token),
 	}
 }
 

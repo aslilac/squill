@@ -2,4 +2,4 @@
 source: crates/formatter/tests/snapshots.rs
 expression: formatted
 ---
-insert or replace into config (key, usn, mtime_secs, val) values (?, ?, ?, ?);
+insert or replace into config (KEY, usn, mtime_secs, val) values (?, ?, ?, ?);

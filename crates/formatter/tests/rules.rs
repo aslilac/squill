@@ -715,3 +715,56 @@ fn table_constraints_are_not_calls() {
 		 );\n"
 	);
 }
+
+#[test]
+fn column_names_spelled_like_keywords_keep_their_case() {
+	// `key`, `value`, and `type` are unreserved Postgres keywords, and
+	// common column names. Where the formatter knows they're names, they
+	// never follow keyword-case.
+	let options = Options {
+		keyword_case: formatter::KeywordCase::Upper,
+		..Options::default()
+	};
+	let format_upper = |source: &str| {
+		let tokens = lex_with(source, Dialect::Postgres, options.lex_options());
+		let parse = parser::parser::parse(&tokens, Dialect::Postgres);
+		format_cst(&parse.cst, &options).text
+	};
+	assert_eq!(
+		format_upper(
+			"insert into kv (key, value) values (1, 2);\n\
+			 select * from t join u using (key);\n\
+			 comment on column t.value is 'v';\n\
+			 alter table t add column if not exists value text;\n\
+			 alter table t rename column value to key;\n\
+			 alter type mood add value 'x';\n\
+			 alter table t owner to current_user;\n"
+		),
+		"INSERT INTO kv (key, value) VALUES (1, 2);\n\
+		 SELECT * FROM t JOIN u USING (key);\n\
+		 COMMENT ON COLUMN t.value IS 'v';\n\
+		 ALTER TABLE t ADD COLUMN IF NOT EXISTS value text;\n\
+		 ALTER TABLE t RENAME COLUMN value TO key;\n\
+		 ALTER TYPE mood ADD VALUE 'x';\n\
+		 ALTER TABLE t OWNER TO CURRENT_USER;\n"
+	);
+}
+
+#[test]
+fn insert_and_using_columns_are_quoted_like_columns() {
+	let options = Options {
+		quoting: formatter::IdentQuoting::AlwaysQuoted,
+		..Options::default()
+	};
+	let tokens = lex_with(
+		"insert into t (a, b) values (1, 2); select * from t join u using (a);",
+		Dialect::Postgres,
+		options.lex_options(),
+	);
+	let parse = parser::parser::parse(&tokens, Dialect::Postgres);
+	assert_eq!(
+		format_cst(&parse.cst, &options).text,
+		"insert into \"t\" (\"a\", \"b\") values (1, 2);\n\
+		 select * from \"t\" join \"u\" using (\"a\");\n"
+	);
+}

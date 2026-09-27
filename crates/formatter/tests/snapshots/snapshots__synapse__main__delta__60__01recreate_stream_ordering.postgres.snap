@@ -27,7 +27,7 @@ expression: formatted
 alter table events add column stream_ordering2 bigint;
 
 -- Create a rule which will populate it for new rows.
-create or replace rule populate_stream_ordering2 as on insert to events do update events set stream_ordering2 = new.stream_ordering
+create or replace rule populate_stream_ordering2 as on insert to events do update events set stream_ordering2 = NEW.stream_ordering
 where stream_ordering = NEW.stream_ordering;
 
 -- Start a bg process to populate it for old events
