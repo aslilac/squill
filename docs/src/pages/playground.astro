@@ -70,6 +70,7 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 					hidden
 				>
 					<ul class="picker-languages" role="listbox" aria-label="Language"></ul>
+					<svg class="picker-aim" aria-hidden="true"><polygon /></svg>
 					<div class="picker-frameworks">
 						<p class="picker-heading" id="picker-heading"></p>
 						<ul role="listbox" aria-labelledby="picker-heading"></ul>
@@ -413,6 +414,8 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 			const chevron = document.getElementById("chevron-right").innerHTML;
 			let chosenLanguage = "sql";
 			let shownLanguage;
+			// The language under the pointer, if any.
+			let hovered;
 
 			const languageItems = languages.map((language) => {
 				const item = document.createElement("li");
@@ -422,7 +425,13 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 				button.dataset.host = language.host;
 				const count = choicesFor(language).length - 1;
 				if (count > 0) button.title = `${count} framework${count === 1 ? "" : "s"}`;
-				button.addEventListener("pointerenter", () => showLanguage(language));
+				button.addEventListener("pointerenter", () => {
+					hovered = language.host;
+					aimAt(language);
+				});
+				button.addEventListener("pointerleave", () => {
+					if (hovered === language.host) hovered = undefined;
+				});
 				button.addEventListener("focus", () => showLanguage(language));
 				button.addEventListener("click", () => {
 					showLanguage(language);
@@ -489,6 +498,102 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 				render();
 			}
 
+			// Menu aim (Ben Kamens' name for the trick Amazon's mega-menu
+			// used): a pointer headed for the frameworks column crosses other
+			// languages on its way. While it keeps moving into the triangle
+			// between itself and the column's left corners, a language it
+			// passes over waits, and takes over only once the pointer rests
+			// or turns away.
+			const AIM_DELAY = 300;
+			// Slack above and below the column, for a pointer aimed at its
+			// first or last item.
+			const AIM_SLACK = 40;
+			// Draw the triangle: faint while the pointer moves, stronger
+			// while it holds a language back. For watching it work.
+			const SHOW_AIM = true;
+			const choicesColumn = panel.querySelector(".picker-frameworks");
+			const aim = panel.querySelector(".picker-aim");
+			const aimShape = aim.querySelector("polygon");
+			let trail = [];
+			let aimTimer;
+			let heldAt;
+
+			function corners() {
+				const rect = choicesColumn.getBoundingClientRect();
+				return [
+					{ x: rect.left, y: rect.top - AIM_SLACK },
+					{ x: rect.left, y: rect.bottom + AIM_SLACK },
+				];
+			}
+
+			// Is the pointer heading into the column? Moving toward it, the
+			// slope from the pointer to the upper corner falls and the slope
+			// to the lower one rises.
+			function headingIn() {
+				const here = trail.at(-1);
+				const before = trail[0];
+				if (!here || !before || here === before) return false;
+				// Resting where it was held: it's arrived.
+				if (heldAt && here.x === heldAt.x && here.y === heldAt.y) return false;
+				const [upper, lower] = corners();
+				if (here.x >= upper.x) return false;
+				const slope = (a, b) => (b.y - a.y) / (b.x - a.x);
+				return (
+					slope(here, upper) < slope(before, upper) &&
+					slope(here, lower) > slope(before, lower)
+				);
+			}
+
+			function aimAt(language) {
+				clearTimeout(aimTimer);
+				// Held, and the pointer went on (into the column, say): this
+				// language never takes over.
+				if (hovered !== language.host) {
+					heldAt = undefined;
+					drawAim(false);
+					return;
+				}
+				if (shownLanguage && headingIn()) {
+					heldAt = trail.at(-1);
+					drawAim(true);
+					aimTimer = setTimeout(() => aimAt(language), AIM_DELAY);
+					return;
+				}
+				heldAt = undefined;
+				drawAim(false);
+				showLanguage(language);
+			}
+
+			function drawAim(holding) {
+				const here = trail.at(-1);
+				if (!SHOW_AIM || !here || panel.hidden) {
+					aim.classList.remove("visible", "holding");
+					return;
+				}
+				const [upper, lower] = corners();
+				// In the column itself there's nothing left to aim at.
+				if (here.x >= upper.x) {
+					aim.classList.remove("visible", "holding");
+					return;
+				}
+				aimShape.setAttribute(
+					"points",
+					[here, upper, lower].map(({ x, y }) => `${x},${y}`).join(" "),
+				);
+				aim.classList.add("visible");
+				aim.classList.toggle("holding", holding);
+			}
+
+			panel.addEventListener("pointermove", (event) => {
+				trail.push({ x: event.clientX, y: event.clientY });
+				if (trail.length > 3) trail.shift();
+				drawAim(heldAt !== undefined);
+			});
+			panel.addEventListener("pointerleave", () => {
+				trail = [];
+				drawAim(false);
+			});
+
 			function openPicker() {
 				settingsPopover.hidden = true;
 				panel.hidden = false;
@@ -498,6 +603,10 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 				languageItems.find((button) => button.dataset.host === chosenLanguage).focus();
 			}
 			function closePicker(refocus) {
+				clearTimeout(aimTimer);
+				heldAt = undefined;
+				trail = [];
+				drawAim(false);
 				panel.hidden = true;
 				picker.setAttribute("aria-expanded", "false");
 				if (refocus) picker.focus();
@@ -784,6 +893,32 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 				width: 14px;
 				height: 14px;
 				color: var(--muted);
+			}
+			/* Menu aim's triangle, over the page; see the picker script. */
+			.picker-aim {
+				position: fixed;
+				inset: 0;
+				width: 100vw;
+				height: 100vh;
+				z-index: 20;
+				pointer-events: none;
+				opacity: 0;
+				transition: opacity 0.15s;
+			}
+			.picker-aim polygon {
+				fill: var(--violet);
+				fill-opacity: 0.08;
+				stroke: var(--violet);
+				stroke-opacity: 0.35;
+				stroke-width: 1;
+				transition: fill-opacity 0.1s;
+			}
+			.picker-aim.visible {
+				opacity: 1;
+			}
+			.picker-aim.holding polygon {
+				fill-opacity: 0.22;
+				stroke-opacity: 0.7;
 			}
 			.picker-empty {
 				margin-top: 0.3rem;
