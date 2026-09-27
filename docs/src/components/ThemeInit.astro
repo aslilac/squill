@@ -1,0 +1,15 @@
+---
+// In the <head> of every page: a theme pinned in the theme menu applies
+// before first paint, so there's no flash of the system's scheme.
+// ThemeSwitcher keeps it up to date after.
+---
+
+<script is:inline>
+	try {
+		const theme = localStorage.getItem("squill.theme");
+		if (theme === "light" || theme === "dark") {
+			document.documentElement.dataset.theme = theme;
+			document.documentElement.dataset.themeChoice = theme;
+		}
+	} catch {}
+</script>

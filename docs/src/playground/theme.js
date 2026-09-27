@@ -14,8 +14,22 @@ export const colors = {
 	selection: "#3a3348",
 };
 
+// The light theme's, for the playground's editor: the light halves of
+// styles/theme.css's code variables.
+export const lightColors = {
+	bg: "#eeeaf4",
+	bgDeep: "#e9e5f0",
+	fg: "#3a3246",
+	keyword: "#6b4fc8",
+	string: "#23794d",
+	number: "#a15c12",
+	comment: "#8a8296",
+	func: "#3565b0",
+	selection: "#d9d0ec",
+};
+
 // The site's panes follow its light or dark theme, so there the palette
-// is CSS variables (Base.astro gives each a light and a dark value).
+// is CSS variables (styles/theme.css gives each a light and a dark value).
 // shiki only takes literal colors, so highlight with the dark theme and
 // swap each of its colors for its variable afterwards.
 const variables = {

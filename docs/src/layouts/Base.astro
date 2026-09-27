@@ -6,7 +6,9 @@
 // `bare` leaves the wordmark out of the top bar, for the landing page,
 // whose masthead already carries it.
 import Footer from "../components/Footer.astro";
+import ThemeInit from "../components/ThemeInit.astro";
 import ThemeSwitcher from "../components/ThemeSwitcher.astro";
+import "../styles/theme.css";
 
 const { title, lede, section, wide, bare } = Astro.props;
 const baseHref = import.meta.env.BASE_URL;
@@ -29,17 +31,7 @@ const topNav = [
 				"A robust, friendly, and flexible SQL code formatter; even for queries embedded in your application code."}
 		/>
 		<link rel="icon" type="image/svg+xml" href="squill-fav.svg" />
-		<script is:inline>
-			// A pinned theme applies before first paint: no flash of the
-			// system's scheme. ThemeSwitcher keeps it up to date after.
-			try {
-				const theme = localStorage.getItem("squill.theme");
-				if (theme === "light" || theme === "dark") {
-					document.documentElement.dataset.theme = theme;
-					document.documentElement.dataset.themeChoice = theme;
-				}
-			} catch {}
-		</script>
+		<ThemeInit />
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link
@@ -80,33 +72,6 @@ const topNav = [
 		</main>
 
 		<style is:global>
-		:root {
-			color-scheme: light dark;
-			--violet: light-dark(oklch(0.53 0.17 293), oklch(0.72 0.15 293));
-			--violet-deep: light-dark(oklch(0.44 0.16 293), oklch(0.8 0.12 293));
-			--ink: light-dark(#221d2b, #e6e1ee);
-			/* Light: a faintly tinted page, and everything set on it (code panes,
-			   inline code, notes) a shade darker. Dark: the reverse. */
-			--paper: light-dark(#f4f1f8, #131019);
-			--edge: light-dark(#dfd9e7, #322b3e);
-			--muted: light-dark(#6f6878, #8a8296);
-			--inset: light-dark(#ede9f3, #191520);
-			/* The docs sidebar's rail, and its links' pills on it. */
-			--rail: light-dark(var(--paper), #0f0c14);
-			--rail-pill: light-dark(#e9e4f0, #211c2a);
-			/* Code panes, and the highlighting in them. */
-			--pane: light-dark(#eeeaf4, #1c1824);
-			--pane-deep: light-dark(#e9e5f0, #191520);
-			--pane-edge: light-dark(#dbd5e4, #322b3e);
-			--pane-text: light-dark(#3a3246, #cfc7db);
-			--code-fg: var(--pane-text);
-			--code-keyword: light-dark(#6b4fc8, #a58fe0);
-			--code-string: light-dark(#23794d, #63b98a);
-			--code-number: light-dark(#a15c12, #d9a05c);
-			--code-comment: light-dark(#8a8296, #6f6878);
-			--code-func: light-dark(#3565b0, #7ba3e0);
-			--green: oklch(0.68 0.13 155);
-		}
 		/* Lists led by a language's icon: the icon is the marker, with room
 		   between it and the text, which wraps clear of it. */
 		ul.lang-list {
@@ -133,13 +98,6 @@ const topNav = [
 			:root:not([data-theme="dark"]) img[src^="langs/"] {
 				filter: brightness(0.78) saturate(1.5);
 			}
-		}
-		/* A theme pinned in the theme menu; otherwise the system's. */
-		:root[data-theme="light"] {
-			color-scheme: light;
-		}
-		:root[data-theme="dark"] {
-			color-scheme: dark;
 		}
 		* {
 			box-sizing: border-box;
@@ -199,8 +157,6 @@ const topNav = [
 			color: var(--violet);
 			margin: 0.4rem 0 0;
 		}
-		/* The masthead's own nav. Scoped on purpose: a bare `nav` rule also
-		   catches the docs sidebar, which is a column. */
 		/* The landing page's calls to action, above its first paragraph. */
 		.actions {
 			display: flex;
@@ -243,6 +199,8 @@ const topNav = [
 			outline: 2px solid var(--violet);
 			outline-offset: 2px;
 		}
+		/* The masthead's own nav. Scoped on purpose: a bare `nav` rule also
+		   catches the docs sidebar, which is a column. */
 		.masthead nav {
 			margin-left: auto;
 			display: flex;
@@ -264,49 +222,7 @@ const topNav = [
 			.masthead {
 				flex-wrap: wrap;
 			}
-			/* The landing page's calls to action, above its first paragraph. */
-		.actions {
-			display: flex;
-			flex-wrap: wrap;
-			gap: 0.75rem;
-			margin-bottom: 1.5rem;
-		}
-		.button {
-			display: inline-flex;
-			align-items: center;
-			padding: 0.55rem 1.2rem;
-			border: 1px solid var(--edge);
-			border-radius: 999px;
-			background: var(--inset);
-			color: var(--ink);
-			font-weight: 500;
-			font-size: 0.95rem;
-			line-height: 1.3;
-			text-decoration: none;
-			transition:
-				background 0.12s,
-				border-color 0.12s,
-				color 0.12s;
-		}
-		.button:hover {
-			border-color: var(--violet);
-			color: var(--violet-deep);
-		}
-		.button.primary {
-			background: var(--violet);
-			border-color: var(--violet);
-			color: light-dark(#fff, #16121c);
-		}
-		.button.primary:hover {
-			background: var(--violet-deep);
-			border-color: var(--violet-deep);
-			color: light-dark(#fff, #16121c);
-		}
-		.button:focus-visible {
-			outline: 2px solid var(--violet);
-			outline-offset: 2px;
-		}
-		.masthead nav {
+			.masthead nav {
 				margin-left: 0;
 				flex-basis: 100%;
 			}

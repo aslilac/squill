@@ -1,5 +1,8 @@
 ---
 import settingsIcon from "lucide-static/icons/settings.svg?raw";
+import ThemeInit from "../components/ThemeInit.astro";
+import ThemeSwitcher from "../components/ThemeSwitcher.astro";
+import "../styles/theme.css";
 
 const baseHref = import.meta.env.BASE_URL;
 ---
@@ -15,6 +18,7 @@ const baseHref = import.meta.env.BASE_URL;
 			content="Format SQL live in your browser — squill compiled to WebAssembly."
 		/>
 		<link rel="icon" type="image/svg+xml" href="squill-fav.svg" />
+		<ThemeInit />
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link
@@ -117,6 +121,7 @@ const baseHref = import.meta.env.BASE_URL;
 					</label>
 				</div>
 			</div>
+			<ThemeSwitcher />
 		</header>
 
 		<main class="panes">
@@ -152,7 +157,12 @@ const baseHref = import.meta.env.BASE_URL;
 				gleamConfiguration,
 				gleamLanguage,
 			} from "../playground/gleam-monarch.js";
-			import { colors, shikiTheme } from "../playground/theme.js";
+			import {
+				colors,
+				lightColors,
+				shikiTheme,
+				themed,
+			} from "../playground/theme.js";
 			import { loadSquill } from "../playground/wasm.js";
 
 			self.MonacoEnvironment = { getWorker: () => new EditorWorker() };
@@ -161,28 +171,44 @@ const baseHref = import.meta.env.BASE_URL;
 			monaco.languages.setMonarchTokensProvider("gleam", gleamLanguage);
 			monaco.languages.setLanguageConfiguration("gleam", gleamConfiguration);
 
-			monaco.editor.defineTheme("squill-dark", {
-				base: "vs-dark",
-				inherit: true,
-				rules: [
-					{
-						token: "keyword",
-						foreground: colors.keyword.slice(1),
-						fontStyle: "bold",
+			// The editor follows the site's theme: the one pinned in the theme
+			// menu, else the system's.
+			for (const [name, base, palette] of [
+				["squill-dark", "vs-dark", colors],
+				["squill-light", "vs", lightColors],
+			]) {
+				monaco.editor.defineTheme(name, {
+					base,
+					inherit: true,
+					rules: [
+						{
+							token: "keyword",
+							foreground: palette.keyword.slice(1),
+							fontStyle: "bold",
+						},
+						{ token: "string", foreground: palette.string.slice(1) },
+						{ token: "string.sql", foreground: palette.string.slice(1) },
+						{ token: "number", foreground: palette.number.slice(1) },
+						{ token: "comment", foreground: palette.comment.slice(1) },
+						{ token: "predefined", foreground: palette.func.slice(1) },
+						{ token: "type.identifier", foreground: palette.func.slice(1) },
+					],
+					colors: {
+						"editor.background": palette.bg,
+						"editor.foreground": palette.fg,
+						"editor.selectionBackground": palette.selection,
+						"editorLineNumber.foreground": palette.comment,
 					},
-					{ token: "string", foreground: colors.string.slice(1) },
-					{ token: "string.sql", foreground: colors.string.slice(1) },
-					{ token: "number", foreground: colors.number.slice(1) },
-					{ token: "comment", foreground: colors.comment.slice(1) },
-					{ token: "predefined", foreground: colors.func.slice(1) },
-					{ token: "type.identifier", foreground: colors.func.slice(1) },
-				],
-				colors: {
-					"editor.background": colors.bg,
-					"editor.foreground": colors.fg,
-					"editor.selectionBackground": colors.selection,
-					"editorLineNumber.foreground": colors.comment,
-				},
+				});
+			}
+			const prefersDark = matchMedia("(prefers-color-scheme: dark)");
+			const editorTheme = () =>
+				`squill-${document.documentElement.dataset.theme ?? (prefersDark.matches ? "dark" : "light")}`;
+			const followTheme = () => monaco.editor.setTheme(editorTheme());
+			prefersDark.addEventListener("change", followTheme);
+			new MutationObserver(followTheme).observe(document.documentElement, {
+				attributes: true,
+				attributeFilter: ["data-theme"],
 			});
 
 			// ---- page state ----
@@ -220,8 +246,10 @@ const baseHref = import.meta.env.BASE_URL;
 			const editor = monaco.editor.create(document.getElementById("editor"), {
 				value: current.source,
 				language: current.monacoLang,
-				theme: "squill-dark",
+				theme: editorTheme(),
 				minimap: { enabled: false },
+				overviewRulerBorder: false,
+				hideCursorInOverviewRuler: true,
 				fontFamily: "JetBrains Mono, monospace",
 				fontSize: 13,
 				lineHeight: 22,
@@ -257,10 +285,12 @@ const baseHref = import.meta.env.BASE_URL;
 				msBadge.textContent = `${Math.ceil(result.ms)} ms`;
 				if (result.output != null && result.diagnostics.length === 0) {
 					lastGoodOutput = result.output;
-					outputPane.innerHTML = highlighter.codeToHtml(result.output, {
-						lang: current.shikiLang,
-						theme: "squill-dark",
-					});
+					outputPane.innerHTML = themed(
+						highlighter.codeToHtml(result.output, {
+							lang: current.shikiLang,
+							theme: "squill-dark",
+						}),
+					);
 					consoleOut.textContent = "—";
 					statusBadge.textContent = "✓ formatted in ";
 					statusBadge.className = "tidy";
@@ -348,20 +378,13 @@ const baseHref = import.meta.env.BASE_URL;
 		</script>
 
 		<style is:global>
+			/* The site's colors (styles/theme.css), plus the playground's own. */
 			:root {
-				/* Always dark, scrollbars and form controls included. */
-				color-scheme: dark;
-				--bg: #131019;
-				--pane: #1c1824;
-				--pane-deep: #191520;
-				--top: #241f2e;
-				--edge: #322b3e;
-				--fg: #cfc7db;
-				--muted: #8a8296;
-				--violet: oklch(0.72 0.15 293);
+				--top: light-dark(#e9e4f0, #241f2e);
 				--violet-solid: oklch(0.53 0.17 293);
-				--green: oklch(0.68 0.13 155);
-				--red: oklch(0.7 0.15 25);
+				--ok: light-dark(oklch(0.5 0.13 155), oklch(0.68 0.13 155));
+				--bad: light-dark(oklch(0.55 0.18 25), oklch(0.7 0.15 25));
+				--gutter: light-dark(#b5aec0, #4a4453);
 			}
 			* {
 				box-sizing: border-box;
@@ -374,8 +397,8 @@ const baseHref = import.meta.env.BASE_URL;
 				margin: 0;
 				display: flex;
 				flex-direction: column;
-				background: var(--bg);
-				color: var(--fg);
+				background: var(--paper);
+				color: var(--ink);
 				font:
 					14px/1.5 "IBM Plex Sans",
 					system-ui,
@@ -401,7 +424,7 @@ const baseHref = import.meta.env.BASE_URL;
 				font-family: "Spectral", serif;
 				font-weight: 600;
 				font-size: 1.1rem;
-				color: #fff;
+				color: var(--ink);
 			}
 			.sub {
 				font-size: 0.9rem;
@@ -413,7 +436,7 @@ const baseHref = import.meta.env.BASE_URL;
 			.ms {
 				font-family: "JetBrains Mono", monospace;
 				font-size: 0.72rem;
-				color: var(--green);
+				color: var(--ok);
 				min-width: 4.5rem;
 				text-align: right;
 			}
@@ -423,7 +446,7 @@ const baseHref = import.meta.env.BASE_URL;
 				font:
 					500 0.78rem "IBM Plex Sans",
 					sans-serif;
-				color: var(--fg);
+				color: var(--pane-text);
 				background: var(--pane);
 				border: 1px solid var(--edge);
 				border-radius: 7px;
@@ -446,6 +469,12 @@ const baseHref = import.meta.env.BASE_URL;
 				stroke: currentColor;
 			}
 
+			/* The theme menu's button, the toolbar's size. */
+			.toolbar .theme-switcher .theme-button {
+				width: 1.9rem;
+				height: 1.9rem;
+			}
+
 			.settings-wrap {
 				position: relative;
 			}
@@ -465,7 +494,7 @@ const baseHref = import.meta.env.BASE_URL;
 				background: var(--pane);
 				border: 1px solid var(--edge);
 				border-radius: 10px;
-				box-shadow: 0 8px 30px rgb(0 0 0 / 0.45);
+				box-shadow: 0 8px 30px light-dark(rgb(34 29 43 / 0.12), rgb(0 0 0 / 0.45));
 			}
 			.popover label {
 				display: flex;
@@ -561,15 +590,15 @@ const baseHref = import.meta.env.BASE_URL;
 				left: 0;
 				width: 3.2rem;
 				text-align: right;
-				color: #4a4453;
+				color: var(--gutter);
 				font-family: "JetBrains Mono", monospace;
 				user-select: none;
 			}
 			.tidy {
-				color: var(--green);
+				color: var(--ok);
 			}
 			.bad {
-				color: var(--red);
+				color: var(--bad);
 			}
 
 			.console {
