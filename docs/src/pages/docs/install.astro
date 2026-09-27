@@ -20,8 +20,7 @@ const release = `https://github.com/aslilac/squill/releases/download/${version}`
 			architecture, which is what makes it the easy one to drop into CI.
 		</p>
 		<Code lang="sh" code={`mise use -g github:aslilac/squill
-
-squill fmt --check .`} />
+squill --check .`} />
 		<p>
 			Pin a version with <code>github:aslilac/squill@0.3.0</code>. mise verifies
 			GitHub artifact attestations and SLSA provenance on install.
@@ -41,21 +40,21 @@ squill fmt --check .`} />
 					id: "nix-run",
 					label: "nix run",
 					lang: "sh",
-					code: `nix run github:aslilac/squill -- fmt --check .`,
+					code: `nix run github:aslilac/squill -- --check .`,
 				},
 				{
 					id: "nix-shell",
 					label: "nix shell",
 					lang: "sh",
 					code: `nix shell github:aslilac/squill
-squill fmt --check .`,
+squill --check .`,
 				},
 				{
 					id: "nix-profile",
 					label: "nix profile",
 					lang: "sh",
 					code: `nix profile install github:aslilac/squill
-squill --version`,
+squill --check .`,
 				},
 				{
 					id: "nix-flake",
@@ -152,21 +151,6 @@ Expand-Archive "$env:TEMP\\squill.zip" -DestinationPath $dir -Force
 			There&rsquo;s no build for Intel Macs; <a href="docs/install/#cargo"
 				>Cargo</a
 			> builds one from source.
-		</p>
-	</section>
-
-	<section>
-		<h2>Checking, not writing</h2>
-		<p>
-			However you install it, CI usually wants <code>--check</code>: squill
-			writes nothing, prints a diff for anything that would change, and exits 1
-			if there is anything to report.
-		</p>
-		<Code lang="sh" code={`squill fmt --check .`} />
-		<p>
-			Add <code>--strict</code> to also fail when a statement could not be
-			parsed and was passed through verbatim &mdash; useful once you expect
-			squill to understand everything in the tree.
 		</p>
 	</section>
 </Docs>
