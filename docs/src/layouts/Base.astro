@@ -335,9 +335,31 @@ const topNav = [
 			padding: 0.15rem 0.6rem;
 			cursor: pointer;
 		}
+		.tabbar [role="tablist"] {
+			display: inline-flex;
+			gap: 0.35rem;
+		}
+		.tabbar [role="tab"] {
+			transition:
+				background 0.12s,
+				border-color 0.12s,
+				color 0.12s;
+		}
+		/* Hover shows a tab's outline and a faint fill; the selected tab
+		   keeps both, filled a step stronger. */
+		.tabbar [role="tab"]:hover {
+			color: var(--pane-text);
+			border-color: var(--pane-edge);
+			background: color-mix(in oklab, var(--pane-edge) 40%, transparent);
+		}
 		.tabbar [role="tab"][aria-selected="true"] {
 			color: var(--pane-text);
 			border-color: var(--pane-edge);
+			background: color-mix(in oklab, var(--pane-edge) 75%, transparent);
+		}
+		.tabbar [role="tab"]:focus-visible {
+			outline: 2px solid var(--violet);
+			outline-offset: 1px;
 		}
 		.tabbar button:hover {
 			color: var(--pane-text);
