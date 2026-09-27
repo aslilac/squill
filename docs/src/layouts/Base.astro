@@ -3,10 +3,12 @@
 // bar is deliberately short — Docs is a section, not a list of pages.
 // `wide` is the docs layout: the full window, with the sidebar as a rail
 // down the left edge, and the footer left to the content column.
+// `bare` leaves the wordmark out of the top bar, for the landing page,
+// whose masthead already carries it.
 import Footer from "../components/Footer.astro";
 import ThemeSwitcher from "../components/ThemeSwitcher.astro";
 
-const { title, lede, section, wide } = Astro.props;
+const { title, lede, section, wide, bare } = Astro.props;
 const baseHref = import.meta.env.BASE_URL;
 
 const topNav = [
@@ -48,10 +50,14 @@ const topNav = [
 	<body>
 		<main class={wide ? "wide" : undefined}>
 			<div class="site-header">
-				<a class="brand" href=".">
-					<img src="squill.svg" width="32" height="32" alt="" />
-					squill
-				</a>
+				{
+					!bare && (
+						<a class="brand" href=".">
+							<img src="squill.svg" width="32" height="32" alt="" />
+							squill
+						</a>
+					)
+				}
 				<nav class="site-nav">
 					{
 						topNav.map((item) => (
