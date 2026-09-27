@@ -44,9 +44,11 @@ import Recipe from "../../../components/Recipe.astro";
 				With sqlx&rsquo;s offline mode, the <code>.sqlx</code> cache is keyed
 				by each query&rsquo;s exact text: run <code>cargo sqlx prepare</code>{" "}
 				after the first format. And sqlx checksums every migration it has
-				applied, so a reformatted old migration stops the app from starting
-				&mdash; <a href="docs/frozen/">freeze</a> <code>migrations/</code>{" "}
-				instead of formatting it wholesale.
+				applied, so a reformatted old migration stops the app from starting.
+				That&rsquo;s what the config&rsquo;s <code>frozen</code> line is
+				for: squill formats a migration while it&rsquo;s new and{" "}
+				<a href="docs/frozen/">never touches it again</a> once it has
+				shipped.
 			</p>
 		</div>
 	</section>

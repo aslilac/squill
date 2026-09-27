@@ -1,3 +1,7 @@
+# sqlx checksums every migration it has applied: format new ones, never
+# rewrite one that has shipped.
+frozen = ["migrations/**"]
+
 [[embedded]]
 include = ["**/*.rs"]
 grammar = "rust"
