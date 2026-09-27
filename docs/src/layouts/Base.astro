@@ -4,6 +4,7 @@
 // `wide` is the docs layout: the full window, with the sidebar as a rail
 // down the left edge, and the footer left to the content column.
 import Footer from "../components/Footer.astro";
+import ThemeSwitcher from "../components/ThemeSwitcher.astro";
 
 const { title, lede, section, wide } = Astro.props;
 const baseHref = import.meta.env.BASE_URL;
@@ -26,6 +27,17 @@ const topNav = [
 				"A robust, friendly, and flexible SQL code formatter; even for queries embedded in your application code."}
 		/>
 		<link rel="icon" type="image/svg+xml" href="squill-fav.svg" />
+		<script is:inline>
+			// A pinned theme applies before first paint: no flash of the
+			// system's scheme. ThemeSwitcher keeps it up to date after.
+			try {
+				const theme = localStorage.getItem("squill.theme");
+				if (theme === "light" || theme === "dark") {
+					document.documentElement.dataset.theme = theme;
+					document.documentElement.dataset.themeChoice = theme;
+				}
+			} catch {}
+		</script>
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link
@@ -52,6 +64,7 @@ const topNav = [
 						))
 					}
 					<a href="https://github.com/aslilac/squill">Source</a>
+					<ThemeSwitcher />
 				</nav>
 			</div>
 
@@ -78,6 +91,13 @@ const topNav = [
 			--pane-edge: #322b3e;
 			--pane-text: #cfc7db;
 			--green: oklch(0.68 0.13 155);
+		}
+		/* A theme pinned in the theme menu; otherwise the system's. */
+		:root[data-theme="light"] {
+			color-scheme: light;
+		}
+		:root[data-theme="dark"] {
+			color-scheme: dark;
 		}
 		* {
 			box-sizing: border-box;
@@ -466,6 +486,7 @@ const topNav = [
 		}
 		.site-nav {
 			display: flex;
+			align-items: center;
 			flex-wrap: wrap;
 			gap: 0.25rem 1rem;
 			margin-left: auto;
@@ -529,6 +550,8 @@ const topNav = [
 			top: 0;
 			max-height: 100vh;
 			overflow-y: auto;
+			scrollbar-width: thin;
+			scrollbar-color: var(--edge) transparent;
 			padding: 2rem 1rem 2rem 0.75rem;
 		}
 		.docs-shell > article {

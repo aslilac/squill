@@ -1,0 +1,240 @@
+---
+// The top bar's theme menu: follow the system, or pin light or dark.
+// The choice lives in localStorage under `squill.theme` and becomes
+// `data-theme` on <html>, which sets `color-scheme` (every color is a
+// `light-dark()`). Base.astro applies a saved choice before first paint.
+import checkIcon from "lucide-static/icons/check.svg?raw";
+import monitorIcon from "lucide-static/icons/monitor.svg?raw";
+import moonIcon from "lucide-static/icons/moon.svg?raw";
+import sunIcon from "lucide-static/icons/sun.svg?raw";
+
+const choices = [
+	{ value: "system", label: "System", icon: monitorIcon },
+	{ value: "light", label: "Light", icon: sunIcon },
+	{ value: "dark", label: "Dark", icon: moonIcon },
+];
+---
+
+<div class="theme-switcher">
+	<button
+		class="theme-button"
+		type="button"
+		aria-haspopup="menu"
+		aria-expanded="false"
+		aria-controls="theme-menu"
+		aria-label="Theme"
+		title="Theme"
+	>
+		{
+			choices.map((choice) => (
+				<span class="theme-icon" data-for={choice.value} set:html={choice.icon} />
+			))
+		}
+	</button>
+	<ul class="theme-menu" id="theme-menu" role="menu" hidden>
+		{
+			choices.map((choice) => (
+				<li role="none">
+					<button
+						type="button"
+						role="menuitemradio"
+						aria-checked="false"
+						data-theme-choice={choice.value}
+					>
+						<span class="theme-item-icon" set:html={choice.icon} />
+						{choice.label}
+						<span class="theme-check" set:html={checkIcon} />
+					</button>
+				</li>
+			))
+		}
+	</ul>
+</div>
+
+<script>
+	const KEY = "squill.theme";
+	const root = document.documentElement;
+
+	function saved(): string {
+		try {
+			const value = localStorage.getItem(KEY);
+			return value === "light" || value === "dark" ? value : "system";
+		} catch {
+			return "system";
+		}
+	}
+
+	function apply(choice: string) {
+		if (choice === "system") {
+			delete root.dataset.theme;
+		} else {
+			root.dataset.theme = choice;
+		}
+		for (const item of document.querySelectorAll<HTMLElement>(
+			"[data-theme-choice]",
+		)) {
+			item.setAttribute(
+				"aria-checked",
+				String(item.dataset.themeChoice === choice),
+			);
+		}
+		root.dataset.themeChoice = choice;
+	}
+
+	for (const switcher of document.querySelectorAll<HTMLElement>(
+		".theme-switcher",
+	)) {
+		const button = switcher.querySelector<HTMLButtonElement>(".theme-button")!;
+		const menu = switcher.querySelector<HTMLElement>(".theme-menu")!;
+		const items = [
+			...menu.querySelectorAll<HTMLButtonElement>("[data-theme-choice]"),
+		];
+
+		const open = () => {
+			menu.hidden = false;
+			button.setAttribute("aria-expanded", "true");
+			const current = items.find(
+				(item) => item.getAttribute("aria-checked") === "true",
+			);
+			(current ?? items[0]).focus();
+		};
+		const close = (refocus: boolean) => {
+			menu.hidden = true;
+			button.setAttribute("aria-expanded", "false");
+			if (refocus) button.focus();
+		};
+
+		button.addEventListener("click", () =>
+			menu.hidden ? open() : close(false),
+		);
+		for (const item of items) {
+			item.addEventListener("click", () => {
+				const choice = item.dataset.themeChoice!;
+				try {
+					if (choice === "system") localStorage.removeItem(KEY);
+					else localStorage.setItem(KEY, choice);
+				} catch {
+					// Storage blocked: the choice lasts for this page.
+				}
+				apply(choice);
+				close(true);
+			});
+		}
+		menu.addEventListener("keydown", (event) => {
+			const at = items.indexOf(document.activeElement as HTMLButtonElement);
+			if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+				event.preventDefault();
+				const step = event.key === "ArrowDown" ? 1 : items.length - 1;
+				items[(at + step) % items.length].focus();
+			} else if (event.key === "Home") {
+				event.preventDefault();
+				items[0].focus();
+			} else if (event.key === "End") {
+				event.preventDefault();
+				items[items.length - 1].focus();
+			} else if (event.key === "Tab") {
+				close(false);
+			}
+		});
+		switcher.addEventListener("keydown", (event) => {
+			if (event.key === "Escape" && !menu.hidden) close(true);
+		});
+		document.addEventListener("click", (event) => {
+			if (!menu.hidden && !switcher.contains(event.target as Node)) {
+				close(false);
+			}
+		});
+	}
+
+	apply(saved());
+</script>
+
+<style>
+	.theme-switcher {
+		position: relative;
+		display: inline-flex;
+	}
+	.theme-button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2rem;
+		height: 2rem;
+		padding: 0;
+		border: 1px solid var(--edge);
+		border-radius: 6px;
+		background: transparent;
+		color: var(--muted);
+		cursor: pointer;
+	}
+	.theme-button:hover,
+	.theme-button[aria-expanded="true"] {
+		color: var(--violet);
+		background: var(--inset);
+	}
+	.theme-button :global(svg),
+	.theme-menu :global(svg) {
+		width: 16px;
+		height: 16px;
+		display: block;
+	}
+	/* The button shows the current choice's icon. */
+	.theme-icon {
+		display: none;
+	}
+	:global(html:not([data-theme-choice])) .theme-icon[data-for="system"],
+	:global(html[data-theme-choice="system"]) .theme-icon[data-for="system"],
+	:global(html[data-theme-choice="light"]) .theme-icon[data-for="light"],
+	:global(html[data-theme-choice="dark"]) .theme-icon[data-for="dark"] {
+		display: block;
+	}
+	.theme-menu {
+		position: absolute;
+		top: calc(100% + 0.4rem);
+		right: 0;
+		z-index: 10;
+		min-width: 9rem;
+		margin: 0;
+		padding: 0.3rem;
+		list-style: none;
+		background: var(--paper);
+		border: 1px solid var(--edge);
+		border-radius: 8px;
+		box-shadow: 0 6px 20px light-dark(rgb(34 29 43 / 0.12), rgb(0 0 0 / 0.45));
+	}
+	.theme-menu[hidden] {
+		display: none;
+	}
+	.theme-menu button {
+		display: flex;
+		align-items: center;
+		gap: 0.55rem;
+		width: 100%;
+		padding: 0.35rem 0.5rem;
+		border: none;
+		border-radius: 5px;
+		background: transparent;
+		color: var(--ink);
+		font: inherit;
+		font-size: 0.88rem;
+		text-align: left;
+		cursor: pointer;
+	}
+	.theme-menu button:hover,
+	.theme-menu button:focus-visible {
+		background: var(--inset);
+		color: var(--violet-deep);
+		outline: none;
+	}
+	.theme-item-icon {
+		color: var(--muted);
+	}
+	.theme-check {
+		margin-left: auto;
+		color: var(--violet);
+		visibility: hidden;
+	}
+	.theme-menu button[aria-checked="true"] .theme-check {
+		visibility: visible;
+	}
+</style>
