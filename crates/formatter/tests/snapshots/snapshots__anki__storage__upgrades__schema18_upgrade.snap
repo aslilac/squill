@@ -8,7 +8,7 @@ create table graves (
 	type integer not null,
 	usn integer not null,
 	primary key (oid, type)
-) without ROWID;
+) without rowid;
 insert or ignore into graves (oid, type, usn)
 select oid, type, usn
 from graves_old;

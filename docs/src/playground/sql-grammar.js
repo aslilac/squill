@@ -38,7 +38,7 @@ const keywords = [
 	"replace", "restrict", "return", "returning", "returns", "right",
 	"rollback", "row", "savepoint", "security", "select", "sequence",
 	"session_user", "set", "setof", "share", "similar", "skip", "some",
-	"stable", "start", "statement", "stored", "symmetric", "system_user",
+	"stable", "start", "statement", "stored", "strict", "symmetric", "system_user",
 	"table", "tablesample", "temporary", "then", "to", "trailing",
 	"transaction", "trigger", "true", "truncate", "union", "unique", "unlogged",
 	"update", "user", "using", "valid", "values", "variadic", "verbose", "view",
@@ -58,6 +58,7 @@ const phrases = [
 	"key\\s+share",
 	"(?:create|alter|drop)\\s+type",
 	"add\\s+value",
+	"without\\s+rowid",
 ];
 
 const words = (list) => list.join("|");

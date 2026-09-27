@@ -37,6 +37,11 @@ const PL_KEYWORDS: &[&str] = &[
 	"while",
 ];
 
+/// SQLite's table options (`strict`, `without rowid`): keywords where
+/// squill emits them as keywords, though not in SQLite's keyword table,
+/// whose parser reads them as plain words.
+const SQLITE_TABLE_OPTIONS: &[&str] = &["rowid", "strict"];
+
 /// Does this bare word change case under the keyword-case option?
 fn cases_as_keyword(word: &str, dialect: parser::Dialect) -> bool {
 	let lower = word.to_ascii_lowercase();
@@ -45,7 +50,10 @@ fn cases_as_keyword(word: &str, dialect: parser::Dialect) -> bool {
 			pg_keyword_category(&lower).is_some()
 				|| PL_KEYWORDS.contains(&lower.as_str())
 		}
-		parser::Dialect::Sqlite => is_sqlite_keyword(&lower),
+		parser::Dialect::Sqlite => {
+			is_sqlite_keyword(&lower)
+				|| SQLITE_TABLE_OPTIONS.contains(&lower.as_str())
+		}
 	}
 }
 use crate::Options;

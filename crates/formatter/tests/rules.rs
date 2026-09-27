@@ -768,3 +768,27 @@ fn insert_and_using_columns_are_quoted_like_columns() {
 		 select * from \"t\" join \"u\" using (\"a\");\n"
 	);
 }
+
+#[test]
+fn sqlite_table_options_follow_the_list() {
+	// `strict` and `without rowid` are keywords to squill, though SQLite's
+	// keyword table lacks them, and stay on the list's closing line.
+	let options = Options {
+		dialect: Dialect::Sqlite,
+		keyword_case: formatter::KeywordCase::Upper,
+		..Options::default()
+	};
+	let tokens = lex_with(
+		"create table t (a int primary key) strict, without rowid;\nselect rowid, strict from t;",
+		Dialect::Sqlite,
+		options.lex_options(),
+	);
+	let parse = parser::parser::parse(&tokens, Dialect::Sqlite);
+	assert_eq!(
+		format_cst(&parse.cst, &options).text,
+		"CREATE TABLE t (\n\
+		 \ta int PRIMARY KEY\n\
+		 ) STRICT, WITHOUT ROWID;\n\
+		 SELECT rowid, strict FROM t;\n"
+	);
+}

@@ -429,8 +429,6 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 				const button = item.firstElementChild;
 				button.firstElementChild.textContent = language.label;
 				button.dataset.host = language.host;
-				const count = choicesFor(language).length - 1;
-				if (count > 0) button.title = `${count} framework${count === 1 ? "" : "s"}`;
 				button.addEventListener("pointerenter", () => {
 					hovered = language.host;
 					aimAt(language);

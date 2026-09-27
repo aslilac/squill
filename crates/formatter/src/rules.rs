@@ -147,6 +147,7 @@ pub(crate) fn lower_statement(
 					.last()
 					.map_or(0, |token| u32::from(token.text_range().end())),
 				force_first_element_list: false,
+				flat_commas: false,
 			};
 			let mut docs = Vec::new();
 			match stmt.kind() {
@@ -194,6 +195,10 @@ struct Lowerer {
 	/// The next `ElementList` renders always-broken (CREATE TABLE column
 	/// lists, CREATE TYPE ... AS ENUM variants).
 	force_first_element_list: bool,
+	/// A statement's top-level commas join with a plain space: SQLite's
+	/// table options after a CREATE TABLE list (`) strict, without
+	/// rowid`), which the list's forced break would otherwise split.
+	flat_commas: bool,
 }
 
 impl Lowerer {
@@ -587,6 +592,7 @@ impl Lowerer {
 					if !words.windows(2).any(|pair| pair == ["partition", "of"]) =>
 				{
 					self.force_first_element_list = true;
+					self.flat_commas = true;
 				}
 				Some("type") if words.iter().any(|w| w == "enum") => {
 					// CREATE TYPE ... AS ENUM variants always break.
@@ -642,6 +648,7 @@ impl Lowerer {
 			self.dml_flow_with(docs, node, break_before);
 		}
 		self.force_first_element_list = false;
+		self.flat_commas = false;
 	}
 
 	/// `ALTER TABLE name` head, then each action on its own (indented)
@@ -834,7 +841,7 @@ impl Lowerer {
 				}
 				SyntaxElement::Token(token) if token.kind() == SyntaxKind::Comma => {
 					self.push(docs, text(","));
-					pending_sls = true;
+					pending_sls = !self.flat_commas;
 				}
 				SyntaxElement::Token(token) => {
 					// Inline parens (INSERT column lists): tight inside.
