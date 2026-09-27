@@ -1,5 +1,5 @@
 // squill itself, at build time: the plain-SQL wasm module the browser
-// loads (public/wasm/sql.wasm, from scripts/build-wasm.sh), run in Node,
+// loads (public/wasm/squill.wasm, from scripts/build-wasm.sh), run in Node,
 // so a page's examples are always what squill does today.
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -11,7 +11,7 @@ let loading;
 // playground sends them). An example squill can't format cleanly fails
 // the build rather than showing something squill wouldn't print.
 export async function formatSql(source, options = {}) {
-	loading ??= readFile(join(process.cwd(), "public/wasm/sql.wasm"))
+	loading ??= readFile(join(process.cwd(), "public/wasm/squill.wasm"))
 		.then((bytes) => WebAssembly.compile(bytes))
 		.then(instantiate);
 	const format = await loading;

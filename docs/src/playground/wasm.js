@@ -4,13 +4,16 @@
 //
 // There's a module per grammar (scripts/build-wasm.sh), each carrying
 // the whole formatter, so a page downloads only the grammar it formats:
-// sql.wasm for plain SQL, rust.wasm for Rust, and so on.
+// squill.wasm for plain SQL, squill-rust.wasm for Rust, and so on.
 
 const loading = new Map();
 
 // The module that formats `host`: TypeScript's grammar crate carries TSX
 // too.
-const moduleFor = (host) => (host === "tsx" ? "typescript" : host);
+const moduleFor = (host) =>
+	host === "sql"
+		? "squill"
+		: `squill-${host === "tsx" ? "typescript" : host}`;
 
 // Load `host`'s module, once per page; resolves to `format(request)`,
 // which returns the parsed response plus how long formatting took (`ms`).

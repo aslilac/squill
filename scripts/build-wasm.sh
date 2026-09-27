@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Rebuild the playground's wasm modules and drop them into public/wasm/:
-# sql.wasm for plain SQL, and one per built-in grammar, so a page loads
+# squill.wasm for plain SQL, and squill-<grammar>.wasm for each built-in
+# grammar, so a page loads
 # only the grammar it formats.
 # Needs: rustup target add wasm32-wasip1, and wasi-sdk (for the
 # tree-sitter C code) at $WASI_SDK (default ~/.local/wasi-sdk):
@@ -24,6 +25,8 @@ for module in sql rust go python javascript typescript gleam \
 	[ "$module" = sql ] || features=(--features "$module")
 	cargo build --profile wasm-release --target wasm32-wasip1 -p playground \
 		--no-default-features "${features[@]}"
-	cp target/wasm32-wasip1/wasm-release/playground.wasm "$out/$module.wasm"
+	name=squill
+	[ "$module" = sql ] || name="squill-$module"
+	cp target/wasm32-wasip1/wasm-release/playground.wasm "$out/$name.wasm"
 done
 ls -la "$out"
