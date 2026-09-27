@@ -126,7 +126,9 @@ grammar = "rust"`} />
 			C++ and C# raw strings, Java text blocks, Kotlin raw strings, and Swift
 			multi-line strings. Those
 			already support a vertical layout, so squill puts the quotes on their own
-			lines and formats one clause per line.
+			lines and formats one clause per line &mdash; a raw string written on
+			one line (<code>R"(&hellip;)"</code>, <code>"""&hellip;"""</code>)
+			included.
 		</p>
 		<p>
 			A plain Rust or Go string joins them once it already spans lines &mdash;
@@ -247,6 +249,52 @@ query = ".config/squill/rust.scm"`} />
 				>.
 			</li>
 		</ol>
+		<h3 id="properties">What a string allows</h3>
+		<p>
+			For most grammars &mdash; C++, C#, Java, Kotlin, Swift, and every
+			grammar you bring &mdash; squill captures a string&rsquo;s text as
+			written, and knows nothing about its syntax. Unless the query says
+			otherwise, it assumes the worst: a string is formatted only when it
+			already spans lines (proof the syntax takes line breaks), and never
+			when it holds a backslash (which might be an escape). A pattern can
+			promise more with tree-sitter&rsquo;s <code>#set!</code>:
+		</p>
+		<ul>
+			<li>
+				<code>(#set! squill.raw)</code>: the string takes no escapes, so a
+				backslash is just a backslash &mdash; Lua&rsquo;s{" "}
+				<code>[[&hellip;]]</code>, Ruby&rsquo;s <code>&lt;&lt;~'SQL'</code>,
+				Elixir&rsquo;s <code>~S</code>.
+			</li>
+			<li>
+				<code>(#set! squill.multiline)</code>: the string takes raw line
+				breaks, so one written on a single line can be given the
+				multi-line layout. Promise it for a syntax meant for it, like
+				Lua&rsquo;s long strings, and not for a language&rsquo;s everyday
+				string, or every short query becomes three lines.
+			</li>
+		</ul>
+		<Code lang="query" file=".config/squill/lua.scm" code={`((function_call
+   name: (method_index_expression method: (identifier) @_m)
+   arguments: (arguments . (string start: _ @_open content: (string_content) @sql)))
+ (#eq? @_m "exec")
+ (#any-of? @_open "[[" "[=[" "[==[")
+ (#set! squill.raw)
+ (#set! squill.multiline))`} />
+		<p>
+			The built-in queries make their promises the same way; see them{" "}
+			<a
+				href="https://github.com/aslilac/squill/blob/trunk/crates/embed/src/lib.rs"
+				>in squill&rsquo;s source</a
+			>. squill checks what it can. Under <code>squill.raw</code>, formatting
+			must leave whatever follows each backslash exactly as it was, so a
+			line continuation can&rsquo;t be moved. A false{" "}
+			<code>squill.multiline</code> is caught by the re-parse only when the
+			grammar rejects a line break in the string, and not every grammar
+			does: Java&rsquo;s, Kotlin&rsquo;s, and Swift&rsquo;s accept one in
+			a <code>"&hellip;"</code> string that the compiler wouldn&rsquo;t. Make
+			that promise only for strings that keep it.
+		</p>
 		<h3>Supported predicates</h3>
 		<p>
 			<code>#eq?</code>, <code>#not-eq?</code>, and <code>#any-of?</code>{" "}
@@ -282,13 +330,11 @@ dialect = "sqlite"`} />
    arguments: (arguments . (string) @sql))
  (#eq? @_m "exec"))`} />
 		<p>
-			squill knows nothing about a loaded grammar&rsquo;s string syntax, so it
-			takes the conservative road. Capture either the string&rsquo;s content
-			node or the whole literal (squill takes the text between its opening
-			and closing delimiter tokens); it is rewritten only when it already
-			spans lines &mdash; proof the syntax takes raw newlines &mdash; and
-			never when it holds a backslash that might be an escape. The re-parse
-			check catches the rest.
+			Capture either the string&rsquo;s content node or the whole literal
+			(squill takes the text between its opening and closing delimiter
+			tokens). squill knows nothing about a loaded grammar&rsquo;s string
+			syntax until the query <a href="docs/embedded/#properties">says what
+			its strings allow</a>.
 		</p>
 		<h3 id="urls">From a URL</h3>
 		<p>
@@ -322,7 +368,9 @@ query = ".config/squill/lua.scm"`} />
 			<code>indent</code> or <code>indent-width</code> in the{" "}
 			<a href="docs/configuration/#rules">rule</a> (or at the top level) to
 			choose deliberately instead. Lines inside a SQL string that itself spans
-			lines are data, and are never re-indented.
+			lines are data, and are never re-indented. A closing delimiter at the
+			margin stays there, since some syntaxes need it there: a bare Ruby
+			heredoc&rsquo;s terminator only ends it at the start of a line.
 		</p>
 		<p>
 			<code>max-width</code> counts from the left edge of the file, not from

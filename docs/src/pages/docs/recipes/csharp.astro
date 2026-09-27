@@ -11,18 +11,19 @@ import Recipe from "../../../components/Recipe.astro";
 	<section>
 		<h2>Which strings squill rewrites</h2>
 		<p>
-			Raw string literals (<code>"""</code>, C# 11 and later) that already
-			span lines: the quotes sit on their own lines, and squill lays the
-			query out between them at the closing quotes&rsquo; indent, which is
-			where C# measures a raw string&rsquo;s indentation from.
+			Raw string literals (<code>"""</code>, C# 11 and later): the quotes sit
+			on their own lines, and squill lays the query out between them at the
+			closing quotes&rsquo; indent, which is where C# measures a raw
+			string&rsquo;s indentation from. A raw string written on one line
+			gets the same layout.
 		</p>
 		<p>
 			Everything else is left exactly as written: plain strings, verbatim
-			strings (<code>@"&hellip;"</code>), and raw strings on a single line.
+			strings (<code>@"&hellip;"</code>).
 			Interpolated strings (<code>$"&hellip;"</code>,{" "}
 			<code>$"""&hellip;"""</code>) never are &mdash; SQL with holes in it
 			isn&rsquo;t SQL squill can parse. To have squill format a query, write
-			it as a multi-line raw string.
+			it as a raw string.
 		</p>
 	</section>
 

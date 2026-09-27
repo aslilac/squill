@@ -7,8 +7,10 @@
    (arguments (string . (quoted_content) @sql .)))
  (#any-of? @_fn "execute" "prepare"))
 
+; ~S takes no escapes.
 ((call
    target: (dot right: (identifier) @_fn)
    (arguments (sigil (sigil_name) @_sigil . (quoted_content) @sql .)))
  (#eq? @_sigil "S")
- (#any-of? @_fn "execute" "prepare"))
+ (#any-of? @_fn "execute" "prepare")
+ (#set! squill.raw))

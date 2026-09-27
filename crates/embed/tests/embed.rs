@@ -635,10 +635,11 @@ fn csharp_raw_strings() {
 fn cpp_raw_strings() {
 	let source = "void f() {\n  sqlite3_prepare_v2(db, R\"sql(\n    SELECT a FROM t LIMIT 1\n  )sql\", -1, &s, 0);\n  txn.exec(R\"(select   1)\");\n}\n";
 	let formatted = format_host(Host::Cpp, CPP_SQL_QUERY, source);
-	// sqlite3_* calls are SQLite; single-line raw strings stay put.
+	// sqlite3_* calls are SQLite. The query promises raw strings take
+	// line breaks, so a one-line one gets the multi-line layout too.
 	assert_eq!(
 		formatted.text,
-		"void f() {\n  sqlite3_prepare_v2(db, R\"sql(\n  select a\n  from t\n  limit 1\n  )sql\", -1, &s, 0);\n  txn.exec(R\"(select   1)\");\n}\n"
+		"void f() {\n  sqlite3_prepare_v2(db, R\"sql(\n  select a\n  from t\n  limit 1\n  )sql\", -1, &s, 0);\n  txn.exec(R\"(\n  select 1\n  )\");\n}\n"
 	);
 }
 
@@ -915,4 +916,111 @@ fn dialect_captures() {
 		messages[1].starts_with("embedded SQL did not parse as Postgres ("),
 		"{messages:?}"
 	);
+}
+
+#[test]
+fn one_line_raw_strings_become_multi_line() {
+	// C#'s `"""` must open and close on lines of their own once the
+	// content spans lines, which is squill's layout.
+	let source = "class M {\n    void Up(DbCommand cmd) {\n        cmd.CommandText = \"\"\"select   1 from t\"\"\";\n    }\n}\n";
+	let formatted = format_host(Host::CSharp, CSHARP_SQL_QUERY, source);
+	assert!(
+		formatted.text.contains(
+			"cmd.CommandText = \"\"\"\n        select 1\n        from t\n        \"\"\";"
+		),
+		"{}",
+		formatted.text
+	);
+	assert!(formatted.warnings.is_empty(), "{:?}", formatted.warnings);
+
+	let source = "fun m() {\n    db.query(\"\"\"select   1 from t\"\"\")\n}\n";
+	let formatted = format_host(Host::Kotlin, KOTLIN_SQL_QUERY, source);
+	assert!(
+		formatted
+			.text
+			.contains("db.query(\"\"\"\n    select 1\n    from t\n    \"\"\")"),
+		"{}",
+		formatted.text
+	);
+}
+
+#[test]
+fn unpromised_strings_are_left_alone() {
+	// Without the query's `#set!` promises, squill assumes the worst: a
+	// one-line string may not take line breaks, and a backslash may be
+	// an escape.
+	let query =
+		CPP_SQL_QUERY.replace(" (#set! squill.raw) (#set! squill.multiline)", "");
+	assert!(!query.contains("#set!"));
+	let source = "void f() {\n  txn.exec(R\"(select   1)\");\n  txn.exec(R\"(\n    SELECT '\\d'\n  )\");\n}\n";
+	let formatted = format_host(Host::Cpp, &query, source);
+	assert_eq!(formatted.text, source);
+	assert_eq!(formatted.warnings.len(), 1, "{:?}", formatted.warnings);
+	assert!(formatted.warnings[0].message.contains("squill.raw"));
+	// Promised raw, the backslash is just a character.
+	let formatted = format_host(Host::Cpp, CPP_SQL_QUERY, source);
+	assert!(formatted.text.contains("  select '\\d'\n"), "{}", formatted.text);
+	assert!(formatted.warnings.is_empty(), "{:?}", formatted.warnings);
+}
+
+#[test]
+fn unknown_properties_are_refused() {
+	let query = CPP_SQL_QUERY.replace("squill.multiline", "squill.multi-line");
+	let result = format_embedded(
+		"",
+		&Host::Cpp.into(),
+		&query,
+		&options(),
+		Indent::FROM_HOST,
+	);
+	let Err(error) = result else {
+		panic!("a misspelled property should be refused");
+	};
+	assert!(error.to_string().contains("squill.multi-line"), "{error}");
+}
+
+#[test]
+fn a_closing_delimiter_at_the_margin_stays_there() {
+	// Some syntaxes need it there (a bare Ruby heredoc's terminator), so
+	// a string closed at the margin is closed at the margin again.
+	let source = "void f() {\n  txn.exec(R\"(\n    SELECT a FROM t\n)\");\n}\n";
+	let formatted = format_host(Host::Cpp, CPP_SQL_QUERY, source);
+	assert_eq!(
+		formatted.text,
+		"void f() {\n  txn.exec(R\"(\n  select a\n  from t\n)\");\n}\n"
+	);
+}
+
+#[test]
+fn a_broken_multiline_promise_fails_the_reparse() {
+	// A query that promises a one-line `"..."` takes line breaks is
+	// wrong, and C++'s grammar rejects the result, so the re-parse
+	// catches it; the raw string beside it still formats. (Not every
+	// grammar is that strict: Java's, Kotlin's, and Swift's all accept a
+	// line break in a one-line string.)
+	let query = r#"
+((call_expression
+   function: (identifier) @_f
+   arguments: (argument_list (string_literal (string_content) @sql)))
+ (#eq? @_f "run")
+ (#set! squill.multiline))
+
+((call_expression
+   function: (field_expression field: (field_identifier) @_f)
+   arguments: (argument_list (raw_string_literal (raw_string_content) @sql)))
+ (#eq? @_f "exec")
+ (#set! squill.raw)
+ (#set! squill.multiline))
+"#;
+	let source =
+		"void f() {\n  run(\"select   1\");\n  txn.exec(R\"(select   2)\");\n}\n";
+	let formatted = format_host(Host::Cpp, query, source);
+	assert!(formatted.text.contains("run(\"select   1\")"), "{}", formatted.text);
+	assert!(
+		formatted.text.contains("txn.exec(R\"(\n  select 2\n  )\")"),
+		"{}",
+		formatted.text
+	);
+	assert_eq!(formatted.warnings.len(), 1, "{:?}", formatted.warnings);
+	assert!(formatted.warnings[0].message.contains("parses"));
 }

@@ -34,7 +34,9 @@ import Recipe from "../../../components/Recipe.astro";
 			it, so those strings never match; pass values as parameters instead.
 			The same goes for sigils: only <code>~S</code>, which never
 			interpolates, is taken. <code>~S"""</code> is the natural choice for a
-			migration, since backslashes in it are literal.
+			migration, since backslashes in it are literal; the queries{" "}
+			<a href="docs/embedded/#properties">tell squill so</a>, and it formats
+			one holding a backslash.
 		</p>
 	</section>
 

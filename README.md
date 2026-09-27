@@ -139,6 +139,8 @@ grammar = ".config/squill/tree-sitter-lua.wasm"
 query = ".config/squill/lua.scm"
 ```
 
+squill knows nothing about a loaded grammar's strings, so unless the query says otherwise, it formats only a string that already spans lines, and never one holding a backslash. A pattern promises more with `#set!`: `(#set! squill.raw)` for a string that takes no escapes, `(#set! squill.multiline)` for one whose syntax takes raw line breaks, so it can be formatted from one line onto several. The built-in C++, C#, Java, Kotlin, and Swift queries say what their strings allow the same way.
+
 `grammar` can also be an `https` URL to the `.wasm`. The first download records its SHA-256 in a `squill.lock` beside the config (commit it), and every later download must match; downloads are cached by hash, and `squill fmt --locked` (for CI) refuses to record a URL the lockfile doesn't have.
 
 Only multiline string syntaxes are reformatted — raw strings, backticks, triple quotes, templates, text blocks, Gleam strings — always into a vertical block: quotes on their own lines, one clause per line. A plain Rust or Go string that already spans lines is rewritten as a raw string; a single-line one stays byte-identical, and so do Python f-strings and interpolated templates (SQL with holes is never touched). Every rewrite is checked by re-parsing the host file, and a string squill declines to touch is reported as a diagnostic. Embedded SQL indents the way its host file does — the same character and the same step, unless `indent` or `indent-width` is configured — and `max-width` counts from the file's left edge, not from where the SQL starts.

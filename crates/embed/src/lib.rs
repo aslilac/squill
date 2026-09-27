@@ -14,9 +14,12 @@
 //!   re-encoded by a hand-written codec per host.
 //! - **Content** (C++, C#, Java, Kotlin, Swift, and every wasm grammar): the
 //!   capture is the string's *content* node, between the delimiters.
-//!   It is taken verbatim, formatted only when it already spans lines
-//!   (proof the syntax allows raw newlines), and never when it holds a
-//!   backslash the grammar might treat as an escape.
+//!   It is taken verbatim. What the string syntax allows, its query
+//!   pattern promises with `#set!` properties, the built-in queries
+//!   included: `squill.multiline` (raw line breaks, so a one-line string
+//!   can be formatted onto several; unpromised, only a string that
+//!   already spans lines is formatted) and `squill.raw` (no backslash
+//!   escapes; unpromised, a string holding a backslash is left alone).
 //!
 //! Either way, every rewrite is checked by re-parsing the host file:
 //! an edit that adds a syntax error, or whose string no longer comes
@@ -249,18 +252,18 @@ impl Host {
 			Host::TypeScript | Host::Tsx => Codec::Literal,
 			#[cfg(feature = "gleam")]
 			Host::Gleam => Codec::Literal,
-			// Raw strings: a backslash is just a backslash.
+			// What their strings allow, their default queries say, with
+			// the same `#set!` properties any query can use.
 			#[cfg(feature = "cpp")]
-			Host::Cpp => Codec::Content { backslash_escapes: false },
+			Host::Cpp => Codec::Content,
 			#[cfg(feature = "csharp")]
-			Host::CSharp => Codec::Content { backslash_escapes: false },
+			Host::CSharp => Codec::Content,
 			#[cfg(feature = "kotlin")]
-			Host::Kotlin => Codec::Content { backslash_escapes: false },
+			Host::Kotlin => Codec::Content,
 			#[cfg(feature = "swift")]
-			Host::Swift => Codec::Content { backslash_escapes: true },
-			// Text blocks process escapes.
+			Host::Swift => Codec::Content,
 			#[cfg(feature = "java")]
-			Host::Java => Codec::Content { backslash_escapes: true },
+			Host::Java => Codec::Content,
 		}
 	}
 }
@@ -282,9 +285,27 @@ enum Codec {
 	/// The capture is a whole literal; decoded by the host's codec.
 	Literal,
 	/// The capture is the content between the delimiters, verbatim.
-	/// When the grammar may treat backslashes as escapes, a snippet
-	/// holding one is left alone.
-	Content { backslash_escapes: bool },
+	/// What the string syntax allows comes from the query's pattern
+	/// ([`StringSyntax`]).
+	Content,
+}
+
+/// What a content capture's string syntax allows, as its query pattern
+/// promises with `#set!` properties. Unpromised, squill assumes the
+/// worst: backslashes may be escapes, and line breaks may be illegal.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct StringSyntax {
+	/// `(#set! squill.raw)`: a backslash is just a backslash, so a
+	/// string holding one can be formatted. Checked: formatting must keep
+	/// what follows every backslash, so a string that did take escapes
+	/// can't have one altered.
+	raw: bool,
+	/// `(#set! squill.multiline)`: the syntax takes raw line breaks, so a
+	/// string on one line can be formatted onto several. Checked only as
+	/// strictly as the grammar is: the host re-parse catches a syntax
+	/// that doesn't take them when the grammar rejects the line break,
+	/// and many (Java's, Kotlin's, Swift's) don't.
+	multiline: bool,
 }
 
 /// A tree-sitter grammar to find SQL with: built in, or (with the
@@ -315,9 +336,8 @@ impl Grammar {
 	fn codec(&self) -> Codec {
 		match self {
 			Grammar::Builtin(host) => host.codec(),
-			// Nothing is known about a loaded grammar's strings.
 			#[cfg(feature = "external-grammars")]
-			Grammar::Wasm(_) => Codec::Content { backslash_escapes: true },
+			Grammar::Wasm(_) => Codec::Content,
 		}
 	}
 
@@ -576,19 +596,21 @@ pub const GLEAM_SQL_QUERY: &str = r#"
 /// Default extraction query for C++: raw-string (`R"(...)"`) arguments
 /// of sqlite3, libpq, and libpqxx calls. The C APIs name their dialect;
 /// pqxx-style `exec`/`query` calls, templated (`tx.query<int>`) or not,
-/// use the configured one.
+/// use the configured one. Raw strings take line breaks and no escapes.
 #[cfg(feature = "cpp")]
 pub const CPP_SQL_QUERY: &str = r#"
 ((call_expression
    function: (identifier) @_fn
    arguments: (argument_list (raw_string_literal (raw_string_content) @sql.sqlite)))
  (#any-of? @_fn
-   "sqlite3_prepare" "sqlite3_prepare_v2" "sqlite3_prepare_v3" "sqlite3_exec"))
+   "sqlite3_prepare" "sqlite3_prepare_v2" "sqlite3_prepare_v3" "sqlite3_exec")
+ (#set! squill.raw) (#set! squill.multiline))
 
 ((call_expression
    function: (identifier) @_fn
    arguments: (argument_list (raw_string_literal (raw_string_content) @sql.postgres)))
- (#any-of? @_fn "PQexec" "PQexecParams" "PQprepare" "PQsendQuery"))
+ (#any-of? @_fn "PQexec" "PQexecParams" "PQprepare" "PQsendQuery")
+ (#set! squill.raw) (#set! squill.multiline))
 
 ((call_expression
    function: [
@@ -602,13 +624,16 @@ pub const CPP_SQL_QUERY: &str = r#"
  (#any-of? @_fn
    "exec" "exec0" "exec1" "exec_n" "exec_params" "exec_params0"
    "exec_params1" "exec_prepared" "prepare" "query" "query1" "query01"
-   "query_n" "query_value" "for_query" "stream"))
+   "query_n" "query_value" "for_query" "stream")
+ (#set! squill.raw) (#set! squill.multiline))
 "#;
 
 /// Default extraction query for C#: raw-string (`"""`) arguments of EF
 /// Core migrations and raw-SQL calls, ADO.NET's `CommandText`, and
-/// Dapper's query/execute family, generic (`QueryAsync<Order>`) or not. Interpolated raw strings (`$"""`) are
-/// a different node and never match.
+/// Dapper's query/execute family, generic (`QueryAsync<Order>`) or not.
+/// Interpolated raw strings (`$"""`) are a different node and never
+/// match. Raw strings take no escapes, and a one-line `"""…"""` becomes
+/// a multi-line one in squill's layout: its content on lines of its own.
 #[cfg(feature = "csharp")]
 pub const CSHARP_SQL_QUERY: &str = r#"
 ((invocation_expression
@@ -627,18 +652,22 @@ pub const CSHARP_SQL_QUERY: &str = r#"
    "QuerySingleOrDefault" "QuerySingleOrDefaultAsync"
    "QueryMultiple" "QueryMultipleAsync"
    "Execute" "ExecuteAsync" "ExecuteScalar" "ExecuteScalarAsync"
-   "ExecuteReader" "ExecuteReaderAsync"))
+   "ExecuteReader" "ExecuteReaderAsync")
+ (#set! squill.raw) (#set! squill.multiline))
 
 ((assignment_expression
    left: (member_access_expression name: (identifier) @_prop)
    right: (raw_string_literal (raw_string_content) @sql))
- (#eq? @_prop "CommandText"))
+ (#eq? @_prop "CommandText")
+ (#set! squill.raw) (#set! squill.multiline))
 "#;
 
 /// Default extraction query for Java: text-block (`"""`) arguments of
 /// JDBC, JPA, and Spring `JdbcTemplate` calls. The whole literal is
 /// captured — the grammar has no node spanning a text block's content —
-/// and one holding an escape is reported, not rewritten.
+/// and one holding an escape is reported, not rewritten. Neither
+/// property holds: text blocks take escapes, and the capture can't tell
+/// a text block from a `"..."` string, which can't take a line break.
 #[cfg(feature = "java")]
 pub const JAVA_SQL_QUERY: &str = r#"
 ((method_invocation
@@ -655,6 +684,7 @@ pub const JAVA_SQL_QUERY: &str = r#"
 /// Default extraction query for Kotlin: raw-string (`"""`) arguments of
 /// JDBC, Spring, and Exposed calls, bare or `.trimIndent()`ed. A raw
 /// string with `$` templates has several content nodes and never matches.
+/// Raw strings take line breaks and no escapes.
 #[cfg(feature = "kotlin")]
 pub const KOTLIN_SQL_QUERY: &str = r#"
 ((call_expression
@@ -669,7 +699,8 @@ pub const KOTLIN_SQL_QUERY: &str = r#"
    "prepareStatement" "prepareCall" "executeQuery" "executeUpdate"
    "execute" "addBatch" "createQuery" "createNativeQuery"
    "query" "queryForObject" "queryForList" "queryForMap"
-   "update" "batchUpdate" "exec"))
+   "update" "batchUpdate" "exec")
+ (#set! squill.raw) (#set! squill.multiline))
 
 ((call_expression
    [
@@ -687,7 +718,8 @@ pub const KOTLIN_SQL_QUERY: &str = r#"
    "execute" "addBatch" "createQuery" "createNativeQuery"
    "query" "queryForObject" "queryForList" "queryForMap"
    "update" "batchUpdate" "exec")
- (#eq? @_trim "trimIndent"))
+ (#eq? @_trim "trimIndent")
+ (#set! squill.raw) (#set! squill.multiline))
 "#;
 
 /// Default extraction query for Swift: multi-line (`"""`) string
@@ -696,13 +728,14 @@ pub const KOTLIN_SQL_QUERY: &str = r#"
 /// (SQLite.swift), `query` (PostgresNIO), or `raw` (SQLKit) uses the
 /// configured dialect. A string with a `\(…)` interpolation or an escape
 /// has several content nodes and never matches; raw strings (`#"""`)
-/// aren't taken.
+/// aren't taken. Multi-line strings take escapes, so aren't `raw`.
 #[cfg(feature = "swift")]
 pub const SWIFT_SQL_QUERY: &str = r#"
 ((value_argument
    name: (value_argument_label (simple_identifier) @_label)
    value: (multi_line_string_literal . (multi_line_str_text) @sql.sqlite .))
- (#eq? @_label "sql"))
+ (#eq? @_label "sql")
+ (#set! squill.multiline))
 
 ((call_expression
    [
@@ -716,7 +749,8 @@ pub const SWIFT_SQL_QUERY: &str = r#"
        (value_argument
          !name
          value: (multi_line_string_literal . (multi_line_str_text) @sql .)))))
- (#any-of? @_fn "run" "execute" "prepare" "scalar" "query" "raw"))
+ (#any-of? @_fn "run" "execute" "prepare" "scalar" "query" "raw")
+ (#set! squill.multiline))
 "#;
 
 /// Which indent options the caller configured. Whatever it didn't comes
@@ -822,6 +856,20 @@ fn compile_query(
 			)));
 		}
 	}
+	// Likewise a `squill.` property squill doesn't know.
+	for pattern in 0..query.pattern_count() {
+		for property in query.property_settings(pattern) {
+			let key = property.key.as_ref();
+			if key.starts_with("squill.")
+				&& !matches!(key, "squill.raw" | "squill.multiline")
+			{
+				return Err(EmbedError::Query(format!(
+					"unknown property `{key}`: squill reads `squill.raw` and \
+					 `squill.multiline`"
+				)));
+			}
+		}
+	}
 	// Anything the binding does not evaluate natively would be silently
 	// ignored: reject unknown custom predicates too.
 	for pattern in 0..query.pattern_count() {
@@ -886,13 +934,13 @@ pub fn locate_sql(
 		let mut found: Vec<Located> = extraction
 			.captures(&tree, source)
 			.into_iter()
-			.map(|Captured { range, dialect, pinned }| {
+			.map(|Captured { range, dialect, pinned, .. }| {
 				let range = match codec {
 					Codec::Literal => {
 						let inner = literal_content(&source[range.clone()]);
 						range.start + inner.start..range.start + inner.end
 					}
-					Codec::Content { .. } => range,
+					Codec::Content => range,
 				};
 				Located { range, dialect, pinned_dialect: pinned }
 			})
@@ -960,13 +1008,14 @@ pub fn format_embedded(
 			}
 		}
 		let options = &options;
-		for Captured { range: node_range, dialect, pinned } in captures {
+		for Captured { range: node_range, dialect, pinned, syntax } in captures {
 			let snippet = Snippet {
 				source,
 				range: node_range.clone(),
 				grammar,
 				dialect,
 				pinned,
+				syntax,
 				options,
 				indent,
 				body_warning: std::cell::RefCell::new(None),
@@ -1044,6 +1093,7 @@ struct Captured {
 	range: std::ops::Range<usize>,
 	dialect: Dialect,
 	pinned: bool,
+	syntax: StringSyntax,
 }
 
 /// How to find SQL in a parsed host file.
@@ -1067,14 +1117,22 @@ impl Extraction<'_> {
 			if !predicates_hold(query, query_match, source) {
 				continue;
 			}
+			let mut syntax = StringSyntax::default();
+			for property in query.property_settings(query_match.pattern_index) {
+				match property.key.as_ref() {
+					"squill.raw" => syntax.raw = true,
+					"squill.multiline" => syntax.multiline = true,
+					_ => {}
+				}
+			}
 			for capture in query_match.captures {
 				let name = &query.capture_names()[capture.index as usize];
 				if let Some(dialect) = sql_dialect(name, self.default_dialect) {
 					let range = match self.codec {
 						Codec::Literal => capture.node.byte_range(),
-						Codec::Content { .. } => content_range(capture.node),
+						Codec::Content => content_range(capture.node),
 					};
-					out.push(Captured { range, dialect, pinned: *name != "sql" });
+					out.push(Captured { range, dialect, pinned: *name != "sql", syntax });
 				}
 			}
 		}
@@ -1110,6 +1168,20 @@ impl Extraction<'_> {
 			}
 			shift += edit.replacement.len() as isize - edit.range.len() as isize;
 		}
+		if failed.len() > 1 {
+			// One bad edit can take the rest of the file with it (a
+			// heredoc that no longer ends): blame only the edits that fail
+			// on their own, unless none does.
+			let mut alone = Vec::new();
+			for &index in &failed {
+				if self.fails_alone(ts, source, &edits[index], baseline_errors)? {
+					alone.push(index);
+				}
+			}
+			if !alone.is_empty() {
+				failed = alone;
+			}
+		}
 		if failed.is_empty() && error_count(&tree) > baseline_errors {
 			// A new syntax error somewhere: find which edits cause one on
 			// their own. Rare, so one re-parse per edit is fine.
@@ -1126,6 +1198,26 @@ impl Extraction<'_> {
 			}
 		}
 		Ok(failed)
+	}
+}
+
+impl Extraction<'_> {
+	/// Does `edit`, the only one applied to `source`, fail the re-parse:
+	/// a new syntax error, or its string not reading back as written?
+	fn fails_alone(
+		&self,
+		ts: &mut TsParser,
+		source: &str,
+		edit: &Edit,
+		baseline_errors: usize,
+	) -> Result<bool, EmbedError> {
+		let text = apply(source, std::slice::from_ref(edit));
+		let tree = ts.parse(&text, None).ok_or(EmbedError::HostParse)?;
+		let range = edit.range.start..edit.range.start + edit.replacement.len();
+		Ok(
+			error_count(&tree) > baseline_errors
+				|| !self.captures(&tree, &text).iter().any(|c| c.range == range),
+		)
 	}
 }
 
@@ -1248,6 +1340,8 @@ struct Snippet<'a> {
 	/// Did the query set `dialect` (`@sql.sqlite`), over the configured
 	/// one?
 	pinned: bool,
+	/// What a content capture's string syntax allows.
+	syntax: StringSyntax,
 	options: &'a Options,
 	indent: Indent,
 	/// A procedural body in the SQL that didn't parse (so was left as
@@ -1291,7 +1385,7 @@ impl Snippet<'_> {
 				if !multiline {
 					return Rewrite::Skip;
 				}
-				let anchored = match self.format(&decoded.content) {
+				let anchored = match self.format(&decoded.content, false) {
 					Ok(anchored) => anchored,
 					Err(rewrite) => return rewrite,
 				};
@@ -1304,21 +1398,42 @@ impl Snippet<'_> {
 					),
 				}
 			}
-			Codec::Content { backslash_escapes } => {
-				if text.trim().is_empty() || !text.contains('\n') {
-					// Only a string that already spans lines proves the
-					// syntax takes raw newlines.
+			Codec::Content => {
+				// A string that already spans lines proves the syntax takes
+				// raw line breaks; otherwise the query must promise it.
+				if text.trim().is_empty()
+					|| !(text.contains('\n') || self.syntax.multiline)
+				{
 					return Rewrite::Skip;
 				}
-				if backslash_escapes && text.contains('\\') {
+				let backslashes = text.contains('\\');
+				if backslashes && !self.syntax.raw {
 					return Rewrite::Warn(
-						"string holds a backslash escape; left unformatted".to_string(),
+						"string holds a backslash, which may be an escape; left \
+						 unformatted (a query can promise the string is raw with \
+						 `(#set! squill.raw)`)"
+							.to_string(),
 					);
 				}
-				match self.format(text) {
-					Ok(anchored) => Rewrite::Replace(anchored),
-					Err(rewrite) => rewrite,
+				// A closing delimiter at the margin may have to stay there
+				// (a bare Ruby heredoc's terminator), so it does.
+				let close_at_margin = text.ends_with('\n');
+				let anchored = match self.format(text, close_at_margin) {
+					Ok(anchored) => anchored,
+					Err(rewrite) => return rewrite,
+				};
+				// Raw, as promised: then whatever follows each backslash is
+				// untouched, since formatting only changes whitespace
+				// between tokens. If it changed, the string may take
+				// escapes after all (a line continuation squill moved).
+				if backslashes && escapes(text).ne(escapes(&anchored)) {
+					return Rewrite::Warn(
+						"formatting would change what follows a backslash, which \
+						 this string may treat as an escape; left unformatted"
+							.to_string(),
+					);
 				}
+				Rewrite::Replace(anchored)
 			}
 		}
 	}
@@ -1326,8 +1441,12 @@ impl Snippet<'_> {
 	/// Format `sql` into the vertical shape: SQL starting on the line
 	/// after the opening quote, each line anchored to the host
 	/// statement's indentation, and the closing quote on its own line at
-	/// that indent.
-	fn format(&self, sql: &str) -> Result<String, Rewrite> {
+	/// that indent, or at the margin with `close_at_margin`.
+	fn format(
+		&self,
+		sql: &str,
+		close_at_margin: bool,
+	) -> Result<String, Rewrite> {
 		// The host statement's own indentation: the anchor every SQL line
 		// hangs off, and — unless an indent style was configured — the
 		// indent character too, so continuation lines don't mix tabs into
@@ -1400,7 +1519,9 @@ impl Snippet<'_> {
 			line_start += line.len() + 1;
 		}
 		anchored.push('\n');
-		anchored.push_str(&host_indent);
+		if !close_at_margin {
+			anchored.push_str(&host_indent);
+		}
 		Ok(anchored)
 	}
 }
@@ -1462,6 +1583,12 @@ fn host_indent_width(
 	let (step, count) =
 		steps.iter().enumerate().rev().max_by_key(|&(_, count)| count)?;
 	(*count > 0).then_some(step as u8)
+}
+
+/// What follows each backslash in `text`, in order: the characters a
+/// string that takes escapes would read as escape sequences.
+fn escapes(text: &str) -> impl Iterator<Item = Option<char>> + '_ {
+	text.match_indices('\\').map(|(at, _)| text[at + 1..].chars().next())
 }
 
 /// Leading whitespace of the line containing `offset`.
@@ -1802,4 +1929,43 @@ fn min_raw_hashes(content: &str) -> usize {
 		}
 	}
 	needed
+}
+
+#[cfg(all(test, feature = "cpp"))]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn an_edit_that_breaks_the_rest_of_the_file_is_blamed_alone() {
+		// The first edit opens a raw string that runs to the end of the file,
+		// so the second string no longer reads back either. Only the
+		// first is at fault.
+		let source = "void f() {\n  txn.exec(R\"(select 1)\");\n  txn.exec(R\"(select 2)\");\n}\n";
+		let grammar = Grammar::from(Host::Cpp);
+		grammar
+			.with_parser(|ts, language| {
+				let query = compile_query(language, CPP_SQL_QUERY)?;
+				let tree = ts.parse(source, None).ok_or(EmbedError::HostParse)?;
+				let extraction = Extraction {
+					query: &query,
+					default_dialect: Dialect::Postgres,
+					codec: grammar.codec(),
+				};
+				let edits: Vec<Edit> = extraction
+					.captures(&tree, source)
+					.into_iter()
+					.zip(["select 1)\"); R\"x(", "select  2"])
+					.map(|(captured, replacement)| Edit {
+						range: captured.range,
+						replacement: replacement.to_string(),
+					})
+					.collect();
+				let text = apply(source, &edits);
+				let failed =
+					extraction.verify(ts, &text, &edits, error_count(&tree), source)?;
+				assert_eq!(failed, vec![0]);
+				Ok(())
+			})
+			.unwrap();
+	}
 }

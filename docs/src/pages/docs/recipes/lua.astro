@@ -23,18 +23,18 @@ import Recipe from "../../../components/Recipe.astro";
 	<section>
 		<h2>Which strings squill rewrites</h2>
 		<p>
-			squill knows nothing about a loaded grammar&rsquo;s strings, so it only
-			rewrites one that already spans lines. In Lua that means long strings,{" "}
-			<code>[[&hellip;]]</code> or <code>[==[&hellip;]==]</code>: a quoted
-			string can&rsquo;t hold a raw newline, so it&rsquo;s never rewritten,
-			and neither is a long string on one line. Write a query you want
-			formatted as a long string over several lines.
+			Long strings, <code>[[&hellip;]]</code> or{" "}
+			<code>[==[&hellip;]==]</code>, on one line or several. squill knows
+			nothing about a loaded grammar&rsquo;s strings until the query{" "}
+			<a href="docs/embedded/#properties">says what they allow</a>, so the
+			queries below promise that a long string takes line breaks and no
+			escapes: a backslash in one is just a backslash. A quoted string
+			can&rsquo;t hold a raw newline, so it&rsquo;s never rewritten; write a
+			query you want formatted as a long string.
 		</p>
 		<p>
-			A long string holding a backslash is left as written and reported.
-			Lua doesn&rsquo;t read escapes there, but squill can&rsquo;t know that
-			about a loaded grammar, so it doesn&rsquo;t guess. A query built with{" "}
-			<code>..</code> isn&rsquo;t one string, and is never matched.
+			A query built with <code>..</code> isn&rsquo;t one string, and is never
+			matched.
 		</p>
 	</section>
 

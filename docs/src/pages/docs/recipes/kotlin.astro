@@ -13,7 +13,8 @@ import Recipe from "../../../components/Recipe.astro";
 		<p>
 			Raw strings (<code>"""</code>) without templates. squill puts the
 			quotes on their own lines and lays the query out one clause per line
-			between them. Plain strings are left exactly as written, and so is any
+			between them, even for a raw string written on one line. Plain strings
+			are left exactly as written, and so is any
 			string with a <code>$name</code> or <code>${"${…}"}</code> template in
 			it &mdash; SQL with holes in it isn&rsquo;t SQL squill can parse.
 		</p>
