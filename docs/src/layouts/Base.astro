@@ -174,6 +174,48 @@ const topNav = [
 		}
 		/* The masthead's own nav. Scoped on purpose: a bare `nav` rule also
 		   catches the docs sidebar, which is a column. */
+		/* The landing page's calls to action, above its first paragraph. */
+		.actions {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.75rem;
+			margin-bottom: 1.5rem;
+		}
+		.button {
+			display: inline-flex;
+			align-items: center;
+			padding: 0.55rem 1.2rem;
+			border: 1px solid var(--edge);
+			border-radius: 999px;
+			background: var(--inset);
+			color: var(--ink);
+			font-weight: 500;
+			font-size: 0.95rem;
+			line-height: 1.3;
+			text-decoration: none;
+			transition:
+				background 0.12s,
+				border-color 0.12s,
+				color 0.12s;
+		}
+		.button:hover {
+			border-color: var(--violet);
+			color: var(--violet-deep);
+		}
+		.button.primary {
+			background: var(--violet);
+			border-color: var(--violet);
+			color: light-dark(#fff, #16121c);
+		}
+		.button.primary:hover {
+			background: var(--violet-deep);
+			border-color: var(--violet-deep);
+			color: light-dark(#fff, #16121c);
+		}
+		.button:focus-visible {
+			outline: 2px solid var(--violet);
+			outline-offset: 2px;
+		}
 		.masthead nav {
 			margin-left: auto;
 			display: flex;
@@ -195,7 +237,49 @@ const topNav = [
 			.masthead {
 				flex-wrap: wrap;
 			}
-			.masthead nav {
+			/* The landing page's calls to action, above its first paragraph. */
+		.actions {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.75rem;
+			margin-bottom: 1.5rem;
+		}
+		.button {
+			display: inline-flex;
+			align-items: center;
+			padding: 0.55rem 1.2rem;
+			border: 1px solid var(--edge);
+			border-radius: 999px;
+			background: var(--inset);
+			color: var(--ink);
+			font-weight: 500;
+			font-size: 0.95rem;
+			line-height: 1.3;
+			text-decoration: none;
+			transition:
+				background 0.12s,
+				border-color 0.12s,
+				color 0.12s;
+		}
+		.button:hover {
+			border-color: var(--violet);
+			color: var(--violet-deep);
+		}
+		.button.primary {
+			background: var(--violet);
+			border-color: var(--violet);
+			color: light-dark(#fff, #16121c);
+		}
+		.button.primary:hover {
+			background: var(--violet-deep);
+			border-color: var(--violet-deep);
+			color: light-dark(#fff, #16121c);
+		}
+		.button:focus-visible {
+			outline: 2px solid var(--violet);
+			outline-offset: 2px;
+		}
+		.masthead nav {
 				margin-left: 0;
 				flex-basis: 100%;
 			}
