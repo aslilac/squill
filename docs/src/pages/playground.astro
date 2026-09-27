@@ -69,8 +69,14 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 					aria-label="Language and framework"
 					hidden
 				>
-					<ul class="picker-languages" role="listbox" aria-label="Language"></ul>
-					<svg class="picker-aim" aria-hidden="true"><polygon /></svg>
+					<ul
+						class="picker-languages"
+						role="listbox"
+						aria-label="Language"
+					></ul>
+					<svg class="picker-aim" aria-hidden="true">
+						<polygon />
+					</svg>
 					<div class="picker-frameworks">
 						<p class="picker-heading" id="picker-heading"></p>
 						<ul role="listbox" aria-labelledby="picker-heading"></ul>
@@ -78,9 +84,9 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 				</div>
 			</div>
 			<div class="spacer"></div>
-			<button id="copy" class="button" title="Copy formatted output"
-				>copy</button
-			>
+			<button id="copy" class="button" title="Copy formatted output">
+				copy
+			</button>
 			<div class="settings-wrap">
 				<button
 					id="gear"
@@ -90,22 +96,22 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 					set:html={settingsIcon}
 				/>
 				<div id="settings" class="popover" hidden>
-					<label
-						>dialect
+					<label>
+						dialect
 						<select data-opt="dialect">
 							<option value="postgres">postgres</option>
 							<option value="sqlite">sqlite</option>
 						</select>
 					</label>
-					<label
-						>indent
+					<label>
+						indent
 						<select data-opt="indent">
 							<option value="tab">tabs</option>
 							<option value="spaces">spaces</option>
 						</select>
 					</label>
-					<label
-						>indent-width
+					<label>
+						indent-width
 						<input
 							data-opt="indent_width"
 							type="number"
@@ -114,8 +120,8 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 							value="2"
 						/>
 					</label>
-					<label
-						>max-width
+					<label>
+						max-width
 						<input
 							data-opt="max_width"
 							type="number"
@@ -124,22 +130,22 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 							value="80"
 						/>
 					</label>
-					<label
-						>keyword-case
+					<label>
+						keyword-case
 						<select data-opt="keyword_case">
 							<option value="lower">lower</option>
 							<option value="upper">upper</option>
 						</select>
 					</label>
-					<label
-						>quote-idents
+					<label>
+						quote-idents
 						<select data-opt="quote_idents">
 							<option value="as-needed">as-needed</option>
 							<option value="always">always</option>
 						</select>
 					</label>
-					<label
-						>trailing-semicolons
+					<label>
+						trailing-semicolons
 						<select data-opt="trailing_semicolons">
 							<option value="">by language</option>
 							<option value="always">always</option>
@@ -177,7 +183,9 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 					<span>formatted</span>
 					<div>
 						<span id="status" class="tidy"></span>
-						<span id="ms" class="ms" title="Time spent formatting">— ms</span>
+						<span id="ms" class="ms" title="Time spent formatting">
+							— ms
+						</span>
 					</div>
 				</div>
 				<div id="output" class="output">
@@ -192,14 +200,13 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 		</footer>
 
 		<script type="application/json" id="frameworks" set:html={frameworksJson} />
-		<template id="chevron-right"><Fragment set:html={chevronRightIcon} /></template>
+		<template id="chevron-right">
+			<Fragment set:html={chevronRightIcon} />
+		</template>
 		<script>
 			import * as monaco from "monaco-editor";
 			import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
-			import {
-				highlight,
-				highlightHost,
-			} from "../components/highlight.js";
+			import { highlight, highlightHost } from "../components/highlight.js";
 			import { languages, sqlExamples } from "../playground/examples.js";
 			import {
 				gleamConfiguration,
@@ -280,8 +287,16 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 							options: dialect ? { dialect } : {},
 						}))
 					: []),
-				...frameworks.filter((framework) => framework.language === language.host),
-				{ title: "Empty", host: language.host, source: "", options: {}, empty: true },
+				...frameworks.filter(
+					(framework) => framework.language === language.host,
+				),
+				{
+					title: "Empty",
+					host: language.host,
+					source: "",
+					options: {},
+					empty: true,
+				},
 			];
 
 			const options = {
@@ -449,7 +464,10 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 				if (shownLanguage === language.host) return;
 				shownLanguage = language.host;
 				for (const button of languageItems) {
-					button.setAttribute("aria-selected", String(button.dataset.host === language.host));
+					button.setAttribute(
+						"aria-selected",
+						String(button.dataset.host === language.host),
+					);
 				}
 				choiceHeading.textContent = language.label;
 				choiceList.replaceChildren(
@@ -607,7 +625,9 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 				picker.setAttribute("aria-expanded", "true");
 				shownLanguage = undefined;
 				showLanguage(languageOf(chosenLanguage));
-				languageItems.find((button) => button.dataset.host === chosenLanguage).focus();
+				languageItems
+					.find((button) => button.dataset.host === chosenLanguage)
+					.focus();
 			}
 			function closePicker(refocus) {
 				clearTimeout(aimTimer);
@@ -650,7 +670,9 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 				} else if (event.key === "ArrowRight" && inLanguages) {
 					choices[0]?.focus();
 				} else if (event.key === "ArrowLeft" && !inLanguages) {
-					languageItems.find((button) => button.dataset.host === shownLanguage).focus();
+					languageItems
+						.find((button) => button.dataset.host === shownLanguage)
+						.focus();
 				} else if (event.key === "Home" || event.key === "End") {
 					focusItem(column.at(event.key === "Home" ? 0 : -1));
 				} else {
@@ -696,7 +718,6 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 
 			render();
 		</script>
-
 		<style is:global>
 			/* The site's colors (styles/theme.css), plus the playground's own. */
 			:root {
@@ -957,7 +978,8 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 				background: var(--pane);
 				border: 1px solid var(--edge);
 				border-radius: 10px;
-				box-shadow: 0 8px 30px light-dark(rgb(34 29 43 / 0.12), rgb(0 0 0 / 0.45));
+				box-shadow: 0 8px 30px
+					light-dark(rgb(34 29 43 / 0.12), rgb(0 0 0 / 0.45));
 			}
 			.popover label {
 				display: flex;
