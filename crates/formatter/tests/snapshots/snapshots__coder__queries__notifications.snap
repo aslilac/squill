@@ -86,7 +86,7 @@ with
 					and (
 						-- exclude all messages which have exceeded the max attempts; these will be purged later
 						nm.attempt_count
-						is null
+							is null
 						or nm.attempt_count < sqlc.arg('max_attempt_count')::int
 					)
 					-- if set, do not retry until we've exceeded the wait time
@@ -233,7 +233,7 @@ on conflict (notification_template_id) do update
 set last_generated_at = EXCLUDED.last_generated_at
 where
 	notification_report_generator_logs.notification_template_id
-	= EXCLUDED.notification_template_id;
+		= EXCLUDED.notification_template_id;
 
 -- name: GetWebpushSubscriptionsByUserID :many
 select * from webpush_subscriptions where user_id = @user_id::uuid;

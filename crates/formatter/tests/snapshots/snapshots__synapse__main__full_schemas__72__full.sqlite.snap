@@ -6,7 +6,7 @@ create table application_services_txns (
 	as_id text not null,
 	txn_id integer not null,
 	event_ids text not null,
-	unique(as_id, txn_id)
+	unique (as_id, txn_id)
 );
 create index application_services_txns_id on application_services_txns (as_id);
 create table presence (
@@ -14,7 +14,7 @@ create table presence (
 	state varchar(20),
 	status_msg text,
 	mtime bigint,
-	unique(user_id)
+	unique (user_id)
 );
 create table users (
 	name text,
@@ -30,7 +30,7 @@ create table users (
 	deactivated smallint not null default 0,
 	shadow_banned boolean,
 	consent_ts bigint,
-	unique(name)
+	unique (name)
 );
 create table user_ips (
 	user_id text not null,
@@ -44,7 +44,7 @@ create table profiles (
 	user_id text not null,
 	displayname text,
 	avatar_url text,
-	unique(user_id)
+	unique (user_id)
 );
 create table received_transactions (
 	transaction_id text,
@@ -53,7 +53,7 @@ create table received_transactions (
 	response_code integer,
 	response_json bytea,
 	has_been_referenced smallint default 0,
-	unique(transaction_id, origin)
+	unique (transaction_id, origin)
 );
 create table destinations (
 	destination text primary key,
@@ -80,7 +80,7 @@ create table events (
 	instance_name text,
 	state_key text default null,
 	rejection_reason text default null,
-	unique(event_id)
+	unique (event_id)
 );
 create index events_order_room
 	on events (room_id, topological_ordering, stream_ordering);
@@ -90,7 +90,7 @@ create table event_json (
 	internal_metadata text not null,
 	json text not null,
 	format_version integer,
-	unique(event_id)
+	unique (event_id)
 );
 create table state_events (
 	event_id text not null,
@@ -98,7 +98,7 @@ create table state_events (
 	type text not null,
 	state_key text not null,
 	prev_state text,
-	unique(event_id)
+	unique (event_id)
 );
 create table current_state_events (
 	event_id text not null,
@@ -106,8 +106,8 @@ create table current_state_events (
 	type text not null,
 	state_key text not null,
 	membership text,
-	unique(event_id),
-	unique(room_id, type, state_key)
+	unique (event_id),
+	unique (room_id, type, state_key)
 );
 create table room_memberships (
 	event_id text not null,
@@ -118,7 +118,7 @@ create table room_memberships (
 	forgotten integer default 0,
 	display_name text,
 	avatar_url text,
-	unique(event_id)
+	unique (event_id)
 );
 create index room_memberships_room_id on room_memberships (room_id);
 create index room_memberships_user_id on room_memberships (user_id);
@@ -136,13 +136,13 @@ create table server_signature_keys (
 	ts_added_ms bigint,
 	verify_key bytea,
 	ts_valid_until_ms bigint,
-	unique(server_name, key_id)
+	unique (server_name, key_id)
 );
 create table rejections (
 	event_id text not null,
 	reason text not null,
 	last_check text not null,
-	unique(event_id)
+	unique (event_id)
 );
 create table push_rules (
 	id bigint primary key,
@@ -152,7 +152,7 @@ create table push_rules (
 	priority integer not null default 0,
 	conditions text not null,
 	actions text not null,
-	unique(user_name, rule_id)
+	unique (user_name, rule_id)
 );
 create index push_rules_user_name on push_rules (user_name);
 create table push_rules_enable (
@@ -160,32 +160,32 @@ create table push_rules_enable (
 	user_name text not null,
 	rule_id text not null,
 	enabled smallint,
-	unique(user_name, rule_id)
+	unique (user_name, rule_id)
 );
 create index push_rules_enable_user_name on push_rules_enable (user_name);
 create table event_forward_extremities (
 	event_id text not null,
 	room_id text not null,
-	unique(event_id, room_id)
+	unique (event_id, room_id)
 );
 create index ev_extrem_room on event_forward_extremities (room_id);
 create index ev_extrem_id on event_forward_extremities (event_id);
 create table event_backward_extremities (
 	event_id text not null,
 	room_id text not null,
-	unique(event_id, room_id)
+	unique (event_id, room_id)
 );
 create index ev_b_extrem_room on event_backward_extremities (room_id);
 create index ev_b_extrem_id on event_backward_extremities (event_id);
 create table room_depth (
 	room_id text not null,
 	min_depth integer not null,
-	unique(room_id)
+	unique (room_id)
 );
 create table event_to_state_groups (
 	event_id text not null,
 	state_group bigint not null,
-	unique(event_id)
+	unique (event_id)
 );
 create table local_media_repository (
 	media_id text,
@@ -198,7 +198,7 @@ create table local_media_repository (
 	url_cache text,
 	last_access_ts bigint,
 	safe_from_quarantine boolean not null default 0,
-	unique(media_id)
+	unique (media_id)
 );
 create table remote_media_cache (
 	media_origin text,
@@ -210,21 +210,21 @@ create table remote_media_cache (
 	filesystem_id text,
 	last_access_ts bigint,
 	quarantined_by text,
-	unique(media_origin, media_id)
+	unique (media_origin, media_id)
 );
 create table redactions (
 	event_id text not null,
 	redacts text not null,
 	have_censored bool not null default false,
 	received_ts bigint,
-	unique(event_id)
+	unique (event_id)
 );
 create index redactions_redacts on redactions (redacts);
 create table room_aliases (
 	room_alias text not null,
 	room_id text not null,
 	creator text,
-	unique(room_alias)
+	unique (room_alias)
 );
 create index room_aliases_id on room_aliases (room_id);
 create table room_alias_servers (
@@ -386,7 +386,7 @@ create table open_id_tokens (
 	token text not null primary key,
 	ts_valid_until_ms bigint not null,
 	user_id text not null,
-	unique(token)
+	unique (token)
 );
 create index open_id_tokens_ts_valid_until_ms
 	on open_id_tokens (ts_valid_until_ms);
@@ -409,7 +409,7 @@ create table event_reports (
 create table appservice_stream_position (
 	Lock char(1) not null unique default 'X',
 	stream_ordering bigint,
-	check(Lock = 'X')
+	check (Lock = 'X')
 );
 create table device_inbox (
 	user_id text not null,
@@ -508,7 +508,7 @@ create table event_push_summary (
 create table event_push_summary_stream_ordering (
 	Lock char(1) not null unique default 'X',
 	stream_ordering bigint not null,
-	check(Lock = 'X')
+	check (Lock = 'X')
 );
 create table if not exists pushers (
 	id bigint primary key,
@@ -526,7 +526,7 @@ create table if not exists pushers (
 	last_stream_ordering integer,
 	last_success bigint,
 	failing_since bigint,
-	unique(app_id, pushkey, user_name)
+	unique (app_id, pushkey, user_name)
 );
 create index device_lists_outbound_pokes_stream
 	on device_lists_outbound_pokes (stream_id);
@@ -550,7 +550,7 @@ create index current_state_delta_stream_idx
 create table user_directory_stream_pos (
 	Lock char(1) not null unique default 'X',
 	stream_id bigint,
-	check(Lock = 'X')
+	check (Lock = 'X')
 );
 create virtual table user_directory_search using fts4(user_id, value)
 /* user_directory_search(user_id,value) */
@@ -798,7 +798,7 @@ create index e2e_cross_signing_signatures2_idx
 create table stats_incremental_position (
 	Lock char(1) not null unique default 'X', -- Makes sure this table only has one row.
 	stream_id bigint not null,
-	check(Lock = 'X')
+	check (Lock = 'X')
 );
 create table room_stats_current (
 	room_id text not null primary key,
@@ -846,7 +846,7 @@ create table user_external_ids (
 	auth_provider text not null,
 	external_id text not null,
 	user_id text not null,
-	unique(auth_provider, external_id)
+	unique (auth_provider, external_id)
 );
 create index users_in_public_rooms_r_idx on users_in_public_rooms (room_id);
 create table device_lists_remote_resync (
@@ -877,13 +877,13 @@ create table ui_auth_sessions (
 	-- The clientdict, uri, and method make up an tuple that must be immutable
 	-- throughout the lifetime of the UI Auth session.
 	description text not null, -- A human readable description of the operation which caused the UI Auth flow to occur.
-	unique(session_id)
+	unique (session_id)
 );
 create table ui_auth_sessions_credentials (
 	session_id text not null, -- The corresponding UI Auth session.
 	stage_type text not null, -- The stage type.
 	result text not null, -- The result of the stage verification, stored as JSON.
-	unique(session_id, stage_type),
+	unique (session_id, stage_type),
 	foreign key (session_id) references ui_auth_sessions (session_id)
 );
 create table if not exists device_lists_outbound_last_success (
@@ -900,7 +900,7 @@ create table if not exists local_media_repository_thumbnails (
 	thumbnail_type text,
 	thumbnail_method text,
 	thumbnail_length integer,
-	unique(
+	unique (
 		media_id,
 		thumbnail_width,
 		thumbnail_height,
@@ -919,7 +919,7 @@ create table if not exists remote_media_cache_thumbnails (
 	thumbnail_type text,
 	thumbnail_length integer,
 	filesystem_id text,
-	unique(
+	unique (
 		media_origin,
 		media_id,
 		thumbnail_width,
@@ -932,7 +932,7 @@ create table ui_auth_sessions_ips (
 	session_id text not null,
 	ip text not null,
 	user_agent text not null,
-	unique(session_id, ip, user_agent),
+	unique (session_id, ip, user_agent),
 	foreign key (session_id) references ui_auth_sessions (session_id)
 );
 create unique index federation_stream_position_instance
@@ -986,7 +986,7 @@ create table if not exists access_tokens (
 	last_validated bigint,
 	refresh_token_id bigint references refresh_tokens (id) on delete cascade,
 	used boolean,
-	unique(token)
+	unique (token)
 );
 create index access_tokens_device_id on access_tokens (user_id, device_id);
 create table if not exists event_txn_id (
@@ -1053,7 +1053,7 @@ create table refresh_tokens (
 	next_token_id bigint references refresh_tokens (id) on delete cascade,
 	expiry_ts bigint default null,
 	ultimate_session_expiry_ts bigint default null,
-	unique(token)
+	unique (token)
 );
 create table worker_locks (
 	lock_name text not null,
@@ -1106,14 +1106,14 @@ create table registration_tokens (
 	pending int not null, -- The number of in progress registrations using this token.
 	completed int not null, -- The number of times this token has been used to complete a registration.
 	expiry_time bigint, -- The latest time this token will be valid (epoch time in milliseconds). NULL if token doesn't expire.
-	unique(token)
+	unique (token)
 );
 create table sessions (
 	session_type text not null, -- The unique key for this type of session.
 	session_id text not null, -- The session ID passed to the client.
 	value text not null, -- A JSON dictionary to persist.
 	expiry_time_ms bigint not null, -- The time this session will expire (epoch time in milliseconds).
-	unique(session_type, session_id)
+	unique (session_type, session_id)
 );
 create table insertion_events (
 	event_id text not null,
@@ -1150,13 +1150,13 @@ create table partial_state_rooms (
 create table partial_state_rooms_servers (
 	room_id text not null references partial_state_rooms (room_id),
 	server_name text not null,
-	unique(room_id, server_name)
+	unique (room_id, server_name)
 );
 create table partial_state_events (
 	-- the room_id is denormalised for efficient indexing (the canonical source is `events`)
 	room_id text not null references partial_state_rooms (room_id),
 	event_id text not null references events (event_id),
-	unique(event_id)
+	unique (event_id)
 );
 create index partial_state_events_room_id_idx on partial_state_events (room_id);
 create trigger partial_state_events_bad_room_id
@@ -1209,7 +1209,7 @@ create index ev_edges_prev_id on event_edges (prev_event_id);
 create table event_push_summary_last_receipt_stream_id (
 	Lock char(1) not null unique default 'X', -- Makes sure this table only has one row.
 	stream_id bigint not null,
-	check(Lock = 'X')
+	check (Lock = 'X')
 );
 create table if not exists application_services_state (
 	as_id text not null primary key,

@@ -12,7 +12,7 @@ from template_with_names as t
 where
 	-- Optionally include deleted templates
 	t.deleted
-	= @deleted
+		= @deleted
 	-- Filter by organization_id
 	and case
 		when @organization_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
@@ -42,11 +42,11 @@ where
 			then case
 				when t.display_name is not null and t.display_name != ''
 					then lower(t.display_name)
-					ilike '%' || lower(@fuzzy_display_name) || '%'
+						ilike '%' || lower(@fuzzy_display_name) || '%'
 				else
 				-- Remove spaces if present since 't.name' cannot have any spaces
 				lower(t.name)
-				ilike '%' || replace(lower(@fuzzy_display_name), ' ', '') || '%'
+					ilike '%' || replace(lower(@fuzzy_display_name), ' ', '') || '%'
 			end
 		else true
 	end

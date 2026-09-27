@@ -8,5 +8,5 @@ create table org_policies (
 	atype integer not null,
 	enabled boolean not null,
 	data text not null,
-	unique(org_uuid, atype)
+	unique (org_uuid, atype)
 );

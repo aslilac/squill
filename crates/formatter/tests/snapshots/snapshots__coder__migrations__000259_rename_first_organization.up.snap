@@ -7,5 +7,5 @@ set name = 'coder', display_name = 'Coder'
 where
 	-- The old name was too long.
 	name
-	= 'first-organization'
+		= 'first-organization'
 	and is_default = true;

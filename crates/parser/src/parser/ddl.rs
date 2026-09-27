@@ -319,12 +319,18 @@ fn element_list(p: &mut Parser<'_>, ctx: Ctx) -> PResult {
 }
 
 fn element(p: &mut Parser<'_>, ctx: Ctx) -> PResult {
-	let state = p.state();
-	if expr(p, 0).is_ok() && (p.at(SyntaxKind::Comma) || p.at(SyntaxKind::RParen))
-	{
-		return Ok(());
+	// A table constraint is never an expression, though `unique (a, b)`
+	// and `check (a > 0)` would parse as calls to functions of those
+	// names.
+	if !(ctx.columns && p.at_any_kw(CONSTRAINT_HEADS)) {
+		let state = p.state();
+		if expr(p, 0).is_ok()
+			&& (p.at(SyntaxKind::Comma) || p.at(SyntaxKind::RParen))
+		{
+			return Ok(());
+		}
+		p.backtrack(state);
 	}
-	p.backtrack(state);
 	p.start(SyntaxKind::ColumnDef);
 	// `name type ...` — but the same node shape also covers table
 	// constraints, which open with a keyword and have no name or type.

@@ -31,10 +31,10 @@ with
 					-- it won't be available for this CASE statement, so we have to
 					-- copy the cast twice.
 					when now()
-					+ (
-						templates.activity_bump / 1000 / 1000 / 1000 || ' seconds'
-					)::interval
-					> @next_autostart::timestamptz
+						+ (
+							templates.activity_bump / 1000 / 1000 / 1000 || ' seconds'
+						)::interval
+						> @next_autostart::timestamptz
 					-- If the autostart is behind now(), then the
 					-- autostart schedule is either the 0 time and not provided,
 					-- or it was the autostart in the past, which is no longer

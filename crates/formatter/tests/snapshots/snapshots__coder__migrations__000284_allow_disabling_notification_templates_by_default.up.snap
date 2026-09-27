@@ -19,14 +19,14 @@ begin
 		from notification_templates
 			left join notification_preferences
 				on notification_preferences.notification_template_id
-				= notification_templates.id
+					= notification_templates.id
 				and notification_preferences.user_id = NEW.user_id
 		where
 			notification_templates.id = NEW.notification_template_id
 			and (
 				-- Case 1: The user has explicitly disabled this template
 				notification_preferences.disabled
-				= true
+					= true
 				or
 				-- Case 2: The template is disabled by default AND the user hasn't enabled it
 				(

@@ -20,7 +20,7 @@ create table if not exists pushers2 (
 	last_token text,
 	last_success bigint,
 	failing_since bigint,
-	unique(app_id, pushkey)
+	unique (app_id, pushkey)
 );
 insert into pushers2 (
 	id,

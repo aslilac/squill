@@ -46,7 +46,7 @@ create table if not exists application_services_txns (
 	as_id text not null,
 	txn_id integer not null,
 	event_ids text not null,
-	unique(as_id, txn_id)
+	unique (as_id, txn_id)
 );
 
 create index if not exists application_services_txns_id

@@ -24,4 +24,4 @@ expression: formatted
 -- column, and is what lets the column be NOT NULL during a rolling upgrade.
 alter table state_groups_persisting
 	add column inserted_ts bigint not null default extract(epoch from now())
-	* 1000;
+		* 1000;

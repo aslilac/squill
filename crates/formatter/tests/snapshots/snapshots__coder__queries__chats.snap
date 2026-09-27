@@ -59,7 +59,7 @@ with
 		from updated_chats
 			left join chats root
 				on root.id
-				= coalesce(updated_chats.root_chat_id, updated_chats.parent_chat_id)
+					= coalesce(updated_chats.root_chat_id, updated_chats.parent_chat_id)
 			join visible_users owner on owner.id = updated_chats.owner_id
 	)
 select *
@@ -130,7 +130,7 @@ with
 		from updated_chats
 			left join chats root
 				on root.id
-				= coalesce(updated_chats.root_chat_id, updated_chats.parent_chat_id)
+					= coalesce(updated_chats.root_chat_id, updated_chats.parent_chat_id)
 			join visible_users owner on owner.id = updated_chats.owner_id
 	)
 select *
@@ -517,7 +517,7 @@ where
 						and cm.id > coalesce(chats_expanded.last_read_message_id, 0)
 				)
 			)
-			= sqlc.narg('has_unread')::boolean
+				= sqlc.narg('has_unread')::boolean
 		else true
 	end
 	-- Filter by pull request status. Unlike the diff_url filter above,
@@ -588,7 +588,7 @@ where
 			then (
 				-- Served by idx_chats_title_fts.
 				to_tsvector('simple', chats_expanded.title)
-				@@ websearch_to_tsquery('simple', @search)
+					@@ websearch_to_tsquery('simple', @search)
 				-- Served by idx_chat_diff_statuses_pr_title_fts.
 				or exists (
 					select 1
@@ -769,7 +769,7 @@ with
 		from inserted_chat
 			left join chats root
 				on root.id
-				= coalesce(inserted_chat.root_chat_id, inserted_chat.parent_chat_id)
+					= coalesce(inserted_chat.root_chat_id, inserted_chat.parent_chat_id)
 			join visible_users owner on owner.id = inserted_chat.owner_id
 	)
 select *
@@ -810,10 +810,10 @@ with
 			chats.id = @chat_id::uuid
 			and (
 				chats.last_model_config_id
-				is distinct from coalesce(
-					batch.last_model_config_id,
-					chats.last_model_config_id
-				)
+					is distinct from coalesce(
+						batch.last_model_config_id,
+						chats.last_model_config_id
+					)
 				or chats.last_reasoning_effort
 					is distinct from coalesce(
 						batch.last_reasoning_effort,
@@ -927,7 +927,7 @@ with
 		from updated_chat
 			left join chats root
 				on root.id
-				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+					= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -994,7 +994,7 @@ with
 		from updated_chat
 			left join chats root
 				on root.id
-				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+					= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1059,7 +1059,7 @@ with
 		from updated_chat
 			left join chats root
 				on root.id
-				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+					= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1124,7 +1124,7 @@ with
 		from updated_chat
 			left join chats root
 				on root.id
-				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+					= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1187,7 +1187,7 @@ with
 		from updated_chat
 			left join chats root
 				on root.id
-				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+					= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1254,7 +1254,7 @@ with
 		from updated_chat
 			left join chats root
 				on root.id
-				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+					= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1320,7 +1320,7 @@ with
 		from updated_chat
 			left join chats root
 				on root.id
-				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+					= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1404,7 +1404,7 @@ with
 		from updated_chat
 			left join chats root
 				on root.id
-				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+					= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1642,7 +1642,7 @@ with
 		from updated_chat
 			left join chats root
 				on root.id
-				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+					= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -1918,7 +1918,7 @@ with
 		from locked_chat
 			left join chats root
 				on root.id
-				= coalesce(locked_chat.root_chat_id, locked_chat.parent_chat_id)
+					= coalesce(locked_chat.root_chat_id, locked_chat.parent_chat_id)
 			join visible_users owner on owner.id = locked_chat.owner_id
 	)
 select *
@@ -1976,7 +1976,7 @@ with
 		from shared_chat
 			left join chats root
 				on root.id
-				= coalesce(shared_chat.root_chat_id, shared_chat.parent_chat_id)
+					= coalesce(shared_chat.root_chat_id, shared_chat.parent_chat_id)
 			join visible_users owner on owner.id = shared_chat.owner_id
 	)
 select *
@@ -2060,7 +2060,7 @@ from deduped;
 select
 	coalesce(sum(cm.total_cost_micros), 0)::bigint as total_cost_micros,
 	count(*) filter (where cm.total_cost_micros
-	is not null)::bigint as priced_message_count,
+		is not null)::bigint as priced_message_count,
 	count(*) filter (where cm.total_cost_micros is null
 	and (
 		cm.input_tokens is not null
@@ -2456,7 +2456,7 @@ select
 	count(*)::bigint as message_count,
 	count(*) filter (where cm.role = 'user')::bigint as user_message_count,
 	count(*) filter (where cm.role
-	= 'assistant')::bigint as assistant_message_count,
+		= 'assistant')::bigint as assistant_message_count,
 	count(*) filter (where cm.role = 'tool')::bigint as tool_message_count,
 	count(*) filter (where cm.role = 'system')::bigint as system_message_count,
 	coalesce(sum(cm.input_tokens), 0)::bigint as total_input_tokens,
@@ -2672,7 +2672,7 @@ with
 		from bumped_chat
 			left join chats root
 				on root.id
-				= coalesce(bumped_chat.root_chat_id, bumped_chat.parent_chat_id)
+					= coalesce(bumped_chat.root_chat_id, bumped_chat.parent_chat_id)
 			join visible_users owner on owner.id = bumped_chat.owner_id
 	)
 select *
@@ -2749,7 +2749,7 @@ with
 		from updated_chat
 			left join chats root
 				on root.id
-				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+					= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *
@@ -2814,7 +2814,7 @@ with
 		from updated_chat
 			left join chats root
 				on root.id
-				= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
+					= coalesce(updated_chat.root_chat_id, updated_chat.parent_chat_id)
 			join visible_users owner on owner.id = updated_chat.owner_id
 	)
 select *

@@ -25,5 +25,5 @@ create table user_chat_provider_keys (
 	api_key_key_id text references dbcrypt_keys (active_key_digest),
 	created_at timestamptz not null default now(),
 	updated_at timestamptz not null default now(),
-	unique(user_id, chat_provider_id)
+	unique (user_id, chat_provider_id)
 );

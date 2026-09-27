@@ -56,7 +56,7 @@ create index event_push_summary_user_rm
 create table event_push_summary_stream_ordering (
 	Lock char(1) not null unique default 'X', -- Makes sure this table only has one row.
 	stream_ordering bigint not null,
-	check(Lock = 'X')
+	check (Lock = 'X')
 );
 
 insert into event_push_summary_stream_ordering (stream_ordering) values (0);

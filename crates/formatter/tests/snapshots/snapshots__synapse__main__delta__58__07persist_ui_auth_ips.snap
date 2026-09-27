@@ -42,6 +42,6 @@ create table if not exists ui_auth_sessions_ips (
 	session_id text not null,
 	ip text not null,
 	user_agent text not null,
-	unique(session_id, ip, user_agent),
+	unique (session_id, ip, user_agent),
 	foreign key (session_id) references ui_auth_sessions (session_id)
 );

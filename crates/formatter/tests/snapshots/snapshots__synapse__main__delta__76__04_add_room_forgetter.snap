@@ -39,7 +39,7 @@ expression: formatted
 create table room_forgetter_stream_pos (
 	Lock char(1) not null unique default 'X', -- Makes sure this table only has one row.
 	stream_id bigint not null,
-	check(Lock = 'X')
+	check (Lock = 'X')
 );
 
 insert into room_forgetter_stream_pos (stream_id)

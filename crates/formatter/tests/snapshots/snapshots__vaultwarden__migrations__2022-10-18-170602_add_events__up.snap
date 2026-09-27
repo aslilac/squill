@@ -19,5 +19,5 @@ create table event (
 	provider_uuid text,
 	provider_user_uuid text,
 	provider_org_uuid text,
-	unique(uuid)
+	unique (uuid)
 );

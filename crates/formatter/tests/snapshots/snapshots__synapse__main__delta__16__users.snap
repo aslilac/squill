@@ -10,7 +10,7 @@ create table if not exists new_access_tokens (
 	device_id text,
 	token text not null,
 	last_used bigint UNSIGNED,
-	unique(token)
+	unique (token)
 );
 
 insert into new_access_tokens
@@ -27,7 +27,7 @@ create table if not exists new_users (
 	password_hash text,
 	creation_ts bigint UNSIGNED,
 	admin bool not null default 0,
-	unique(name)
+	unique (name)
 );
 
 insert into new_users select name, password_hash, creation_ts, admin from users;

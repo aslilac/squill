@@ -28,7 +28,7 @@ create table access_tokens2 (
 	valid_until_ms bigint,
 	puppets_user_id text,
 	last_validated bigint,
-	unique(token)
+	unique (token)
 );
 
 insert into access_tokens2 (id, user_id, device_id, token)

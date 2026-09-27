@@ -70,7 +70,7 @@ from templates t
 	inner join organizations o on o.id = t.organization_id
 where
 	tvp.desired_instances
-	is not null -- Consider only presets that have a prebuild configuration.
+		is not null -- Consider only presets that have a prebuild configuration.
 	-- AND NOT t.deleted -- We don't exclude deleted templates because there's no constraint in the DB preventing a soft deletion on a template while workspaces are running.
 	and (
 		t.id = sqlc.narg('template_id')::uuid or sqlc.narg('template_id') is null
@@ -120,7 +120,7 @@ with
 			latest_prebuilds.job_id,
 			bool_and(
 				workspace_agents.lifecycle_state
-				= 'ready'::workspace_agent_lifecycle_state
+					= 'ready'::workspace_agent_lifecycle_state
 			)::boolean as ready
 		from latest_prebuilds
 			join workspace_resources
@@ -205,7 +205,7 @@ with
 				on tv.template_id = t.id and t.active_version_id = tv.id
 		where
 			tvp.desired_instances
-			is not null -- Consider only presets that have a prebuild configuration.
+				is not null -- Consider only presets that have a prebuild configuration.
 			and wlb.transition = 'start'::workspace_transition
 			and w.owner_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0'
 			and not t.deleted
@@ -242,7 +242,7 @@ from time_sorted_builds tsb
 	left join failed_count fc on fc.preset_id = tsb.preset_id
 where
 	tsb.rn
-	<= tsb.desired_instances -- Fetch the last N builds, where N is the number of desired instances; if any fail, we backoff
+		<= tsb.desired_instances -- Fetch the last N builds, where N is the number of desired instances; if any fail, we backoff
 	and tsb.job_status = 'failed'::provisioner_job_status
 	and created_at >= @lookback::timestamptz
 group by tsb.template_version_id, tsb.preset_id, fc.num_failed;
@@ -272,7 +272,7 @@ with
 				on tv.template_id = t.id and t.active_version_id = tv.id
 		where
 			tvp.desired_instances
-			is not null -- Consider only presets that have a prebuild configuration.
+				is not null -- Consider only presets that have a prebuild configuration.
 			and wlb.transition = 'start'::workspace_transition
 			and w.owner_id = 'c42fdf75-3097-471c-8c33-fb52454d81c0'
 	),
@@ -307,10 +307,10 @@ select
 	o.name as organization_name,
 	count(*) as created_count,
 	count(*) filter (where pj.job_status
-	= 'failed'::provisioner_job_status) as failed_count,
+		= 'failed'::provisioner_job_status) as failed_count,
 	count(*) filter (where w.owner_id
-	!= 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid -- The system user responsible for prebuilds.
-	) as claimed_count
+		!= 'c42fdf75-3097-471c-8c33-fb52454d81c0'::uuid -- The system user responsible for prebuilds.
+		) as claimed_count
 from workspaces w
 	inner join workspace_prebuild_builds wpb on wpb.workspace_id = w.id
 	inner join templates t on t.id = w.template_id
@@ -350,7 +350,7 @@ select pm.template_version_preset_id
 from preset_matches pm
 where
 	pm.total_preset_params
-	= pm.matching_params -- All preset parameters must match
+		= pm.matching_params -- All preset parameters must match
 order by
 	pm.total_preset_params desc -- Return the preset with the most parameters
 limit 1;

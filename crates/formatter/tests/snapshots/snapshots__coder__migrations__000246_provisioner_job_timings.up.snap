@@ -49,12 +49,12 @@ select
 							then pjt.ended_at
 					end
 				)
-				- min(
-					case
-						when pjt.stage = 'init'::provisioner_job_timing_stage
-							then pjt.started_at
-					end
-				)
+					- min(
+						case
+							when pjt.stage = 'init'::provisioner_job_timing_stage
+								then pjt.started_at
+						end
+					)
 			)
 		),
 		0
@@ -68,12 +68,12 @@ select
 							then pjt.ended_at
 					end
 				)
-				- min(
-					case
-						when pjt.stage = 'plan'::provisioner_job_timing_stage
-							then pjt.started_at
-					end
-				)
+					- min(
+						case
+							when pjt.stage = 'plan'::provisioner_job_timing_stage
+								then pjt.started_at
+						end
+					)
 			)
 		),
 		0
@@ -87,12 +87,12 @@ select
 							then pjt.ended_at
 					end
 				)
-				- min(
-					case
-						when pjt.stage = 'graph'::provisioner_job_timing_stage
-							then pjt.started_at
-					end
-				)
+					- min(
+						case
+							when pjt.stage = 'graph'::provisioner_job_timing_stage
+								then pjt.started_at
+						end
+					)
 			)
 		),
 		0
@@ -106,12 +106,12 @@ select
 							then pjt.ended_at
 					end
 				)
-				- min(
-					case
-						when pjt.stage = 'apply'::provisioner_job_timing_stage
-							then pjt.started_at
-					end
-				)
+					- min(
+						case
+							when pjt.stage = 'apply'::provisioner_job_timing_stage
+								then pjt.started_at
+						end
+					)
 			)
 		),
 		0

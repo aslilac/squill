@@ -261,7 +261,7 @@ with
 		where
 			-- Filter out the latest builds for each workspace.
 			latest_builds.workspace_id
-			is null
+				is null
 			and case
 				-- If the last time the agent connected was before @threshold
 				when wa.last_connected_at is not null
@@ -377,7 +377,7 @@ from workspace_agents
 where
 	-- This should only match 1 agent, so 1 returned row or 0.
 	workspace_agents.auth_token
-	= @auth_token::uuid
+		= @auth_token::uuid
 	and workspaces.deleted = false
 	-- Filter out deleted sub agents.
 	and workspace_agents.deleted = false

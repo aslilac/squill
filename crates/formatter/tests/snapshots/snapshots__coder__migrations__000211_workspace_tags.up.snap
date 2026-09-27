@@ -7,5 +7,5 @@ create table if not exists template_version_workspace_tags (
 		on delete cascade,
 	key text not null,
 	value text not null,
-	unique(template_version_id, key)
+	unique (template_version_id, key)
 );

@@ -39,7 +39,7 @@ expression: formatted
 create table stats_stream_pos (
 	Lock char(1) not null unique default 'X', -- Makes sure this table only has one row.
 	stream_id bigint,
-	check(Lock = 'X')
+	check (Lock = 'X')
 );
 
 insert into stats_stream_pos (stream_id) values (null);

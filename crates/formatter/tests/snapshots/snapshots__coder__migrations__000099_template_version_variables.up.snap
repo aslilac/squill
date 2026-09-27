@@ -12,7 +12,7 @@ create table if not exists template_version_variables (
 	default_value text not null,
 	required boolean not null,
 	sensitive boolean not null,
-	unique(template_version_id, name)
+	unique (template_version_id, name)
 );
 
 comment on column template_version_variables.name is 'Variable name';

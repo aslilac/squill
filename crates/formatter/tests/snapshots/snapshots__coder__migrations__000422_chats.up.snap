@@ -99,18 +99,18 @@ create table chat_providers (
 	constraint chat_providers_provider_check
 		check (
 			provider
-			= any(
-				array[
-					'anthropic'::text,
-					'azure'::text,
-					'bedrock'::text,
-					'google'::text,
-					'openai'::text,
-					'openai-compat'::text,
-					'openrouter'::text,
-					'vercel'::text
-				]
-			)
+				= any(
+					array[
+						'anthropic'::text,
+						'azure'::text,
+						'bedrock'::text,
+						'google'::text,
+						'openai'::text,
+						'openai-compat'::text,
+						'openrouter'::text,
+						'vercel'::text
+					]
+				)
 		)
 );
 

@@ -15,7 +15,7 @@ where
 		'template-admin',
 		'user-admin'
 	]
-	&& rbac_roles;
+		&& rbac_roles;
 
 
 update users
@@ -25,4 +25,4 @@ set
 where
 	-- Only on the owner
 	'owner'
-	= any(rbac_roles);
+		= any(rbac_roles);

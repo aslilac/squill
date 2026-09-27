@@ -45,7 +45,7 @@ create table refresh_tokens (
 	-- When consumed, a new refresh token is generated, which is tracked by
 	-- this foreign key
 	next_token_id bigint references refresh_tokens (id) on delete cascade,
-	unique(token)
+	unique (token)
 );
 
 -- Add a reference to the refresh token generated alongside each access token

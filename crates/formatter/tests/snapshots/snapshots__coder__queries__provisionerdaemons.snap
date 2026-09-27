@@ -11,7 +11,7 @@ from provisioner_daemons
 where
 	-- This is the original search criteria:
 	organization_id
-	= @organization_id::uuid
+		= @organization_id::uuid
 	and
 	-- adding support for searching by tags:
 	(
@@ -180,7 +180,7 @@ where
 	and (
 		-- Filter daemons by any statuses if provided
 		coalesce(array_length(@statuses::provisioner_daemon_status[], 1), 0)
-		= 0
+			= 0
 		or (
 			current_job.id is not null
 			and 'busy'::provisioner_daemon_status
@@ -193,7 +193,7 @@ where
 		)
 		or (
 			'offline'::provisioner_daemon_status
-			= any(@statuses::provisioner_daemon_status[])
+				= any(@statuses::provisioner_daemon_status[])
 			and (
 				pd.last_seen_at is null
 				or pd.last_seen_at < (

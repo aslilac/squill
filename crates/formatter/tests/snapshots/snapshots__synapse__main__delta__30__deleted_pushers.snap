@@ -42,7 +42,7 @@ create table if not exists deleted_pushers (
 	pushkey text not null,
 	user_id text not null,
 	/* We only track the most recent delete for each app_id, pushkey and user_id. */
-	unique(app_id, pushkey, user_id)
+	unique (app_id, pushkey, user_id)
 );
 
 create index deleted_pushers_stream_id on deleted_pushers (stream_id);

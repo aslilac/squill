@@ -239,7 +239,7 @@ client)
 from aibridge_interceptions
 where
 	ended_at
-	is not null -- incomplete interceptions are not included in summaries
+		is not null -- incomplete interceptions are not included in summaries
 	and ended_at >= @ended_at_after::timestamptz
 	and ended_at < @ended_at_before::timestamptz;
 
@@ -274,7 +274,7 @@ with
 						extract(EPOCH from duration)),
 					0
 				)
-				* 1000
+					* 1000
 			)::bigint as interception_duration_p50_millis,
 			(
 				coalesce(
@@ -282,7 +282,7 @@ with
 						extract(EPOCH from duration)),
 					0
 				)
-				* 1000
+					* 1000
 			)::bigint as interception_duration_p90_millis,
 			(
 				coalesce(
@@ -290,7 +290,7 @@ with
 						extract(EPOCH from duration)),
 					0
 				)
-				* 1000
+					* 1000
 			)::bigint as interception_duration_p95_millis,
 			(
 				coalesce(
@@ -298,7 +298,7 @@ with
 						extract(EPOCH from duration)),
 					0
 				)
-				* 1000
+					* 1000
 			)::bigint as interception_duration_p99_millis
 		from interceptions_in_range
 	),
@@ -323,9 +323,9 @@ with
 	tool_aggregates as (
 		select
 			count(tu.id) filter (where tu.injected
-			= true) as tool_calls_count_injected,
+				= true) as tool_calls_count_injected,
 			count(tu.id) filter (where tu.injected
-			= false) as tool_calls_count_non_injected,
+				= false) as tool_calls_count_non_injected,
 			count(tu.id) filter (where tu.injected = true
 			and tu.invocation_error is not null) as injected_tool_call_error_count
 		from interceptions_in_range i
@@ -391,10 +391,10 @@ with
 select
 	(
 		(select count(*) from model_thoughts)
-		+ (select count(*) from tool_usages)
-		+ (select count(*) from token_usages)
-		+ (select count(*) from user_prompts)
-		+ (select count(*) from interceptions)
+			+ (select count(*) from tool_usages)
+			+ (select count(*) from token_usages)
+			+ (select count(*) from user_prompts)
+			+ (select count(*) from interceptions)
 	)::bigint as total_deleted;
 
 -- name: CountAIBridgeSessions :one
@@ -409,7 +409,7 @@ from aibridge_interceptions
 where
 	-- Remove inflight interceptions (ones which lack an ended_at value).
 	aibridge_interceptions.ended_at
-	is not null
+		is not null
 	-- Filter by time frame
 	and case
 		when @started_after::timestamptz != '0001-01-01 00:00:00+00'::timestamptz
@@ -512,17 +512,17 @@ with
 		where
 			-- Remove inflight interceptions (ones which lack an ended_at value).
 			ai.ended_at
-			is not null
+				is not null
 			-- Filter by time frame
 			and case
 				when @started_after::timestamptz
-				!= '0001-01-01 00:00:00+00'::timestamptz
+					!= '0001-01-01 00:00:00+00'::timestamptz
 					then ai.started_at >= @started_after::timestamptz
 				else true
 			end
 			and case
 				when @started_before::timestamptz
-				!= '0001-01-01 00:00:00+00'::timestamptz
+					!= '0001-01-01 00:00:00+00'::timestamptz
 					then ai.started_at <= @started_before::timestamptz
 				else true
 			end
@@ -697,7 +697,10 @@ select
 from aibridge_interceptions
 	join paginated_threads pt
 		on pt.thread_id
-		= coalesce(aibridge_interceptions.thread_root_id, aibridge_interceptions.id)
+			= coalesce(
+				aibridge_interceptions.thread_root_id,
+				aibridge_interceptions.id
+			)
 where
 	aibridge_interceptions.session_id = @session_id::text
 	and aibridge_interceptions.ended_at is not null
@@ -721,7 +724,7 @@ from aibridge_interceptions
 where
 	-- Remove inflight interceptions (ones which lack an ended_at value).
 	aibridge_interceptions.ended_at
-	is not null
+		is not null
 	-- Filter model
 	and case
 		when @model::text != ''
@@ -747,7 +750,7 @@ where
 	and case
 		when @client::text != ''
 			then coalesce(aibridge_interceptions.client, 'Unknown')
-			like @client::text || '%'
+				like @client::text || '%'
 		else true
 	end
 -- We use an `@authorize_filter` as we are attempting to list clients

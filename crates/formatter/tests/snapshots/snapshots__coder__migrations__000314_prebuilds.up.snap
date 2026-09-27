@@ -26,7 +26,7 @@ with
 		from workspaces w
 		where
 			w.owner_id
-			= 'c42fdf75-3097-471c-8c33-fb52454d81c0' -- The system user responsible for prebuilds.
+				= 'c42fdf75-3097-471c-8c33-fb52454d81c0' -- The system user responsible for prebuilds.
 	),
 	-- We can't rely on the template_version_preset_id in the workspace_builds table because this value is only set on the
 	-- initial workspace creation. Subsequent stop/start transitions will not have a value for template_version_preset_id,
@@ -54,7 +54,7 @@ with
 			inner join workspace_agents wa on wa.resource_id = wr.id
 		where
 			w.owner_id
-			= 'c42fdf75-3097-471c-8c33-fb52454d81c0' -- The system user responsible for prebuilds.
+				= 'c42fdf75-3097-471c-8c33-fb52454d81c0' -- The system user responsible for prebuilds.
 		group by w.id
 	),
 	current_presets as (

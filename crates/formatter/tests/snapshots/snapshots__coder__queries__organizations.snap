@@ -11,7 +11,7 @@ from organizations
 where
 	-- Optionally include deleted organizations
 	deleted
-	= @deleted
+		= @deleted
 	-- Filter by ids
 	and case
 		when array_length(@ids::uuid[], 1) > 0 then id = any(@ids)
@@ -28,7 +28,7 @@ from organizations
 where
 	-- Optionally include deleted organizations
 	deleted
-	= @deleted
+		= @deleted
 	and lower(name) = lower(@name)
 limit 1;
 

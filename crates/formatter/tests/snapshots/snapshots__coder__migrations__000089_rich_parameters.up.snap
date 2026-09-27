@@ -15,7 +15,7 @@ create table if not exists template_version_parameters (
 	validation_regex text not null,
 	validation_min integer not null,
 	validation_max integer not null,
-	unique(template_version_id, name)
+	unique (template_version_id, name)
 );
 
 comment on column template_version_parameters.name is 'Parameter name';
@@ -34,7 +34,7 @@ create table if not exists workspace_build_parameters (
 		on delete cascade,
 	name text not null,
 	value text not null,
-	unique(workspace_build_id, name)
+	unique (workspace_build_id, name)
 );
 
 comment on column workspace_build_parameters.name is 'Parameter name';

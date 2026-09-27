@@ -57,7 +57,7 @@ create table if not exists device_lists_changes_converted_stream_position (
 	stream_id bigint not null,
 	-- `room_id` may be an empty string, which compares less than all valid room IDs.
 	room_id text not null,
-	check(Lock = 'X')
+	check (Lock = 'X')
 );
 
 insert into device_lists_changes_converted_stream_position (stream_id, room_id)

@@ -29,5 +29,5 @@ create table users_organizations (
 	key text not null,
 	status integer not null,
 	type integer not null,
-	unique(user_uuid, org_uuid)
+	unique (user_uuid, org_uuid)
 );

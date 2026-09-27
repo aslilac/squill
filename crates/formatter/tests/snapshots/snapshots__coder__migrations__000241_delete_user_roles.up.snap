@@ -22,7 +22,7 @@ begin
 		where
 			-- Scope to the correct organization
 			organization_members.organization_id
-			= OLD.organization_id;
+				= OLD.organization_id;
 	end if;
 	return OLD;
 end;

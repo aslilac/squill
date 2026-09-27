@@ -112,15 +112,15 @@ with
 		select
 			array_agg(distinct template_id) as template_ids,
 			array_agg(distinct template_id) filter (where ssh_mins
-			> 0) as ssh_template_ids,
+				> 0) as ssh_template_ids,
 			array_agg(distinct template_id) filter (where sftp_mins
-			> 0) as sftp_template_ids,
+				> 0) as sftp_template_ids,
 			array_agg(distinct template_id) filter (where reconnecting_pty_mins
-			> 0) as reconnecting_pty_template_ids,
+				> 0) as reconnecting_pty_template_ids,
 			array_agg(distinct template_id) filter (where vscode_mins
-			> 0) as vscode_template_ids,
+				> 0) as vscode_template_ids,
 			array_agg(distinct template_id) filter (where jetbrains_mins
-			> 0) as jetbrains_template_ids
+				> 0) as jetbrains_template_ids
 		from template_usage_stats
 		where
 			start_time >= @start_time::timestamptz
@@ -289,7 +289,7 @@ with
 				on
 				-- Query parameter filter.
 				tus.start_time
-				>= @start_time::timestamptz
+					>= @start_time::timestamptz
 				and tus.end_time <= @end_time::timestamptz
 				and case
 					when coalesce(array_length(@template_ids::uuid[], 1), 0) > 0
@@ -340,7 +340,7 @@ with
 					icon
 					order by start_time
 				)
-				* '30 minutes'::interval
+					* '30 minutes'::interval
 			) as uniq
 		from template_usage_stats_with_apps
 	),
@@ -784,7 +784,7 @@ insert into template_usage_stats as tus (
 			on
 			-- The latencies group-by ensures there at most one row.
 			latencies.start_time
-			= stats.start_time
+				= stats.start_time
 			and latencies.template_id = stats.template_id
 			and latencies.user_id = stats.user_id
 )

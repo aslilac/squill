@@ -15,7 +15,7 @@ create table groups (
 create table groups_users (
 	groups_uuid text not null references groups (uuid),
 	users_organizations_uuid text not null references users_organizations (uuid),
-	unique(groups_uuid, users_organizations_uuid)
+	unique (groups_uuid, users_organizations_uuid)
 );
 
 create table collections_groups (
@@ -23,5 +23,5 @@ create table collections_groups (
 	groups_uuid text not null references groups (uuid),
 	read_only boolean not null,
 	hide_passwords boolean not null,
-	unique(collections_uuid, groups_uuid)
+	unique (collections_uuid, groups_uuid)
 );

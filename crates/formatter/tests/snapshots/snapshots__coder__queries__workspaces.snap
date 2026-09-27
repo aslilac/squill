@@ -120,7 +120,7 @@ with
 		where
 			-- Optionally include deleted workspaces
 			workspaces.deleted
-			= @deleted
+				= @deleted
 			and case
 				when @status::text != ''
 					then case
@@ -160,7 +160,7 @@ with
 							then
 							-- By default just match the job status exactly
 							latest_build.job_status
-							= @status::provisioner_job_status
+								= @status::provisioner_job_status
 						else true
 					end
 				else true
@@ -174,7 +174,7 @@ with
 			-- Filter by organization_id
 			and case
 				when @organization_id::uuid
-				!= '00000000-0000-0000-0000-000000000000'::uuid
+					!= '00000000-0000-0000-0000-000000000000'::uuid
 					then workspaces.organization_id = @organization_id
 				else true
 			end
@@ -228,11 +228,11 @@ with
 			and case
 				when @template_name::text != ''
 					then workspaces.template_id
-					= any (
-						select id
-						from templates
-						where lower(name) = lower(@template_name) and deleted = false
-					)
+						= any (
+							select id
+							from templates
+							where lower(name) = lower(@template_name) and deleted = false
+						)
 				else true
 			end
 			-- Filter by template_ids
@@ -280,11 +280,11 @@ with
 											else 'connecting'
 										end
 									when workspace_agents.disconnected_at
-									> workspace_agents.last_connected_at
+										> workspace_agents.last_connected_at
 										then 'disconnected'
 									when now() - workspace_agents.last_connected_at
-									> interval '1 second'
-										* @agent_inactive_disconnect_timeout_seconds::bigint
+										> interval '1 second'
+											* @agent_inactive_disconnect_timeout_seconds::bigint
 										then 'disconnected'
 									when workspace_agents.last_connected_at is not null
 										then 'connected'
@@ -293,7 +293,7 @@ with
 							)
 								= any(@has_agent_statuses::text[])
 					)
-					> 0
+						> 0
 				else true
 			end
 			-- Filter by dormant workspaces.
@@ -304,7 +304,7 @@ with
 			-- Filter by last_used
 			and case
 				when @last_used_before::timestamp with time zone
-				> '0001-01-01 00:00:00Z'
+					> '0001-01-01 00:00:00Z'
 					then workspaces.last_used_at <= @last_used_before
 				else true
 			end
@@ -316,7 +316,7 @@ with
 			and case
 				when sqlc.narg('using_active')::boolean is not null
 					then (latest_build.template_version_id = template.active_version_id)
-					= sqlc.narg('using_active')::boolean
+						= sqlc.narg('using_active')::boolean
 				else true
 			end
 			-- Filter by has_ai_task, checks if this is a task workspace.
@@ -329,7 +329,7 @@ with
 							-- Consider all tasks, deleting a task does not turn the
 							-- workspace into a non-task workspace.
 							tasks.workspace_id
-							= workspaces.id
+								= workspaces.id
 					)
 				else true
 			end
@@ -337,7 +337,7 @@ with
 			and case
 				when sqlc.narg('has_external_agent')::boolean is not null
 					then latest_build.has_external_agent
-					= sqlc.narg('has_external_agent')::boolean
+						= sqlc.narg('has_external_agent')::boolean
 				else true
 			end
 			-- Filter by shared status
@@ -347,20 +347,20 @@ with
 						workspaces.user_acl != '{}'::jsonb
 						or workspaces.group_acl != '{}'::jsonb
 					)
-					= sqlc.narg('shared')::boolean
+						= sqlc.narg('shared')::boolean
 				else true
 			end
 			-- Filter by shared_with_user_id
 			and case
 				when @shared_with_user_id::uuid
-				!= '00000000-0000-0000-0000-000000000000'::uuid
+					!= '00000000-0000-0000-0000-000000000000'::uuid
 					then workspaces.user_acl ? (@shared_with_user_id::uuid)::text
 				else true
 			end
 			-- Filter by shared_with_group_id
 			and case
 				when @shared_with_group_id::uuid
-				!= '00000000-0000-0000-0000-000000000000'::uuid
+					!= '00000000-0000-0000-0000-000000000000'::uuid
 					then workspaces.group_acl ? (@shared_with_group_id::uuid)::text
 				else true
 			end
@@ -482,7 +482,7 @@ with
 			and w.owner_id != @prebuilds_user_id::uuid
 			and case
 				when @organization_id::uuid
-				!= '00000000-0000-0000-0000-000000000000'::uuid
+					!= '00000000-0000-0000-0000-000000000000'::uuid
 					then w.organization_id = @organization_id
 				else true
 			end
@@ -503,7 +503,7 @@ with
 			and w.last_used_at > @lookback_cutoff::timestamptz
 			and case
 				when @organization_id::uuid
-				!= '00000000-0000-0000-0000-000000000000'::uuid
+					!= '00000000-0000-0000-0000-000000000000'::uuid
 					then w.organization_id = @organization_id
 				else true
 			end
@@ -746,7 +746,7 @@ where
 				-- When this occurs, we return the workspace so the Coder server can
 				-- compute a valid next start at and update it.
 				workspaces.next_start_at
-				is null
+					is null
 				or workspaces.next_start_at <= @now::timestamptz
 			)
 		)
@@ -793,7 +793,7 @@ where
 									else provisioner_jobs.completed_at
 								end
 							)
-							> interval '24 hours'
+								> interval '24 hours'
 						)
 					)
 				else true
@@ -872,8 +872,8 @@ where
 				(
 					@now::timestamptz
 				)
-				- workspaces.last_used_at
-				>= interval '15 minutes'
+					- workspaces.last_used_at
+					>= interval '15 minutes'
 				-- ...or activity bumps are disabled (deadline can't move)...
 				or templates.activity_bump <= 0
 				-- ...or the hard max_deadline ceiling is within the lead window, so
@@ -934,9 +934,9 @@ set
 		when @time_til_dormant_autodelete_ms::bigint = 0 then null
 		when @dormant_at::timestamptz > '0001-01-01 00:00:00+00'::timestamptz
 			then (@dormant_at::timestamptz)
-			+ interval '1 milliseconds' * @time_til_dormant_autodelete_ms::bigint
+				+ interval '1 milliseconds' * @time_til_dormant_autodelete_ms::bigint
 		else dormant_at
-		+ interval '1 milliseconds' * @time_til_dormant_autodelete_ms::bigint
+			+ interval '1 milliseconds' * @time_til_dormant_autodelete_ms::bigint
 	end,
 	dormant_at = case
 		when @dormant_at::timestamptz > '0001-01-01 00:00:00+00'::timestamptz
@@ -1004,7 +1004,7 @@ from workspaces
 where
 	-- Filter by owner_id
 	workspaces.owner_id
-	= @owner_id::uuid
+		= @owner_id::uuid
 	and workspaces.deleted = false
 -- Authorize Filter clause will be injected below in GetAuthorizedWorkspacesAndAgentsByOwnerID
 -- @authorize_filter

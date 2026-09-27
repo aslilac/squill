@@ -73,7 +73,7 @@ select template_version_preset_parameters.*
 from template_version_preset_parameters
 	inner join template_version_presets
 		on template_version_preset_parameters.template_version_preset_id
-		= template_version_presets.id
+			= template_version_presets.id
 where template_version_presets.template_version_id = @template_version_id;
 
 -- name: GetPresetParametersByPresetID :many
@@ -96,7 +96,7 @@ from template_version_preset_prebuild_schedules tvpps
 where
 	-- Template version is active, and template is not deleted or deprecated
 	tv.id
-	= t.active_version_id
+		= t.active_version_id
 	and not t.deleted
 	and t.deprecated = '';
 

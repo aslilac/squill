@@ -46,7 +46,7 @@ create table if not exists partial_state_rooms (
 create table if not exists partial_state_rooms_servers (
 	room_id text not null references partial_state_rooms (room_id),
 	server_name text not null,
-	unique(room_id, server_name)
+	unique (room_id, server_name)
 );
 
 -- a list of events with partial state. We can't store this in the `events` table
@@ -55,7 +55,7 @@ create table if not exists partial_state_events (
 	-- the room_id is denormalised for efficient indexing (the canonical source is `events`)
 	room_id text not null references partial_state_rooms (room_id),
 	event_id text not null references events (event_id),
-	unique(event_id)
+	unique (event_id)
 );
 
 create index if not exists partial_state_events_room_id_idx

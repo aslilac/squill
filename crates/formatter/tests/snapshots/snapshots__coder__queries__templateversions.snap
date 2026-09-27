@@ -137,7 +137,7 @@ from
 			-- This allows archiving a specific template version.
 			case
 				when sqlc.arg('template_version_id')::uuid
-				!= '00000000-0000-0000-0000-000000000000'::uuid
+					!= '00000000-0000-0000-0000-000000000000'::uuid
 					then template_versions.id = sqlc.arg('template_version_id')::uuid
 				else true
 			end
@@ -170,7 +170,7 @@ from
 			-- job status like 'failed'.
 			when sqlc.narg('job_status')::provisioner_job_status is not null
 				then provisioner_jobs.job_status
-				= sqlc.narg('job_status')::provisioner_job_status
+					= sqlc.narg('job_status')::provisioner_job_status
 			else true
 		end
 		-- Pending or running jobs should not be archived, as they are "in progress"

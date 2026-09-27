@@ -206,5 +206,5 @@ where
 	mcp_server_ids != '{}'
 	and not (
 		mcp_server_ids
-		<@ coalesce((select array_agg(id) from mcp_server_configs), '{}')
+			<@ coalesce((select array_agg(id) from mcp_server_configs), '{}')
 	);

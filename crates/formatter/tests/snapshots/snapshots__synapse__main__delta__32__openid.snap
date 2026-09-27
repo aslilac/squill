@@ -6,7 +6,7 @@ create table open_id_tokens (
 	token text not null primary key,
 	ts_valid_until_ms bigint not null,
 	user_id text not null,
-	unique(token)
+	unique (token)
 );
 
 create index open_id_tokens_ts_valid_until_ms

@@ -40,25 +40,25 @@ create table if not exists schema_version (
 	Lock char(1) not null unique default 'X', -- Makes sure this table only has one row.
 	version integer not null,
 	upgraded bool not null, -- Whether we reached this version from an upgrade or an initial schema.
-	check(Lock = 'X')
+	check (Lock = 'X')
 );
 
 create table if not exists schema_compat_version (
 	Lock char(1) not null unique default 'X', -- Makes sure this table only has one row.
 	-- The SCHEMA_VERSION of the oldest synapse this database can be used with
 	compat_version integer not null,
-	check(Lock = 'X')
+	check (Lock = 'X')
 );
 
 create table if not exists applied_schema_deltas (
 	version integer not null,
 	file text not null,
-	unique(version, file)
+	unique (version, file)
 );
 
 -- a list of schema files we have loaded on behalf of dynamic modules
 create table if not exists applied_module_schemas (
 	module_name text not null,
 	file text not null,
-	unique(module_name, file)
+	unique (module_name, file)
 );

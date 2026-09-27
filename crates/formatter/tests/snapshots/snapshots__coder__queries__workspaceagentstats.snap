@@ -101,7 +101,7 @@ select
 		(
 			percentile_cont(0.5) within group (order by
 				connection_median_latency_ms) filter (where connection_median_latency_ms
-			> 0)
+				> 0)
 		),
 		-1
 	)::float as workspace_connection_latency_50,
@@ -109,7 +109,7 @@ select
 		(
 			percentile_cont(0.95) within group (order by
 				connection_median_latency_ms) filter (where connection_median_latency_ms
-			> 0)
+				> 0)
 		),
 		-1
 	)::float as workspace_connection_latency_95,

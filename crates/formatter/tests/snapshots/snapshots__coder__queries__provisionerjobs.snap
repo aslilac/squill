@@ -58,9 +58,9 @@ with
 		from provisioner_jobs
 		where
 			id
-			= any(
-				@ids::uuid[]
-			) -- Apply filter early to reduce dataset size before expensive JOIN
+				= any(
+					@ids::uuid[]
+				) -- Apply filter early to reduce dataset size before expensive JOIN
 	),
 	pending_jobs as (
 		-- Step 2: Extract only pending jobs
@@ -119,7 +119,7 @@ with
 		from filtered_provisioner_jobs fpj -- Use the pre-filtered dataset instead of full provisioner_jobs
 			left join ranked_jobs rj
 				on fpj.id
-				= rj.id -- Join with the ranking jobs CTE to assign a rank to each specified provisioner job.
+					= rj.id -- Join with the ranking jobs CTE to assign a rank to each specified provisioner job.
 		group by fpj.id, fpj.created_at
 	)
 select
@@ -132,7 +132,7 @@ select
 from final_jobs fj
 	inner join provisioner_jobs pj
 		on fj.id
-		= pj.id -- Ensure we retrieve full details from `provisioner_jobs`.
+			= pj.id -- Ensure we retrieve full details from `provisioner_jobs`.
 -- JOIN with pj is required for sqlc.embed(pj) to compile successfully.
 order by fj.created_at;
 
@@ -172,7 +172,7 @@ select
 		where
 			-- See AcquireProvisionerJob.
 			pj.started_at
-			is null
+				is null
 			and pj.organization_id = pd.organization_id
 			and pj.provisioner = any(pd.provisioners)
 			and provisioner_tagset_contains(pd.tags, pj.tags)
@@ -297,14 +297,14 @@ where
 	(
 		-- If the job has not been started before @pending_since, reap it.
 		updated_at
-		< @pending_since
+			< @pending_since
 		and started_at is null
 		and completed_at is null
 	)
 	or (
 		-- If the job has been started but not completed before @hung_since, reap it.
 		updated_at
-		< @hung_since
+			< @hung_since
 		and started_at is not null
 		and completed_at is null
 	)

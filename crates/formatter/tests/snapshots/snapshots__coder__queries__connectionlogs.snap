@@ -49,7 +49,7 @@ where
 	-- Filter by workspace_owner_id
 	and case
 		when @workspace_owner_id::uuid
-		!= '00000000-0000-0000-0000-000000000000'::uuid
+			!= '00000000-0000-0000-0000-000000000000'::uuid
 			then workspace_owner_id = @workspace_owner_id
 		else true
 	end
@@ -152,7 +152,7 @@ from (
 		-- Filter organization_id
 		case
 			when @organization_id::uuid
-			!= '00000000-0000-0000-0000-000000000000'::uuid
+				!= '00000000-0000-0000-0000-000000000000'::uuid
 				then connection_logs.organization_id = @organization_id
 			else true
 		end
@@ -169,7 +169,7 @@ from (
 		-- Filter by workspace_owner_id
 		and case
 			when @workspace_owner_id::uuid
-			!= '00000000-0000-0000-0000-000000000000'::uuid
+				!= '00000000-0000-0000-0000-000000000000'::uuid
 				then workspace_owner_id = @workspace_owner_id
 			else true
 		end

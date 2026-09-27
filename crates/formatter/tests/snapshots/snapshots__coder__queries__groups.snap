@@ -17,7 +17,7 @@ where
 	-- ...so that we can retain exactly those rows where an input ID does not
 	-- match an existing group.
 	groups.id
-	is null;
+		is null;
 
 -- name: GetGroupByOrgAndName :one
 select * from groups where organization_id = $1 and name = $2 limit 1;

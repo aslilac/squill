@@ -88,8 +88,8 @@ create table group_summary_rooms (
 	category_id text not null,
 	room_order bigint not null,
 	is_public boolean not null, -- whether the room should be show to everyone
-	unique(group_id, category_id, room_id, room_order),
-	check(room_order > 0)
+	unique (group_id, category_id, room_id, room_order),
+	check (room_order > 0)
 );
 
 create unique index group_summary_rooms_g_idx
@@ -101,8 +101,8 @@ create table group_summary_room_categories (
 	group_id text not null,
 	category_id text not null,
 	cat_order bigint not null,
-	unique(group_id, category_id, cat_order),
-	check(cat_order > 0)
+	unique (group_id, category_id, cat_order),
+	check (cat_order > 0)
 );
 
 -- The categories in the group
@@ -111,7 +111,7 @@ create table group_room_categories (
 	category_id text not null,
 	profile text not null,
 	is_public boolean not null, -- whether the category should be show to everyone
-	unique(group_id, category_id)
+	unique (group_id, category_id)
 );
 
 -- The users to include in the group summary
@@ -131,8 +131,8 @@ create table group_summary_roles (
 	group_id text not null,
 	role_id text not null,
 	role_order bigint not null,
-	unique(group_id, role_id, role_order),
-	check(role_order > 0)
+	unique (group_id, role_id, role_order),
+	check (role_order > 0)
 );
 
 
@@ -142,7 +142,7 @@ create table group_roles (
 	role_id text not null,
 	profile text not null,
 	is_public boolean not null, -- whether the role should be show to everyone
-	unique(group_id, role_id)
+	unique (group_id, role_id)
 );
 
 

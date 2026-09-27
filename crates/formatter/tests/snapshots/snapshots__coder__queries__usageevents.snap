@@ -33,7 +33,7 @@ with
 					-- Do not publish events that have already been published or
 					-- have permanently failed to publish.
 					potential_event.published_at
-					is null
+						is null
 					-- Do not publish events that are already being published by
 					-- another replica.
 					and (

@@ -46,13 +46,13 @@ create table if not exists ui_auth_sessions (
 	-- The clientdict, uri, and method make up an tuple that must be immutable
 	-- throughout the lifetime of the UI Auth session.
 	description text not null, -- A human readable description of the operation which caused the UI Auth flow to occur.
-	unique(session_id)
+	unique (session_id)
 );
 
 create table if not exists ui_auth_sessions_credentials (
 	session_id text not null, -- The corresponding UI Auth session.
 	stage_type text not null, -- The stage type.
 	result text not null, -- The result of the stage verification, stored as JSON.
-	unique(session_id, stage_type),
+	unique (session_id, stage_type),
 	foreign key (session_id) references ui_auth_sessions (session_id)
 );

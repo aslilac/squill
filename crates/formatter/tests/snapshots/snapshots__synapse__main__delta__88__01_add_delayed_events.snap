@@ -41,7 +41,7 @@ create index delayed_events_room_state_event_idx
 create table delayed_events_stream_pos (
 	Lock char(1) not null unique default 'X', -- Makes sure this table only has one row.
 	stream_id bigint not null,
-	check(Lock = 'X')
+	check (Lock = 'X')
 );
 
 -- Start processing events from the point this migration was run, rather

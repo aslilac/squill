@@ -68,7 +68,7 @@ from usage_events
 where
 	-- The only event type we currently support is dc_managed_agents_v1
 	event_type
-	= 'dc_managed_agents_v1'
+		= 'dc_managed_agents_v1'
 group by date_trunc('day', created_at at time zone 'UTC')::date, event_type
 on conflict (day, event_type) do update
 set usage_data = EXCLUDED.usage_data;

@@ -77,7 +77,7 @@ drop table if exists stats_incremental_position;
 create table stats_incremental_position (
 	Lock char(1) not null unique default 'X', -- Makes sure this table only has one row.
 	stream_id bigint not null,
-	check(Lock = 'X')
+	check (Lock = 'X')
 );
 
 -- insert a null row and make sure it is the only one.

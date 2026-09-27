@@ -43,5 +43,5 @@ create table if not exists user_external_ids (
 	auth_provider text not null,
 	external_id text not null,
 	user_id text not null,
-	unique(auth_provider, external_id)
+	unique (auth_provider, external_id)
 );

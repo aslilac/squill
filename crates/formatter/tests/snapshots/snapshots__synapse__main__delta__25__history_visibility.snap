@@ -44,5 +44,5 @@ create table if not exists history_visibility (
 	event_id text not null,
 	room_id text not null,
 	history_visibility text not null,
-	unique(event_id)
+	unique (event_id)
 );

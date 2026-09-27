@@ -18,7 +18,7 @@ where
 				name,
 				coalesce(organization_id, '00000000-0000-0000-0000-000000000000'::uuid)
 			)
-			= any(@lookup_roles::name_organization_pair[])
+				= any(@lookup_roles::name_organization_pair[])
 		else true
 	end
 	-- This allows fetching all roles, or just site wide roles

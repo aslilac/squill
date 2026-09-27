@@ -679,3 +679,39 @@ fn broken_list_items_indent_their_operator_lines() {
 		 \tand boundary_usage_stats.denied_requests_total = 2;\n"
 	);
 }
+
+#[test]
+fn broken_comparisons_indent_their_operator_line() {
+	// A comparison's second line continues its first, even where an
+	// `and` chain's conditions start at the margin.
+	assert_eq!(
+		format(
+			"select a from t where boundary_usage_stats.allowed_requests_total_for_the_window = coalesce(excluded.allowed_requests_total, 0) and b = 1;"
+		),
+		"select a\n\
+		 from t\n\
+		 where\n\
+		 \tboundary_usage_stats.allowed_requests_total_for_the_window\n\
+		 \t\t= coalesce(excluded.allowed_requests_total, 0)\n\
+		 \tand b = 1;\n"
+	);
+}
+
+#[test]
+fn table_constraints_are_not_calls() {
+	// `unique (a, b)` and `check (a > 0)` would parse as calls to
+	// functions of those names; as table constraints, they keep the
+	// space that `primary key (a)` has.
+	assert_eq!(
+		format(
+			"create table t (a int, b int, unique (a, b), check (a > 0), primary key (a));"
+		),
+		"create table t (\n\
+		 \ta int,\n\
+		 \tb int,\n\
+		 \tunique (a, b),\n\
+		 \tcheck (a > 0),\n\
+		 \tprimary key (a)\n\
+		 );\n"
+	);
+}

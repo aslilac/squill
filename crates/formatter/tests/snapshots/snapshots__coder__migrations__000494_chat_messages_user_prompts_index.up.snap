@@ -11,11 +11,11 @@ create index idx_chat_messages_user_prompts
 			and (role = 'user'::chat_message_role)
 			and (
 				visibility
-				= any(
-					array[
-						'user'::chat_message_visibility,
-						'both'::chat_message_visibility
-					]
-				)
+					= any(
+						array[
+							'user'::chat_message_visibility,
+							'both'::chat_message_visibility
+						]
+					)
 			)
 		);

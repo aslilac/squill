@@ -51,4 +51,4 @@ select *
 from workspace_resource_metadata
 where
 	workspace_resource_id
-	= any (select id from workspace_resources where created_at > $1);
+		= any (select id from workspace_resources where created_at > $1);

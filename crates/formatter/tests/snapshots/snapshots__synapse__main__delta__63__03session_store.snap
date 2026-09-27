@@ -42,5 +42,5 @@ create table if not exists sessions (
 	session_id text not null, -- The session ID passed to the client.
 	value text not null, -- A JSON dictionary to persist.
 	expiry_time_ms bigint not null, -- The time this session will expire (epoch time in milliseconds).
-	unique(session_type, session_id)
+	unique (session_type, session_id)
 );

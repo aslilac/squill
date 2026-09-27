@@ -86,7 +86,7 @@ where
 	-- Periods don't need to be escaped because they're not special characters
 	-- in SQL matches unlike regular expressions.
 	@hostname::text
-	similar to '[a-zA-Z0-9._-]+'
+		similar to '[a-zA-Z0-9._-]+'
 	and deleted = false
 	and
 

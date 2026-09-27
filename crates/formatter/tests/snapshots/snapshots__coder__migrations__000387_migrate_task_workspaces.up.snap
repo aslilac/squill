@@ -75,7 +75,7 @@ from workspaces w
 where
 	-- Skip deleted workspaces because of duplicate name.
 	w.deleted
-	= false
+		= false
 	-- Safe-guard, do not create tasks for workspaces that are already tasks.
 	and not exists (select 1 from tasks t where t.workspace_id = w.id);
 

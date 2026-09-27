@@ -108,7 +108,7 @@ where
 	and case
 		when @build_reason::text != ''
 			then coalesce(wb_build.reason::text, wb_workspace.reason::text)
-			= @build_reason
+				= @build_reason
 		else true
 	end
 	-- Filter request_id
@@ -188,7 +188,7 @@ from (
 		-- Filter organization_id
 		and case
 			when @organization_id::uuid
-			!= '00000000-0000-0000-0000-000000000000'::uuid
+				!= '00000000-0000-0000-0000-000000000000'::uuid
 				then audit_logs.organization_id = @organization_id
 			else true
 		end
@@ -236,7 +236,7 @@ from (
 		and case
 			when @build_reason::text != ''
 				then coalesce(wb_build.reason::text, wb_workspace.reason::text)
-				= @build_reason
+					= @build_reason
 			else true
 		end
 		-- Filter request_id

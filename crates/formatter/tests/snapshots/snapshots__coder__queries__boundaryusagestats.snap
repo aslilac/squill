@@ -46,22 +46,22 @@ with deleted as (delete from boundary_usage_stats returning *)
 select
 	coalesce(
 		sum(unique_workspaces_count) filter (where window_start
-		>= now() - (@max_staleness_ms::bigint || ' ms')::interval),
+			>= now() - (@max_staleness_ms::bigint || ' ms')::interval),
 		0
 	)::bigint as unique_workspaces,
 	coalesce(
 		sum(unique_users_count) filter (where window_start
-		>= now() - (@max_staleness_ms::bigint || ' ms')::interval),
+			>= now() - (@max_staleness_ms::bigint || ' ms')::interval),
 		0
 	)::bigint as unique_users,
 	coalesce(
 		sum(allowed_requests) filter (where window_start
-		>= now() - (@max_staleness_ms::bigint || ' ms')::interval),
+			>= now() - (@max_staleness_ms::bigint || ' ms')::interval),
 		0
 	)::bigint as allowed_requests,
 	coalesce(
 		sum(denied_requests) filter (where window_start
-		>= now() - (@max_staleness_ms::bigint || ' ms')::interval),
+			>= now() - (@max_staleness_ms::bigint || ' ms')::interval),
 		0
 	)::bigint as denied_requests
 from deleted;

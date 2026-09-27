@@ -30,7 +30,7 @@ create table local_media_repository_thumbnails_new (
 	thumbnail_type text,
 	thumbnail_method text,
 	thumbnail_length integer,
-	unique(
+	unique (
 		media_id,
 		thumbnail_width,
 		thumbnail_height,
@@ -67,7 +67,7 @@ create table if not exists remote_media_cache_thumbnails_new (
 	thumbnail_type text,
 	thumbnail_length integer,
 	filesystem_id text,
-	unique(
+	unique (
 		media_origin,
 		media_id,
 		thumbnail_width,

@@ -32,6 +32,6 @@ from templates
 where
 	-- Only fetch template version associated files.
 	storage_method
-	= 'file'
+		= 'file'
 	and provisioner_jobs.type = 'template_version_import'
 	and file_id = @file_id;

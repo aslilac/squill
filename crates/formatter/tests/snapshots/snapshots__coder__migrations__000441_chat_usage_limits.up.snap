@@ -7,7 +7,7 @@ create table chat_usage_limit_config (
 	id bigserial primary key,
 	-- Only one row allowed (enforced by CHECK).
 	singleton boolean not null check (singleton) default true,
-	unique(singleton),
+	unique (singleton),
 	enabled boolean not null default false,
 	-- Limit per user per period, in micro-dollars (1 USD = 1,000,000).
 	default_limit_micros bigint not null check (default_limit_micros >= 0)

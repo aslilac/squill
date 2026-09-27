@@ -17,7 +17,7 @@ set
 			from user_links inn
 			where out.linked_id = inn.linked_id and out.login_type = inn.login_type
 		)
-		> 1
+			> 1
 			then ''
 		else out.linked_id
 	end;

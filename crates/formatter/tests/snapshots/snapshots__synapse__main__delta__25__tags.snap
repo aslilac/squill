@@ -54,7 +54,7 @@ create table if not exists room_tags_revisions (
 create table if not exists private_user_data_max_stream_id (
 	Lock char(1) not null unique default 'X', -- Makes sure this table only has one row.
 	stream_id bigint not null,
-	check(Lock = 'X')
+	check (Lock = 'X')
 );
 
 insert into private_user_data_max_stream_id (stream_id) values (0);

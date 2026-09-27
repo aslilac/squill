@@ -8,7 +8,7 @@ create table twofactor (
 	type integer not null,
 	enabled boolean not null,
 	data text not null,
-	unique(user_uuid, type)
+	unique (user_uuid, type)
 );
 
 

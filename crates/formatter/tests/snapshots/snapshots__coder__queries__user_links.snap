@@ -57,7 +57,7 @@ from user_links
 where
 	-- Only return rows where the top level key exists
 	claims
-	? 'merged_claims'
+		? 'merged_claims'
 	and
 	-- 'null' is the default value for the id_token_claims field
 	-- jsonb 'null' is not the same as SQL NULL. Strip these out.
@@ -67,11 +67,11 @@ where
 	and case
 		when @organization_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
 			then user_links.user_id
-			= any (
-				select organization_members.user_id
-				from organization_members
-				where organization_id = @organization_id
-			)
+				= any (
+					select organization_members.user_id
+					from organization_members
+					where organization_id = @organization_id
+				)
 		else true
 	end;
 
@@ -86,7 +86,7 @@ distinct
 			when jsonb_typeof(
 				claims -> 'merged_claims' -> sqlc.arg('claim_field')::text
 			)
-			= 'array'
+				= 'array'
 				then (
 					select jsonb_agg(element)
 					from jsonb_array_elements(
@@ -95,13 +95,13 @@ distinct
 					where
 						-- Filtering out non-string elements
 						jsonb_typeof(element)
-						= 'string'
+							= 'string'
 				)
 			-- Some IDPs return a single string instead of an array of strings.
 			when jsonb_typeof(
 				claims -> 'merged_claims' -> sqlc.arg('claim_field')::text
 			)
-			= 'string'
+				= 'string'
 				then jsonb_build_array(
 					claims -> 'merged_claims' -> sqlc.arg('claim_field')::text
 				)
@@ -111,16 +111,16 @@ from user_links
 where
 	-- IDP sync only supports string and array (of string) types
 	jsonb_typeof(claims -> 'merged_claims' -> sqlc.arg('claim_field')::text)
-	= any(array['string', 'array'])
+		= any(array['string', 'array'])
 	and login_type = 'oidc'
 	and case
 		when @organization_id::uuid != '00000000-0000-0000-0000-000000000000'::uuid
 			then user_links.user_id
-			= any (
-				select organization_members.user_id
-				from organization_members
-				where organization_id = @organization_id
-			)
+				= any (
+					select organization_members.user_id
+					from organization_members
+					where organization_id = @organization_id
+				)
 		else true
 	end;
 

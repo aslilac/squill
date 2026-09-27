@@ -29,4 +29,4 @@ set
 where
 	-- Only on existing admins
 	'admin'
-	= any(rbac_roles);
+		= any(rbac_roles);

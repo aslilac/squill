@@ -38,7 +38,7 @@ create table thread_subscriptions (
 	-- 1. foreign key constraint on (room_id)
 	-- 2. foreign key constraint on (room_id, event_id)
 	-- 3. finding the user's settings for a specific thread (as well as enforcing uniqueness)
-	unique(room_id, event_id, user_id)
+	unique (room_id, event_id, user_id)
 );
 
 -- this provides a useful index for finding a user's own rules,

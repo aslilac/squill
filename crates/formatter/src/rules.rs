@@ -1900,10 +1900,13 @@ impl Lowerer {
 	/// leading each soft line; other operators get a soft line before the
 	/// operator run.
 	///
-	/// As an item of a comma list (a select or set list, arguments, a
-	/// values row), the operator lines indent one level past the first
-	/// operand, so they don't read as the next item. Not when the last
-	/// operand hugs (`+ case`, `+ (`): its own lines already indent.
+	/// The operator lines of a comparison or arithmetic indent one level
+	/// past the first operand, since they continue it. So do an `and`/`or`
+	/// chain's as an item of a comma list (a select or set list,
+	/// arguments, a values row), so they don't read as the next item;
+	/// elsewhere (a `where` clause) each condition starts at the margin.
+	/// Not when the last operand hugs (`+ case`, `+ (`): its own lines
+	/// already indent.
 	fn binary_expr(&mut self, node: &SyntaxNode) -> Doc {
 		let chain_op = bool_chain_op(node);
 		let mut docs = Vec::new();
@@ -1920,7 +1923,9 @@ impl Lowerer {
 			&& !is_chain(node)
 			&& hug_op_index(&elements).is_some();
 		match first_operand {
-			Some(split) if !hugs && indents_continuation(node) => {
+			Some(split)
+				if !hugs && (chain_op.is_none() || indents_continuation(node)) =>
+			{
 				let rest = docs.split_off(split);
 				group(concat([concat(docs), indent(concat(rest))]))
 			}

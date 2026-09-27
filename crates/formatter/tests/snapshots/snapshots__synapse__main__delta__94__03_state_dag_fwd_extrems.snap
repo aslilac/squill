@@ -21,7 +21,7 @@ create table if not exists msc4242_state_dag_forward_extremities (
 	event_id text not null references events (event_id) on delete cascade,
 	-- it doesn't make sense to reference the same event multiple times, and this uniqueness
 	-- index is also used to delete events once they are no longer forward extremities.
-	unique(event_id)
+	unique (event_id)
 );
 -- When creating events, we want to select all forward extremities for a room which this index helps with.
 create index msc4242_state_dag_room

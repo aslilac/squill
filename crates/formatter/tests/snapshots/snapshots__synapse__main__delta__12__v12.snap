@@ -40,7 +40,7 @@ create table if not exists rejections (
 	event_id text not null,
 	reason text not null,
 	last_check text not null,
-	unique(event_id)
+	unique (event_id)
 );
 
 -- Push notification endpoints that users have configured
@@ -59,7 +59,7 @@ create table if not exists pushers (
 	last_token text,
 	last_success bigint UNSIGNED,
 	failing_since bigint UNSIGNED,
-	unique(app_id, pushkey)
+	unique (app_id, pushkey)
 );
 
 create table if not exists push_rules (
@@ -70,7 +70,7 @@ create table if not exists push_rules (
 	priority integer not null default 0,
 	conditions text not null,
 	actions text not null,
-	unique(user_name, rule_id)
+	unique (user_name, rule_id)
 );
 
 create index if not exists push_rules_user_name on push_rules (user_name);

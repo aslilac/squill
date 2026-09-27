@@ -39,7 +39,7 @@ expression: formatted
 create table if not exists appservice_stream_position (
 	Lock char(1) not null unique default 'X', -- Makes sure this table only has one row.
 	stream_ordering bigint,
-	check(Lock = 'X')
+	check (Lock = 'X')
 );
 
 insert into appservice_stream_position (stream_ordering)
