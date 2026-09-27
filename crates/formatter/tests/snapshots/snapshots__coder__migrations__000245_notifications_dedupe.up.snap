@@ -19,7 +19,7 @@ returns trigger
 language plpgsql
 as $$
 begin
-	new.dedupe_hash := md5(
+	NEW.dedupe_hash := md5(
 		concat_ws(
 			':',
 			NEW.notification_template_id,

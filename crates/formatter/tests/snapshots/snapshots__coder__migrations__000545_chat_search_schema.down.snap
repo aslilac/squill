@@ -37,7 +37,7 @@ begin
 		raise exception 'chat % does not exist', NEW.chat_id;
 	end if;
 
-	new.revision = chat_snapshot_version;
+	NEW.revision = chat_snapshot_version;
 	return NEW;
 end;
 $$;

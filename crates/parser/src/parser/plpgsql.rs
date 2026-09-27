@@ -484,7 +484,11 @@ fn pl_get_diagnostics(p: &mut Parser<'_>) -> PResult {
 /// `target := expr;` — target may be qualified and subscripted.
 fn pl_assign(p: &mut Parser<'_>) -> PResult {
 	p.start(SyntaxKind::PlAssign);
+	// The target is a name, as it would be in an expression: its case is
+	// never a keyword's (`NEW.total := ...`).
+	p.start(SyntaxKind::ColumnRef);
 	qualified_name(p)?;
+	p.finish();
 	while p.at(SyntaxKind::LBracket) {
 		p.bump();
 		expr(p, 0)?;

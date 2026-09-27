@@ -160,7 +160,7 @@ begin
 		raise exception 'chat % does not exist', NEW.chat_id;
 	end if;
 
-	new.revision = chat_snapshot_version;
+	NEW.revision = chat_snapshot_version;
 	return NEW;
 end;
 $$;
@@ -290,11 +290,11 @@ begin
 	end if;
 
 	if NEW.generation_attempt is distinct from OLD.generation_attempt then
-		new.retry_state = null;
+		NEW.retry_state = null;
 	end if;
 
 	if NEW.retry_state is distinct from OLD.retry_state then
-		new.retry_state_version = NEW.snapshot_version;
+		NEW.retry_state_version = NEW.snapshot_version;
 	end if;
 
 	return NEW;

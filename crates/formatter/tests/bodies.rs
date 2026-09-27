@@ -300,3 +300,13 @@ fn plpgsql_blank_lines_between_statements() {
 		"do $$\ndeclare\n\ta int := 1;\n\n\tb int := 2;\nbegin\n\tperform 1;\n\n\tperform 2;\n\tif a > 0 then\n\t\tperform 3;\n\n\t\tperform 4;\n\tend if;\nend\n$$;\n"
 	);
 }
+
+#[test]
+fn assignment_targets_keep_their_case() {
+	// `NEW` is a keyword elsewhere, but an assignment's target is a name,
+	// just as `NEW.b` on the right is.
+	assert_eq!(
+		format("DO $$ BEGIN NEW.a := NEW.b; END $$;"),
+		"do $$\nbegin\n\tNEW.a := NEW.b;\nend\n$$;\n"
+	);
+}
