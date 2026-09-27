@@ -1,0 +1,21 @@
+---
+// One example on the style tour: squill's output, with the input it came
+// from behind a second tab. The output is formatted at build time, and
+// reformatted in the browser when the tour's options change (the source
+// rides along in `data-source`).
+import CodeTabs from "./CodeTabs.astro";
+import { formatSql } from "./format-at-build.js";
+
+const { input } = Astro.props;
+const source = input.trim() + "\n";
+const formatted = await formatSql(source);
+---
+
+<div class="style-example" data-source={source}>
+	<CodeTabs
+		tabs={[
+			{ id: "formatted", label: "Formatted", code: formatted, lang: "sql" },
+			{ id: "input", label: "Input", code: source, lang: "sql" },
+		]}
+	/>
+</div>

@@ -317,7 +317,8 @@ const topNav = [
 			font-family: "JetBrains Mono", monospace;
 			font-size: 13px;
 			line-height: 1.7;
-			tab-size: 2;
+			/* A live pane sets --tab-width to the indent-width it shows. */
+			tab-size: var(--tab-width, 2);
 		}
 		/* No ligatures: code on these pages is there to be copied, and
 		   JetBrains Mono would draw Ruby's <<-SQL as a guillemet and a dash. */

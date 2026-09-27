@@ -15,9 +15,14 @@ const recipes = [...document.querySelectorAll(".recipe[data-live]")].map(
 	(root) => {
 		const after = root.querySelector('[data-pane="after"]');
 		const config = root.querySelector('[data-file="squill.toml"] > div');
+		const live = JSON.parse(root.dataset.live);
+		// The recipe's own indent-width measures its tabs from the start.
+		if (live.options.indent_width) {
+			after.style.setProperty("--tab-width", live.options.indent_width);
+		}
 		return {
 			root,
-			live: JSON.parse(root.dataset.live),
+			live,
 			after,
 			config,
 			// What the page was built with: shown again when nothing is
@@ -93,6 +98,10 @@ function setStatus(recipe, text) {
 async function update(recipe) {
 	const version = ++recipe.version;
 	const { live, after, config, original } = recipe;
+	// Tabs measure the indent-width the pane shows.
+	const tabWidth = overrides.indent_width ?? live.options.indent_width;
+	if (tabWidth) after.style.setProperty("--tab-width", tabWidth);
+	else after.style.removeProperty("--tab-width");
 	const sqlPane = after.querySelector(".sql-on");
 	const plainPane = after.querySelector(".sql-off");
 	if (Object.keys(overrides).length === 0) {
