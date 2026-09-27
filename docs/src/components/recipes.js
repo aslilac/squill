@@ -59,10 +59,21 @@ export function liveRecipe(name) {
 			if (layer[key] !== undefined) options[key.replaceAll("-", "_")] = layer[key];
 		}
 	}
+	// The dialect squill reads before's SQL in, from `squill locate`
+	// (spans.jsonl): the config's, or one the query pins (@sql.sqlite).
+	const dialects = new Set(
+		read("spans.jsonl")
+			.split("\n")
+			.filter(Boolean)
+			.map((line) => JSON.parse(line))
+			.filter((span) => span.path === before)
+			.map((span) => span.dialect),
+	);
 	return {
 		host,
 		query: rule.query ? read(rule.query) : undefined,
 		options,
+		dialect: dialects.size === 1 ? [...dialects][0] : undefined,
 		source: read(before),
 		config: configText,
 		// Where new keys go in the config: the rule's table, or the top.

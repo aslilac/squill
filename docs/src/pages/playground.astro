@@ -15,9 +15,9 @@ const baseHref = import.meta.env.BASE_URL;
 const frameworks = recipeTitles().flatMap(({ name, page, title }) => {
 	const recipe = liveRecipe(name);
 	if (!recipe) return [];
-	const { host, query, options, source } = recipe;
+	const { host, query, options, dialect, source } = recipe;
 	const language = host === "sql" ? page : host;
-	return [{ name, title, language, host, query, options, source }];
+	return [{ name, title, language, host, query, options, dialect, source }];
 });
 // Inline JSON: `<` escaped so no source can end the script element.
 const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
@@ -200,7 +200,7 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 				highlight,
 				highlightHost,
 			} from "../components/highlight.js";
-			import { languages, sqlExample } from "../playground/examples.js";
+			import { languages, sqlExamples } from "../playground/examples.js";
 			import {
 				gleamConfiguration,
 				gleamLanguage,
@@ -272,7 +272,13 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 			// What a language offers: its recipes, then a clean slate.
 			const choicesFor = (language) => [
 				...(language.host === "sql"
-					? [{ title: "Example", host: "sql", source: sqlExample, options: {} }]
+					? sqlExamples.map(({ title, dialect, source }) => ({
+							title,
+							host: "sql",
+							source,
+							dialect,
+							options: dialect ? { dialect } : {},
+						}))
 					: []),
 				...frameworks.filter((framework) => framework.language === language.host),
 				{ title: "Empty", host: language.host, source: "", options: {}, empty: true },
@@ -297,7 +303,7 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 			let query;
 
 			const editor = monaco.editor.create(document.getElementById("editor"), {
-				value: sqlExample,
+				value: sqlExamples[0].source,
 				language: current.monacoLang,
 				theme: editorTheme(),
 				minimap: { enabled: false },
@@ -456,7 +462,10 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 						button.role = "option";
 						button.textContent = choice.title;
 						if (choice.empty) item.className = "picker-empty";
-						if (choice.options.dialect === "sqlite") {
+						// SQLite's are marked, however they got there: the
+						// config, or a query that pins it (sqlight, GRDB).
+						// The SQL examples are named for their dialect.
+						if (choice.dialect === "sqlite" && language.host !== "sql") {
 							const note = document.createElement("span");
 							note.className = "picker-note";
 							note.textContent = "SQLite";
@@ -651,7 +660,7 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 				}
 				event.preventDefault();
 			});
-			pickerLabel.textContent = "SQL · Example";
+			pickerLabel.textContent = `SQL · ${sqlExamples[0].title}`;
 
 			copyButton.addEventListener("click", async () => {
 				await navigator.clipboard.writeText(lastGoodOutput);
