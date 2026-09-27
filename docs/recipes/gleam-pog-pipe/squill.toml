@@ -1,4 +1,0 @@
-[[embedded]]
-include = ["**/*.gleam"]
-grammar = "gleam"
-query = ".config/squill/pog.scm"

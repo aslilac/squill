@@ -14,3 +14,16 @@ pub fn overdue(db: pog.Connection, cutoff: pog.Timestamp) {
   |> pog.returning(decoder)
   |> pog.execute(db)
 }
+
+pub fn top_posters(db: pog.Connection, since: pog.Date) {
+  let decoder = {
+    use name <- decode.field(0, decode.string)
+    use posts <- decode.field(1, decode.int)
+    decode.success(#(name, posts))
+  }
+  "SELECT u.name, count(*) AS posts FROM posts p JOIN users u ON u.id = p.author_id WHERE p.created_at >= $1 GROUP BY u.name HAVING count(*) > 10 ORDER BY posts DESC"
+  |> pog.query
+  |> pog.parameter(pog.calendar_date(since))
+  |> pog.returning(decoder)
+  |> pog.execute(db)
+}

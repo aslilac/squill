@@ -19,7 +19,8 @@ import Recipe from "../../../components/Recipe.astro";
 			The built-in <code>gleam</code> grammar&rsquo;s default query looks for
 			a string passed straight to a <code>query</code>, <code>exec</code>, or{" "}
 			<code>execute</code> call, module-qualified (<code>sqlight.query</code>)
-			or imported bare. A string bound to a variable first
+			or imported bare, or piped into one (<code>"&hellip;" |&gt;
+			pog.query</code>). A string bound to a variable first
 			(<code>let sql = "&hellip;"</code>, then <code>pog.query(sql)</code>) is
 			out of its sight.
 		</p>
@@ -41,18 +42,11 @@ import Recipe from "../../../components/Recipe.astro";
 		<h2>pog</h2>
 		<p>
 			pog&rsquo;s calls use the configured dialect, Postgres unless you say
-			otherwise:
+			otherwise. The string can be passed in or piped in
+			(<code>"&hellip;" |&gt; pog.query</code>); the default query finds
+			both:
 		</p>
 		<Recipe name="gleam-pog" lang="gleam" />
-		<h3>Piping into pog.query</h3>
-		<p>
-			pog code often pipes the string in &mdash;{" "}
-			<code>"&hellip;" |&gt; pog.query</code> &mdash; which isn&rsquo;t a call
-			the default query recognizes. A query of your own covers it. It
-			replaces the default rather than adding to it, so it carries the plain
-			call form along too:
-		</p>
-		<Recipe name="gleam-pog-pipe" lang="gleam" />
 	</section>
 
 	<section>

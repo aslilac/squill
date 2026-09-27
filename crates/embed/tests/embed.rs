@@ -1024,3 +1024,30 @@ fn a_broken_multiline_promise_fails_the_reparse() {
 	assert_eq!(formatted.warnings.len(), 1, "{:?}", formatted.warnings);
 	assert!(formatted.warnings[0].message.contains("parses"));
 }
+
+#[test]
+fn gleam_strings_piped_into_a_query() {
+	let source = "pub fn f(db) {\n  \"SELECT   1\"\n  |> pog.query\n  |> pog.execute(db)\n  \"select id from t where a = ?\" |> sqlight.query(on: db, with: [], expecting: d)\n  \"SELECT   2\" |> query\n}\n";
+	let formatted = format_host(Host::Gleam, GLEAM_SQL_QUERY, source);
+	// `"…" |> pog.query`, chained on.
+	assert!(
+		formatted.text.contains("  \"\n  select 1\n  \"\n  |> pog.query\n"),
+		"{}",
+		formatted.text
+	);
+	// sqlight's dialect comes along through a pipe: `?` lexes as SQLite.
+	assert!(
+		formatted.text.contains(
+			"\"\n  select id\n  from t\n  where a = ?\n  \" |> sqlight.query("
+		),
+		"{}",
+		formatted.text
+	);
+	// A bare `query`.
+	assert!(
+		formatted.text.contains("\"\n  select 2\n  \" |> query"),
+		"{}",
+		formatted.text
+	);
+	assert!(formatted.warnings.is_empty(), "{:?}", formatted.warnings);
+}
