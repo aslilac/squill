@@ -107,6 +107,16 @@ const topNav = [
 			--code-func: light-dark(#3565b0, #7ba3e0);
 			--green: oklch(0.68 0.13 155);
 		}
+		/* Language icons are Catppuccin Mocha, a dark palette: on a light
+		   page they're deepened a little to keep their contrast. */
+		:root[data-theme="light"] img[src^="langs/"] {
+			filter: brightness(0.78) saturate(1.5);
+		}
+		@media (prefers-color-scheme: light) {
+			:root:not([data-theme="dark"]) img[src^="langs/"] {
+				filter: brightness(0.78) saturate(1.5);
+			}
+		}
 		/* A theme pinned in the theme menu; otherwise the system's. */
 		:root[data-theme="light"] {
 			color-scheme: light;
