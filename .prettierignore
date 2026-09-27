@@ -1,0 +1,7 @@
+# Byte-exact on purpose: the recipes' before files are messy by design and
+# their after files are squill's output; the corpora and test fixtures are
+# vendored as they are.
+corpus/
+docs/recipes/
+crates/**/tests/
+pnpm-lock.yaml

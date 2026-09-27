@@ -65,6 +65,24 @@ jobs:
       - run: cargo build --manifest-path integrations/zed/Cargo.toml --target wasm32-wasip2 --release
         name: Build
 
+  prettier:
+    name: Prettier
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        name: Checkout
+
+      - uses: pnpm/setup@v3
+        name: Configure pnpm
+        with:
+          runtime: node@24
+          cache: true
+
+      - run: pnpm exec prettier --check .
+        name: Check formatting
+
   vscode:
     name: VS Code extension
 
