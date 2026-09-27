@@ -129,6 +129,9 @@ const live = (() => {
 		rule: index >= 0 ? { kind, index } : null,
 	};
 })();
+// The view menu: the SQL highlighting switch for host code, and the style
+// options for a live recipe.
+const menu = lang !== "sql" || live;
 const settings = live && [
 	{ key: "indent", label: "indent", values: ["tabs", "spaces"] },
 	{ key: "indent_width", label: "indent-width", values: [2, 4, 8] },
@@ -175,49 +178,52 @@ const settings = live && [
 				</span>
 				<span class="tab-tools">
 					{
-						live && (
-							<span class="live-settings">
+						menu && (
+							<span class="recipe-menu">
 								<button
 									type="button"
-									class="live-gear"
-									popovertarget={`live-${name}`}
-									title="Try other style options"
-									aria-label="Try other style options"
+									class="recipe-gear"
+									popovertarget={`menu-${name}`}
+									title="View options"
+									aria-label="View options"
 									set:html={settingsIcon}
 								/>
-								<div class="live-popover" id={`live-${name}`} popover>
-									{settings.map(({ key, label, values }) => (
-										<label>
-											{label}
-											<select data-option={key}>
-												<option value="">{`default (${live.defaults[key]})`}</option>
-												{values
-													.filter((value) => value !== live.defaults[key])
-													.map((value) => (
-														<option value={String(value)}>{String(value)}</option>
-													))}
-											</select>
-										</label>
-									))}
-									<span class="live-status" aria-live="polite" />
-									<button type="button" class="live-reset">
-										reset
-									</button>
+								<div class="recipe-popover" id={`menu-${name}`} popover>
+									{lang !== "sql" && (
+										<button
+											type="button"
+											class="sql-toggle"
+											role="switch"
+											aria-checked="true"
+										>
+											sql highlighting
+											<span class="switch" aria-hidden="true" />
+										</button>
+									)}
+									{live && (
+										<div class="live-options">
+											<p class="menu-heading">style options, for the after tab</p>
+											{settings.map(({ key, label, values }) => (
+												<label>
+													{label}
+													<select data-option={key}>
+														<option value="">{`default (${live.defaults[key]})`}</option>
+														{values
+															.filter((value) => value !== live.defaults[key])
+															.map((value) => (
+																<option value={String(value)}>{String(value)}</option>
+															))}
+													</select>
+												</label>
+											))}
+											<span class="live-status" aria-live="polite" />
+											<button type="button" class="live-reset">
+												reset
+											</button>
+										</div>
+									)}
 								</div>
 							</span>
-						)
-					}
-					{
-						lang !== "sql" && (
-							<button
-								type="button"
-								class="sql-toggle"
-								role="switch"
-								aria-checked="true"
-							>
-								<span class="switch" aria-hidden="true" />
-								sql highlighting
-							</button>
 						)
 					}
 					<span>{label(lang)}</span>

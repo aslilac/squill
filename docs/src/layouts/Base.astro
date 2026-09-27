@@ -462,16 +462,15 @@ const topNav = [
 			align-items: center;
 			gap: 0.75rem;
 		}
-		/* A live recipe's style menu: a gear on the after tab, and a
-		   popover in the top layer (the pane would clip it) that doesn't
-		   inherit the caption's small caps. */
-		[data-current="before"] .live-settings {
-			display: none;
-		}
-		.live-settings {
+		/* A recipe's view menu: a gear, and a popover in the top layer (the
+		   pane would clip it) holding the SQL highlighting switch and, for a
+		   live recipe, style options. It sits in the tab bar's markup, so its
+		   rules are scoped past `.tabbar button`'s, and it drops the
+		   caption's small caps. */
+		.recipe-menu {
 			display: inline-flex;
 		}
-		.tabbar .live-gear {
+		.tabbar .recipe-gear {
 			display: inline-flex;
 			align-items: center;
 			justify-content: center;
@@ -488,26 +487,26 @@ const topNav = [
 				border-color 0.12s,
 				color 0.12s;
 		}
-		.tabbar .live-gear:hover,
-		.tabbar .live-gear[aria-expanded="true"] {
+		.tabbar .recipe-gear:hover,
+		.tabbar .recipe-gear[aria-expanded="true"] {
 			color: var(--pane-text);
 			border-color: var(--pane-edge);
 			background: color-mix(in oklab, var(--pane-edge) 40%, transparent);
 		}
-		.live-gear:focus-visible {
+		.recipe-gear:focus-visible {
 			outline: 2px solid var(--violet);
 		}
-		.live-gear svg {
+		.recipe-gear svg {
 			flex-shrink: 0;
 			width: 14px;
 			height: 14px;
 			display: block;
 		}
-		.live-popover {
+		.recipe-popover {
 			position: absolute;
 			inset: auto;
 			margin: 0;
-			padding: 0.6rem 0.75rem 0.75rem;
+			padding: 0.5rem 0.75rem 0.6rem;
 			min-width: 17rem;
 			border: 1px solid var(--edge);
 			border-radius: 10px;
@@ -519,15 +518,38 @@ const topNav = [
 			letter-spacing: normal;
 			text-transform: none;
 		}
-		.live-popover label {
+		.recipe-popover label,
+		.recipe-popover .sql-toggle {
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
 			gap: 1rem;
-			padding: 0.2rem 0;
+			width: 100%;
+			padding: 0.25rem 0;
 		}
-		.live-popover select,
-		.live-reset {
+		.recipe-popover .sql-toggle {
+			border: none;
+			border-radius: 0;
+			background: none;
+			color: var(--ink);
+			cursor: pointer;
+		}
+		.live-options {
+			margin-top: 0.35rem;
+			padding-top: 0.45rem;
+			border-top: 1px solid var(--edge);
+		}
+		.live-options:first-child {
+			margin-top: 0;
+			padding-top: 0;
+			border-top: none;
+		}
+		.menu-heading {
+			margin: 0 0 0.2rem;
+			color: var(--muted);
+		}
+		.recipe-popover select,
+		.recipe-popover .live-reset {
 			font: inherit;
 			color: var(--ink);
 			background: var(--inset);
@@ -544,27 +566,22 @@ const topNav = [
 		.live-status:empty {
 			display: none;
 		}
-		.live-reset {
+		.recipe-popover .live-reset {
 			margin-top: 0.5rem;
 			cursor: pointer;
 		}
-		.live-reset:hover {
+		.recipe-popover .live-reset:hover {
 			border-color: var(--violet);
 			color: var(--violet-deep);
 		}
 		/* The SQL highlighting switch: a track and a knob that slides. */
-		.tabbar .sql-toggle {
-			display: inline-flex;
-			align-items: center;
-			gap: 0.5rem;
-			padding-left: 0.2rem;
-		}
 		.switch {
 			position: relative;
+			flex-shrink: 0;
 			width: 1.7rem;
 			height: 0.95rem;
 			border-radius: 999px;
-			background: var(--pane-edge);
+			background: var(--edge);
 			transition: background 0.15s;
 		}
 		.switch::after {
@@ -575,11 +592,8 @@ const topNav = [
 			width: 0.65rem;
 			height: 0.65rem;
 			border-radius: 50%;
-			background: var(--pane-text);
+			background: var(--paper);
 			transition: transform 0.15s;
-		}
-		.sql-toggle[aria-checked="true"] {
-			color: var(--pane-text);
 		}
 		.sql-toggle[aria-checked="true"] .switch {
 			background: var(--green);

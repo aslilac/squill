@@ -1,6 +1,7 @@
-// Live recipes: a recipe whose grammar the playground's wasm module has
-// carries its source, config, and options (Recipe.astro's `data-live`).
-// Its gear menu reformats the after pane with other style options, and
+// Recipe view menus, and live recipes: a recipe whose grammar the
+// playground's wasm module has carries its source, config, and options
+// (Recipe.astro's `data-live`). Its menu reformats the after pane with
+// other style options, and
 // writes the keys that would do it into the config pane. The choices are
 // page-wide — every live recipe on the page follows them — and last
 // until the page reloads, so the docs always open on the defaults.
@@ -31,12 +32,13 @@ const recipes = [...document.querySelectorAll(".recipe[data-live]")].map(
 	},
 );
 
-for (const recipe of recipes) {
-	const { root } = recipe;
-	const gear = root.querySelector(".live-gear");
-	const popover = root.querySelector(".live-popover");
-	// The popover sits in the top layer, out of the pane that would clip
-	// it; place it under its gear, right edges aligned.
+// Every recipe's view menu: the popover sits in the top layer, out of
+// the pane that would clip it; place it under its gear, right edges
+// aligned.
+for (const root of document.querySelectorAll(".recipe")) {
+	const gear = root.querySelector(".recipe-gear");
+	const popover = root.querySelector(".recipe-popover");
+	if (!gear || !popover) continue;
 	popover.addEventListener("toggle", (event) => {
 		gear.setAttribute("aria-expanded", String(event.newState === "open"));
 		if (event.newState !== "open") return;
@@ -45,12 +47,18 @@ for (const recipe of recipes) {
 		popover.style.top = `${at.bottom + scrollY + 6}px`;
 		popover.style.left = `${left}px`;
 	});
+}
+
+for (const recipe of recipes) {
+	const { root } = recipe;
+	const popover = root.querySelector(".recipe-popover");
 	for (const select of popover.querySelectorAll("select[data-option]")) {
 		select.addEventListener("change", () => {
 			const key = select.dataset.option;
 			if (select.value === "") delete overrides[key];
 			else overrides[key] = numeric.has(key) ? Number(select.value) : select.value;
 			syncMenus();
+			showAfter(root);
 			for (const each of recipes) update(each);
 		});
 	}
@@ -59,15 +67,19 @@ for (const recipe of recipes) {
 		syncMenus();
 		for (const each of recipes) update(each);
 	});
-	// Switching to the before tab puts the menu away.
-	root.querySelector("[data-tabs]").addEventListener("click", (event) => {
-		if (event.target.closest('[data-tab="before"]')) popover.hidePopover?.();
-	});
+}
+
+// Style options change the after pane: show it, if the before tab is up.
+function showAfter(root) {
+	const tabs = root.querySelector("[data-tabs]");
+	if (tabs.dataset.current !== "after") {
+		tabs.querySelector('[data-tab="after"]').click();
+	}
 }
 
 function syncMenus() {
 	for (const select of document.querySelectorAll(
-		".live-popover select[data-option]",
+		".recipe-popover select[data-option]",
 	)) {
 		const value = overrides[select.dataset.option];
 		select.value = value === undefined ? "" : String(value);
