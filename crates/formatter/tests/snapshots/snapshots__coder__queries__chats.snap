@@ -1466,17 +1466,16 @@ select
 	r.source_path
 from hydrated cross join workspace_agent_context_resources r
 where r.workspace_agent_id = @agent_id::uuid
-on conflict
-	(chat_id,
-	source) do update set
-		body_kind = EXCLUDED.body_kind,
-		body = EXCLUDED.body,
-		content_hash = EXCLUDED.content_hash,
-		size_bytes = EXCLUDED.size_bytes,
-		status = EXCLUDED.status,
-		error = EXCLUDED.error,
-		source_path = EXCLUDED.source_path,
-		updated_at = now();
+on conflict (chat_id, source) do update
+set
+	body_kind = EXCLUDED.body_kind,
+	body = EXCLUDED.body,
+	content_hash = EXCLUDED.content_hash,
+	size_bytes = EXCLUDED.size_bytes,
+	status = EXCLUDED.status,
+	error = EXCLUDED.error,
+	source_path = EXCLUDED.source_path,
+	updated_at = now();
 
 -- name: MarkChatsContextDirtyByAgent :many
 -- Flips active, already-hydrated chats for an agent to dirty when the
@@ -1713,22 +1712,22 @@ values
 		@git_remote_origin::text,
 		@stale_at::timestamptz
 	)
-on conflict
-	(chat_id) do update set
-		url = case
-			when EXCLUDED.url is not null then EXCLUDED.url
-			else chat_diff_statuses.url
-		end,
-		git_branch = case
-			when EXCLUDED.git_branch != '' then EXCLUDED.git_branch
-			else chat_diff_statuses.git_branch
-		end,
-		git_remote_origin = case
-			when EXCLUDED.git_remote_origin != '' then EXCLUDED.git_remote_origin
-			else chat_diff_statuses.git_remote_origin
-		end,
-		stale_at = EXCLUDED.stale_at,
-		updated_at = now()
+on conflict (chat_id) do update
+set
+	url = case
+		when EXCLUDED.url is not null then EXCLUDED.url
+		else chat_diff_statuses.url
+	end,
+	git_branch = case
+		when EXCLUDED.git_branch != '' then EXCLUDED.git_branch
+		else chat_diff_statuses.git_branch
+	end,
+	git_remote_origin = case
+		when EXCLUDED.git_remote_origin != '' then EXCLUDED.git_remote_origin
+		else chat_diff_statuses.git_remote_origin
+	end,
+	stale_at = EXCLUDED.stale_at,
+	updated_at = now()
 returning *;
 
 -- name: UpsertChatDiffStatus :one
@@ -1775,27 +1774,27 @@ values
 		@refreshed_at::timestamptz,
 		@stale_at::timestamptz
 	)
-on conflict
-	(chat_id) do update set
-		url = EXCLUDED.url,
-		pull_request_state = EXCLUDED.pull_request_state,
-		pull_request_title = EXCLUDED.pull_request_title,
-		pull_request_draft = EXCLUDED.pull_request_draft,
-		changes_requested = EXCLUDED.changes_requested,
-		additions = EXCLUDED.additions,
-		deletions = EXCLUDED.deletions,
-		changed_files = EXCLUDED.changed_files,
-		author_login = EXCLUDED.author_login,
-		author_avatar_url = EXCLUDED.author_avatar_url,
-		base_branch = EXCLUDED.base_branch,
-		head_branch = EXCLUDED.head_branch,
-		pr_number = EXCLUDED.pr_number,
-		commits = EXCLUDED.commits,
-		approved = EXCLUDED.approved,
-		reviewer_count = EXCLUDED.reviewer_count,
-		refreshed_at = EXCLUDED.refreshed_at,
-		stale_at = EXCLUDED.stale_at,
-		updated_at = now()
+on conflict (chat_id) do update
+set
+	url = EXCLUDED.url,
+	pull_request_state = EXCLUDED.pull_request_state,
+	pull_request_title = EXCLUDED.pull_request_title,
+	pull_request_draft = EXCLUDED.pull_request_draft,
+	changes_requested = EXCLUDED.changes_requested,
+	additions = EXCLUDED.additions,
+	deletions = EXCLUDED.deletions,
+	changed_files = EXCLUDED.changed_files,
+	author_login = EXCLUDED.author_login,
+	author_avatar_url = EXCLUDED.author_avatar_url,
+	base_branch = EXCLUDED.base_branch,
+	head_branch = EXCLUDED.head_branch,
+	pr_number = EXCLUDED.pr_number,
+	commits = EXCLUDED.commits,
+	approved = EXCLUDED.approved,
+	reviewer_count = EXCLUDED.reviewer_count,
+	refreshed_at = EXCLUDED.refreshed_at,
+	stale_at = EXCLUDED.stale_at,
+	updated_at = now()
 returning *;
 
 -- name: InsertChatQueuedMessage :one
@@ -2233,12 +2232,12 @@ insert into chat_usage_limit_config (
 )
 values
 	(true, @enabled::boolean, @default_limit_micros::bigint, @period::text, now())
-on conflict
-	(singleton) do update set
-		enabled = EXCLUDED.enabled,
-		default_limit_micros = EXCLUDED.default_limit_micros,
-		period = EXCLUDED.period,
-		updated_at = now()
+on conflict (singleton) do update
+set
+	enabled = EXCLUDED.enabled,
+	default_limit_micros = EXCLUDED.default_limit_micros,
+	period = EXCLUDED.period,
+	updated_at = now()
 returning *;
 
 -- name: ListChatUsageLimitOverrides :many
@@ -2567,8 +2566,8 @@ select chat_ids.chat_id, runner_ids.runner_id, now()
 from unnest(@chat_ids::uuid[]) with ordinality as chat_ids(chat_id, ord)
 	join unnest(@runner_ids::uuid[]) with ordinality as runner_ids(runner_id, ord)
 		using (ord)
-on conflict
-	(chat_id, runner_id) do update set heartbeat_at = EXCLUDED.heartbeat_at;
+on conflict (chat_id, runner_id) do update
+set heartbeat_at = EXCLUDED.heartbeat_at;
 
 -- name: DeleteStaleChatHeartbeats :execrows
 delete from chat_heartbeats
@@ -2926,8 +2925,8 @@ where
 -- database time so callers do not depend on a local clock.
 insert into chat_heartbeats (chat_id, runner_id, heartbeat_at)
 values (@chat_id::uuid, @runner_id::uuid, now())
-on conflict
-	(chat_id, runner_id) do update set heartbeat_at = EXCLUDED.heartbeat_at;
+on conflict (chat_id, runner_id) do update
+set heartbeat_at = EXCLUDED.heartbeat_at;
 
 -- name: GetChatHeartbeat :one
 select *

@@ -113,13 +113,12 @@ select
 	ucpk.created_at,
 	ucpk.updated_at
 from user_chat_provider_keys ucpk
-on conflict
-	(user_id,
-	ai_provider_id) do update set
-		api_key = EXCLUDED.api_key,
-		api_key_key_id = EXCLUDED.api_key_key_id,
-		updated_at = EXCLUDED.updated_at where
-		user_ai_provider_keys.updated_at < EXCLUDED.updated_at;
+on conflict (user_id, ai_provider_id) do update
+set
+	api_key = EXCLUDED.api_key,
+	api_key_key_id = EXCLUDED.api_key_key_id,
+	updated_at = EXCLUDED.updated_at
+where user_ai_provider_keys.updated_at < EXCLUDED.updated_at;
 
 update chat_model_configs cmc
 set ai_provider_id = cp.id

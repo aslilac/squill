@@ -37,11 +37,10 @@ insert into task_workspace_apps (
 	workspace_app_id
 )
 values ($1, $2, $3, $4)
-on conflict
-	(task_id,
-	workspace_build_number) do update set
-		workspace_agent_id = EXCLUDED.workspace_agent_id,
-		workspace_app_id = EXCLUDED.workspace_app_id
+on conflict (task_id, workspace_build_number) do update
+set
+	workspace_agent_id = EXCLUDED.workspace_agent_id,
+	workspace_app_id = EXCLUDED.workspace_app_id
 returning *;
 
 -- name: GetTaskByID :one
@@ -101,10 +100,10 @@ returning *;
 -- name: UpsertTaskSnapshot :exec
 insert into task_snapshots (task_id, log_snapshot, log_snapshot_created_at)
 values ($1, $2, $3)
-on conflict
-	(task_id) do update set
-		log_snapshot = EXCLUDED.log_snapshot,
-		log_snapshot_created_at = EXCLUDED.log_snapshot_created_at;
+on conflict (task_id) do update
+set
+	log_snapshot = EXCLUDED.log_snapshot,
+	log_snapshot_created_at = EXCLUDED.log_snapshot_created_at;
 
 -- name: GetTaskSnapshot :one
 select * from task_snapshots where task_id = $1;

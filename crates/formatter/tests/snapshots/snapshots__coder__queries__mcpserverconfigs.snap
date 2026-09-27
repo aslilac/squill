@@ -156,19 +156,18 @@ values
 		@token_type::text,
 		sqlc.narg('expiry')::timestamptz
 	)
-on conflict
-	(mcp_server_config_id,
-	user_id) do update set
-		access_token = @access_token::text,
-		access_token_key_id = sqlc.narg('access_token_key_id')::text,
-		refresh_token = @refresh_token::text,
-		refresh_token_key_id = sqlc.narg('refresh_token_key_id')::text,
-		token_type = @token_type::text,
-		expiry = sqlc.narg('expiry')::timestamptz,
-		-- New token material means the user re-authenticated, so any
-		-- cached permanent refresh failure no longer applies.
-		oauth_refresh_failure_reason = '',
-		updated_at = now()
+on conflict (mcp_server_config_id, user_id) do update
+set
+	access_token = @access_token::text,
+	access_token_key_id = sqlc.narg('access_token_key_id')::text,
+	refresh_token = @refresh_token::text,
+	refresh_token_key_id = sqlc.narg('refresh_token_key_id')::text,
+	token_type = @token_type::text,
+	expiry = sqlc.narg('expiry')::timestamptz,
+	-- New token material means the user re-authenticated, so any
+	-- cached permanent refresh failure no longer applies.
+	oauth_refresh_failure_reason = '',
+	updated_at = now()
 returning *;
 
 -- name: MarkMCPServerUserTokenRefreshFailure :one

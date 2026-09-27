@@ -63,61 +63,62 @@ values
 		$19,
 		$20
 	)
-on conflict
-	(id) do update set
-		display_name = EXCLUDED.display_name,
-		icon = EXCLUDED.icon,
-		command = EXCLUDED.command,
-		url = EXCLUDED.url,
-		external = EXCLUDED.external,
-		subdomain = EXCLUDED.subdomain,
-		sharing_level = EXCLUDED.sharing_level,
-		healthcheck_url = EXCLUDED.healthcheck_url,
-		healthcheck_interval = EXCLUDED.healthcheck_interval,
-		healthcheck_threshold = EXCLUDED.healthcheck_threshold,
-		health = EXCLUDED.health,
-		display_order = EXCLUDED.display_order,
-		hidden = EXCLUDED.hidden,
-		open_in = EXCLUDED.open_in,
-		display_group = EXCLUDED.display_group,
-		agent_id = EXCLUDED.agent_id,
-		slug = EXCLUDED.slug,
-		tooltip = EXCLUDED.tooltip where
-		-- Prevent cross-tenant/cross-workspace agent rebinding (SEC-91).
-		-- App IDs persist across builds of the same workspace, but agent IDs are
-		-- regenerated every build, so compare by the workspace that owns the agent
-		-- rather than by agent_id. Permit unowned apps to be claimed and permit
-		-- same-workspace rebuilds. If an existing app belongs to a workspace, block
-		-- moves to both different workspaces and template import or dry-run agents
-		-- that resolve to no workspace. The conflicting row is then left untouched,
-		-- and the :one query returns no row, which the caller treats as a
-		-- rejection.
-		not exists (
-			select 1
-			from workspace_agents as existing_agent
-				inner join workspace_resources as existing_resource
-					on existing_agent.resource_id = existing_resource.id
-				inner join workspace_builds as existing_build
-					on existing_resource.job_id = existing_build.job_id
-			where existing_agent.id = workspace_apps.agent_id
-		)
-		or exists (
-			select 1
-			from workspace_agents as existing_agent
-				inner join workspace_resources as existing_resource
-					on existing_agent.resource_id = existing_resource.id
-				inner join workspace_builds as existing_build
-					on existing_resource.job_id = existing_build.job_id
-				inner join workspace_agents as incoming_agent
-					on incoming_agent.id = EXCLUDED.agent_id
-				inner join workspace_resources as incoming_resource
-					on incoming_agent.resource_id = incoming_resource.id
-				inner join workspace_builds as incoming_build
-					on incoming_resource.job_id = incoming_build.job_id
-			where
-				existing_agent.id = workspace_apps.agent_id
-				and existing_build.workspace_id = incoming_build.workspace_id
-		)
+on conflict (id) do update
+set
+	display_name = EXCLUDED.display_name,
+	icon = EXCLUDED.icon,
+	command = EXCLUDED.command,
+	url = EXCLUDED.url,
+	external = EXCLUDED.external,
+	subdomain = EXCLUDED.subdomain,
+	sharing_level = EXCLUDED.sharing_level,
+	healthcheck_url = EXCLUDED.healthcheck_url,
+	healthcheck_interval = EXCLUDED.healthcheck_interval,
+	healthcheck_threshold = EXCLUDED.healthcheck_threshold,
+	health = EXCLUDED.health,
+	display_order = EXCLUDED.display_order,
+	hidden = EXCLUDED.hidden,
+	open_in = EXCLUDED.open_in,
+	display_group = EXCLUDED.display_group,
+	agent_id = EXCLUDED.agent_id,
+	slug = EXCLUDED.slug,
+	tooltip = EXCLUDED.tooltip
+where
+	-- Prevent cross-tenant/cross-workspace agent rebinding (SEC-91).
+	-- App IDs persist across builds of the same workspace, but agent IDs are
+	-- regenerated every build, so compare by the workspace that owns the agent
+	-- rather than by agent_id. Permit unowned apps to be claimed and permit
+	-- same-workspace rebuilds. If an existing app belongs to a workspace, block
+	-- moves to both different workspaces and template import or dry-run agents
+	-- that resolve to no workspace. The conflicting row is then left untouched,
+	-- and the :one query returns no row, which the caller treats as a
+	-- rejection.
+	not exists (
+		select 1
+		from workspace_agents as existing_agent
+			inner join workspace_resources as existing_resource
+				on existing_agent.resource_id = existing_resource.id
+			inner join workspace_builds as existing_build
+				on existing_resource.job_id = existing_build.job_id
+		where existing_agent.id = workspace_apps.agent_id
+	)
+	or exists (
+		select 1
+		from workspace_agents as existing_agent
+			inner join workspace_resources as existing_resource
+				on existing_agent.resource_id = existing_resource.id
+			inner join workspace_builds as existing_build
+				on existing_resource.job_id = existing_build.job_id
+			inner join workspace_agents as incoming_agent
+				on incoming_agent.id = EXCLUDED.agent_id
+			inner join workspace_resources as incoming_resource
+				on incoming_agent.resource_id = incoming_resource.id
+			inner join workspace_builds as incoming_build
+				on incoming_resource.job_id = incoming_build.job_id
+		where
+			existing_agent.id = workspace_apps.agent_id
+			and existing_build.workspace_id = incoming_build.workspace_id
+	)
 returning *;
 
 -- name: UpdateWorkspaceAppHealthByID :exec

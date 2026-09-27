@@ -166,7 +166,9 @@ create unique index event_push_summary_unique_index2
 -- from 72/02event_push_actions_index.sql and 72/06thread_notifications.sql.
 insert into background_updates (ordering, update_name, progress_json)
 values (7706, 'event_push_summary_unique_index2', '{}')
-on conflict (update_name) do update set progress_json = '{}';
+on conflict (update_name) do update
+set progress_json = '{}';
 insert into background_updates (ordering, update_name, progress_json)
 values (7706, 'event_push_actions_stream_highlight_index', '{}')
-on conflict (update_name) do update set progress_json = '{}';
+on conflict (update_name) do update
+set progress_json = '{}';

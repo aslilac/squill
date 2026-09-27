@@ -13,12 +13,12 @@ insert into ai_seat_state (
 	updated_at
 )
 values ($1, $2, $2, $3, $4, $2)
-on conflict
-	(user_id) do update set
-		last_used_at = EXCLUDED.last_used_at,
-		last_event_type = EXCLUDED.last_event_type,
-		last_event_description = EXCLUDED.last_event_description,
-		updated_at = EXCLUDED.updated_at
+on conflict (user_id) do update
+set
+	last_used_at = EXCLUDED.last_used_at,
+	last_event_type = EXCLUDED.last_event_type,
+	last_event_description = EXCLUDED.last_event_description,
+	updated_at = EXCLUDED.updated_at
 returning
 	-- Postgres vodoo to know if a row was inserted.
 	(

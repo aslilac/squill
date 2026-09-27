@@ -33,18 +33,17 @@ begin
 			NEW.event_type,
 			NEW.event_data
 		)
-	on conflict
-		(day,
-		event_type) do update set
-			usage_data = case
-				-- Handle simple counter events by summing the count
-				when NEW.event_type in ('dc_managed_agents_v1')
-					then jsonb_build_object(
-						'count',
-						coalesce((usage_events_daily.usage_data ->> 'count')::bigint, 0)
-						+ coalesce((NEW.event_data ->> 'count')::bigint, 0)
-					)
-			end;
+	on conflict (day, event_type) do update
+	set
+		usage_data = case
+			-- Handle simple counter events by summing the count
+			when NEW.event_type in ('dc_managed_agents_v1')
+				then jsonb_build_object(
+					'count',
+					coalesce((usage_events_daily.usage_data ->> 'count')::bigint, 0)
+					+ coalesce((NEW.event_data ->> 'count')::bigint, 0)
+				)
+		end;
 
 	return NEW;
 end;
@@ -71,4 +70,5 @@ where
 	event_type
 	= 'dc_managed_agents_v1'
 group by date_trunc('day', created_at at time zone 'UTC')::date, event_type
-on conflict (day, event_type) do update set usage_data = EXCLUDED.usage_data;
+on conflict (day, event_type) do update
+set usage_data = EXCLUDED.usage_data;

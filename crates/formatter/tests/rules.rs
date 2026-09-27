@@ -594,3 +594,39 @@ fn trailing_comments_stay_put() {
 		"select\n\ta, -- first\n\tb\nfrom t;\n"
 	);
 }
+
+#[test]
+fn on_conflict_do_update_lays_out_like_an_update() {
+	// The conflict target and `do update` share a line; `set` and
+	// `where` are clauses of the statement, as in an UPDATE.
+	assert_eq!(
+		format(
+			"INSERT INTO members (id, name, email) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET name = excluded.name, email = excluded.email, updated_at = now(), organization_id = excluded.organization_id WHERE members.deleted_at IS NULL RETURNING id;"
+		),
+		"insert into members (id, name, email)\n\
+		 values ($1, $2, $3)\n\
+		 on conflict (id) do update\n\
+		 set\n\
+		 \tname = excluded.name,\n\
+		 \temail = excluded.email,\n\
+		 \tupdated_at = now(),\n\
+		 \torganization_id = excluded.organization_id\n\
+		 where members.deleted_at is null\n\
+		 returning id;\n"
+	);
+	// Short enough, it all fits on one line; `do nothing` has no clauses.
+	assert_eq!(
+		format(
+			"insert into t (a, b) values (1, 2) on conflict (a) do update set b = excluded.b;"
+		),
+		"insert into t (a, b) values (1, 2) on conflict (a) do update set b = excluded.b;\n"
+	);
+	assert_eq!(
+		format(
+			"insert into accounts (id, organization_id, email) values (1, 2, 'x') on conflict (organization_id, lower(email)) where deleted_at is null do nothing;"
+		),
+		"insert into accounts (id, organization_id, email)\n\
+		 values (1, 2, 'x')\n\
+		 on conflict (organization_id, lower(email)) where deleted_at is null do nothing;\n"
+	);
+}

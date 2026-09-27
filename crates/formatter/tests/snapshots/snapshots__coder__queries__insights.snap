@@ -786,19 +786,17 @@ insert into template_usage_stats as tus (
 			and latencies.template_id = stats.template_id
 			and latencies.user_id = stats.user_id
 )
-on conflict
-	(start_time,
-	template_id,
-	user_id) do update set
-		usage_mins = EXCLUDED.usage_mins,
-		median_latency_ms = EXCLUDED.median_latency_ms,
-		ssh_mins = EXCLUDED.ssh_mins,
-		sftp_mins = EXCLUDED.sftp_mins,
-		reconnecting_pty_mins = EXCLUDED.reconnecting_pty_mins,
-		vscode_mins = EXCLUDED.vscode_mins,
-		jetbrains_mins = EXCLUDED.jetbrains_mins,
-		app_usage_mins = EXCLUDED.app_usage_mins where
-		(tus.*) is distinct from (EXCLUDED.*);
+on conflict (start_time, template_id, user_id) do update
+set
+	usage_mins = EXCLUDED.usage_mins,
+	median_latency_ms = EXCLUDED.median_latency_ms,
+	ssh_mins = EXCLUDED.ssh_mins,
+	sftp_mins = EXCLUDED.sftp_mins,
+	reconnecting_pty_mins = EXCLUDED.reconnecting_pty_mins,
+	vscode_mins = EXCLUDED.vscode_mins,
+	jetbrains_mins = EXCLUDED.jetbrains_mins,
+	app_usage_mins = EXCLUDED.app_usage_mins
+where (tus.*) is distinct from (EXCLUDED.*);
 
 -- name: GetTemplateParameterInsights :many
 -- GetTemplateParameterInsights does for each template in a given timeframe,

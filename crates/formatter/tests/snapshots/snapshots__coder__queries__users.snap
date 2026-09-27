@@ -148,40 +148,40 @@ where
 insert into user_configs (user_id, key, value)
 values (@user_id, 'theme_preference', @theme_preference)
 on conflict on constraint user_configs_pkey do update
-	set value = @theme_preference where
-		user_configs.user_id = @user_id and user_configs.key = 'theme_preference'
+set value = @theme_preference
+where user_configs.user_id = @user_id and user_configs.key = 'theme_preference'
 returning *;
 
 -- name: UpdateUserTerminalFont :one
 insert into user_configs (user_id, key, value)
 values (@user_id, 'terminal_font', @terminal_font)
 on conflict on constraint user_configs_pkey do update
-	set value = @terminal_font where
-		user_configs.user_id = @user_id and user_configs.key = 'terminal_font'
+set value = @terminal_font
+where user_configs.user_id = @user_id and user_configs.key = 'terminal_font'
 returning *;
 
 -- name: UpdateUserThemeMode :one
 insert into user_configs (user_id, key, value)
 values (@user_id, 'theme_mode', @theme_mode)
 on conflict on constraint user_configs_pkey do update
-	set value = @theme_mode where
-		user_configs.user_id = @user_id and user_configs.key = 'theme_mode'
+set value = @theme_mode
+where user_configs.user_id = @user_id and user_configs.key = 'theme_mode'
 returning *;
 
 -- name: UpdateUserThemeLight :one
 insert into user_configs (user_id, key, value)
 values (@user_id, 'theme_light', @theme_light)
 on conflict on constraint user_configs_pkey do update
-	set value = @theme_light where
-		user_configs.user_id = @user_id and user_configs.key = 'theme_light'
+set value = @theme_light
+where user_configs.user_id = @user_id and user_configs.key = 'theme_light'
 returning *;
 
 -- name: UpdateUserThemeDark :one
 insert into user_configs (user_id, key, value)
 values (@user_id, 'theme_dark', @theme_dark)
 on conflict on constraint user_configs_pkey do update
-	set value = @theme_dark where
-		user_configs.user_id = @user_id and user_configs.key = 'theme_dark'
+set value = @theme_dark
+where user_configs.user_id = @user_id and user_configs.key = 'theme_dark'
 returning *;
 
 -- name: GetUserChatCustomPrompt :one
@@ -193,8 +193,9 @@ where user_id = @user_id and key = 'chat_custom_prompt';
 insert into user_configs (user_id, key, value)
 values (@user_id, 'chat_custom_prompt', @chat_custom_prompt)
 on conflict on constraint user_configs_pkey do update
-	set value = @chat_custom_prompt where
-		user_configs.user_id = @user_id and user_configs.key = 'chat_custom_prompt'
+set value = @chat_custom_prompt
+where
+	user_configs.user_id = @user_id and user_configs.key = 'chat_custom_prompt'
 returning *;
 
 -- name: ListUserChatCompactionThresholds :many
@@ -212,7 +213,7 @@ where user_id = @user_id and key = @key;
 insert into user_configs (user_id, key, value)
 values (@user_id, @key, (@threshold_percent::int)::text)
 on conflict on constraint user_configs_pkey do update
-	set value = (@threshold_percent::int)::text
+set value = (@threshold_percent::int)::text
 returning *;
 
 -- name: DeleteUserChatCompactionThreshold :exec
@@ -238,13 +239,14 @@ values
 		case when sqlc.arg(debug_logging_enabled)::bool then 'true' else 'false' end
 	)
 on conflict on constraint user_configs_pkey do update
-	set
-		value = case
-			when sqlc.arg(debug_logging_enabled)::bool then 'true'
-			else 'false'
-		end where
-		user_configs.user_id = @user_id
-		and user_configs.key = 'chat_debug_logging_enabled';
+set
+	value = case
+		when sqlc.arg(debug_logging_enabled)::bool then 'true'
+		else 'false'
+	end
+where
+	user_configs.user_id = @user_id
+	and user_configs.key = 'chat_debug_logging_enabled';
 
 -- name: ListUserChatPersonalModelOverrides :many
 select key, value
@@ -260,7 +262,8 @@ where user_id = @user_id and key = @key;
 -- name: UpsertUserChatPersonalModelOverride :exec
 insert into user_configs (user_id, key, value)
 values (@user_id::uuid, @key::text, @value::text)
-on conflict on constraint user_configs_pkey do update set value = @value::text;
+on conflict on constraint user_configs_pkey do update
+set value = @value::text;
 
 -- name: GetUserTaskNotificationAlertDismissed :one
 select value::boolean as task_notification_alert_dismissed
@@ -277,9 +280,10 @@ values
 		(@task_notification_alert_dismissed::boolean)::text
 	)
 on conflict on constraint user_configs_pkey do update
-	set value = @task_notification_alert_dismissed where
-		user_configs.user_id = @user_id
-		and user_configs.key = 'preference_task_notification_alert_dismissed'
+set value = @task_notification_alert_dismissed
+where
+	user_configs.user_id = @user_id
+	and user_configs.key = 'preference_task_notification_alert_dismissed'
 returning value::boolean as task_notification_alert_dismissed;
 
 -- name: GetUserThinkingDisplayMode :one
@@ -292,9 +296,10 @@ insert into user_configs (user_id, key, value)
 values
 	(@user_id, 'preference_thinking_display_mode', @thinking_display_mode::text)
 on conflict on constraint user_configs_pkey do update
-	set value = @thinking_display_mode where
-		user_configs.user_id = @user_id
-		and user_configs.key = 'preference_thinking_display_mode'
+set value = @thinking_display_mode
+where
+	user_configs.user_id = @user_id
+	and user_configs.key = 'preference_thinking_display_mode'
 returning value as thinking_display_mode;
 
 -- name: GetUserShellToolDisplayMode :one
@@ -311,9 +316,10 @@ values
 		@shell_tool_display_mode::text
 	)
 on conflict on constraint user_configs_pkey do update
-	set value = @shell_tool_display_mode where
-		user_configs.user_id = @user_id
-		and user_configs.key = 'preference_shell_tool_display_mode'
+set value = @shell_tool_display_mode
+where
+	user_configs.user_id = @user_id
+	and user_configs.key = 'preference_shell_tool_display_mode'
 returning value as shell_tool_display_mode;
 
 -- name: GetUserCodeDiffDisplayMode :one
@@ -326,9 +332,10 @@ insert into user_configs (user_id, key, value)
 values
 	(@user_id, 'preference_code_diff_display_mode', @code_diff_display_mode::text)
 on conflict on constraint user_configs_pkey do update
-	set value = @code_diff_display_mode where
-		user_configs.user_id = @user_id
-		and user_configs.key = 'preference_code_diff_display_mode'
+set value = @code_diff_display_mode
+where
+	user_configs.user_id = @user_id
+	and user_configs.key = 'preference_code_diff_display_mode'
 returning value as code_diff_display_mode;
 
 -- name: GetUserAgentChatSendShortcut :one
@@ -345,9 +352,10 @@ values
 		@agent_chat_send_shortcut::text
 	)
 on conflict on constraint user_configs_pkey do update
-	set value = @agent_chat_send_shortcut where
-		user_configs.user_id = @user_id
-		and user_configs.key = 'preference_agent_chat_send_shortcut'
+set value = @agent_chat_send_shortcut
+where
+	user_configs.user_id = @user_id
+	and user_configs.key = 'preference_agent_chat_send_shortcut'
 returning value as agent_chat_send_shortcut;
 
 -- name: UpdateUserRoles :one

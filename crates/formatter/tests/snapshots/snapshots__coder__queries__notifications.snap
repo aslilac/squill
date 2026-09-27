@@ -198,10 +198,8 @@ from (
 		unnest(@notification_template_ids::uuid[]) as notification_template_id,
 		unnest(@disableds::bool[]) as disabled
 ) as new_values
-on conflict
-	(user_id,
-	notification_template_id) do update set
-		disabled = EXCLUDED.disabled, updated_at = CURRENT_TIMESTAMP;
+on conflict (user_id, notification_template_id) do update
+set disabled = EXCLUDED.disabled, updated_at = CURRENT_TIMESTAMP;
 
 -- name: UpdateNotificationTemplateMethodByID :one
 update notification_templates
@@ -231,11 +229,11 @@ insert into notification_report_generator_logs (
 	last_generated_at
 )
 values (@notification_template_id, @last_generated_at)
-on conflict
-	(notification_template_id) do update set
-		last_generated_at = EXCLUDED.last_generated_at where
-		notification_report_generator_logs.notification_template_id
-		= EXCLUDED.notification_template_id;
+on conflict (notification_template_id) do update
+set last_generated_at = EXCLUDED.last_generated_at
+where
+	notification_report_generator_logs.notification_template_id
+	= EXCLUDED.notification_template_id;
 
 -- name: GetWebpushSubscriptionsByUserID :many
 select * from webpush_subscriptions where user_id = @user_id::uuid;
@@ -253,12 +251,11 @@ insert into webpush_subscriptions (
 	endpoint_auth_key
 )
 values ($1, $2, $3, $4, $5)
-on conflict
-	(user_id,
-	endpoint) do update set
-		endpoint_p256dh_key = EXCLUDED.endpoint_p256dh_key,
-		endpoint_auth_key = EXCLUDED.endpoint_auth_key,
-		created_at = EXCLUDED.created_at
+on conflict (user_id, endpoint) do update
+set
+	endpoint_p256dh_key = EXCLUDED.endpoint_p256dh_key,
+	endpoint_auth_key = EXCLUDED.endpoint_auth_key,
+	created_at = EXCLUDED.created_at
 returning *;
 
 -- name: DeleteWebpushSubscriptions :exec

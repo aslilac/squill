@@ -341,8 +341,8 @@ impl Lowerer {
 			}
 			SyntaxKind::SetClause
 			| SyntaxKind::UsingClause
-			| SyntaxKind::OnConflictClause
 			| SyntaxKind::ReturningClause => self.kw_clause(node),
+			SyntaxKind::OnConflictClause => self.on_conflict(node),
 			SyntaxKind::MergeWhenClause => self.merge_when(node),
 			SyntaxKind::SetItem => self.space_flow(node, IdentPos::ColumnOrTable),
 			SyntaxKind::ColumnDef => self.column_def(node),
@@ -954,6 +954,36 @@ impl Lowerer {
 			}
 		}
 		clause(head, content)
+	}
+
+	/// `ON CONFLICT [target] DO NOTHING | DO UPDATE SET ... [WHERE ...]`:
+	/// the head through `do update` stays on one line, and the action's
+	/// `set` and `where` are clauses of the statement, laid out as they
+	/// are in an UPDATE.
+	fn on_conflict(&mut self, node: &SyntaxNode) -> Doc {
+		let elements: Vec<SyntaxElement> = node.children_with_tokens().collect();
+		let action = elements
+			.iter()
+			.position(|element| {
+				element
+					.as_node()
+					.is_some_and(|child| child.kind() == SyntaxKind::SetClause)
+			})
+			.unwrap_or(elements.len());
+		let mut head = Vec::new();
+		self.dml_flow_elements(&mut head, &elements[..action], &[], false);
+		let mut docs = vec![group(concat(head))];
+		for &element in &elements[action..] {
+			match element {
+				SyntaxElement::Token(token) => self.trivia(&mut docs, token),
+				SyntaxElement::Node(child) => {
+					docs.push(soft_line_or_space());
+					let doc = self.node(child);
+					self.push(&mut docs, doc);
+				}
+			}
+		}
+		concat(docs)
 	}
 
 	/// A MERGE's `WHEN [NOT] MATCHED ... THEN action`: the action stays on

@@ -5,7 +5,8 @@ expression: formatted
 -- name: UpsertTailnetCoordinator :one
 insert into tailnet_coordinators (id, heartbeat_at)
 values ($1, now() at time zone 'utc')
-on conflict (id) do update set id = $1, heartbeat_at = now() at time zone 'utc'
+on conflict (id) do update
+set id = $1, heartbeat_at = now() at time zone 'utc'
 returning *;
 
 -- name: CleanTailnetCoordinators :exec
@@ -32,14 +33,13 @@ where
 -- name: UpsertTailnetPeer :one
 insert into tailnet_peers (id, coordinator_id, node, status, updated_at)
 values ($1, $2, $3, $4, now() at time zone 'utc')
-on conflict
-	(id,
-	coordinator_id) do update set
-		id = $1,
-		coordinator_id = $2,
-		node = $3,
-		status = $4,
-		updated_at = now() at time zone 'utc'
+on conflict (id, coordinator_id) do update
+set
+	id = $1,
+	coordinator_id = $2,
+	node = $3,
+	status = $4,
+	updated_at = now() at time zone 'utc'
 returning *;
 
 -- name: UpdateTailnetPeerStatusByCoordinator :many
@@ -56,14 +56,12 @@ select * from tailnet_peers where id = $1;
 -- name: UpsertTailnetTunnel :one
 insert into tailnet_tunnels (coordinator_id, src_id, dst_id, updated_at)
 values ($1, $2, $3, now() at time zone 'utc')
-on conflict
-	(coordinator_id,
-	src_id,
-	dst_id) do update set
-		coordinator_id = $1,
-		src_id = $2,
-		dst_id = $3,
-		updated_at = now() at time zone 'utc'
+on conflict (coordinator_id, src_id, dst_id) do update
+set
+	coordinator_id = $1,
+	src_id = $2,
+	dst_id = $3,
+	updated_at = now() at time zone 'utc'
 returning *;
 
 -- name: DeleteTailnetTunnel :one

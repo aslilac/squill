@@ -26,15 +26,15 @@ values
 		now(),
 		now()
 	)
-on conflict
-	(replica_id) do update set
-		unique_workspaces_count = @unique_workspaces_count,
-		unique_users_count = @unique_users_count,
-		allowed_requests = boundary_usage_stats.allowed_requests
-		+ EXCLUDED.allowed_requests,
-		denied_requests = boundary_usage_stats.denied_requests
-		+ EXCLUDED.denied_requests,
-		updated_at = now()
+on conflict (replica_id) do update
+set
+	unique_workspaces_count = @unique_workspaces_count,
+	unique_users_count = @unique_users_count,
+	allowed_requests = boundary_usage_stats.allowed_requests
+	+ EXCLUDED.allowed_requests,
+	denied_requests = boundary_usage_stats.denied_requests
+	+ EXCLUDED.denied_requests,
+	updated_at = now()
 returning (xmax = 0) as new_period;
 
 -- name: GetAndResetBoundaryUsageSummary :one

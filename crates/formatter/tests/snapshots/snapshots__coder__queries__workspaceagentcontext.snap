@@ -18,12 +18,12 @@ values
 		@snapshot_error,
 		@received_at
 	)
-on conflict
-	(workspace_agent_id) do update set
-		version = EXCLUDED.version,
-		aggregate_hash = EXCLUDED.aggregate_hash,
-		snapshot_error = EXCLUDED.snapshot_error,
-		received_at = EXCLUDED.received_at
+on conflict (workspace_agent_id) do update
+set
+	version = EXCLUDED.version,
+	aggregate_hash = EXCLUDED.aggregate_hash,
+	snapshot_error = EXCLUDED.snapshot_error,
+	received_at = EXCLUDED.received_at
 returning *;
 
 -- name: UpsertWorkspaceAgentContextResource :one
@@ -54,17 +54,16 @@ values
 		@now,
 		@now
 	)
-on conflict
-	(workspace_agent_id,
-	source) do update set
-		body_kind = EXCLUDED.body_kind,
-		body = EXCLUDED.body,
-		content_hash = EXCLUDED.content_hash,
-		size_bytes = EXCLUDED.size_bytes,
-		status = EXCLUDED.status,
-		error = EXCLUDED.error,
-		source_path = EXCLUDED.source_path,
-		updated_at = EXCLUDED.updated_at
+on conflict (workspace_agent_id, source) do update
+set
+	body_kind = EXCLUDED.body_kind,
+	body = EXCLUDED.body,
+	content_hash = EXCLUDED.content_hash,
+	size_bytes = EXCLUDED.size_bytes,
+	status = EXCLUDED.status,
+	error = EXCLUDED.error,
+	source_path = EXCLUDED.source_path,
+	updated_at = EXCLUDED.updated_at
 returning *;
 
 -- name: DeleteStaleWorkspaceAgentContextResources :exec

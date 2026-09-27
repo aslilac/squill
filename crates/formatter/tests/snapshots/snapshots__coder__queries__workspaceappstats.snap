@@ -24,16 +24,13 @@ select
 	unnest(@session_started_at::timestamptz[]) as session_started_at,
 	unnest(@session_ended_at::timestamptz[]) as session_ended_at,
 	unnest(@requests::int[]) as requests
-on conflict
-	(user_id,
-	agent_id,
-	session_id) do update set
-		session_ended_at = EXCLUDED.session_ended_at,
-		requests = EXCLUDED.requests where
-		workspace_app_stats.user_id = EXCLUDED.user_id
-		and workspace_app_stats.agent_id = EXCLUDED.agent_id
-		and workspace_app_stats.session_id = EXCLUDED.session_id
-		-- Since stats are updated in place as time progresses, we only
-		-- want to update this row if it's fresh.
-		and workspace_app_stats.session_ended_at <= EXCLUDED.session_ended_at
-		and workspace_app_stats.requests <= EXCLUDED.requests;
+on conflict (user_id, agent_id, session_id) do update
+set session_ended_at = EXCLUDED.session_ended_at, requests = EXCLUDED.requests
+where
+	workspace_app_stats.user_id = EXCLUDED.user_id
+	and workspace_app_stats.agent_id = EXCLUDED.agent_id
+	and workspace_app_stats.session_id = EXCLUDED.session_id
+	-- Since stats are updated in place as time progresses, we only
+	-- want to update this row if it's fresh.
+	and workspace_app_stats.session_ended_at <= EXCLUDED.session_ended_at
+	and workspace_app_stats.requests <= EXCLUDED.requests;

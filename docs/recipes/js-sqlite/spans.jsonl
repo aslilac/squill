@@ -1,4 +1,4 @@
 {"path":"after.ts","start":111,"end":265,"line":6,"column":4,"end_line":12,"end_column":3,"dialect":"sqlite","pinned":false}
-{"path":"after.ts","start":304,"end":444,"line":15,"column":33,"end_line":19,"end_column":1,"dialect":"sqlite","pinned":false}
+{"path":"after.ts","start":304,"end":444,"line":15,"column":33,"end_line":20,"end_column":1,"dialect":"sqlite","pinned":false}
 {"path":"before.ts","start":111,"end":251,"line":6,"column":4,"end_line":6,"end_column":144,"dialect":"sqlite","pinned":false}
 {"path":"before.ts","start":290,"end":428,"line":9,"column":33,"end_line":9,"end_column":171,"dialect":"sqlite","pinned":false}

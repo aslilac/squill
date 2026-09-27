@@ -15,7 +15,8 @@ const recentPosts = db.prepare(
 const upsertDraft = db.prepare(`
 insert into drafts (post_id, body, saved_at)
 values (@postId, @body, unixepoch())
-on conflict (post_id) do update set body = excluded.body
+on conflict (post_id) do update
+set body = excluded.body
 `);
 
 export function posts(authorId: number) {

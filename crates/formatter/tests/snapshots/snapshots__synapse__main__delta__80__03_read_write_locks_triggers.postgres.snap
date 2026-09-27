@@ -35,10 +35,9 @@ begin
 		token
 	)
 	values (NEW.lock_name, NEW.lock_key, NEW.write_lock, NEW.token)
-	on conflict
-		(lock_name,
-		lock_key) do update set write_lock = NEW.write_lock where
-			OLD.write_lock != NEW.write_lock;
+	on conflict (lock_name, lock_key) do update
+	set write_lock = NEW.write_lock
+	where OLD.write_lock != NEW.write_lock;
 	return NEW;
 end
 $$;

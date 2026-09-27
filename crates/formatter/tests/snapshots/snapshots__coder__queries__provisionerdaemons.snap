@@ -252,17 +252,17 @@ values
 		@api_version,
 		@key_id
 	)
-on conflict
-	(organization_id,
-	name,
-	lower(coalesce(tags ->> 'owner'::text, ''::text))) do update set
-		provisioners = @provisioners,
-		tags = @tags,
-		last_seen_at = @last_seen_at,
-		version = @version,
-		api_version = @api_version,
-		organization_id = @organization_id,
-		key_id = @key_id
+on conflict (organization_id,
+name,
+lower(coalesce(tags ->> 'owner'::text, ''::text))) do update
+set
+	provisioners = @provisioners,
+	tags = @tags,
+	last_seen_at = @last_seen_at,
+	version = @version,
+	api_version = @api_version,
+	organization_id = @organization_id,
+	key_id = @key_id
 returning *;
 
 -- name: UpdateProvisionerDaemonLastSeenAt :exec

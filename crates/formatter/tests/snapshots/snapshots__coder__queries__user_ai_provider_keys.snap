@@ -43,12 +43,11 @@ values
 		@created_at::timestamptz,
 		@updated_at::timestamptz
 	)
-on conflict
-	(user_id,
-	ai_provider_id) do update set
-		api_key = EXCLUDED.api_key,
-		api_key_key_id = EXCLUDED.api_key_key_id,
-		updated_at = EXCLUDED.updated_at
+on conflict (user_id, ai_provider_id) do update
+set
+	api_key = EXCLUDED.api_key,
+	api_key_key_id = EXCLUDED.api_key_key_id,
+	updated_at = EXCLUDED.updated_at
 returning *;
 
 -- name: UpdateUserAIProviderKey :one

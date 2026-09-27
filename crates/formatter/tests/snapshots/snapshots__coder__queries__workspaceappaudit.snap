@@ -20,26 +20,26 @@ insert into workspace_app_audit_sessions (
 	updated_at
 )
 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-on conflict
-	(agent_id,
-	app_id,
-	user_id,
-	ip,
-	user_agent,
-	slug_or_port,
-	status_code) do update set
-		-- ID is used to know if session was reset on upsert.
-		id = case
-			when workspace_app_audit_sessions.updated_at
-			> now() - (@stale_interval_ms::bigint || ' ms')::interval
-				then workspace_app_audit_sessions.id
-			else EXCLUDED.id
-		end,
-		started_at = case
-			when workspace_app_audit_sessions.updated_at
-			> now() - (@stale_interval_ms::bigint || ' ms')::interval
-				then workspace_app_audit_sessions.started_at
-			else EXCLUDED.started_at
-		end,
-		updated_at = EXCLUDED.updated_at
+on conflict (agent_id,
+app_id,
+user_id,
+ip,
+user_agent,
+slug_or_port,
+status_code) do update
+set
+	-- ID is used to know if session was reset on upsert.
+	id = case
+		when workspace_app_audit_sessions.updated_at
+		> now() - (@stale_interval_ms::bigint || ' ms')::interval
+			then workspace_app_audit_sessions.id
+		else EXCLUDED.id
+	end,
+	started_at = case
+		when workspace_app_audit_sessions.updated_at
+		> now() - (@stale_interval_ms::bigint || ' ms')::interval
+			then workspace_app_audit_sessions.started_at
+		else EXCLUDED.started_at
+	end,
+	updated_at = EXCLUDED.updated_at
 returning id = $1 as new_or_stale;
