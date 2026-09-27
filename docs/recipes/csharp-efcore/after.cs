@@ -24,8 +24,12 @@ public static class Maintenance
             """
             delete from carts
             where
-              updated_at < @cutoff
-              and not exists (select 1 from orders where orders.cart_id = carts.id)
+                updated_at < @cutoff
+                and not exists (
+                    select 1
+                    from orders
+                    where orders.cart_id = carts.id
+                )
             """,
             new NpgsqlParameter("cutoff", cutoff));
 

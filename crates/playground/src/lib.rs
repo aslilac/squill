@@ -152,11 +152,11 @@ pub fn format_request(json: &str) -> String {
 			if request.host == "sql" {
 				format_sql(&request.source, &options)
 			} else if let Some((host, query)) = embed_host(&request.host) {
-				// Same rule as the CLI: an indent style the caller named
-				// wins, otherwise the host file's own indentation does.
-				let indent = match request.options.indent {
-					Some(_) => embed::Indent::Configured,
-					None => embed::Indent::FromHost,
+				// Same rule as the CLI: indent options the caller named win,
+				// otherwise the host file's own indentation does.
+				let indent = embed::Indent {
+					configured_style: request.options.indent.is_some(),
+					configured_width: request.options.indent_width.is_some(),
 				};
 				// And the CLI's host-conventional placeholders, and no
 				// final `;` unless asked for.

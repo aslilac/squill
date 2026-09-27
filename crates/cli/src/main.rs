@@ -593,12 +593,16 @@ fn resolve(
 ) -> Result<Option<Resolved>, String> {
 	let dir = parent_dir(path);
 	let mut options = Options::default();
-	let mut indent_set = args.overrides.indent_style.is_some();
+	let mut indent = embed::Indent {
+		configured_style: args.overrides.indent_style.is_some(),
+		configured_width: args.overrides.indent_width.is_some(),
+	};
 	let mut kind = None;
 	if let Some(loaded) = caches.governing(dir, args)? {
 		let config = &loaded.config;
 		config.options.apply(&mut options);
-		indent_set |= config.options.indent_style.is_some();
+		indent.configured_style |= config.options.indent_style.is_some();
+		indent.configured_width |= config.options.indent_width.is_some();
 		let absolute = std::path::absolute(path).ok();
 		let matches = |set: &IgnoreSet| set.matches(absolute.as_deref(), path);
 		let embedded: Vec<&config::EmbeddedRule> = config
@@ -652,7 +656,8 @@ fn resolve(
 				|| args.overrides.pyformat_params.is_some();
 			for rule in &embedded {
 				rule.options.apply(&mut options);
-				indent_set |= rule.options.indent_style.is_some();
+				indent.configured_style |= rule.options.indent_style.is_some();
+				indent.configured_width |= rule.options.indent_width.is_some();
 				at_set |= rule.options.at_params.is_some();
 				semicolons_set |= rule.options.trailing_semicolons.is_some();
 				question_set |= rule.options.question_params.is_some();
@@ -676,7 +681,8 @@ fn resolve(
 		} else if is_sql_file(path) || !files.is_empty() {
 			for rule in &files {
 				rule.options.apply(&mut options);
-				indent_set |= rule.options.indent_style.is_some();
+				indent.configured_style |= rule.options.indent_style.is_some();
+				indent.configured_width |= rule.options.indent_width.is_some();
 			}
 			kind = Some(Kind::Sql);
 		}
@@ -687,11 +693,6 @@ fn resolve(
 		return Ok(None);
 	};
 	args.overrides.apply(&mut options);
-	let indent = if indent_set {
-		embed::Indent::Configured
-	} else {
-		embed::Indent::FromHost
-	};
 	Ok(Some(Resolved { options, indent, kind }))
 }
 
@@ -798,7 +799,7 @@ fn resolve_sql_defaults(
 		loaded.config.options.apply(&mut options);
 	}
 	args.overrides.apply(&mut options);
-	Ok(Resolved { options, indent: embed::Indent::Configured, kind: Kind::Sql })
+	Ok(Resolved { options, indent: embed::Indent::CONFIGURED, kind: Kind::Sql })
 }
 
 /// `, N frozen` when any were skipped, and nothing at all when none

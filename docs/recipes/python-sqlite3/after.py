@@ -4,15 +4,15 @@ import sqlite3
 def migrate(db: sqlite3.Connection) -> None:
     db.executescript("""
     create table if not exists bookmarks (
-      id integer primary key,
-      url text not null unique,
-      title text,
-      added_at text not null default (datetime('now'))
+        id integer primary key,
+        url text not null unique,
+        title text,
+        added_at text not null default (datetime('now'))
     );
     create table if not exists tags (
-      bookmark_id integer not null references bookmarks (id) on delete cascade,
-      tag text not null,
-      primary key (bookmark_id, tag)
+        bookmark_id integer not null references bookmarks (id) on delete cascade,
+        tag text not null,
+        primary key (bookmark_id, tag)
     )
     """)
 

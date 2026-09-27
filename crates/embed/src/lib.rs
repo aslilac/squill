@@ -754,16 +754,27 @@ pub const SWIFT_SQL_QUERY: &str = r#"
  (#any-of? @_fn "run" "execute" "prepare" "scalar" "query" "raw"))
 "#;
 
-/// Where an embedded snippet takes its indent character from.
+/// Which indent options the caller configured. Whatever it didn't comes
+/// from the host file, so embedded SQL is indented like the code around
+/// it: a spaces-indented file never gains tabs, and a 4-space file
+/// indents its SQL by 4.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum Indent {
-	/// Match the host file's own indentation, so a spaces-indented file
-	/// never gains tabs. The default when nothing is configured.
-	#[default]
-	FromHost,
-	/// Use `Options::indent_style` as given — the caller configured an
-	/// indent style explicitly and means it.
-	Configured,
+pub struct Indent {
+	/// Use `Options::indent_style` as given, not the host file's indent
+	/// character.
+	pub configured_style: bool,
+	/// Use `Options::indent_width` as given, not the host file's indent
+	/// step.
+	pub configured_width: bool,
+}
+
+impl Indent {
+	/// Nothing configured: the host file decides both. The default.
+	pub const FROM_HOST: Self =
+		Self { configured_style: false, configured_width: false };
+	/// Both configured: the options apply as given.
+	pub const CONFIGURED: Self =
+		Self { configured_style: true, configured_width: true };
 }
 
 #[derive(Debug)]
@@ -954,9 +965,8 @@ fn literal_content(literal: &str) -> std::ops::Range<usize> {
 
 /// Format every SQL snippet the query captures in `source`, returning the
 /// rewritten host file. Unparsable or unsafe snippets stay byte-exact
-/// and come back as warnings. `indent` decides whether
-/// `options.indent_style` applies or the host file's own indentation
-/// wins.
+/// and come back as warnings. `indent` says which of the indent options
+/// apply as given; the host file's own indentation decides the rest.
 pub fn format_embedded(
 	source: &str,
 	grammar: &Grammar,
@@ -975,9 +985,17 @@ pub fn format_embedded(
 			default_dialect: options.dialect,
 			codec: grammar.codec(),
 		};
-		for Captured { range: node_range, dialect, pinned } in
-			extraction.captures(&tree, source)
-		{
+		let captures = extraction.captures(&tree, source);
+		let mut options = *options;
+		if !indent.configured_width {
+			let strings: Vec<_> =
+				captures.iter().map(|captured| captured.range.clone()).collect();
+			if let Some(width) = host_indent_width(source, &strings) {
+				options.indent_width = width;
+			}
+		}
+		let options = &options;
+		for Captured { range: node_range, dialect, pinned } in captures {
 			let snippet = Snippet {
 				source,
 				range: node_range.clone(),
@@ -1355,10 +1373,21 @@ impl Snippet<'_> {
 		// The author chose a multi-line literal: keep statements
 		// clause-per-line, never collapsed onto one line.
 		format_options.always_break_statements = true;
-		if self.indent == Indent::FromHost {
+		if !self.indent.configured_style {
 			format_options.indent_style =
 				host_indent_style(self.source, &host_indent);
 		}
+		// Every line starts at the anchor, so the SQL gets the width left
+		// after it — but never less than half, or a deeply nested string
+		// would break at every opportunity.
+		let tab = u16::from(format_options.indent_width);
+		let anchor: u16 = host_indent
+			.chars()
+			.map(|c| if c == '\t' { tab } else { 1 })
+			.fold(0, u16::saturating_add);
+		let max_width = self.options.max_width;
+		format_options.max_width =
+			max_width.saturating_sub(anchor).max(max_width / 2);
 
 		let lex_options = format_options.lex_options();
 		let tokens = parser::lexer::lex_with(sql, self.dialect, lex_options);
@@ -1429,6 +1458,45 @@ fn host_indent_style(
 		Some(' ') => formatter::IndentStyle::Spaces,
 		_ => formatter::IndentStyle::Tab,
 	}
+}
+
+/// The indent step a spaces-indented host file uses: the most common
+/// increase in indentation from one line to the next (ties go to the
+/// smaller), not counting lines inside the SQL strings themselves. `None`
+/// when the file never steps in with spaces.
+fn host_indent_width(
+	source: &str,
+	strings: &[std::ops::Range<usize>],
+) -> Option<u8> {
+	let mut steps = [0usize; 9];
+	let mut previous: Option<usize> = None;
+	let mut offset = 0;
+	for line in source.split('\n') {
+		let start = offset;
+		offset += line.len() + 1;
+		if line.trim().is_empty()
+			|| strings.iter().any(|string| string.start < start && start < string.end)
+		{
+			continue;
+		}
+		let indent = &line[..line.len() - line.trim_start().len()];
+		if indent.contains('\t') {
+			previous = None;
+			continue;
+		}
+		let width = indent.len();
+		// A step of one is a comment's ` * `, not an indent.
+		if let Some(step) =
+			previous.and_then(|previous| width.checked_sub(previous))
+			&& (2..steps.len()).contains(&step)
+		{
+			steps[step] += 1;
+		}
+		previous = Some(width);
+	}
+	let (step, count) =
+		steps.iter().enumerate().rev().max_by_key(|&(_, count)| count)?;
+	(*count > 0).then_some(step as u8)
 }
 
 /// Leading whitespace of the line containing `offset`.

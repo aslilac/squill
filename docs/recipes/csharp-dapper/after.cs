@@ -22,7 +22,10 @@ public sealed class OrderRepository(NpgsqlDataSource db)
             """
             update orders
             set cancelled_at = now()
-            where customer_id = @customerId and id in @orderIds and shipped_at is null
+            where
+                customer_id = @customerId
+                and id in @orderIds
+                and shipped_at is null
             """,
             new { customerId, orderIds });
     }

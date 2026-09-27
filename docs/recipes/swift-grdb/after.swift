@@ -8,12 +8,12 @@ struct PlayerStore {
         migrator.registerMigration("v1") { db in
             try db.execute(sql: """
             create table player (
-              id integer primary key autoincrement,
-              name text not null,
-              score integer not null default 0
+                id integer primary key autoincrement,
+                name text not null,
+                score integer not null default 0
             );
             create index player_on_score
-              on player (score desc)
+                on player (score desc)
             """)
         }
         try migrator.migrate(dbQueue)

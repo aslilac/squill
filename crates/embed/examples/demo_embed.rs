@@ -24,7 +24,7 @@ async fn touch(pool: &PgPool, id: Uuid) -> sqlx::Result<()> {
 		&embed::Host::Rust.into(),
 		embed::RUST_SQLX_QUERY,
 		&Default::default(),
-		embed::Indent::default(),
+		embed::Indent::FROM_HOST,
 	)
 	.unwrap();
 	print!("{}", out.text);

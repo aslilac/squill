@@ -2,13 +2,13 @@ fn migrate(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute_batch(
         r#"
         create table if not exists notes (
-          id integer primary key,
-          title text not null,
-          body text not null default '',
-          updated_at integer not null
+            id integer primary key,
+            title text not null,
+            body text not null default '',
+            updated_at integer not null
         );
         create index if not exists notes_updated
-          on notes (updated_at desc)
+            on notes (updated_at desc)
         "#,
     )
 }

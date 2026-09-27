@@ -61,7 +61,7 @@ fn rust_sqlx_fixture_formats_and_still_compiles() {
 		&Host::Rust.into(),
 		RUST_SQLX_QUERY,
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format")
 	.text;
@@ -111,7 +111,7 @@ fn rust_sqlx_fixture_formats_and_still_compiles() {
 		&Host::Rust.into(),
 		RUST_SQLX_QUERY,
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format")
 	.text;
@@ -159,7 +159,7 @@ fn single_line_plain_strings_stay_untouched() {
 		&Host::Rust.into(),
 		RUST_SQLX_QUERY,
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format")
 	.text;
@@ -176,7 +176,7 @@ fn single_line_raw_strings_reformat_vertically() {
 		&Host::Rust.into(),
 		RUST_SQLX_QUERY,
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format")
 	.text;
@@ -190,7 +190,7 @@ fn single_line_raw_strings_reformat_vertically() {
 		&Host::Rust.into(),
 		RUST_SQLX_QUERY,
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format")
 	.text;
@@ -205,7 +205,7 @@ fn multiline_literal_gets_quotes_on_own_lines() {
 		&Host::Rust.into(),
 		RUST_SQLX_QUERY,
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format")
 	.text;
@@ -222,7 +222,7 @@ fn multiline_literal_gets_quotes_on_own_lines() {
 		&Host::Rust.into(),
 		RUST_SQLX_QUERY,
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format")
 	.text;
@@ -239,7 +239,7 @@ fn multiline_plain_strings_become_raw_strings() {
 		&Host::Rust.into(),
 		RUST_SQLX_QUERY,
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format")
 	.text;
@@ -258,7 +258,7 @@ fn escaped_newlines_count_as_multiline() {
 		&Host::Rust.into(),
 		RUST_SQLX_QUERY,
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format")
 	.text;
@@ -281,7 +281,7 @@ fn rust_query_functions_use_the_session_dialect() {
 		&Host::Rust.into(),
 		RUST_SQLX_QUERY,
 		&options,
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format");
 	assert!(
@@ -306,7 +306,7 @@ fn unparsable_sql_is_reported_not_rewritten() {
 		&Host::Rust.into(),
 		RUST_SQLX_QUERY,
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format");
 	assert_eq!(formatted.text, source);
@@ -328,7 +328,7 @@ fn edits_the_query_cannot_read_back_are_dropped() {
 		&Host::Rust.into(),
 		query,
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format");
 	assert_eq!(formatted.text, source);
@@ -348,7 +348,7 @@ fn go_multiline_interpreted_strings_become_raw_strings() {
 		&Host::Go.into(),
 		GO_DB_QUERY,
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format");
 	assert!(
@@ -371,7 +371,7 @@ fn match_predicate_is_rejected() {
 		&Host::Rust.into(),
 		query,
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.unwrap_err();
 	assert!(err.to_string().contains("match"), "got: {err}");
@@ -386,7 +386,7 @@ fn go_smoke_test() {
 		&Host::Go.into(),
 		GO_DB_QUERY,
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format")
 	.text;
@@ -408,7 +408,7 @@ fn go_smoke_test() {
 		&Host::Go.into(),
 		GO_DB_QUERY,
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format")
 	.text;
@@ -428,7 +428,7 @@ fn python_smoke_test() {
 		&Host::Python.into(),
 		PYTHON_DB_QUERY,
 		&python_options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format")
 	.text;
@@ -450,7 +450,7 @@ fn python_smoke_test() {
 		&Host::Python.into(),
 		PYTHON_DB_QUERY,
 		&python_options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format")
 	.text;
@@ -465,7 +465,7 @@ fn js_smoke_test() {
 		&Host::JavaScript.into(),
 		JS_SQL_QUERY,
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format")
 	.text;
@@ -490,7 +490,7 @@ fn js_smoke_test() {
 		&Host::JavaScript.into(),
 		JS_SQL_QUERY,
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format")
 	.text;
@@ -505,7 +505,7 @@ fn typescript_smoke_test() {
 		&Host::TypeScript.into(),
 		JS_SQL_QUERY,
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format")
 	.text;
@@ -519,7 +519,7 @@ fn typescript_smoke_test() {
 		&Host::Tsx.into(),
 		JS_SQL_QUERY,
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format")
 	.text;
@@ -538,7 +538,7 @@ fn gleam_smoke_test() {
 		&Host::Gleam.into(),
 		GLEAM_SQL_QUERY,
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format")
 	.text;
@@ -557,7 +557,7 @@ fn gleam_smoke_test() {
 		&Host::Gleam.into(),
 		GLEAM_SQL_QUERY,
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format")
 	.text;
@@ -572,14 +572,14 @@ fn format_host(host: Host, query: &str, source: &str) -> embed::Embedded {
 	options.question_params = host.uses_question_params();
 	options.pyformat_params = host.uses_pyformat_params();
 	let formatted =
-		format_embedded(source, &host.into(), query, &options, Indent::FromHost)
+		format_embedded(source, &host.into(), query, &options, Indent::FROM_HOST)
 			.expect("format");
 	let twice = format_embedded(
 		&formatted.text,
 		&host.into(),
 		query,
 		&options,
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	)
 	.expect("format");
 	assert_eq!(twice.text, formatted.text, "not idempotent");
@@ -678,7 +678,7 @@ fn every_default_query_compiles() {
 			&host.into(),
 			host.default_query(),
 			&options(),
-			Indent::FromHost,
+			Indent::FROM_HOST,
 		);
 		assert!(formatted.is_ok(), "{}: {:?}", host.name(), formatted.err());
 	}
@@ -705,7 +705,7 @@ fn procedural_bodies_anchor_but_their_strings_do_not() {
 	let formatted = format_host(Host::Rust, RUST_SQLX_QUERY, source);
 	assert!(
 		formatted.text.contains(
-			"    as $$\n    begin\n      raise notice 'one\ntwo';\n    end\n    $$\n"
+			"    as $$\n    begin\n        raise notice 'one\ntwo';\n    end\n    $$\n"
 		),
 		"{}",
 		formatted.text
@@ -721,10 +721,61 @@ fn column_zero_strings_take_the_files_indent_character() {
 	let formatted = format_host(Host::CSharp, CSHARP_SQL_QUERY, source);
 	assert!(!formatted.text.contains('\t'), "{}", formatted.text);
 	assert!(
-		formatted.text.contains("\nselect\n  key,\n  userId,"),
+		formatted.text.contains("\nselect\n    key,\n    userId,"),
 		"{}",
 		formatted.text
 	);
+}
+
+#[test]
+fn embedded_sql_indents_by_the_files_step() {
+	let two = "fn f() {\n  if x {\n    sqlx::query!(r#\"select a, b from t where alpha = 1 and beta = 2 or alpha = 3 and beta = 4 or alpha = 5 and gamma = 6\"#);\n  }\n}\n";
+	let four = two.replace("\n  ", "\n    ").replace("\n      ", "\n        ");
+	let formatted = format_host(Host::Rust, RUST_SQLX_QUERY, two);
+	assert!(
+		formatted.text.contains("\n    where\n      alpha = 1"),
+		"{}",
+		formatted.text
+	);
+	let formatted = format_host(Host::Rust, RUST_SQLX_QUERY, &four);
+	assert!(
+		formatted.text.contains("\n        where\n            alpha = 1"),
+		"{}",
+		formatted.text
+	);
+	// A configured width wins over the file's.
+	let configured = format_embedded(
+		&four,
+		&Host::Rust.into(),
+		RUST_SQLX_QUERY,
+		&options(),
+		Indent { configured_width: true, ..Indent::FROM_HOST },
+	)
+	.expect("format");
+	assert!(
+		configured.text.contains("\n        where\n          alpha = 1"),
+		"{}",
+		configured.text
+	);
+}
+
+#[test]
+fn max_width_counts_from_the_left_margin() {
+	// A 76-column select list: it fits in 80 at column 0, not at 12.
+	let columns =
+		"select id, name, email, created_at, updated_at, organization_id, deleted";
+	let sql = format!("{columns} from members");
+	let at = |indent: &str| {
+		format!("fn f() {{\n{indent}sqlx::query!(r#\"{sql}\"#);\n}}\n")
+	};
+	let formatted = format_host(Host::Rust, RUST_SQLX_QUERY, &at(""));
+	assert!(
+		formatted.text.contains(&format!("\n{columns}\n")),
+		"{}",
+		formatted.text
+	);
+	let formatted = format_host(Host::Rust, RUST_SQLX_QUERY, &at("            "));
+	assert!(!formatted.text.contains(columns), "{}", formatted.text);
 }
 
 #[test]
@@ -836,7 +887,7 @@ fn dialect_captures() {
 		&Host::Cpp.into(),
 		"((raw_string_content) @sql.mysql)",
 		&options(),
-		Indent::FromHost,
+		Indent::FROM_HOST,
 	);
 	let Err(err) = unknown else { panic!("@sql.mysql accepted") };
 	assert!(err.to_string().contains("unknown capture `@sql.mysql`"), "{err}");

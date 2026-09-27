@@ -300,12 +300,20 @@ query = ".config/squill/lua.scm"`} />
 	<section id="indentation">
 		<h2>Indentation</h2>
 		<p>
-			Embedded SQL is anchored to the host statement&rsquo;s indentation and,
-			by default, copies that file&rsquo;s own indent character, so a
-			spaces-indented file never gains tabs. Set <code>indent</code> in the{" "}
+			Embedded SQL is anchored to the host statement&rsquo;s indentation,
+			and by default indents the way the file around it does: the same
+			character, so a spaces-indented file never gains tabs, and the same
+			step, so a file indented by four spaces gets four-space SQL. Set{" "}
+			<code>indent</code> or <code>indent-width</code> in the{" "}
 			<a href="docs/configuration/#rules">rule</a> (or at the top level) to
 			choose deliberately instead. Lines inside a SQL string that itself spans
 			lines are data, and are never re-indented.
+		</p>
+		<p>
+			<code>max-width</code> counts from the left edge of the file, not from
+			the anchor, so a query nested deep in a function breaks sooner than the
+			same query at the top level &mdash; though it always gets at least half
+			the width to itself.
 		</p>
 	</section>
 

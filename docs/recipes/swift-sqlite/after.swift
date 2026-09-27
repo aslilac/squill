@@ -4,10 +4,10 @@ let db = try Connection("notes.sqlite3")
 
 try db.execute("""
 create table if not exists notes (
-  id integer primary key,
-  title text not null,
-  body text not null default '',
-  updated_at integer not null
+    id integer primary key,
+    title text not null,
+    body text not null default '',
+    updated_at integer not null
 )
 """)
 
