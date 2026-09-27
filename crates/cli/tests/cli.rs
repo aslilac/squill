@@ -1986,3 +1986,41 @@ fn colon_params_are_configured() {
 	);
 	let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Embedded SQL indents by the host file's step unless `indent` or
+/// `indent-width` is configured, at the top level or in the rule.
+#[test]
+fn configured_indent_beats_the_hosts() {
+	let dir = temp_dir("indentprecedence");
+	std::fs::write(
+		dir.join("a.rs"),
+		"fn f() {\n    if x {\n        sqlx::query!(r#\"select a from t where alpha = 1 and beta = 2 or alpha = 3 and beta = 4 or alpha = 5 and gamma = 6\"#);\n    }\n}\n",
+	)
+	.expect("write");
+	let rule = "[[embedded]]\ninclude = [\"*.rs\"]\ngrammar = \"rust\"\n";
+	for (config, expected) in [
+		(rule.to_string(), "\n        where\n            alpha = 1"),
+		(
+			format!("indent-width = 2\n{rule}"),
+			"\n        where\n          alpha = 1",
+		),
+		(
+			format!("{rule}indent-width = 2\n"),
+			"\n        where\n          alpha = 1",
+		),
+		(
+			format!("{rule}indent = \"tabs\"\n"),
+			"\n        where\n        \talpha = 1",
+		),
+	] {
+		std::fs::write(dir.join("squill.toml"), &config).expect("write config");
+		let output = squill()
+			.args(["fmt", "--stdout"])
+			.arg(dir.join("a.rs"))
+			.output()
+			.expect("run");
+		let stdout = String::from_utf8_lossy(&output.stdout);
+		assert!(stdout.contains(expected), "{config}\n{stdout}");
+	}
+	let _ = std::fs::remove_dir_all(&dir);
+}
