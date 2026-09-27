@@ -1,4 +1,5 @@
 import { createHighlighter } from "shiki";
+import { sqlGrammar } from "../playground/sql-grammar.js";
 import { colors, shikiTheme, themed } from "../playground/theme.js";
 
 // A TextMate grammar for tree-sitter queries (.scm), which shiki doesn't
@@ -35,7 +36,7 @@ let highlighter;
 async function loaded(lang) {
 	highlighter ??= createHighlighter({
 		themes: [shikiTheme],
-		langs: [queryGrammar, "sql"],
+		langs: [queryGrammar, sqlGrammar],
 	});
 	const h = await highlighter;
 	if (!h.getLoadedLanguages().includes(lang)) await h.loadLanguage(lang);

@@ -163,6 +163,7 @@ const baseHref = import.meta.env.BASE_URL;
 				shikiTheme,
 				themed,
 			} from "../playground/theme.js";
+			import { sqlGrammar } from "../playground/sql-grammar.js";
 			import { loadSquill } from "../playground/wasm.js";
 
 			self.MonacoEnvironment = { getWorker: () => new EditorWorker() };
@@ -262,7 +263,7 @@ const baseHref = import.meta.env.BASE_URL;
 			const [highlighter] = await Promise.all([
 				createHighlighter({
 					themes: [shikiTheme],
-					langs: ["sql", "rust", "go", "python", "typescript", "gleam"],
+					langs: [sqlGrammar, "rust", "go", "python", "typescript", "gleam"],
 				}),
 				loadSquill(current.host),
 			]);

@@ -1,0 +1,104 @@
+// The docs' SQL highlighting: a TextMate grammar in place of shiki's
+// bundled one, whose keyword list mixes dialects and colors column names
+// like `name` while missing Postgres words like `conflict`.
+//
+// Keywords are colored the way squill treats them: the words its
+// `keyword-case` option recases. The list is every word squill recased
+// in at least half of its uses across the corpora (comments and strings
+// aside), plus the Postgres reserved and type-or-function-name keywords
+// from squill's own tables (crates/formatter/src/keywords.rs), which can
+// never be bare column names, plus a few PL/pgSQL and SQLite words the
+// corpora don't use. Type names aren't keywords to squill, which keeps
+// their case, so they aren't colored. `key`, `value`, and `type` are
+// common column names, so they're keywords only in their phrases.
+
+const keywords = [
+	"abort", "add", "after", "all", "alter", "always", "analyse", "analyze",
+	"and", "any", "array", "as", "asc", "asymmetric", "at", "attach",
+	"autoincrement", "before", "begin", "between", "binary", "both", "by",
+	"cache", "cascade", "case", "cast", "check", "collate", "column", "comment",
+	"commit", "concurrently", "conflict", "constant", "constraint", "continue",
+	"create", "cross", "current_catalog", "current_date", "current_role",
+	"current_time", "current_timestamp", "current_user", "declare", "default",
+	"deferrable", "deferred", "definer", "delete", "desc", "detach", "distinct",
+	"do", "domain", "drop", "each", "else", "elseif", "elsif", "end", "enum",
+	"except", "exception", "exclude", "exclusive", "execute", "exists", "exit",
+	"external", "fail", "false", "fetch", "filter", "for", "foreach", "foreign",
+	"freeze", "from", "full", "function", "generated", "glob", "grant", "group",
+	"having", "if", "ignore", "ilike", "immediate", "immutable", "in",
+	"including", "increment", "index", "initially", "inner", "insert",
+	"instead", "intersect", "interval", "into", "invoker", "is", "isnull",
+	"join", "language", "lateral", "leading", "left", "like", "limit",
+	"localtime", "localtimestamp", "locked", "logged", "loop", "materialized",
+	"maxvalue", "minvalue", "natural", "no", "not", "nothing", "notnull",
+	"nowait", "null", "nulls", "of", "offset", "on", "only", "or", "order",
+	"ordinality", "outer", "over", "overlaps", "partition", "perform",
+	"placing", "pragma", "primary", "procedure", "raise", "recursive",
+	"references", "referencing", "regexp", "reindex", "release", "rename",
+	"replace", "restrict", "return", "returning", "returns", "right",
+	"rollback", "row", "savepoint", "security", "select", "sequence",
+	"session_user", "set", "setof", "share", "similar", "skip", "some",
+	"stable", "start", "statement", "stored", "symmetric", "system_user",
+	"table", "tablesample", "temporary", "then", "to", "trailing",
+	"transaction", "trigger", "true", "truncate", "union", "unique", "unlogged",
+	"update", "user", "using", "valid", "values", "variadic", "verbose", "view",
+	"virtual", "volatile", "when", "where", "while", "window", "with", "within",
+	"without",
+];
+
+// Keywords that are also functions: colored as calls when they are one.
+// A call's parenthesis is adjacent (squill writes `count(*)`, but
+// `insert into t (a, b)`).
+const callable = new Set(["all", "any", "array", "cast", "left", "replace", "right", "some"]);
+
+const phrases = [
+	"primary\\s+key",
+	"foreign\\s+key",
+	"no\\s+key",
+	"key\\s+share",
+	"(?:create|alter|drop)\\s+type",
+	"add\\s+value",
+];
+
+const words = (list) => list.join("|");
+
+export const sqlGrammar = {
+	name: "sql",
+	scopeName: "source.sql",
+	patterns: [
+		{ match: "--.*$", name: "comment.line.double-dash.sql" },
+		{ begin: "/\\*", end: "\\*/", name: "comment.block.sql" },
+		// E'...' takes backslash escapes; every string takes ''.
+		{
+			begin: "(?i)(?<![\\w$])e'",
+			end: "'",
+			name: "string.quoted.single.sql",
+			patterns: [{ match: "\\\\.|''" }],
+		},
+		{
+			begin: "'",
+			end: "'",
+			name: "string.quoted.single.sql",
+			patterns: [{ match: "''" }],
+		},
+		// A quoted identifier is a name, whatever word it spells.
+		{ begin: '"', end: '"', name: "variable.other.quoted.sql" },
+		{ match: "\\$\\d+", name: "constant.numeric.parameter.sql" },
+		{
+			match: "(?<![\\w$])(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][+-]?\\d+)?(?![\\w$])",
+			name: "constant.numeric.sql",
+		},
+		{
+			match: `(?i)(?<![.\\w$])(?:${words(phrases)})(?![\\w$])`,
+			name: "keyword.other.sql",
+		},
+		{
+			match: `(?i)(?<![\\w$])(?!(?:${words(keywords.filter((word) => !callable.has(word)))})(?![\\w$]))[a-z_][\\w$]*(?=\\()`,
+			name: "entity.name.function.sql",
+		},
+		{
+			match: `(?i)(?<![.\\w$])(?:${words(keywords)})(?![\\w$])`,
+			name: "keyword.other.sql",
+		},
+	],
+};
