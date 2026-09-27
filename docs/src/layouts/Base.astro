@@ -1,6 +1,10 @@
 ---
 // The page shell: head, top bar, footer, and the site's styles. The top
 // bar is deliberately short — Docs is a section, not a list of pages.
+// `wide` is the docs layout: the full window, with the sidebar as a rail
+// down the left edge, and the footer left to the content column.
+import Footer from "../components/Footer.astro";
+
 const { title, lede, section, wide } = Astro.props;
 const baseHref = import.meta.env.BASE_URL;
 
@@ -53,12 +57,7 @@ const topNav = [
 
 			<slot />
 
-			<footer>
-				<p>
-					Built by Kayla and her birds &middot; source at{" "}
-					<a href="https://github.com/aslilac/squill">github.com/aslilac/squill</a>
-				</p>
-			</footer>
+			{!wide && <Footer />}
 		</main>
 
 		<style is:global>
@@ -71,6 +70,9 @@ const topNav = [
 			--edge: light-dark(#e7e2ee, #322b3e);
 			--muted: light-dark(#6f6878, #8a8296);
 			--inset: light-dark(#faf8fd, #191520);
+			/* The docs sidebar's rail, and its links' pills on it. */
+			--rail: light-dark(#ece7f2, #0f0c14);
+			--rail-pill: light-dark(#f8f6fb, #211c2a);
 			--pane: #1c1824;
 			--pane-deep: #191520;
 			--pane-edge: #322b3e;
@@ -94,16 +96,18 @@ const topNav = [
 			margin: 0 auto;
 			padding: 3rem 1.25rem 4rem;
 		}
-		/* Docs carry a sidebar, so they get the landing page's width plus
-		   the sidebar and its gutter — the prose column keeps the same
-		   measure instead of being squeezed by the nav beside it. */
+		/* Docs span the window: the header across the top, the sidebar a
+		   rail down the left edge, the content centered in what's left. */
 		main.wide {
-			max-width: 80rem;
+			max-width: none;
+			padding: 0;
+			min-height: 100vh;
+			display: flex;
+			flex-direction: column;
 		}
-		@media (max-width: 720px) {
-			main.wide {
-				max-width: 64rem;
-			}
+		main.wide > .site-header {
+			margin: 0;
+			padding: 1rem 1.5rem;
 		}
 		::selection {
 			background: light-dark(oklch(0.9 0.05 293), oklch(0.4 0.1 293));
@@ -507,29 +511,47 @@ const topNav = [
 		.note > :last-child {
 			margin-bottom: 0;
 		}
-		/* Docs shell: sidebar beside content, stacked on narrow screens. */
+		/* Docs shell: the sidebar rail beside the content, stacked on
+		   narrow screens. The rail stretches the full height of the page;
+		   its nav sticks to the top of the window as the page scrolls. */
 		.docs-shell {
+			flex: 1;
 			display: grid;
-			grid-template-columns: 13rem minmax(0, 1fr);
-			gap: 3rem;
-			align-items: start;
+			grid-template-columns: 16rem minmax(0, 1fr);
+		}
+		.sidebar {
+			background: var(--rail);
+			border-right: 1px solid var(--edge);
+			font-size: 0.92rem;
+		}
+		.sidebar nav {
+			position: sticky;
+			top: 0;
+			max-height: 100vh;
+			overflow-y: auto;
+			padding: 2rem 1rem 2rem 0.75rem;
+		}
+		.docs-shell > article {
+			width: 100%;
+			max-width: 60rem;
+			margin: 0 auto;
+			padding: 2.5rem 2.5rem 4rem;
 		}
 		@media (max-width: 720px) {
 			.docs-shell {
 				grid-template-columns: minmax(0, 1fr);
-				gap: 1.5rem;
 			}
-		}
-		.sidebar {
-			position: sticky;
-			top: 2rem;
-			font-size: 0.92rem;
-		}
-		@media (max-width: 720px) {
 			.sidebar {
-				position: static;
-				padding-bottom: 1rem;
+				border-right: none;
 				border-bottom: 1px solid var(--edge);
+			}
+			.sidebar nav {
+				position: static;
+				max-height: none;
+				padding: 1.25rem 1rem;
+			}
+			.docs-shell > article {
+				padding: 2rem 1rem 3rem;
 			}
 		}
 		.sidebar h2 {
@@ -546,9 +568,6 @@ const topNav = [
 		}
 		.sidebar h2:first-child {
 			margin-top: 0;
-		}
-		.sidebar nav {
-			display: block;
 		}
 		.sidebar ul {
 			list-style: none;
@@ -572,11 +591,11 @@ const topNav = [
 			color: var(--ink);
 		}
 		.sidebar a:hover {
-			background: var(--inset);
+			background: var(--rail-pill);
 			color: var(--violet);
 		}
 		.sidebar a[aria-current="page"] {
-			background: var(--inset);
+			background: var(--rail-pill);
 			color: var(--violet-deep);
 			font-weight: 600;
 		}
