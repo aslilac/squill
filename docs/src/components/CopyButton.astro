@@ -1,0 +1,32 @@
+---
+// A copy button for a code pane's caption: copies the text of the pane
+// it's in as it stands, so a config the live recipe menu has rewritten
+// copies with its new keys.
+import checkIcon from "lucide-static/icons/check.svg?raw";
+import copyIcon from "lucide-static/icons/copy.svg?raw";
+---
+
+<button type="button" class="copy-code" title="Copy" aria-label="Copy">
+	<span class="copy-idle" set:html={copyIcon} />
+	<span class="copy-done" set:html={checkIcon} />
+</button>
+
+<script>
+	document.addEventListener("click", async (event) => {
+		const button = (event.target as Element).closest<HTMLElement>(".copy-code");
+		if (!button) return;
+		const pre = button.closest("figure")?.querySelector("pre");
+		if (!pre) return;
+		try {
+			await navigator.clipboard.writeText(pre.textContent ?? "");
+		} catch {
+			return;
+		}
+		button.classList.add("copied");
+		button.setAttribute("aria-label", "Copied");
+		setTimeout(() => {
+			button.classList.remove("copied");
+			button.setAttribute("aria-label", "Copy");
+		}, 1400);
+	});
+</script>

@@ -5,6 +5,9 @@
 // shows them exactly as written and never needs syncing by hand.
 import { readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
+import CopyButton from "./CopyButton.astro";
+import settingsIcon from "lucide-static/icons/settings-2.svg?raw";
+import { parse as parseToml } from "smol-toml";
 import { highlight as shiki, highlightHost } from "./highlight.js";
 
 const { name, lang } = Astro.props;
@@ -63,22 +66,97 @@ const panes = [
 // What each config-side file is written in, for its caption and colors.
 const kind = (path) =>
 	path.endsWith(".scm") ? "query" : path.endsWith(".toml") ? "toml" : "yaml";
+
+// Live recipes: where the playground's wasm module has the grammar, the
+// after pane can be reformatted in the browser with other style options,
+// and the config pane shows the keys that would do it. Found from the
+// config: the rule covering `before`, its grammar and query, and every
+// option it (or the top level) sets.
+const LIVE_HOSTS = ["rust", "go", "python", "javascript", "typescript", "tsx", "gleam"];
+const configPath = files.find((path) => path === "squill.toml");
+const extension = before.split(".").pop();
+const live = (() => {
+	if (!configPath) return null;
+	const config = parseToml(read(configPath));
+	const kind = extension === "sql" ? "files" : "embedded";
+	const rules = config[kind] ?? [];
+	const index = rules.findIndex((rule) =>
+		rule.include?.some((glob) => glob.endsWith(`.${extension}`)),
+	);
+	const rule = rules[index] ?? {};
+	const host = extension === "sql" ? "sql" : rule.grammar;
+	if (host !== "sql" && !LIVE_HOSTS.includes(host)) return null;
+	// Request options, top level first and the rule over it, as squill
+	// layers them.
+	const keys = [
+		"dialect",
+		"indent",
+		"indent-width",
+		"max-width",
+		"keyword-case",
+		"quote-idents",
+		"trailing-semicolons",
+		"at-params",
+		"question-params",
+		"colon-params",
+		"pyformat-params",
+	];
+	const options = {};
+	for (const layer of [config, rule]) {
+		for (const key of keys) {
+			if (layer[key] !== undefined) options[key.replaceAll("-", "_")] = layer[key];
+		}
+	}
+	// What each style setting is when left alone, for its menu.
+	const defaults = {
+		indent: options.indent ?? (host === "sql" ? "tabs" : "the file's"),
+		indent_width: options.indent_width ?? (host === "sql" ? 2 : "the file's"),
+		max_width: options.max_width ?? 80,
+		keyword_case: options.keyword_case ?? "lower",
+		quote_idents: options.quote_idents ?? "as-needed",
+		trailing_semicolons:
+			options.trailing_semicolons ?? (host === "sql" ? "always" : "none"),
+	};
+	return {
+		host,
+		lang,
+		query: rule.query ? read(rule.query) : undefined,
+		options,
+		defaults,
+		source: read(before),
+		config: read(configPath),
+		// Where new keys go in the config: the rule's table, or the top.
+		rule: index >= 0 ? { kind, index } : null,
+	};
+})();
+const settings = live && [
+	{ key: "indent", label: "indent", values: ["tabs", "spaces"] },
+	{ key: "indent_width", label: "indent-width", values: [2, 4, 8] },
+	{ key: "max_width", label: "max-width", values: [40, 60, 80, 100, 120] },
+	{ key: "keyword_case", label: "keyword-case", values: ["lower", "upper"] },
+	{ key: "quote_idents", label: "quote-idents", values: ["as-needed", "always"] },
+	{ key: "trailing_semicolons", label: "trailing-semicolons", values: ["always", "none"] },
+];
 ---
 
-<div class="recipe">
+<div class="recipe" data-live={live ? JSON.stringify(live) : undefined}>
 	<div class="pair stacked">
 		{
 			files.map(async (path) => (
-				<figure>
+				<figure data-file={path}>
 					<figcaption>
-						<span class="filename">{path}</span> <span>{kind(path)}</span>
+						<span class="filename">{path}</span>
+						<span class="caption-tools">
+							<span>{kind(path)}</span>
+							<CopyButton />
+						</span>
 					</figcaption>
 					<div set:html={await highlight(read(path), kind(path))} />
 				</figure>
 			))
 		}
 	</div>
-	<div class="pair stacked" data-tabs>
+	<div class="pair stacked" data-tabs data-current="after">
 		<figure>
 			<figcaption class="tabbar">
 				<span role="tablist">
@@ -97,6 +175,39 @@ const kind = (path) =>
 				</span>
 				<span class="tab-tools">
 					{
+						live && (
+							<span class="live-settings">
+								<button
+									type="button"
+									class="live-gear"
+									popovertarget={`live-${name}`}
+									title="Try other style options"
+									aria-label="Try other style options"
+									set:html={settingsIcon}
+								/>
+								<div class="live-popover" id={`live-${name}`} popover>
+									{settings.map(({ key, label, values }) => (
+										<label>
+											{label}
+											<select data-option={key}>
+												<option value="">{`default (${live.defaults[key]})`}</option>
+												{values
+													.filter((value) => value !== live.defaults[key])
+													.map((value) => (
+														<option value={String(value)}>{String(value)}</option>
+													))}
+											</select>
+										</label>
+									))}
+									<span class="live-status" aria-live="polite" />
+									<button type="button" class="live-reset">
+										reset
+									</button>
+								</div>
+							</span>
+						)
+					}
+					{
 						lang !== "sql" && (
 							<button
 								type="button"
@@ -114,7 +225,7 @@ const kind = (path) =>
 			</figcaption>
 			{
 				panes.map(({ tab, sql, plain }) => (
-					<div role="tabpanel" data-panel={tab} hidden={tab !== "after"}>
+					<div role="tabpanel" data-panel={tab} hidden={tab !== "after"} data-pane={tab}>
 						<div class="sql-on" set:html={sql} />
 						<div class="sql-off" set:html={plain} />
 					</div>
@@ -125,6 +236,8 @@ const kind = (path) =>
 </div>
 
 <script>
+	import "./live-recipe.js";
+
 	// Tabs switch within one recipe; the SQL toggle is page-wide, and
 	// remembered.
 	const root = document.documentElement;
@@ -141,7 +254,8 @@ const kind = (path) =>
 		const target = event.target as Element;
 		const tab = target.closest<HTMLElement>("[data-tab]");
 		if (tab) {
-			const tabs = tab.closest("[data-tabs]")!;
+			const tabs = tab.closest<HTMLElement>("[data-tabs]")!;
+			tabs.dataset.current = tab.dataset.tab;
 			for (const other of tabs.querySelectorAll("[data-tab]")) {
 				other.setAttribute("aria-selected", String(other === tab));
 			}

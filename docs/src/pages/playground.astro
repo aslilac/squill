@@ -153,6 +153,7 @@ const baseHref = import.meta.env.BASE_URL;
 				gleamLanguage,
 			} from "../playground/gleam-monarch.js";
 			import { colors, shikiTheme } from "../playground/theme.js";
+			import { loadSquill } from "../playground/wasm.js";
 
 			self.MonacoEnvironment = { getWorker: () => new EditorWorker() };
 
@@ -183,73 +184,6 @@ const baseHref = import.meta.env.BASE_URL;
 					"editorLineNumber.foreground": colors.comment,
 				},
 			});
-
-			// ---- the wasm module, behind a minimal WASI stub ----
-			let memory;
-			const dataView = () => new DataView(memory.buffer);
-			const wasiHandlers = {
-				fd_write: (fd, iovs, n, out) => {
-					dataView().setUint32(out, 0, true);
-					return 0;
-				},
-				random_get: (ptr, len) => {
-					crypto.getRandomValues(new Uint8Array(memory.buffer, ptr, len));
-					return 0;
-				},
-				clock_time_get: (id, prec, out) => {
-					dataView().setBigUint64(out, BigInt(Date.now()) * 1000000n, true);
-					return 0;
-				},
-				environ_sizes_get: (c, s) => {
-					dataView().setUint32(c, 0, true);
-					dataView().setUint32(s, 0, true);
-					return 0;
-				},
-				environ_get: () => 0,
-				args_sizes_get: (c, s) => {
-					dataView().setUint32(c, 0, true);
-					dataView().setUint32(s, 0, true);
-					return 0;
-				},
-				args_get: () => 0,
-				sched_yield: () => 0,
-				proc_exit: (code) => {
-					throw new Error("wasm exited: " + code);
-				},
-			};
-
-			async function loadWasm() {
-				const response = await fetch("playground.wasm");
-				const module = await WebAssembly.compileStreaming(response);
-				const wasi = {};
-				for (const imp of WebAssembly.Module.imports(module)) {
-					if (imp.module !== "wasi_snapshot_preview1") continue;
-					wasi[imp.name] = wasiHandlers[imp.name] ?? (() => 8); // default: WASI EBADF
-				}
-				const instance = await WebAssembly.instantiate(module, {
-					wasi_snapshot_preview1: wasi,
-				});
-				memory = instance.exports.memory;
-				instance.exports._initialize?.();
-				return instance;
-			}
-
-			function callFormat(instance, request) {
-				const bytes = new TextEncoder().encode(JSON.stringify(request));
-				const ptr = instance.exports.squill_alloc(bytes.length);
-				new Uint8Array(memory.buffer, ptr, bytes.length).set(bytes);
-				const start = performance.now();
-				const packed = instance.exports.squill_format(ptr, bytes.length);
-				const ms = performance.now() - start;
-				instance.exports.squill_dealloc(ptr, bytes.length);
-				const outPtr = Number(packed >> 32n);
-				const outLen = Number(packed & 0xffffffffn);
-				const text = new TextDecoder().decode(
-					new Uint8Array(memory.buffer, outPtr, outLen),
-				);
-				instance.exports.squill_dealloc(outPtr, outLen);
-				return { ms, ...JSON.parse(text) };
-			}
 
 			// ---- page state ----
 			const exampleSelect = document.getElementById("example");
@@ -297,12 +231,12 @@ const baseHref = import.meta.env.BASE_URL;
 				wordWrap: "off",
 			});
 
-			const [highlighter, wasm] = await Promise.all([
+			const [highlighter, format] = await Promise.all([
 				createHighlighter({
 					themes: [shikiTheme],
 					langs: ["sql", "rust", "go", "python", "typescript", "gleam"],
 				}),
-				loadWasm(),
+				loadSquill(),
 			]);
 
 			function render() {
@@ -313,7 +247,7 @@ const baseHref = import.meta.env.BASE_URL;
 				};
 				let result;
 				try {
-					result = callFormat(wasm, request);
+					result = format(request);
 				} catch (error) {
 					consoleOut.textContent = String(error);
 					statusBadge.textContent = "✗ error";
@@ -415,6 +349,8 @@ const baseHref = import.meta.env.BASE_URL;
 
 		<style is:global>
 			:root {
+				/* Always dark, scrollbars and form controls included. */
+				color-scheme: dark;
 				--bg: #131019;
 				--pane: #1c1824;
 				--pane-deep: #191520;

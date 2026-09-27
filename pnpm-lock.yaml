@@ -226,6 +226,9 @@ importers:
       astro:
         specifier: ^7.1.1
         version: 7.1.1(@azure/identity@4.13.3)(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.2)(@types/node@24.13.3)
+      smol-toml:
+        specifier: ^1.7.0
+        version: 1.7.0
 
   integrations/vscode:
     dependencies:

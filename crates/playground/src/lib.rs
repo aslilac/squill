@@ -12,6 +12,9 @@ struct Request {
 	/// `"sql"`, or an embed host: `rust`, `go`, `python`, `javascript`,
 	/// `typescript`, `tsx`, `gleam`.
 	host: String,
+	/// A tree-sitter query to find the SQL with, instead of the host's
+	/// default (a docs recipe's own query file).
+	query: Option<String>,
 	#[serde(default)]
 	options: RequestOptions,
 }
@@ -39,6 +42,10 @@ struct Response {
 	output: Option<String>,
 	/// Human-readable notes: parse errors, verbatim fallbacks.
 	diagnostics: Vec<String>,
+	/// Where the SQL is in `output`, as `[start, end)` byte offsets: the
+	/// whole text for plain SQL, each string the query captures for a
+	/// host. What the docs highlight as SQL.
+	spans: Vec<[usize; 2]>,
 }
 
 fn build_options(req: &RequestOptions) -> formatter::Options {
@@ -130,7 +137,8 @@ fn format_sql(source: &str, options: &formatter::Options) -> Response {
 			result.fallback_statements
 		));
 	}
-	Response { output: Some(result.text), diagnostics }
+	let spans = vec![[0, result.text.len()]];
+	Response { output: Some(result.text), diagnostics, spans }
 }
 
 fn format_host(
@@ -150,9 +158,24 @@ fn format_host(
 					format!("{line}:{col}: {}", warning.message)
 				})
 				.collect();
-			Response { output: Some(output.text), diagnostics }
+			// Where the SQL landed, for highlighting: found the same way as
+			// before formatting, in the new text.
+			let spans =
+				embed::locate_sql(&output.text, &host.into(), query, options.dialect)
+					.map(|found| {
+						found
+							.iter()
+							.map(|located| [located.range.start, located.range.end])
+							.collect()
+					})
+					.unwrap_or_default();
+			Response { output: Some(output.text), diagnostics, spans }
 		}
-		Err(err) => Response { output: None, diagnostics: vec![err.to_string()] },
+		Err(err) => Response {
+			output: None,
+			diagnostics: vec![err.to_string()],
+			spans: Vec::new(),
+		},
 	}
 }
 
@@ -163,7 +186,8 @@ pub fn format_request(json: &str) -> String {
 			let options = build_options(&request.options);
 			if request.host == "sql" {
 				format_sql(&request.source, &options)
-			} else if let Some((host, query)) = embed_host(&request.host) {
+			} else if let Some((host, default_query)) = embed_host(&request.host) {
+				let query = request.query.as_deref().unwrap_or(default_query);
 				// Same rule as the CLI: indent options the caller named win,
 				// otherwise the host file's own indentation does.
 				let indent = embed::Indent {
@@ -181,16 +205,19 @@ pub fn format_request(json: &str) -> String {
 				Response {
 					output: None,
 					diagnostics: vec![format!("unknown host `{}`", request.host)],
+					spans: Vec::new(),
 				}
 			}
 		}
 		Err(err) => Response {
 			output: None,
 			diagnostics: vec![format!("bad request: {err}")],
+			spans: Vec::new(),
 		},
 	};
 	serde_json::to_string(&response).unwrap_or_else(|_| {
-		r#"{"output":null,"diagnostics":["response serialization failed"]}"#.into()
+		r#"{"output":null,"diagnostics":["response serialization failed"],"spans":[]}"#
+			.into()
 	})
 }
 
@@ -264,6 +291,27 @@ mod tests {
 		});
 		let response = format_request(&request.to_string());
 		assert!(response.contains("from users"), "{response}");
+	}
+
+	#[test]
+	fn spans_say_where_the_sql_is() {
+		let request = serde_json::json!({
+			"source": "fn main() {\n    run(\"SELECT   1\");\n}\n",
+			"host": "rust",
+			"query": "(call_expression function: (identifier) @_f arguments: (arguments (string_literal (string_content) @sql)) (#eq? @_f \"run\"))",
+		});
+		let response: serde_json::Value =
+			serde_json::from_str(&format_request(&request.to_string())).unwrap();
+		let output = response["output"].as_str().unwrap();
+		let [start, end] =
+			[0, 1].map(|i| response["spans"][0][i].as_u64().unwrap() as usize);
+		assert_eq!(&output[start..end], "SELECT   1", "{response}");
+
+		let response: serde_json::Value = serde_json::from_str(&format_request(
+			r#"{"source":"SELECT   1;","host":"sql"}"#,
+		))
+		.unwrap();
+		assert_eq!(response["spans"], serde_json::json!([[0, 10]]));
 	}
 
 	#[test]

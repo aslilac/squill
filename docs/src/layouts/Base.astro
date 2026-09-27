@@ -462,6 +462,96 @@ const topNav = [
 			align-items: center;
 			gap: 0.75rem;
 		}
+		/* A live recipe's style menu: a gear on the after tab, and a
+		   popover in the top layer (the pane would clip it) that doesn't
+		   inherit the caption's small caps. */
+		[data-current="before"] .live-settings {
+			display: none;
+		}
+		.live-settings {
+			display: inline-flex;
+		}
+		.tabbar .live-gear {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 1.6rem;
+			height: 1.6rem;
+			padding: 0;
+			border: 1px solid transparent;
+			border-radius: 50%;
+			background: none;
+			color: inherit;
+			cursor: pointer;
+			transition:
+				background 0.12s,
+				border-color 0.12s,
+				color 0.12s;
+		}
+		.tabbar .live-gear:hover,
+		.tabbar .live-gear[aria-expanded="true"] {
+			color: var(--pane-text);
+			border-color: var(--pane-edge);
+			background: color-mix(in oklab, var(--pane-edge) 40%, transparent);
+		}
+		.live-gear:focus-visible {
+			outline: 2px solid var(--violet);
+		}
+		.live-gear svg {
+			flex-shrink: 0;
+			width: 14px;
+			height: 14px;
+			display: block;
+		}
+		.live-popover {
+			position: absolute;
+			inset: auto;
+			margin: 0;
+			padding: 0.6rem 0.75rem 0.75rem;
+			min-width: 17rem;
+			border: 1px solid var(--edge);
+			border-radius: 10px;
+			background: var(--paper);
+			color: var(--ink);
+			box-shadow: 0 6px 20px light-dark(rgb(34 29 43 / 0.12), rgb(0 0 0 / 0.45));
+			font-family: "JetBrains Mono", monospace;
+			font-size: 0.78rem;
+			letter-spacing: normal;
+			text-transform: none;
+		}
+		.live-popover label {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 1rem;
+			padding: 0.2rem 0;
+		}
+		.live-popover select,
+		.live-reset {
+			font: inherit;
+			color: var(--ink);
+			background: var(--inset);
+			border: 1px solid var(--edge);
+			border-radius: 5px;
+			padding: 0.15rem 0.35rem;
+		}
+		.live-status {
+			display: block;
+			margin-top: 0.4rem;
+			color: var(--muted);
+			white-space: pre-wrap;
+		}
+		.live-status:empty {
+			display: none;
+		}
+		.live-reset {
+			margin-top: 0.5rem;
+			cursor: pointer;
+		}
+		.live-reset:hover {
+			border-color: var(--violet);
+			color: var(--violet-deep);
+		}
 		/* The SQL highlighting switch: a track and a knob that slides. */
 		.tabbar .sql-toggle {
 			display: inline-flex;
@@ -509,6 +599,53 @@ const topNav = [
 		}
 		[role="tabpanel"][hidden] {
 			display: none;
+		}
+		/* A pane caption's right side: the file's language, and a button
+		   that copies the pane. */
+		.caption-tools {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.6rem;
+		}
+		.copy-code {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 1.6rem;
+			height: 1.6rem;
+			margin: -0.35rem -0.4rem -0.35rem 0;
+			padding: 0;
+			border: 1px solid transparent;
+			border-radius: 50%;
+			background: none;
+			color: inherit;
+			cursor: pointer;
+			transition:
+				background 0.12s,
+				border-color 0.12s,
+				color 0.12s;
+		}
+		.copy-code:hover {
+			color: var(--pane-text);
+			border-color: var(--pane-edge);
+			background: color-mix(in oklab, var(--pane-edge) 40%, transparent);
+		}
+		.copy-code:focus-visible {
+			outline: 2px solid var(--violet);
+		}
+		.copy-code svg {
+			flex-shrink: 0;
+			width: 14px;
+			height: 14px;
+			display: block;
+		}
+		.copy-done,
+		.copy-code.copied .copy-idle {
+			display: none;
+		}
+		.copy-code.copied .copy-done {
+			display: block;
+			color: var(--green);
 		}
 		/* A file's name in a pane's caption keeps its own case. */
 		.pair figcaption .filename {
