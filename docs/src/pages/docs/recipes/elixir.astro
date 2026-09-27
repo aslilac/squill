@@ -11,12 +11,13 @@ import Recipe from "../../../components/Recipe.astro";
 	<section>
 		<h2>Loading the grammar</h2>
 		<p>
-			squill doesn&rsquo;t compile Elixir in, so the rule names the grammar
-			by its release URL. The first run downloads it and records its SHA-256
-			in a <code>squill.lock</code> beside the config; commit that, and run
-			CI with <code>squill fmt --locked</code>. A loaded grammar has no
-			default query, so every rule brings one. See{" "}
-			<a href="docs/embedded/#grammars">bringing your own grammar</a> for how both work.
+			squill doesn&rsquo;t compile Elixir in, so the rule names the grammar by
+			its release URL. The first run downloads it and records its SHA-256 in a{" "}
+			<code>squill.lock</code> beside the config; commit that, and run CI with{" "}
+			<code>squill fmt --locked</code>. A loaded grammar has no default query,
+			so every rule brings one. See{" "}
+			<a href="docs/embedded/#grammars">bringing your own grammar</a> for how
+			both work.
 		</p>
 	</section>
 
@@ -24,19 +25,19 @@ import Recipe from "../../../components/Recipe.astro";
 		<h2>Which strings squill rewrites</h2>
 		<p>
 			squill only rewrites a string from a loaded grammar that already spans
-			lines: in Elixir, a <code>"""</code> heredoc, a <code>~S"""</code>{" "}
-			sigil, or a plain string written over several lines. A one-line string
-			is left as written.
+			lines: in Elixir, a <code>"""</code> heredoc, a <code>~S"""</code> sigil,
+			or a plain string written over several lines. A one-line string is left as
+			written.
 		</p>
 		<p>
-			The queries below take a string only when its content is a single
-			node. Interpolation (<code>#&lbrace;&rbrace;</code>) or an escape splits
-			it, so those strings never match; pass values as parameters instead.
-			The same goes for sigils: only <code>~S</code>, which never
-			interpolates, is taken. <code>~S"""</code> is the natural choice for a
-			migration, since backslashes in it are literal; the queries{" "}
-			<a href="docs/embedded/#properties">tell squill so</a>, and it formats
-			one holding a backslash.
+			The queries below take a string only when its content is a single node.
+			Interpolation (<code>#&lbrace;&rbrace;</code>) or an escape splits it, so
+			those strings never match; pass values as parameters instead. The same
+			goes for sigils: only <code>~S</code>, which never interpolates, is taken.{" "}
+			<code>~S"""</code> is the natural choice for a migration, since
+			backslashes in it are literal; the queries{" "}
+			<a href="docs/embedded/#properties">tell squill so</a>, and it formats one
+			holding a backslash.
 		</p>
 	</section>
 
@@ -44,8 +45,7 @@ import Recipe from "../../../components/Recipe.astro";
 		<h2>Ecto</h2>
 		<p>
 			<code>Repo.query!</code>, <code>Ecto.Adapters.SQL.query!</code>, and a
-			migration&rsquo;s <code>execute</code>, in the default Postgres
-			dialect:
+			migration&rsquo;s <code>execute</code>, in the default Postgres dialect:
 		</p>
 		<Recipe name="elixir-ecto" lang="elixir" />
 		<p>

@@ -10,16 +10,14 @@ const { lang, code, file } = Astro.props;
 
 <div class:list={["pair", "stacked", "code-block", { captioned: file }]}>
 	<figure>
-		{
-			file && (
-				<figcaption>
-					<span class="filename">{file}</span>
-					<span class="caption-tools">
-						<CopyButton />
-					</span>
-				</figcaption>
-			)
-		}
+		{file && (
+			<figcaption>
+				<span class="filename">{file}</span>
+				<span class="caption-tools">
+					<CopyButton />
+				</span>
+			</figcaption>
+		)}
 		<div set:html={await highlight(code.trim(), lang)} />
 	</figure>
 </div>

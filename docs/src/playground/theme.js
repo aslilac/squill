@@ -47,7 +47,10 @@ const byHex = new Map(
 	]),
 );
 export const themed = (html) =>
-	html.replace(/#[0-9a-f]{6}\b/gi, (hex) => byHex.get(hex.toLowerCase()) ?? hex);
+	html.replace(
+		/#[0-9a-f]{6}\b/gi,
+		(hex) => byHex.get(hex.toLowerCase()) ?? hex,
+	);
 
 export const shikiTheme = {
 	name: "squill-dark",

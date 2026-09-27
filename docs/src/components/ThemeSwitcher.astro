@@ -25,29 +25,25 @@ const choices = [
 		aria-label="Theme"
 		title="Theme"
 	>
-		{
-			choices.map((choice) => (
-				<span class="theme-icon" data-for={choice.value} set:html={choice.icon} />
-			))
-		}
+		{choices.map((choice) => (
+			<span class="theme-icon" data-for={choice.value} set:html={choice.icon} />
+		))}
 	</button>
 	<ul class="theme-menu" id="theme-menu" role="menu" hidden>
-		{
-			choices.map((choice) => (
-				<li role="none">
-					<button
-						type="button"
-						role="menuitemradio"
-						aria-checked="false"
-						data-theme-choice={choice.value}
-					>
-						<span class="theme-item-icon" set:html={choice.icon} />
-						{choice.label}
-						<span class="theme-check" set:html={checkIcon} />
-					</button>
-				</li>
-			))
-		}
+		{choices.map((choice) => (
+			<li role="none">
+				<button
+					type="button"
+					role="menuitemradio"
+					aria-checked="false"
+					data-theme-choice={choice.value}
+				>
+					<span class="theme-item-icon" set:html={choice.icon} />
+					{choice.label}
+					<span class="theme-check" set:html={checkIcon} />
+				</button>
+			</li>
+		))}
 	</ul>
 </div>
 

@@ -27,8 +27,10 @@ const topNav = [
 		<title>{title ? `${title} — squill` : "squill, SQL formatter"}</title>
 		<meta
 			name="description"
-			content={lede ??
-				"A robust, friendly, and flexible SQL code formatter; even for queries embedded in your application code."}
+			content={
+				lede ??
+				"A robust, friendly, and flexible SQL code formatter; even for queries embedded in your application code."
+			}
 		/>
 		<link rel="icon" type="image/svg+xml" href="squill-fav.svg" />
 		<ThemeInit />
@@ -42,25 +44,21 @@ const topNav = [
 	<body>
 		<main class={wide ? "wide" : undefined}>
 			<div class="site-header">
-				{
-					!bare && (
-						<a class="brand" href=".">
-							<img src="squill.svg" width="32" height="32" alt="" />
-							squill
-						</a>
-					)
-				}
+				{!bare && (
+					<a class="brand" href=".">
+						<img src="squill.svg" width="32" height="32" alt="" />
+						squill
+					</a>
+				)}
 				<nav class="site-nav">
-					{
-						topNav.map((item) => (
-							<a
-								href={item.href}
-								aria-current={item.key === section ? "true" : undefined}
-							>
-								{item.label}
-							</a>
-						))
-					}
+					{topNav.map((item) => (
+						<a
+							href={item.href}
+							aria-current={item.key === section ? "true" : undefined}
+						>
+							{item.label}
+						</a>
+					))}
 					<a href="https://github.com/aslilac/squill">Source</a>
 					<ThemeSwitcher />
 				</nav>
@@ -72,795 +70,796 @@ const topNav = [
 		</main>
 
 		<style is:global>
-		/* Lists led by a language's icon: the icon is the marker, with room
-		   between it and the text, which wraps clear of it. */
-		ul.lang-list {
-			list-style: none;
-			padding-left: 0;
-		}
-		.lang-list li {
-			position: relative;
-			padding-left: 1.75rem;
-		}
-		.lang-list li > img {
-			position: absolute;
-			left: 0;
-			top: 0.5em;
-			width: 16px;
-			height: 16px;
-		}
-		/* Language icons are Catppuccin Mocha, a dark palette: on a light
-		   page they're deepened a little to keep their contrast. */
-		:root[data-theme="light"] img[src^="langs/"] {
-			filter: brightness(0.78) saturate(1.5);
-		}
-		@media (prefers-color-scheme: light) {
-			:root:not([data-theme="dark"]) img[src^="langs/"] {
+			/* Lists led by a language's icon: the icon is the marker, with room
+			   between it and the text, which wraps clear of it. */
+			ul.lang-list {
+				list-style: none;
+				padding-left: 0;
+			}
+			.lang-list li {
+				position: relative;
+				padding-left: 1.75rem;
+			}
+			.lang-list li > img {
+				position: absolute;
+				left: 0;
+				top: 0.5em;
+				width: 16px;
+				height: 16px;
+			}
+			/* Language icons are Catppuccin Mocha, a dark palette: on a light
+			   page they're deepened a little to keep their contrast. */
+			:root[data-theme="light"] img[src^="langs/"] {
 				filter: brightness(0.78) saturate(1.5);
 			}
-		}
-		* {
-			box-sizing: border-box;
-		}
-		body {
-			margin: 0;
-			font:
-				16px/1.7 "IBM Plex Sans",
-				system-ui,
-				sans-serif;
-			color: var(--ink);
-			background: var(--paper);
-		}
-		main {
-			max-width: 64rem;
-			margin: 0 auto;
-			padding: 3rem 1.25rem 4rem;
-		}
-		/* Docs span the window: the header across the top, the sidebar a
-		   rail down the left edge, the content centered in what's left. */
-		main.wide {
-			max-width: none;
-			padding: 0;
-			min-height: 100vh;
-			display: flex;
-			flex-direction: column;
-		}
-		main.wide > .site-header {
-			margin: 0;
-			padding: 1rem 1.5rem;
-		}
-		::selection {
-			background: light-dark(oklch(0.9 0.05 293), oklch(0.4 0.1 293));
-		}
+			@media (prefers-color-scheme: light) {
+				:root:not([data-theme="dark"]) img[src^="langs/"] {
+					filter: brightness(0.78) saturate(1.5);
+				}
+			}
+			* {
+				box-sizing: border-box;
+			}
+			body {
+				margin: 0;
+				font:
+					16px/1.7 "IBM Plex Sans",
+					system-ui,
+					sans-serif;
+				color: var(--ink);
+				background: var(--paper);
+			}
+			main {
+				max-width: 64rem;
+				margin: 0 auto;
+				padding: 3rem 1.25rem 4rem;
+			}
+			/* Docs span the window: the header across the top, the sidebar a
+			   rail down the left edge, the content centered in what's left. */
+			main.wide {
+				max-width: none;
+				padding: 0;
+				min-height: 100vh;
+				display: flex;
+				flex-direction: column;
+			}
+			main.wide > .site-header {
+				margin: 0;
+				padding: 1rem 1.5rem;
+			}
+			::selection {
+				background: light-dark(oklch(0.9 0.05 293), oklch(0.4 0.1 293));
+			}
 
-		header {
-			margin-bottom: 2.5rem;
-		}
-		.masthead {
-			display: flex;
-			align-items: center;
-			gap: 1.1rem;
-			margin: 12lvh 0;
-		}
-		h1 {
-			font-family: "Spectral", serif;
-			font-size: 2.8rem;
-			font-weight: 600;
-			letter-spacing: -0.02em;
-			margin: 0;
-			line-height: 1;
-		}
-		.tagline {
-			font-family: "Spectral", serif;
-			font-style: italic;
-			font-size: 1.15rem;
-			color: var(--violet);
-			margin: 0.4rem 0 0;
-		}
-		/* The landing page's calls to action, above its first paragraph. */
-		.actions {
-			display: flex;
-			flex-wrap: wrap;
-			gap: 0.75rem;
-			margin-bottom: 1.5rem;
-		}
-		.button {
-			display: inline-flex;
-			align-items: center;
-			padding: 0.55rem 1.2rem;
-			border: 1px solid var(--edge);
-			border-radius: 999px;
-			background: var(--inset);
-			color: var(--ink);
-			font-weight: 500;
-			font-size: 0.95rem;
-			line-height: 1.3;
-			text-decoration: none;
-			transition:
-				background 0.12s,
-				border-color 0.12s,
-				color 0.12s;
-		}
-		.button:hover {
-			border-color: var(--violet);
-			color: var(--violet-deep);
-		}
-		.button.primary {
-			background: var(--violet);
-			border-color: var(--violet);
-			color: light-dark(#fff, #16121c);
-		}
-		.button.primary:hover {
-			background: var(--violet-deep);
-			border-color: var(--violet-deep);
-			color: light-dark(#fff, #16121c);
-		}
-		.button:focus-visible {
-			outline: 2px solid var(--violet);
-			outline-offset: 2px;
-		}
-		/* The masthead's own nav. Scoped on purpose: a bare `nav` rule also
-		   catches the docs sidebar, which is a column. */
-		.masthead nav {
-			margin-left: auto;
-			display: flex;
-			align-items: center;
-			gap: 1rem;
-			white-space: nowrap;
-		}
-		.badge {
-			font-family: "JetBrains Mono", monospace;
-			font-size: 0.7rem;
-			font-weight: 600;
-			background: light-dark(oklch(0.92 0.045 293), #241f2e);
-			border: 1px solid light-dark(oklch(0.84 0.07 293), #3a3348);
-			color: var(--violet-deep);
-			padding: 0.3rem 0.7rem;
-			border-radius: 999px;
-		}
-		@media (max-width: 720px) {
+			header {
+				margin-bottom: 2.5rem;
+			}
 			.masthead {
+				display: flex;
+				align-items: center;
+				gap: 1.1rem;
+				margin: 12lvh 0;
+			}
+			h1 {
+				font-family: "Spectral", serif;
+				font-size: 2.8rem;
+				font-weight: 600;
+				letter-spacing: -0.02em;
+				margin: 0;
+				line-height: 1;
+			}
+			.tagline {
+				font-family: "Spectral", serif;
+				font-style: italic;
+				font-size: 1.15rem;
+				color: var(--violet);
+				margin: 0.4rem 0 0;
+			}
+			/* The landing page's calls to action, above its first paragraph. */
+			.actions {
+				display: flex;
 				flex-wrap: wrap;
+				gap: 0.75rem;
+				margin-bottom: 1.5rem;
 			}
+			.button {
+				display: inline-flex;
+				align-items: center;
+				padding: 0.55rem 1.2rem;
+				border: 1px solid var(--edge);
+				border-radius: 999px;
+				background: var(--inset);
+				color: var(--ink);
+				font-weight: 500;
+				font-size: 0.95rem;
+				line-height: 1.3;
+				text-decoration: none;
+				transition:
+					background 0.12s,
+					border-color 0.12s,
+					color 0.12s;
+			}
+			.button:hover {
+				border-color: var(--violet);
+				color: var(--violet-deep);
+			}
+			.button.primary {
+				background: var(--violet);
+				border-color: var(--violet);
+				color: light-dark(#fff, #16121c);
+			}
+			.button.primary:hover {
+				background: var(--violet-deep);
+				border-color: var(--violet-deep);
+				color: light-dark(#fff, #16121c);
+			}
+			.button:focus-visible {
+				outline: 2px solid var(--violet);
+				outline-offset: 2px;
+			}
+			/* The masthead's own nav. Scoped on purpose: a bare `nav` rule also
+			   catches the docs sidebar, which is a column. */
 			.masthead nav {
-				margin-left: 0;
-				flex-basis: 100%;
+				margin-left: auto;
+				display: flex;
+				align-items: center;
+				gap: 1rem;
+				white-space: nowrap;
 			}
-		}
-		.flower {
-			font-family: "Spectral", serif;
-			font-style: italic;
-			color: var(--muted);
-			font-size: 0.95rem;
-		}
+			.badge {
+				font-family: "JetBrains Mono", monospace;
+				font-size: 0.7rem;
+				font-weight: 600;
+				background: light-dark(oklch(0.92 0.045 293), #241f2e);
+				border: 1px solid light-dark(oklch(0.84 0.07 293), #3a3348);
+				color: var(--violet-deep);
+				padding: 0.3rem 0.7rem;
+				border-radius: 999px;
+			}
+			@media (max-width: 720px) {
+				.masthead {
+					flex-wrap: wrap;
+				}
+				.masthead nav {
+					margin-left: 0;
+					flex-basis: 100%;
+				}
+			}
+			.flower {
+				font-family: "Spectral", serif;
+				font-style: italic;
+				color: var(--muted);
+				font-size: 0.95rem;
+			}
 
-		h2 {
-			font-family: "Spectral", serif;
-			font-size: 1.5rem;
-			font-weight: 600;
-			letter-spacing: -0.01em;
-			margin: 0 0 0.75rem;
-		}
-		section {
-			margin-top: 2.75rem;
-		}
+			h2 {
+				font-family: "Spectral", serif;
+				font-size: 1.5rem;
+				font-weight: 600;
+				letter-spacing: -0.01em;
+				margin: 0 0 0.75rem;
+			}
+			section {
+				margin-top: 2.75rem;
+			}
 
-		.pair {
-			display: grid;
-			grid-template-columns: 1fr;
-			border: 1px solid var(--pane-edge);
-			border-radius: 14px;
-			overflow: hidden;
-			background: var(--pane);
-		}
-		@media (min-width: 900px) {
 			.pair {
-				grid-template-columns: 1fr 1fr;
+				display: grid;
+				grid-template-columns: 1fr;
+				border: 1px solid var(--pane-edge);
+				border-radius: 14px;
+				overflow: hidden;
+				background: var(--pane);
 			}
-		}
-		.pair figure {
-			margin: 0;
-			min-width: 0;
-			display: flex;
-			flex-direction: column;
-		}
-		.pair figure + figure {
-			background: var(--pane-deep);
-		}
-		/* Before above after, for code whose lines are too long to share
-		   the width: the docs' recipes. */
-		.pair.stacked {
-			grid-template-columns: 1fr;
-		}
-		.pair.stacked figure + figure {
-			border-top: 1px solid var(--pane-edge);
-		}
-		@media (min-width: 900px) {
-			.pair:not(.stacked) figure:first-child {
-				border-right: 1px solid var(--pane-edge);
+			@media (min-width: 900px) {
+				.pair {
+					grid-template-columns: 1fr 1fr;
+				}
 			}
-		}
-		.pair figcaption {
-			font-family: "JetBrains Mono", monospace;
-			font-size: 0.65rem;
-			letter-spacing: 0.1em;
-			text-transform: uppercase;
-			color: var(--code-comment);
-			padding: 0.85rem 1.25rem 0.2rem;
-			display: flex;
-			justify-content: space-between;
-		}
-		.tidy {
-			color: var(--green);
-		}
-		/* The set:html wrapper and the pre both stretch so the scrollable
-		   area fills the pane, not just the lines of text. */
-		.pair figure > div {
-			flex: 1;
-			display: flex;
-			flex-direction: column;
-			min-width: 0;
-		}
-		/* shiki emits the <pre> at build time. This block is already
-		   is:global, so the selector is written plainly — `:global()` is a
-		   scoped-style construct and would survive into the output as an
-		   invalid selector, silently killing the whole rule. The panes
-		   supply their own background, hence the override. */
-		.pair pre {
-			flex: 1;
-			margin: 0;
-			padding: 0.5rem 1.25rem 1.25rem;
-			overflow-x: auto;
-			scrollbar-width: thin;
-			scrollbar-color: var(--pane-edge) transparent;
-			background: transparent !important;
-			font-family: "JetBrains Mono", monospace;
-			font-size: 13px;
-			line-height: 1.7;
-			/* A live pane sets --tab-width to the indent-width it shows. */
-			tab-size: var(--tab-width, 2);
-		}
-		/* No ligatures: code on these pages is there to be copied, and
-		   JetBrains Mono would draw Ruby's <<-SQL as a guillemet and a dash. */
-		code {
-			font-family: "JetBrains Mono", monospace;
-			font-variant-ligatures: none;
-		}
-		/* Code blocks that aren't the dark hero style — the config snippets
-		   through the docs. Sized to match pre.dark, and sitting a hair
-		   above the inline `code` measure rather than browser-default 1em. */
-		pre:not(.dark):not(.shiki) {
-			background: var(--inset);
-			border: 1px solid var(--edge);
-			border-radius: 10px;
-			padding: 0.9rem 1.1rem;
-			overflow-x: auto;
-			font-size: 0.85rem;
-			line-height: 1.6;
-			tab-size: 2;
-		}
-		/* Code blocks through the docs: a pane of their own, captioned with
-		   their file when they have one. */
-		.code-block {
-			margin: 1rem 0;
-		}
-		.code-block:not(.captioned) pre {
-			padding-top: 1.1rem;
-		}
-		/* Recipe tabs: before and after share one pane. */
-		.tabbar {
-			align-items: center;
-			gap: 1rem;
-		}
-		.tabbar button {
-			font: inherit;
-			letter-spacing: inherit;
-			text-transform: inherit;
-			color: inherit;
-			background: none;
-			border: 1px solid transparent;
-			border-radius: 999px;
-			padding: 0.15rem 0.6rem;
-			cursor: pointer;
-		}
-		.tabbar [role="tablist"] {
-			display: inline-flex;
-			flex-wrap: wrap;
-			gap: 0.35rem;
-		}
-		/* Tabs named in words (platforms), not the pane's small caps. */
-		.pair figcaption.prose-tabs {
-			color: var(--muted);
-			font-family: inherit;
-			font-size: 0.85rem;
-			letter-spacing: normal;
-			text-transform: none;
-		}
-		.tabbar [role="tab"] {
-			transition:
-				background 0.12s,
-				border-color 0.12s,
-				color 0.12s;
-		}
-		/* Hover shows a tab's outline and a faint fill; the selected tab
-		   keeps both, filled a step stronger. */
-		.tabbar [role="tab"]:hover {
-			color: var(--pane-text);
-			border-color: var(--pane-edge);
-			background: color-mix(in oklab, var(--pane-edge) 40%, transparent);
-		}
-		.tabbar [role="tab"][aria-selected="true"] {
-			color: var(--pane-text);
-			border-color: var(--pane-edge);
-			background: color-mix(in oklab, var(--pane-edge) 75%, transparent);
-		}
-		.tabbar [role="tab"]:focus-visible {
-			outline: 2px solid var(--violet);
-			outline-offset: 1px;
-		}
-		.tabbar button:hover {
-			color: var(--pane-text);
-		}
-		.tab-tools {
-			display: flex;
-			align-items: center;
-			gap: 0.75rem;
-		}
-		/* A recipe's view menu: a gear, and a popover in the top layer (the
-		   pane would clip it) holding the SQL highlighting switch and, for a
-		   live recipe, style options. It sits in the tab bar's markup, so its
-		   rules are scoped past `.tabbar button`'s, and it drops the
-		   caption's small caps. */
-		.recipe-menu {
-			display: inline-flex;
-		}
-		.tabbar .recipe-gear {
-			display: inline-flex;
-			align-items: center;
-			justify-content: center;
-			width: 1.6rem;
-			height: 1.6rem;
-			padding: 0;
-			border: 1px solid transparent;
-			border-radius: 50%;
-			background: none;
-			color: inherit;
-			cursor: pointer;
-			transition:
-				background 0.12s,
-				border-color 0.12s,
-				color 0.12s;
-		}
-		.tabbar .recipe-gear:hover,
-		.tabbar .recipe-gear[aria-expanded="true"] {
-			color: var(--pane-text);
-			border-color: var(--pane-edge);
-			background: color-mix(in oklab, var(--pane-edge) 40%, transparent);
-		}
-		.recipe-gear:focus-visible {
-			outline: 2px solid var(--violet);
-		}
-		.recipe-gear svg {
-			flex-shrink: 0;
-			width: 14px;
-			height: 14px;
-			display: block;
-		}
-		.recipe-popover {
-			position: absolute;
-			inset: auto;
-			margin: 0;
-			padding: 0.5rem 0.75rem 0.6rem;
-			min-width: 17rem;
-			border: 1px solid var(--edge);
-			border-radius: 10px;
-			background: var(--paper);
-			color: var(--ink);
-			box-shadow: 0 6px 20px light-dark(rgb(34 29 43 / 0.12), rgb(0 0 0 / 0.45));
-			font-family: "JetBrains Mono", monospace;
-			font-size: 0.78rem;
-			letter-spacing: normal;
-			text-transform: none;
-		}
-		.recipe-popover label,
-		.recipe-popover .sql-toggle {
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			gap: 1rem;
-			width: 100%;
-			padding: 0.25rem 0;
-		}
-		.recipe-popover .sql-toggle {
-			border: none;
-			border-radius: 0;
-			background: none;
-			color: var(--ink);
-			cursor: pointer;
-		}
-		.live-options {
-			margin-top: 0.35rem;
-			padding-top: 0.45rem;
-			border-top: 1px solid var(--edge);
-		}
-		.live-options:first-child {
-			margin-top: 0;
-			padding-top: 0;
-			border-top: none;
-		}
-		.menu-heading {
-			margin: 0 0 0.2rem;
-			color: var(--muted);
-		}
-		.recipe-popover select,
-		.recipe-popover .live-reset {
-			font: inherit;
-			color: var(--ink);
-			background: var(--inset);
-			border: 1px solid var(--edge);
-			border-radius: 5px;
-			padding: 0.15rem 0.35rem;
-		}
-		.live-status {
-			display: block;
-			margin-top: 0.4rem;
-			color: var(--muted);
-			white-space: pre-wrap;
-		}
-		.live-status:empty {
-			display: none;
-		}
-		.recipe-popover .live-reset {
-			margin-top: 0.5rem;
-			cursor: pointer;
-		}
-		.recipe-popover .live-reset:hover {
-			border-color: var(--violet);
-			color: var(--violet-deep);
-		}
-		/* The SQL highlighting switch: a track and a knob that slides. */
-		.switch {
-			position: relative;
-			flex-shrink: 0;
-			width: 1.7rem;
-			height: 0.95rem;
-			border-radius: 999px;
-			background: var(--edge);
-			transition: background 0.15s;
-		}
-		.switch::after {
-			content: "";
-			position: absolute;
-			top: 0.15rem;
-			left: 0.15rem;
-			width: 0.65rem;
-			height: 0.65rem;
-			border-radius: 50%;
-			background: var(--paper);
-			transition: transform 0.15s;
-		}
-		.sql-toggle[aria-checked="true"] .switch {
-			background: var(--green);
-		}
-		.sql-toggle[aria-checked="true"] .switch::after {
-			transform: translateX(0.75rem);
-		}
-		.sql-toggle:focus-visible {
-			outline: 2px solid var(--violet);
-		}
-		.sql-off,
-		html.plain-sql .sql-on {
-			display: none;
-		}
-		html.plain-sql .sql-off {
-			display: block;
-		}
-		[role="tabpanel"][hidden] {
-			display: none;
-		}
-		/* A pane caption's right side: the file's language, and a button
-		   that copies the pane. */
-		.caption-tools {
-			display: inline-flex;
-			align-items: center;
-			gap: 0.6rem;
-		}
-		.copy-code {
-			display: inline-flex;
-			align-items: center;
-			justify-content: center;
-			width: 1.6rem;
-			height: 1.6rem;
-			margin: -0.35rem -0.4rem -0.35rem 0;
-			padding: 0;
-			border: 1px solid transparent;
-			border-radius: 50%;
-			background: none;
-			color: inherit;
-			cursor: pointer;
-			transition:
-				background 0.12s,
-				border-color 0.12s,
-				color 0.12s;
-		}
-		.copy-code:hover {
-			color: var(--pane-text);
-			border-color: var(--pane-edge);
-			background: color-mix(in oklab, var(--pane-edge) 40%, transparent);
-		}
-		.copy-code:focus-visible {
-			outline: 2px solid var(--violet);
-		}
-		.copy-code svg {
-			flex-shrink: 0;
-			width: 14px;
-			height: 14px;
-			display: block;
-		}
-		.copy-done,
-		.copy-code.copied .copy-idle {
-			display: none;
-		}
-		.copy-code.copied .copy-done {
-			display: block;
-			color: var(--green);
-		}
-		/* A file's name in a pane's caption keeps its own case. */
-		.pair figcaption .filename {
-			text-transform: none;
-			letter-spacing: normal;
-			font-size: 0.75rem;
-			color: var(--pane-text);
-		}
-		.recipe .pair {
-			margin-top: 1.25rem;
-		}
-		pre.dark {
-			background: var(--pane);
-			color: var(--pane-text);
-			border: 1px solid var(--pane-edge);
-			border-radius: 12px;
-			padding: 1rem 1.2rem;
-			overflow-x: auto;
-			font-size: 0.85rem;
-			line-height: 1.6;
-		}
-		p code,
-		td code,
-		code.boxed {
-			background: var(--inset);
-			border: 1px solid var(--edge);
-			border-radius: 5px;
-			padding: 0.05rem 0.35rem;
-			font-size: 0.85em;
-		}
+			.pair figure {
+				margin: 0;
+				min-width: 0;
+				display: flex;
+				flex-direction: column;
+			}
+			.pair figure + figure {
+				background: var(--pane-deep);
+			}
+			/* Before above after, for code whose lines are too long to share
+			   the width: the docs' recipes. */
+			.pair.stacked {
+				grid-template-columns: 1fr;
+			}
+			.pair.stacked figure + figure {
+				border-top: 1px solid var(--pane-edge);
+			}
+			@media (min-width: 900px) {
+				.pair:not(.stacked) figure:first-child {
+					border-right: 1px solid var(--pane-edge);
+				}
+			}
+			.pair figcaption {
+				font-family: "JetBrains Mono", monospace;
+				font-size: 0.65rem;
+				letter-spacing: 0.1em;
+				text-transform: uppercase;
+				color: var(--code-comment);
+				padding: 0.85rem 1.25rem 0.2rem;
+				display: flex;
+				justify-content: space-between;
+			}
+			.tidy {
+				color: var(--green);
+			}
+			/* The set:html wrapper and the pre both stretch so the scrollable
+			   area fills the pane, not just the lines of text. */
+			.pair figure > div {
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+				min-width: 0;
+			}
+			/* shiki emits the <pre> at build time. This block is already
+			   is:global, so the selector is written plainly — `:global()` is a
+			   scoped-style construct and would survive into the output as an
+			   invalid selector, silently killing the whole rule. The panes
+			   supply their own background, hence the override. */
+			.pair pre {
+				flex: 1;
+				margin: 0;
+				padding: 0.5rem 1.25rem 1.25rem;
+				overflow-x: auto;
+				scrollbar-width: thin;
+				scrollbar-color: var(--pane-edge) transparent;
+				background: transparent !important;
+				font-family: "JetBrains Mono", monospace;
+				font-size: 13px;
+				line-height: 1.7;
+				/* A live pane sets --tab-width to the indent-width it shows. */
+				tab-size: var(--tab-width, 2);
+			}
+			/* No ligatures: code on these pages is there to be copied, and
+			   JetBrains Mono would draw Ruby's <<-SQL as a guillemet and a dash. */
+			code {
+				font-family: "JetBrains Mono", monospace;
+				font-variant-ligatures: none;
+			}
+			/* Code blocks that aren't the dark hero style — the config snippets
+			   through the docs. Sized to match pre.dark, and sitting a hair
+			   above the inline `code` measure rather than browser-default 1em. */
+			pre:not(.dark):not(.shiki) {
+				background: var(--inset);
+				border: 1px solid var(--edge);
+				border-radius: 10px;
+				padding: 0.9rem 1.1rem;
+				overflow-x: auto;
+				font-size: 0.85rem;
+				line-height: 1.6;
+				tab-size: 2;
+			}
+			/* Code blocks through the docs: a pane of their own, captioned with
+			   their file when they have one. */
+			.code-block {
+				margin: 1rem 0;
+			}
+			.code-block:not(.captioned) pre {
+				padding-top: 1.1rem;
+			}
+			/* Recipe tabs: before and after share one pane. */
+			.tabbar {
+				align-items: center;
+				gap: 1rem;
+			}
+			.tabbar button {
+				font: inherit;
+				letter-spacing: inherit;
+				text-transform: inherit;
+				color: inherit;
+				background: none;
+				border: 1px solid transparent;
+				border-radius: 999px;
+				padding: 0.15rem 0.6rem;
+				cursor: pointer;
+			}
+			.tabbar [role="tablist"] {
+				display: inline-flex;
+				flex-wrap: wrap;
+				gap: 0.35rem;
+			}
+			/* Tabs named in words (platforms), not the pane's small caps. */
+			.pair figcaption.prose-tabs {
+				color: var(--muted);
+				font-family: inherit;
+				font-size: 0.85rem;
+				letter-spacing: normal;
+				text-transform: none;
+			}
+			.tabbar [role="tab"] {
+				transition:
+					background 0.12s,
+					border-color 0.12s,
+					color 0.12s;
+			}
+			/* Hover shows a tab's outline and a faint fill; the selected tab
+			   keeps both, filled a step stronger. */
+			.tabbar [role="tab"]:hover {
+				color: var(--pane-text);
+				border-color: var(--pane-edge);
+				background: color-mix(in oklab, var(--pane-edge) 40%, transparent);
+			}
+			.tabbar [role="tab"][aria-selected="true"] {
+				color: var(--pane-text);
+				border-color: var(--pane-edge);
+				background: color-mix(in oklab, var(--pane-edge) 75%, transparent);
+			}
+			.tabbar [role="tab"]:focus-visible {
+				outline: 2px solid var(--violet);
+				outline-offset: 1px;
+			}
+			.tabbar button:hover {
+				color: var(--pane-text);
+			}
+			.tab-tools {
+				display: flex;
+				align-items: center;
+				gap: 0.75rem;
+			}
+			/* A recipe's view menu: a gear, and a popover in the top layer (the
+			   pane would clip it) holding the SQL highlighting switch and, for a
+			   live recipe, style options. It sits in the tab bar's markup, so its
+			   rules are scoped past `.tabbar button`'s, and it drops the
+			   caption's small caps. */
+			.recipe-menu {
+				display: inline-flex;
+			}
+			.tabbar .recipe-gear {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				width: 1.6rem;
+				height: 1.6rem;
+				padding: 0;
+				border: 1px solid transparent;
+				border-radius: 50%;
+				background: none;
+				color: inherit;
+				cursor: pointer;
+				transition:
+					background 0.12s,
+					border-color 0.12s,
+					color 0.12s;
+			}
+			.tabbar .recipe-gear:hover,
+			.tabbar .recipe-gear[aria-expanded="true"] {
+				color: var(--pane-text);
+				border-color: var(--pane-edge);
+				background: color-mix(in oklab, var(--pane-edge) 40%, transparent);
+			}
+			.recipe-gear:focus-visible {
+				outline: 2px solid var(--violet);
+			}
+			.recipe-gear svg {
+				flex-shrink: 0;
+				width: 14px;
+				height: 14px;
+				display: block;
+			}
+			.recipe-popover {
+				position: absolute;
+				inset: auto;
+				margin: 0;
+				padding: 0.5rem 0.75rem 0.6rem;
+				min-width: 17rem;
+				border: 1px solid var(--edge);
+				border-radius: 10px;
+				background: var(--paper);
+				color: var(--ink);
+				box-shadow: 0 6px 20px
+					light-dark(rgb(34 29 43 / 0.12), rgb(0 0 0 / 0.45));
+				font-family: "JetBrains Mono", monospace;
+				font-size: 0.78rem;
+				letter-spacing: normal;
+				text-transform: none;
+			}
+			.recipe-popover label,
+			.recipe-popover .sql-toggle {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 1rem;
+				width: 100%;
+				padding: 0.25rem 0;
+			}
+			.recipe-popover .sql-toggle {
+				border: none;
+				border-radius: 0;
+				background: none;
+				color: var(--ink);
+				cursor: pointer;
+			}
+			.live-options {
+				margin-top: 0.35rem;
+				padding-top: 0.45rem;
+				border-top: 1px solid var(--edge);
+			}
+			.live-options:first-child {
+				margin-top: 0;
+				padding-top: 0;
+				border-top: none;
+			}
+			.menu-heading {
+				margin: 0 0 0.2rem;
+				color: var(--muted);
+			}
+			.recipe-popover select,
+			.recipe-popover .live-reset {
+				font: inherit;
+				color: var(--ink);
+				background: var(--inset);
+				border: 1px solid var(--edge);
+				border-radius: 5px;
+				padding: 0.15rem 0.35rem;
+			}
+			.live-status {
+				display: block;
+				margin-top: 0.4rem;
+				color: var(--muted);
+				white-space: pre-wrap;
+			}
+			.live-status:empty {
+				display: none;
+			}
+			.recipe-popover .live-reset {
+				margin-top: 0.5rem;
+				cursor: pointer;
+			}
+			.recipe-popover .live-reset:hover {
+				border-color: var(--violet);
+				color: var(--violet-deep);
+			}
+			/* The SQL highlighting switch: a track and a knob that slides. */
+			.switch {
+				position: relative;
+				flex-shrink: 0;
+				width: 1.7rem;
+				height: 0.95rem;
+				border-radius: 999px;
+				background: var(--edge);
+				transition: background 0.15s;
+			}
+			.switch::after {
+				content: "";
+				position: absolute;
+				top: 0.15rem;
+				left: 0.15rem;
+				width: 0.65rem;
+				height: 0.65rem;
+				border-radius: 50%;
+				background: var(--paper);
+				transition: transform 0.15s;
+			}
+			.sql-toggle[aria-checked="true"] .switch {
+				background: var(--green);
+			}
+			.sql-toggle[aria-checked="true"] .switch::after {
+				transform: translateX(0.75rem);
+			}
+			.sql-toggle:focus-visible {
+				outline: 2px solid var(--violet);
+			}
+			.sql-off,
+			html.plain-sql .sql-on {
+				display: none;
+			}
+			html.plain-sql .sql-off {
+				display: block;
+			}
+			[role="tabpanel"][hidden] {
+				display: none;
+			}
+			/* A pane caption's right side: the file's language, and a button
+			   that copies the pane. */
+			.caption-tools {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.6rem;
+			}
+			.copy-code {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				width: 1.6rem;
+				height: 1.6rem;
+				margin: -0.35rem -0.4rem -0.35rem 0;
+				padding: 0;
+				border: 1px solid transparent;
+				border-radius: 50%;
+				background: none;
+				color: inherit;
+				cursor: pointer;
+				transition:
+					background 0.12s,
+					border-color 0.12s,
+					color 0.12s;
+			}
+			.copy-code:hover {
+				color: var(--pane-text);
+				border-color: var(--pane-edge);
+				background: color-mix(in oklab, var(--pane-edge) 40%, transparent);
+			}
+			.copy-code:focus-visible {
+				outline: 2px solid var(--violet);
+			}
+			.copy-code svg {
+				flex-shrink: 0;
+				width: 14px;
+				height: 14px;
+				display: block;
+			}
+			.copy-done,
+			.copy-code.copied .copy-idle {
+				display: none;
+			}
+			.copy-code.copied .copy-done {
+				display: block;
+				color: var(--green);
+			}
+			/* A file's name in a pane's caption keeps its own case. */
+			.pair figcaption .filename {
+				text-transform: none;
+				letter-spacing: normal;
+				font-size: 0.75rem;
+				color: var(--pane-text);
+			}
+			.recipe .pair {
+				margin-top: 1.25rem;
+			}
+			pre.dark {
+				background: var(--pane);
+				color: var(--pane-text);
+				border: 1px solid var(--pane-edge);
+				border-radius: 12px;
+				padding: 1rem 1.2rem;
+				overflow-x: auto;
+				font-size: 0.85rem;
+				line-height: 1.6;
+			}
+			p code,
+			td code,
+			code.boxed {
+				background: var(--inset);
+				border: 1px solid var(--edge);
+				border-radius: 5px;
+				padding: 0.05rem 0.35rem;
+				font-size: 0.85em;
+			}
 
-		table {
-			border-collapse: collapse;
-			width: 100%;
-		}
-		th,
-		td {
-			text-align: left;
-			padding: 0.5rem 0.75rem;
-			border-bottom: 1px solid var(--edge);
-		}
-		/* The configuration page's option tables share their columns, so
-		   the three line up as one. */
-		table.options {
-			table-layout: fixed;
-			min-width: 44rem;
-		}
-		table.options th:nth-child(1) {
-			width: 17%;
-		}
-		table.options th:nth-child(2) {
-			width: 20%;
-		}
-		table.options th:nth-child(4) {
-			width: 22%;
-		}
-		/* Option names shouldn't break at their hyphens; the table is in a
-		   .scroll wrapper, so it can grow sideways instead. */
-		td code {
-			white-space: nowrap;
-		}
-		th {
-			font-family: "JetBrains Mono", monospace;
-			font-size: 0.7rem;
-			text-transform: uppercase;
-			letter-spacing: 0.1em;
-			color: var(--muted);
-		}
-		ul li {
-			padding: 0.2em 0;
-		}
-		a {
-			color: var(--violet);
-			text-decoration: none;
-		}
-		a:hover {
-			color: var(--violet-deep);
-		}
-		footer {
-			margin-top: 3.5rem;
-			text-align: center;
-			color: var(--muted);
-		}
-
-		/* Site chrome shared by every page. */
-		.site-header {
-			display: flex;
-			align-items: center;
-			gap: 1rem;
-			flex-wrap: wrap;
-			padding-bottom: 1rem;
-			margin-bottom: 2rem;
-			border-bottom: 1px solid var(--edge);
-		}
-		.brand {
-			display: inline-flex;
-			align-items: center;
-			gap: 0.5rem;
-			font-family: "Spectral", Georgia, serif;
-			font-size: 1.25rem;
-			font-weight: 600;
-			color: var(--ink);
-		}
-		.brand:hover {
-			color: var(--violet);
-		}
-		.site-nav {
-			display: flex;
-			align-items: center;
-			flex-wrap: wrap;
-			gap: 0.25rem 1rem;
-			margin-left: auto;
-			font-size: 0.9rem;
-		}
-		.site-nav a[aria-current] {
-			color: var(--ink);
-			font-weight: 600;
-			text-decoration: underline;
-			text-underline-offset: 4px;
-			text-decoration-color: var(--violet);
-		}
-		/* Sub-pages lead with their own title rather than the wordmark. */
-		.page-title {
-			font-size: 2rem;
-			margin: 0 0 0.35rem;
-		}
-		.page-lede {
-			color: var(--muted);
-			font-size: 1.05rem;
-			margin-top: 0;
-			margin-bottom: 2rem;
-		}
-		h3 {
-			font-family: "Spectral", Georgia, serif;
-			font-size: 1.15rem;
-			margin: 2rem 0 0.5rem;
-		}
-		/* Wide tables scroll rather than pushing the page sideways. */
-		.scroll {
-			overflow-x: auto;
-		}
-		.note {
-			border-left: 3px solid var(--violet);
-			background: var(--inset);
-			padding: 0.75rem 1rem;
-			margin: 1.5rem 0;
-			border-radius: 0 5px 5px 0;
-		}
-		.note > :first-child {
-			margin-top: 0;
-		}
-		.note > :last-child {
-			margin-bottom: 0;
-		}
-		/* Docs shell: the sidebar rail beside the content, stacked on
-		   narrow screens. The rail stretches the full height of the page;
-		   its nav sticks to the top of the window as the page scrolls. */
-		.docs-shell {
-			flex: 1;
-			display: grid;
-			grid-template-columns: 16rem minmax(0, 1fr);
-		}
-		.sidebar {
-			background: var(--rail);
-			border-right: 1px solid var(--edge);
-			font-size: 0.92rem;
-		}
-		.sidebar nav {
-			position: sticky;
-			top: 0;
-			max-height: 100vh;
-			overflow-y: auto;
-			scrollbar-width: thin;
-			scrollbar-color: var(--edge) transparent;
-			padding: 2rem 1rem 2rem 0.75rem;
-		}
-		.docs-shell > article {
-			width: 100%;
-			max-width: 60rem;
-			margin: 0 auto;
-			padding: 2.5rem 2.5rem 4rem;
-		}
-		@media (max-width: 720px) {
-			.docs-shell {
-				grid-template-columns: minmax(0, 1fr);
+			table {
+				border-collapse: collapse;
+				width: 100%;
 			}
-			.sidebar {
-				border-right: none;
+			th,
+			td {
+				text-align: left;
+				padding: 0.5rem 0.75rem;
 				border-bottom: 1px solid var(--edge);
 			}
+			/* The configuration page's option tables share their columns, so
+			   the three line up as one. */
+			table.options {
+				table-layout: fixed;
+				min-width: 44rem;
+			}
+			table.options th:nth-child(1) {
+				width: 17%;
+			}
+			table.options th:nth-child(2) {
+				width: 20%;
+			}
+			table.options th:nth-child(4) {
+				width: 22%;
+			}
+			/* Option names shouldn't break at their hyphens; the table is in a
+			   .scroll wrapper, so it can grow sideways instead. */
+			td code {
+				white-space: nowrap;
+			}
+			th {
+				font-family: "JetBrains Mono", monospace;
+				font-size: 0.7rem;
+				text-transform: uppercase;
+				letter-spacing: 0.1em;
+				color: var(--muted);
+			}
+			ul li {
+				padding: 0.2em 0;
+			}
+			a {
+				color: var(--violet);
+				text-decoration: none;
+			}
+			a:hover {
+				color: var(--violet-deep);
+			}
+			footer {
+				margin-top: 3.5rem;
+				text-align: center;
+				color: var(--muted);
+			}
+
+			/* Site chrome shared by every page. */
+			.site-header {
+				display: flex;
+				align-items: center;
+				gap: 1rem;
+				flex-wrap: wrap;
+				padding-bottom: 1rem;
+				margin-bottom: 2rem;
+				border-bottom: 1px solid var(--edge);
+			}
+			.brand {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.5rem;
+				font-family: "Spectral", Georgia, serif;
+				font-size: 1.25rem;
+				font-weight: 600;
+				color: var(--ink);
+			}
+			.brand:hover {
+				color: var(--violet);
+			}
+			.site-nav {
+				display: flex;
+				align-items: center;
+				flex-wrap: wrap;
+				gap: 0.25rem 1rem;
+				margin-left: auto;
+				font-size: 0.9rem;
+			}
+			.site-nav a[aria-current] {
+				color: var(--ink);
+				font-weight: 600;
+				text-decoration: underline;
+				text-underline-offset: 4px;
+				text-decoration-color: var(--violet);
+			}
+			/* Sub-pages lead with their own title rather than the wordmark. */
+			.page-title {
+				font-size: 2rem;
+				margin: 0 0 0.35rem;
+			}
+			.page-lede {
+				color: var(--muted);
+				font-size: 1.05rem;
+				margin-top: 0;
+				margin-bottom: 2rem;
+			}
+			h3 {
+				font-family: "Spectral", Georgia, serif;
+				font-size: 1.15rem;
+				margin: 2rem 0 0.5rem;
+			}
+			/* Wide tables scroll rather than pushing the page sideways. */
+			.scroll {
+				overflow-x: auto;
+			}
+			.note {
+				border-left: 3px solid var(--violet);
+				background: var(--inset);
+				padding: 0.75rem 1rem;
+				margin: 1.5rem 0;
+				border-radius: 0 5px 5px 0;
+			}
+			.note > :first-child {
+				margin-top: 0;
+			}
+			.note > :last-child {
+				margin-bottom: 0;
+			}
+			/* Docs shell: the sidebar rail beside the content, stacked on
+			   narrow screens. The rail stretches the full height of the page;
+			   its nav sticks to the top of the window as the page scrolls. */
+			.docs-shell {
+				flex: 1;
+				display: grid;
+				grid-template-columns: 16rem minmax(0, 1fr);
+			}
+			.sidebar {
+				background: var(--rail);
+				border-right: 1px solid var(--edge);
+				font-size: 0.92rem;
+			}
 			.sidebar nav {
-				position: static;
-				max-height: none;
-				padding: 1.25rem 1rem;
+				position: sticky;
+				top: 0;
+				max-height: 100vh;
+				overflow-y: auto;
+				scrollbar-width: thin;
+				scrollbar-color: var(--edge) transparent;
+				padding: 2rem 1rem 2rem 0.75rem;
 			}
 			.docs-shell > article {
-				padding: 2rem 1rem 3rem;
+				width: 100%;
+				max-width: 60rem;
+				margin: 0 auto;
+				padding: 2.5rem 2.5rem 4rem;
 			}
-		}
-		.sidebar h2 {
-			font-family: "JetBrains Mono", monospace;
-			font-size: 0.68rem;
-			text-transform: uppercase;
-			letter-spacing: 0.1em;
-			color: var(--muted);
-			margin: 1.5rem 0 0.5rem;
-			border: none;
-			/* Line up with the item labels, past the bar gutter and the
-			   pill's own padding. */
-			padding: 0 0 0 1.45rem;
-		}
-		.sidebar h2:first-child {
-			margin-top: 0;
-		}
-		.sidebar ul {
-			list-style: none;
-			margin: 0 0 0.25rem;
-			/* Room to the left of the pills for the current-page bar. */
-			padding: 0 0 0 0.75rem;
-		}
-		.sidebar li {
-			position: relative;
-			padding: 0;
-		}
-		/* Adjacent pills need air: a hover background butted straight up
-		   against the current-page background reads as one lumpy shape. */
-		.sidebar li + li {
-			margin-top: 0.25rem;
-		}
-		.sidebar a {
-			display: block;
-			padding: 0.35rem 0.7rem;
-			border-radius: 6px;
-			color: var(--ink);
-		}
-		.sidebar a:hover {
-			background: var(--rail-pill);
-			color: var(--violet);
-		}
-		.sidebar a[aria-current="page"] {
-			background: var(--rail-pill);
-			color: var(--violet-deep);
-			font-weight: 600;
-		}
-		/* The marker sits outside the pill rather than inset into it: an
-		   inset shadow follows the border radius and tapers at the
-		   corners, which reads as a smudge rather than a bar. */
-		.sidebar a[aria-current="page"]::before {
-			content: "";
-			position: absolute;
-			left: -0.75rem;
-			top: 0.2rem;
-			bottom: 0.2rem;
-			width: 2px;
-			border-radius: 1px;
-			background: var(--violet);
-		}
+			@media (max-width: 720px) {
+				.docs-shell {
+					grid-template-columns: minmax(0, 1fr);
+				}
+				.sidebar {
+					border-right: none;
+					border-bottom: 1px solid var(--edge);
+				}
+				.sidebar nav {
+					position: static;
+					max-height: none;
+					padding: 1.25rem 1rem;
+				}
+				.docs-shell > article {
+					padding: 2rem 1rem 3rem;
+				}
+			}
+			.sidebar h2 {
+				font-family: "JetBrains Mono", monospace;
+				font-size: 0.68rem;
+				text-transform: uppercase;
+				letter-spacing: 0.1em;
+				color: var(--muted);
+				margin: 1.5rem 0 0.5rem;
+				border: none;
+				/* Line up with the item labels, past the bar gutter and the
+				   pill's own padding. */
+				padding: 0 0 0 1.45rem;
+			}
+			.sidebar h2:first-child {
+				margin-top: 0;
+			}
+			.sidebar ul {
+				list-style: none;
+				margin: 0 0 0.25rem;
+				/* Room to the left of the pills for the current-page bar. */
+				padding: 0 0 0 0.75rem;
+			}
+			.sidebar li {
+				position: relative;
+				padding: 0;
+			}
+			/* Adjacent pills need air: a hover background butted straight up
+			   against the current-page background reads as one lumpy shape. */
+			.sidebar li + li {
+				margin-top: 0.25rem;
+			}
+			.sidebar a {
+				display: block;
+				padding: 0.35rem 0.7rem;
+				border-radius: 6px;
+				color: var(--ink);
+			}
+			.sidebar a:hover {
+				background: var(--rail-pill);
+				color: var(--violet);
+			}
+			.sidebar a[aria-current="page"] {
+				background: var(--rail-pill);
+				color: var(--violet-deep);
+				font-weight: 600;
+			}
+			/* The marker sits outside the pill rather than inset into it: an
+			   inset shadow follows the border radius and tapers at the
+			   corners, which reads as a smudge rather than a bar. */
+			.sidebar a[aria-current="page"]::before {
+				content: "";
+				position: absolute;
+				left: -0.75rem;
+				top: 0.2rem;
+				bottom: 0.2rem;
+				width: 2px;
+				border-radius: 1px;
+				background: var(--violet);
+			}
 		</style>
 	</body>
 </html>

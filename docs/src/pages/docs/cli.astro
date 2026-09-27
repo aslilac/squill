@@ -10,32 +10,34 @@ import Docs from "../../layouts/Docs.astro";
 >
 	<section>
 		<h2>Commands</h2>
-		<Code lang="text" code={`squill [fmt] [OPTIONS] [PATHS...]
+		<Code
+			lang="text"
+			code={`squill [fmt] [OPTIONS] [PATHS...]
 squill locate [--json] [OPTIONS] [PATHS...]
 squill init [--dialect <D>] [--yaml] [--yes]
 squill language-server start
 squill help [COMMAND]
-squill version`} />
+squill version`}
+		/>
 		<ul>
 			<li>
 				<code>squill fmt</code> formats files, below. It&rsquo;s the default
 				command, so <code>squill .</code> formats the working directory,{" "}
-				<code>squill -</code> formats stdin, and{" "}
-				<code>squill --check .</code> checks. A file named like a command
-				needs the <code>fmt</code>, or a path: <code>squill ./init</code>.
+				<code>squill -</code> formats stdin, and <code>squill --check .</code>{" "}
+				checks. A file named like a command needs the <code>fmt</code>, or a
+				path: <code>squill ./init</code>.
 			</li>
 			<li>
-				<code>squill locate</code> lists where the SQL is, <a
-					href="docs/cli/#locate">below</a
-				>.
+				<code>squill locate</code> lists where the SQL is,{" "}
+				<a href="docs/cli/#locate">below</a>.
 			</li>
 			<li>
 				<code>squill init</code> writes a starter config &mdash; see{" "}
 				<a href="docs/configuration/">configuration</a>.
 			</li>
 			<li>
-				<code>squill language-server start</code> serves editors over stdin
-				and stdout &mdash; see <a href="docs/editors/">editors</a>.
+				<code>squill language-server start</code> serves editors over stdin and
+				stdout &mdash; see <a href="docs/editors/">editors</a>.
 			</li>
 			<li>
 				<code>squill help</code> and <code>squill version</code> are{" "}
@@ -46,20 +48,21 @@ squill version`} />
 	</section>
 
 	<section>
-		<h2>What <code>fmt</code> formats</h2>
+		<h2>
+			What <code>fmt</code> formats
+		</h2>
 		<p>
-			Each path is a file or a directory. Directories are searched
-			recursively for <code>.sql</code> files, plus whatever the
-			config&rsquo;s <a href="docs/configuration/#rules">rules</a> include.
-			The search honors <code>.gitignore</code>, skips hidden files, and
-			skips the config&rsquo;s <code>ignore</code> globs and any{" "}
-			<code>--ignore</code> flags.
+			Each path is a file or a directory. Directories are searched recursively
+			for <code>.sql</code> files, plus whatever the config&rsquo;s{" "}
+			<a href="docs/configuration/#rules">rules</a> include. The search honors{" "}
+			<code>.gitignore</code>, skips hidden files, and skips the config&rsquo;s{" "}
+			<code>ignore</code> globs and any <code>--ignore</code> flags.
 		</p>
 		<p>
-			A file named on the command line is always formatted, ignored or not.
-			If no rule covers it, it formats as plain SQL &mdash; unless it is in a
-			language squill has a grammar for, in which case squill stops and
-			shows the rule to add. <a href="docs/frozen/">Frozen</a> files are the
+			A file named on the command line is always formatted, ignored or not. If
+			no rule covers it, it formats as plain SQL &mdash; unless it is in a
+			language squill has a grammar for, in which case squill stops and shows
+			the rule to add. <a href="docs/frozen/">Frozen</a> files are the
 			exception: they are never rewritten, however they are named.
 		</p>
 	</section>
@@ -67,38 +70,51 @@ squill version`} />
 	<section>
 		<h2>Where the output goes</h2>
 		<p>
-			By default squill rewrites files in place, listing each one it
-			changed. The alternatives:
+			By default squill rewrites files in place, listing each one it changed.
+			The alternatives:
 		</p>
 		<div class="scroll">
 			<table>
 				<thead>
-					<tr><th>flag</th><th>does</th></tr>
+					<tr>
+						<th>flag</th>
+						<th>does</th>
+					</tr>
 				</thead>
 				<tbody>
 					<tr>
-						<td><code>--check</code></td>
 						<td>
-							Writes nothing. Prints a diff for each file that would change,
-							and exits 1 if there are any.
+							<code>--check</code>
+						</td>
+						<td>
+							Writes nothing. Prints a diff for each file that would change, and
+							exits 1 if there are any.
 						</td>
 					</tr>
 					<tr>
-						<td><code>--stdout</code></td>
-						<td>Prints each file&rsquo;s formatted text instead of writing it.</td>
+						<td>
+							<code>--stdout</code>
+						</td>
+						<td>
+							Prints each file&rsquo;s formatted text instead of writing it.
+						</td>
 					</tr>
 					<tr>
-						<td><code>--stdin</code>, <code>-</code></td>
+						<td>
+							<code>--stdin</code>, <code>-</code>
+						</td>
 						<td>Reads SQL from stdin and writes it to stdout.</td>
 					</tr>
 					<tr>
-						<td><code>--stdin-filepath &lt;PATH&gt;</code></td>
+						<td>
+							<code>--stdin-filepath &lt;PATH&gt;</code>
+						</td>
 						<td>
 							Reads stdin as the file at <code>PATH</code>, which need not
-							exist: its config and rules apply, so a host file&rsquo;s
-							embedded SQL formats too. An ignored, frozen, or unconfigured
-							host file comes back unchanged. This is the one for editors
-							that pipe a buffer through a formatter.
+							exist: its config and rules apply, so a host file&rsquo;s embedded
+							SQL formats too. An ignored, frozen, or unconfigured host file
+							comes back unchanged. This is the one for editors that pipe a
+							buffer through a formatter.
 						</td>
 					</tr>
 				</tbody>
@@ -109,24 +125,27 @@ squill version`} />
 	<section>
 		<h2>Options</h2>
 		<p>
-			The formatting flags &mdash; <code>--dialect</code>,{" "}
-			<code>--indent</code>, <code>--indent-width</code>,{" "}
-			<code>--max-width</code>, <code>--keyword-case</code>,{" "}
-			<code>--quote-idents</code>, <code>--at-params</code>,{" "}
-			<code>--question-params</code>, <code>--colon-params</code>, and{" "}
-			<code>--pyformat-params</code>{" "}
-			&mdash; each set the config key of the same name, and win over the
-			config. <a href="docs/configuration/">Configuration</a> lists their
-			values.
+			The formatting flags &mdash; <code>--dialect</code>, <code>--indent</code>
+			, <code>--indent-width</code>, <code>--max-width</code>,{" "}
+			<code>--keyword-case</code>, <code>--quote-idents</code>,{" "}
+			<code>--at-params</code>, <code>--question-params</code>,{" "}
+			<code>--colon-params</code>, and <code>--pyformat-params</code> &mdash;
+			each set the config key of the same name, and win over the config.{" "}
+			<a href="docs/configuration/">Configuration</a> lists their values.
 		</p>
 		<div class="scroll">
 			<table>
 				<thead>
-					<tr><th>flag</th><th>does</th></tr>
+					<tr>
+						<th>flag</th>
+						<th>does</th>
+					</tr>
 				</thead>
 				<tbody>
 					<tr>
-						<td><code>--strict</code></td>
+						<td>
+							<code>--strict</code>
+						</td>
 						<td>
 							Exits 1 when anything was left unformatted: a statement squill
 							couldn&rsquo;t parse, or an embedded string it couldn&rsquo;t
@@ -134,7 +153,9 @@ squill version`} />
 						</td>
 					</tr>
 					<tr>
-						<td><code>--locked</code></td>
+						<td>
+							<code>--locked</code>
+						</td>
 						<td>
 							Fails rather than record a grammar URL that{" "}
 							<code>squill.lock</code> doesn&rsquo;t have yet. See{" "}
@@ -142,7 +163,9 @@ squill version`} />
 						</td>
 					</tr>
 					<tr>
-						<td><code>--ignore &lt;GLOB&gt;</code></td>
+						<td>
+							<code>--ignore &lt;GLOB&gt;</code>
+						</td>
 						<td>
 							Skips matching paths while searching directories. Repeatable,
 							relative to the working directory, with <code>*</code>,{" "}
@@ -151,24 +174,32 @@ squill version`} />
 						</td>
 					</tr>
 					<tr>
-						<td><code>--no-config</code></td>
+						<td>
+							<code>--no-config</code>
+						</td>
 						<td>Ignores config files: built-in defaults and flags only.</td>
 					</tr>
 					<tr>
-						<td><code>--frozen &lt;GLOB&gt;</code></td>
 						<td>
-							Formats matching files while they&rsquo;re new, and never
-							after they exist on the baseline ref. Repeatable. See{" "}
+							<code>--frozen &lt;GLOB&gt;</code>
+						</td>
+						<td>
+							Formats matching files while they&rsquo;re new, and never after
+							they exist on the baseline ref. Repeatable. See{" "}
 							<a href="docs/frozen/">frozen paths</a>, with{" "}
 							<code>--frozen-ref</code> and <code>--no-frozen-fetch</code>.
 						</td>
 					</tr>
 					<tr>
-						<td><code>-V</code>, <code>--version</code></td>
+						<td>
+							<code>-V</code>, <code>--version</code>
+						</td>
 						<td>Prints the version.</td>
 					</tr>
 					<tr>
-						<td><code>-h</code>, <code>--help</code></td>
+						<td>
+							<code>-h</code>, <code>--help</code>
+						</td>
 						<td>
 							Prints help; <code>squill init --help</code> has its own.
 						</td>
@@ -181,28 +212,31 @@ squill version`} />
 	<section id="locate">
 		<h2>Finding the SQL</h2>
 		<p>
-			<code>squill locate</code> takes the same paths and finds the same
-			files as <code>fmt</code>, but formats nothing: it lists every string
-			a rule&rsquo;s query captures, whether or not squill would rewrite
-			it, and every plain SQL file whole. Each line says where the
-			string&rsquo;s contents start and end, which dialect they&rsquo;re
-			read in, and how they begin:
+			<code>squill locate</code> takes the same paths and finds the same files
+			as <code>fmt</code>, but formats nothing: it lists every string a
+			rule&rsquo;s query captures, whether or not squill would rewrite it, and
+			every plain SQL file whole. Each line says where the string&rsquo;s
+			contents start and end, which dialect they&rsquo;re read in, and how they
+			begin:
 		</p>
-		<Code lang="text" code={`$ squill locate src/db.rs
+		<Code
+			lang="text"
+			code={`$ squill locate src/db.rs
 src/db.rs:12:9-17:9 postgres  select m.id, m.name…
-src/db.rs:24:26-24:68 postgres  SELECT count(*) FROM members`} />
+src/db.rs:24:26-24:68 postgres  SELECT count(*) FROM members`}
+		/>
 		<p>
 			It&rsquo;s the quick way to check a{" "}
-			<a href="docs/embedded/#queries">query of your own</a>: a string
-			missing from the list is one the query doesn&rsquo;t match. With{" "}
+			<a href="docs/embedded/#queries">query of your own</a>: a string missing
+			from the list is one the query doesn&rsquo;t match. With{" "}
 			<code>--json</code>, each line is an object instead &mdash;{" "}
-			<code>path</code>, <code>start</code> and <code>end</code> (byte
-			offsets), <code>line</code>, <code>column</code>,{" "}
-			<code>end_line</code>, <code>end_column</code>,{" "}
-			<code>dialect</code>, and <code>pinned_dialect</code> (whether the query set
-			the dialect, which the plain output marks{" "}
-			<code>(from the query)</code>) &mdash; for tools that want to know where the SQL
-			is; these docs highlight the SQL in their recipes with it.
+			<code>path</code>, <code>start</code> and <code>end</code> (byte offsets),{" "}
+			<code>line</code>, <code>column</code>, <code>end_line</code>,{" "}
+			<code>end_column</code>, <code>dialect</code>, and{" "}
+			<code>pinned_dialect</code> (whether the query set the dialect, which the
+			plain output marks <code>(from the query)</code>) &mdash; for tools that
+			want to know where the SQL is; these docs highlight the SQL in their
+			recipes with it.
 		</p>
 	</section>
 
@@ -212,13 +246,16 @@ src/db.rs:24:26-24:68 postgres  SELECT count(*) FROM members`} />
 			Whatever squill leaves alone, it says so on stderr, one line each, with
 			the place and the reason:
 		</p>
-		<Code lang="text" code={`queries/report.sql:14:1: expected a statement, found \`frobnicate\` (statement passed through verbatim)
-src/db.rs:42:25: embedded SQL did not parse (expected a statement, found \`frobnicate\`); left unformatted`} />
+		<Code
+			lang="text"
+			code={`queries/report.sql:14:1: expected a statement, found \`frobnicate\` (statement passed through verbatim)
+src/db.rs:42:25: embedded SQL did not parse (expected a statement, found \`frobnicate\`); left unformatted`}
+		/>
 		<p>
 			A summary line follows: how many files were checked, how many were (or
-			would be) reformatted, and how many diagnostics there were. A
-			diagnostic alone doesn&rsquo;t fail the run &mdash; the file is still
-			as correct as it was &mdash; unless you pass <code>--strict</code>.
+			would be) reformatted, and how many diagnostics there were. A diagnostic
+			alone doesn&rsquo;t fail the run &mdash; the file is still as correct as
+			it was &mdash; unless you pass <code>--strict</code>.
 		</p>
 	</section>
 
@@ -227,22 +264,31 @@ src/db.rs:42:25: embedded SQL did not parse (expected a statement, found \`frobn
 		<div class="scroll">
 			<table>
 				<thead>
-					<tr><th>code</th><th>means</th></tr>
+					<tr>
+						<th>code</th>
+						<th>means</th>
+					</tr>
 				</thead>
 				<tbody>
 					<tr>
-						<td><code>0</code></td>
+						<td>
+							<code>0</code>
+						</td>
 						<td>Done; nothing to report.</td>
 					</tr>
 					<tr>
-						<td><code>1</code></td>
+						<td>
+							<code>1</code>
+						</td>
 						<td>
 							Under <code>--check</code>, a file would change; under{" "}
 							<code>--strict</code>, something was left unformatted.
 						</td>
 					</tr>
 					<tr>
-						<td><code>2</code></td>
+						<td>
+							<code>2</code>
+						</td>
 						<td>
 							squill couldn&rsquo;t do the job: a bad flag, a broken config, a
 							file it couldn&rsquo;t read or write.

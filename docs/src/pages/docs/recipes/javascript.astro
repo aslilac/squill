@@ -19,9 +19,9 @@ import Recipe from "../../../components/Recipe.astro";
 			never touched: SQL with a hole in it isn&rsquo;t SQL squill can parse.
 		</p>
 		<p>
-			Each language is its own grammar: <code>javascript</code> (which
-			includes JSX), <code>typescript</code>, and <code>tsx</code>. A project
-			with more than one needs a rule for each.
+			Each language is its own grammar: <code>javascript</code> (which includes
+			JSX), <code>typescript</code>, and <code>tsx</code>. A project with more
+			than one needs a rule for each.
 		</p>
 	</section>
 
@@ -29,9 +29,9 @@ import Recipe from "../../../components/Recipe.astro";
 		<h2>node-postgres</h2>
 		<p>
 			The default query finds the first string or template argument of{" "}
-			<code>query</code>, <code>execute</code>, and <code>prepare</code>{" "}
-			method calls on any object, which covers pg&rsquo;s{" "}
-			<code>Pool</code> and <code>Client</code>. No query file needed:
+			<code>query</code>, <code>execute</code>, and <code>prepare</code> method
+			calls on any object, which covers pg&rsquo;s <code>Pool</code> and{" "}
+			<code>Client</code>. No query file needed:
 		</p>
 		<Recipe name="js-pg" lang="typescript" />
 	</section>
@@ -39,15 +39,15 @@ import Recipe from "../../../components/Recipe.astro";
 	<section>
 		<h2>better-sqlite3 and bun:sqlite</h2>
 		<p>
-			The same methods, with the dialect set to SQLite, which is also what
-			makes <code>?</code>, <code>@name</code>, and <code>$name</code>{" "}
-			placeholders parse. bun:sqlite&rsquo;s <code>db.query()</code> is found
-			the same way as <code>db.prepare()</code>:
+			The same methods, with the dialect set to SQLite, which is also what makes{" "}
+			<code>?</code>, <code>@name</code>, and <code>$name</code> placeholders
+			parse. bun:sqlite&rsquo;s <code>db.query()</code> is found the same way as{" "}
+			<code>db.prepare()</code>:
 		</p>
 		<Recipe name="js-sqlite" lang="typescript" />
 		<p>
-			<code>db.exec()</code>, for migrations and other multi-statement
-			scripts, isn&rsquo;t in the default query; a query of your own can add{" "}
+			<code>db.exec()</code>, for migrations and other multi-statement scripts,
+			isn&rsquo;t in the default query; a query of your own can add{" "}
 			<code>"exec"</code> to the method names.
 		</p>
 	</section>
@@ -55,11 +55,11 @@ import Recipe from "../../../components/Recipe.astro";
 	<section>
 		<h2>postgres.js and Bun.sql</h2>
 		<p>
-			The default query also finds <code>sql`&hellip;`</code> tagged
-			templates. Those libraries pass parameters as template holes, though,
-			and a template with a hole is never touched &mdash; so squill formats
-			the schema changes and maintenance queries that take no parameters, and
-			leaves the rest as written:
+			The default query also finds <code>sql`&hellip;`</code> tagged templates.
+			Those libraries pass parameters as template holes, though, and a template
+			with a hole is never touched &mdash; so squill formats the schema changes
+			and maintenance queries that take no parameters, and leaves the rest as
+			written:
 		</p>
 		<Recipe name="js-postgres" lang="typescript" />
 	</section>

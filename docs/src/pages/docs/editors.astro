@@ -11,21 +11,24 @@ import Docs from "../../layouts/Docs.astro";
 	<section>
 		<h2>How it works</h2>
 		<p>
-			Editors hand a formatter the buffer on stdin and read the result back
-			from stdout. Tell squill which file the buffer is with{" "}
+			Editors hand a formatter the buffer on stdin and read the result back from
+			stdout. Tell squill which file the buffer is with{" "}
 			<code>--stdin-filepath</code>, and it formats it exactly as{" "}
 			<code>squill fmt</code> would format that file on disk: the nearest{" "}
 			<code>squill.toml</code> applies, and so do its{" "}
-			<a href="docs/configuration/#rules">rules</a>, so a Rust buffer gets
-			its embedded SQL formatted and a <code>*.sql.sqlite</code> file its
-			dialect. The file doesn&rsquo;t need to exist yet.
+			<a href="docs/configuration/#rules">rules</a>, so a Rust buffer gets its
+			embedded SQL formatted and a <code>*.sql.sqlite</code> file its dialect.
+			The file doesn&rsquo;t need to exist yet.
 		</p>
-		<Code lang="sh" code={`squill fmt --stdin-filepath src/db.rs < src/db.rs`} />
+		<Code
+			lang="sh"
+			code={`squill fmt --stdin-filepath src/db.rs < src/db.rs`}
+		/>
 		<p>
-			A buffer squill wouldn&rsquo;t format as a file comes back unchanged:
-			an <code>ignore</code>d or <a href="docs/frozen/">frozen</a> path, or a
-			host-language file no <code>[[embedded]]</code> rule covers. So it is
-			safe to turn on for every file of a language, in every project.
+			A buffer squill wouldn&rsquo;t format as a file comes back unchanged: an{" "}
+			<code>ignore</code>d or <a href="docs/frozen/">frozen</a> path, or a
+			host-language file no <code>[[embedded]]</code> rule covers. So it is safe
+			to turn on for every file of a language, in every project.
 		</p>
 	</section>
 
@@ -33,69 +36,87 @@ import Docs from "../../layouts/Docs.astro";
 		<h2>Helix</h2>
 		<p>
 			In <code>languages.toml</code>, set squill as the SQL formatter.{" "}
-			<code>%&lbrace;buffer_name&rbrace;</code> passes the buffer&rsquo;s
-			path:
+			<code>%&lbrace;buffer_name&rbrace;</code> passes the buffer&rsquo;s path:
 		</p>
-		<Code lang="toml" file="languages.toml" code={`[[language]]
+		<Code
+			lang="toml"
+			file="languages.toml"
+			code={`[[language]]
 name = "sql"
 formatter = { command = "squill", args = ["fmt", "--stdin-filepath", "%{buffer_name}"] }
-auto-format = true`} />
+auto-format = true`}
+		/>
 		<p>
 			A Helix formatter replaces the language server&rsquo;s, and runs alone.
 			For SQL embedded in another language, pipe that language&rsquo;s own
 			formatter into squill:
 		</p>
-		<Code lang="toml" file="languages.toml" code={`[[language]]
+		<Code
+			lang="toml"
+			file="languages.toml"
+			code={`[[language]]
 name = "rust"
-formatter = { command = "sh", args = ["-c", "rustfmt | squill fmt --stdin-filepath \\"$0\\"", "%{buffer_name}"] }`} />
+formatter = { command = "sh", args = ["-c", "rustfmt | squill fmt --stdin-filepath \\"$0\\"", "%{buffer_name}"] }`}
+		/>
 	</section>
 
 	<section>
 		<h2>Language server</h2>
 		<p>
-			<code>squill language-server start</code> runs a language server on
-			stdin and stdout. It
-			formats documents the same way (by their path, config and rules
-			included), and it reports what squill leaves alone as warnings where
-			they are: statements it passed through verbatim, and embedded strings
-			it declined to rewrite. Config is re-read for every request, so edits
-			to <code>squill.toml</code> apply without a restart.
+			<code>squill language-server start</code> runs a language server on stdin
+			and stdout. It formats documents the same way (by their path, config and
+			rules included), and it reports what squill leaves alone as warnings where
+			they are: statements it passed through verbatim, and embedded strings it
+			declined to rewrite. Config is re-read for every request, so edits to{" "}
+			<code>squill.toml</code> apply without a restart.
 		</p>
 		<p>In Helix, register it and use it for SQL:</p>
-		<Code lang="toml" file="languages.toml" code={`[language-server.squill]
+		<Code
+			lang="toml"
+			file="languages.toml"
+			code={`[language-server.squill]
 command = "squill"
 args = ["language-server", "start"]
 
 [[language]]
 name = "sql"
 language-servers = ["squill"]
-auto-format = true`} />
+auto-format = true`}
+		/>
 		<p>
 			Next to another language&rsquo;s own server, it can contribute just its
 			diagnostics about embedded SQL, while that server keeps formatting:
 		</p>
-		<Code lang="toml" file="languages.toml" code={`[[language]]
+		<Code
+			lang="toml"
+			file="languages.toml"
+			code={`[[language]]
 name = "rust"
-language-servers = ["rust-analyzer", { name = "squill", only-features = ["diagnostics"] }]`} />
+language-servers = ["rust-analyzer", { name = "squill", only-features = ["diagnostics"] }]`}
+		/>
 	</section>
 
 	<section>
 		<h2>Zed</h2>
 		<p>
 			squill&rsquo;s Zed extension, in{" "}
-			<a href="https://github.com/aslilac/squill/tree/trunk/integrations/zed"
-				><code>integrations/zed</code></a
-			>, runs squill&rsquo;s language server for SQL and the languages it formats
-			embedded SQL in; install it with <strong>zed: install dev
-			extension</strong>, and see its README for settings. Without it, an
-			external formatter works too.
+			<a href="https://github.com/aslilac/squill/tree/trunk/integrations/zed">
+				<code>integrations/zed</code>
+			</a>
+			, runs squill&rsquo;s language server for SQL and the languages it formats
+			embedded SQL in; install it with{" "}
+			<strong>zed: install dev extension</strong>, and see its README for
+			settings. Without it, an external formatter works too.
 		</p>
 		<p>
 			Install the SQL extension for syntax support, then in{" "}
 			<code>settings.json</code> set squill as an external formatter.{" "}
 			<code>&lbrace;buffer_path&rbrace;</code> passes the buffer&rsquo;s path:
 		</p>
-		<Code lang="jsonc" file="settings.json" code={`{
+		<Code
+			lang="jsonc"
+			file="settings.json"
+			code={`{
   "languages": {
     "SQL": {
       "formatter": {
@@ -106,13 +127,17 @@ language-servers = ["rust-analyzer", { name = "squill", only-features = ["diagno
       }
     }
   }
-}`} />
+}`}
+		/>
 		<p>
 			Zed runs a list of formatters in order, so for SQL embedded in another
 			language, keep its language server&rsquo;s formatting and follow it with
 			squill:
 		</p>
-		<Code lang="jsonc" file="settings.json" code={`{
+		<Code
+			lang="jsonc"
+			file="settings.json"
+			code={`{
   "languages": {
     "Rust": {
       "formatter": [
@@ -126,43 +151,51 @@ language-servers = ["rust-analyzer", { name = "squill", only-features = ["diagno
       ]
     }
   }
-}`} />
+}`}
+		/>
 	</section>
 
 	<section>
 		<h2>VS Code</h2>
 		<p>
 			squill&rsquo;s VS Code extension, in{" "}
-			<a href="https://github.com/aslilac/squill/tree/trunk/integrations/vscode"
-				><code>integrations/vscode</code></a
-			>, runs squill&rsquo;s language server: it formats SQL files, and a{" "}
+			<a href="https://github.com/aslilac/squill/tree/trunk/integrations/vscode">
+				<code>integrations/vscode</code>
+			</a>
+			, runs squill&rsquo;s language server: it formats SQL files, and a{" "}
 			<code>source.formatSql</code> code action formats embedded SQL on save,
 			after the language&rsquo;s own formatter. Build it with{" "}
-			<code>pnpm install &amp;&amp; pnpm run build &amp;&amp; pnpm run package</code>{" "}
+			<code>
+				pnpm install &amp;&amp; pnpm run build &amp;&amp; pnpm run package
+			</code>{" "}
 			and install the <code>.vsix</code>; its README covers the settings.
 		</p>
 		<p>
-			VS Code has no built-in way to run a command-line formatter, so
-			without the extension, the{" "}
-			<a
-				href="https://marketplace.visualstudio.com/items?itemName=jkillian.custom-local-formatters"
-				>Custom Local Formatters</a
-			> extension can run it for SQL files:
+			VS Code has no built-in way to run a command-line formatter, so without
+			the extension, the{" "}
+			<a href="https://marketplace.visualstudio.com/items?itemName=jkillian.custom-local-formatters">
+				Custom Local Formatters
+			</a>{" "}
+			extension can run it for SQL files:
 		</p>
-		<Code lang="jsonc" file="settings.json" code={`{
+		<Code
+			lang="jsonc"
+			file="settings.json"
+			code={`{
   "customLocalFormatters.formatters": [
     { "command": "squill fmt --stdin", "languages": ["sql"] }
   ],
   "[sql]": {
     "editor.defaultFormatter": "jkillian.custom-local-formatters"
   }
-}`} />
+}`}
+		/>
 		<div class="note">
 			<p>
-				That extension can&rsquo;t pass the buffer&rsquo;s path, so squill
-				reads the <code>squill.toml</code> at the workspace root: its
-				top-level settings apply, but not its rules, and SQL embedded in other
-				languages isn&rsquo;t formatted.
+				That extension can&rsquo;t pass the buffer&rsquo;s path, so squill reads
+				the <code>squill.toml</code> at the workspace root: its top-level
+				settings apply, but not its rules, and SQL embedded in other languages
+				isn&rsquo;t formatted.
 			</p>
 		</div>
 	</section>

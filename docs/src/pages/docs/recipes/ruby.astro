@@ -11,36 +11,37 @@ import Recipe from "../../../components/Recipe.astro";
 	<section>
 		<h2>Loading the grammar</h2>
 		<p>
-			squill doesn&rsquo;t compile Ruby in, so the rule names the grammar by
-			its release URL. The first run downloads it and records its SHA-256 in
-			a <code>squill.lock</code> beside the config; commit that, and run CI
-			with <code>squill fmt --locked</code>. A loaded grammar has no default
-			query, so every rule brings one. See{" "}
-			<a href="docs/embedded/#grammars">bringing your own grammar</a> for how both work.
+			squill doesn&rsquo;t compile Ruby in, so the rule names the grammar by its
+			release URL. The first run downloads it and records its SHA-256 in a{" "}
+			<code>squill.lock</code> beside the config; commit that, and run CI with{" "}
+			<code>squill fmt --locked</code>. A loaded grammar has no default query,
+			so every rule brings one. See{" "}
+			<a href="docs/embedded/#grammars">bringing your own grammar</a> for how
+			both work.
 		</p>
 	</section>
 
 	<section>
 		<h2>Which strings squill rewrites</h2>
 		<p>
-			Squiggly heredocs (<code>&lt;&lt;~SQL</code>) are the form to use.
-			Ruby strips their common indentation, so squill can lay the query out
-			at the statement&rsquo;s indent and the string still means the same
-			SQL. <code>&lt;&lt;-SQL</code> and a bare <code>&lt;&lt;SQL</code>{" "}
-			work too; a bare heredoc&rsquo;s terminator has to stay in the first
-			column, and squill leaves it there.
+			Squiggly heredocs (<code>&lt;&lt;~SQL</code>) are the form to use. Ruby
+			strips their common indentation, so squill can lay the query out at the
+			statement&rsquo;s indent and the string still means the same SQL.{" "}
+			<code>&lt;&lt;-SQL</code> and a bare <code>&lt;&lt;SQL</code> work too; a
+			bare heredoc&rsquo;s terminator has to stay in the first column, and
+			squill leaves it there.
 		</p>
 		<p>
 			A heredoc&rsquo;s body isn&rsquo;t inside the call in Ruby&rsquo;s tree;
-			it follows the whole statement. So the queries below match the
-			statement, then the body that comes right after it, and they only
-			cover a heredoc passed first (or first in an array). A body with{" "}
-			<code>#&lbrace;&rbrace;</code> interpolation or an escape is more than
-			one node, and never matches. Pass values as binds instead. A
-			single-quoted heredoc (<code>&lt;&lt;~'SQL'</code>) takes no escapes,
-			and the queries have a pattern of their own for it that{" "}
-			<a href="docs/embedded/#properties">tells squill so</a>, so a
-			backslash in one is just a backslash.
+			it follows the whole statement. So the queries below match the statement,
+			then the body that comes right after it, and they only cover a heredoc
+			passed first (or first in an array). A body with{" "}
+			<code>#&lbrace;&rbrace;</code> interpolation or an escape is more than one
+			node, and never matches. Pass values as binds instead. A single-quoted
+			heredoc (<code>&lt;&lt;~'SQL'</code>) takes no escapes, and the queries
+			have a pattern of their own for it that{" "}
+			<a href="docs/embedded/#properties">tells squill so</a>, so a backslash in
+			one is just a backslash.
 		</p>
 	</section>
 
@@ -50,10 +51,10 @@ import Recipe from "../../../components/Recipe.astro";
 			One query covers ActiveRecord&rsquo;s raw-SQL methods (migrations&rsquo;{" "}
 			<code>execute</code>, <code>find_by_sql</code>, the connection&rsquo;s{" "}
 			<code>select_*</code> and <code>exec_*</code>) and the pg gem&rsquo;s{" "}
-			<code>exec</code> family. ActiveRecord binds <code>?</code>{" "}
-			placeholders, so the rule turns on <code>question-params</code>. Leave
-			it off if you only use <code>$1</code>, since in Postgres{" "}
-			<code>?</code> is also a jsonb operator.
+			<code>exec</code> family. ActiveRecord binds <code>?</code> placeholders,
+			so the rule turns on <code>question-params</code>. Leave it off if you
+			only use <code>$1</code>, since in Postgres <code>?</code> is also a jsonb
+			operator.
 		</p>
 		<Recipe name="ruby-activerecord" lang="ruby" />
 		<p>

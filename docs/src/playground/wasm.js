@@ -11,9 +11,7 @@ const loading = new Map();
 // The module that formats `host`: TypeScript's grammar crate carries TSX
 // too.
 const moduleFor = (host) =>
-	host === "sql"
-		? "squill"
-		: `squill-${host === "tsx" ? "typescript" : host}`;
+	host === "sql" ? "squill" : `squill-${host === "tsx" ? "typescript" : host}`;
 
 // The module reports byte offsets (a response's `spans`); JS strings
 // count UTF-16 units. Converts `[start, end]` pairs into `text`.

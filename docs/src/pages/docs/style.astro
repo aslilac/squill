@@ -5,11 +5,29 @@ import Docs from "../../layouts/Docs.astro";
 // The tour's options: squill's own, with its defaults for plain SQL.
 const settings = [
 	{ key: "keyword_case", label: "keyword-case", values: ["lower", "upper"] },
-	{ key: "max_width", label: "max-width", values: [40, 60, 80, 100, 120], numeric: true },
+	{
+		key: "max_width",
+		label: "max-width",
+		values: [40, 60, 80, 100, 120],
+		numeric: true,
+	},
 	{ key: "indent", label: "indent", values: ["tabs", "spaces"] },
-	{ key: "indent_width", label: "indent-width", values: [2, 4, 8], numeric: true },
-	{ key: "quote_idents", label: "quote-idents", values: ["as-needed", "always"] },
-	{ key: "trailing_semicolons", label: "trailing-semicolons", values: ["always", "none"] },
+	{
+		key: "indent_width",
+		label: "indent-width",
+		values: [2, 4, 8],
+		numeric: true,
+	},
+	{
+		key: "quote_idents",
+		label: "quote-idents",
+		values: ["as-needed", "always"],
+	},
+	{
+		key: "trailing_semicolons",
+		label: "trailing-semicolons",
+		values: ["always", "none"],
+	},
 ];
 const defaults = {
 	keyword_case: "lower",
@@ -27,30 +45,29 @@ const defaults = {
 	lede="What squill does to each part of a query, with every option in reach: change one and every example on the page reformats."
 >
 	<form class="style-bar" aria-label="Style options">
-		{
-			settings.map(({ key, label, values, numeric }) => (
-				<label>
-					<span>{label}</span>
-					<select data-option={key} data-numeric={numeric ? "" : undefined}>
-						{values.map((value) => (
-							<option value={String(value)} selected={value === defaults[key]}>
-								{value === defaults[key] ? `${value} (default)` : String(value)}
-							</option>
-						))}
-					</select>
-				</label>
-			))
-		}
-		<button type="reset" class="style-reset">reset</button>
+		{settings.map(({ key, label, values, numeric }) => (
+			<label>
+				<span>{label}</span>
+				<select data-option={key} data-numeric={numeric ? "" : undefined}>
+					{values.map((value) => (
+						<option value={String(value)} selected={value === defaults[key]}>
+							{value === defaults[key] ? `${value} (default)` : String(value)}
+						</option>
+					))}
+				</select>
+			</label>
+		))}
+		<button type="reset" class="style-reset">
+			reset
+		</button>
 		<span class="style-status" aria-live="polite"></span>
 	</form>
 
 	<section id="one-line">
 		<h2>One line when it fits</h2>
 		<p>
-			A statement that fits within <code>max-width</code> stays on one
-			line. There&rsquo;s no clause-per-line ceremony for a three-word
-			query.
+			A statement that fits within <code>max-width</code> stays on one line.
+			There&rsquo;s no clause-per-line ceremony for a three-word query.
 		</p>
 		<StyleExample
 			input={`SELECT id, name FROM users WHERE org_id = $1;
@@ -62,12 +79,11 @@ DELETE FROM sessions WHERE expires_at < now() - interval '7 days';`}
 	<section id="clauses">
 		<h2>A line per clause</h2>
 		<p>
-			Once a statement doesn&rsquo;t fit, every clause starts a line of
-			its own. Joins are part of <code>from</code>, so they&rsquo;re
-			indented under it. Anything that still fits on its line stays
-			there: a join&rsquo;s condition, a <code>where</code> clause, a{" "}
-			<code>group by</code> list. Set <code>max-width</code> to 40 and
-			watch them break in turn.
+			Once a statement doesn&rsquo;t fit, every clause starts a line of its own.
+			Joins are part of <code>from</code>, so they&rsquo;re indented under it.
+			Anything that still fits on its line stays there: a join&rsquo;s
+			condition, a <code>where</code> clause, a <code>group by</code> list. Set{" "}
+			<code>max-width</code> to 40 and watch them break in turn.
 		</p>
 		<StyleExample
 			input={`SELECT u.id, u.name, u.email, o.name AS org_name, count(p.id) AS project_count
@@ -81,10 +97,10 @@ ORDER BY project_count DESC LIMIT 20;`}
 	<section id="lists">
 		<h2>Lists and expressions</h2>
 		<p>
-			A list that doesn&rsquo;t fit puts one item on each line, indented
-			under its clause, and so does a list where any item spans lines
-			&mdash; like a <code>case</code>, which puts each <code>when</code>{" "}
-			on its own line. A subquery short enough to stay inline does.
+			A list that doesn&rsquo;t fit puts one item on each line, indented under
+			its clause, and so does a list where any item spans lines &mdash; like a{" "}
+			<code>case</code>, which puts each <code>when</code> on its own line. A
+			subquery short enough to stay inline does.
 		</p>
 		<StyleExample
 			input={`SELECT name, CASE WHEN score >= 90 THEN 'great'
@@ -97,10 +113,9 @@ WHERE team = 'platform');`}
 	<section id="ctes">
 		<h2>Common table expressions</h2>
 		<p>
-			<code>with</code> gets a line to itself, each named query is
-			indented under it, and a query&rsquo;s body is indented inside its
-			parentheses, so the statement that uses them starts back at the
-			margin.
+			<code>with</code> gets a line to itself, each named query is indented
+			under it, and a query&rsquo;s body is indented inside its parentheses, so
+			the statement that uses them starts back at the margin.
 		</p>
 		<StyleExample
 			input={`WITH recent AS (SELECT user_id, max(created_at) AS last_seen
@@ -115,9 +130,8 @@ JOIN recent r ON r.user_id = u.id;`}
 		<p>
 			Writes follow the same rule: one line per clause when the whole
 			doesn&rsquo;t fit. An upsert&rsquo;s{" "}
-			<code>on conflict &hellip; do update</code> reads as the update it
-			is, with its <code>set</code> and <code>where</code> clauses at the
-			margin.
+			<code>on conflict &hellip; do update</code> reads as the update it is,
+			with its <code>set</code> and <code>where</code> clauses at the margin.
 		</p>
 		<StyleExample
 			input={`INSERT INTO settings (user_id, key, value, updated_at)
@@ -132,8 +146,8 @@ WHERE id = $1 RETURNING id, last_used_at;`}
 	<section id="ddl">
 		<h2>Tables and indexes</h2>
 		<p>
-			A table&rsquo;s columns and constraints go one to a line. An
-			index&rsquo;s clauses are indented under the line that names it.
+			A table&rsquo;s columns and constraints go one to a line. An index&rsquo;s
+			clauses are indented under the line that names it.
 		</p>
 		<StyleExample
 			input={`CREATE TABLE workspace_agents (id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -149,9 +163,9 @@ WHERE deleted_at IS NULL;`}
 	<section id="comments">
 		<h2>Comments stay put</h2>
 		<p>
-			squill never drops, duplicates, or reorders a comment. A comment at
-			the end of a line stays at the end of that line, even if it forces
-			the list it&rsquo;s in to break.
+			squill never drops, duplicates, or reorders a comment. A comment at the
+			end of a line stays at the end of that line, even if it forces the list
+			it&rsquo;s in to break.
 		</p>
 		<StyleExample
 			input={`-- The newest build per workspace.
@@ -178,10 +192,10 @@ RETURN NEW; END; $$;`}
 	<section id="identifiers">
 		<h2>Quoted identifiers</h2>
 		<p>
-			With <code>quote-idents = "as-needed"</code>, squill drops the
-			quotes an identifier doesn&rsquo;t need and keeps the ones it does:
-			a name with capitals, or a keyword like <code>order</code>. With{" "}
-			<code>"always"</code>, every identifier is quoted.
+			With <code>quote-idents = "as-needed"</code>, squill drops the quotes an
+			identifier doesn&rsquo;t need and keeps the ones it does: a name with
+			capitals, or a keyword like <code>order</code>. With <code>"always"</code>
+			, every identifier is quoted.
 		</p>
 		<StyleExample
 			input={`SELECT "id", "User"."Name", "order" FROM "users"
@@ -192,11 +206,11 @@ JOIN "User" ON "User"."id" = "users"."user_id";`}
 	<section id="beyond">
 		<h2>What squill leaves alone</h2>
 		<p>
-			A statement squill can&rsquo;t parse passes through exactly as
-			written, and so does one whose output fails squill&rsquo;s own
-			check that nothing but layout changed. For SQL inside other
-			languages, see <a href="docs/embedded/">embedded SQL</a>; for
-			every option, <a href="docs/configuration/">configuration</a>.
+			A statement squill can&rsquo;t parse passes through exactly as written,
+			and so does one whose output fails squill&rsquo;s own check that nothing
+			but layout changed. For SQL inside other languages, see{" "}
+			<a href="docs/embedded/">embedded SQL</a>; for every option,{" "}
+			<a href="docs/configuration/">configuration</a>.
 		</p>
 	</section>
 </Docs>
@@ -207,12 +221,14 @@ JOIN "User" ON "User"."id" = "users"."user_id";`}
 
 	const bar = document.querySelector<HTMLFormElement>(".style-bar")!;
 	const status = bar.querySelector<HTMLElement>(".style-status")!;
-	const examples = [...document.querySelectorAll<HTMLElement>(".style-example")].map(
-		(root) => {
-			const pane = root.querySelector<HTMLElement>('[data-panel="formatted"] > div')!;
-			return { root, pane, original: pane.innerHTML };
-		},
-	);
+	const examples = [
+		...document.querySelectorAll<HTMLElement>(".style-example"),
+	].map((root) => {
+		const pane = root.querySelector<HTMLElement>(
+			'[data-panel="formatted"] > div',
+		)!;
+		return { root, pane, original: pane.innerHTML };
+	});
 	let version = 0;
 
 	function chosen() {
@@ -228,9 +244,9 @@ JOIN "User" ON "User"."id" = "users"."user_id";`}
 	async function reformat() {
 		const current = ++version;
 		const options = chosen();
-		const isDefault = [...bar.querySelectorAll<HTMLSelectElement>("select")].every(
-			(select) => select.selectedOptions[0].defaultSelected,
-		);
+		const isDefault = [
+			...bar.querySelectorAll<HTMLSelectElement>("select"),
+		].every((select) => select.selectedOptions[0].defaultSelected);
 		document.documentElement.style.setProperty(
 			"--tab-width",
 			String(options.indent_width),
@@ -244,7 +260,11 @@ JOIN "User" ON "User"."id" = "users"."user_id";`}
 		const format = await loadSquill("sql");
 		const panes = await Promise.all(
 			examples.map(async ({ root }) => {
-				const result = format({ source: root.dataset.source, host: "sql", options });
+				const result = format({
+					source: root.dataset.source,
+					host: "sql",
+					options,
+				});
 				return result.output == null
 					? null
 					: highlight(result.output.trim(), "sql");
@@ -293,7 +313,9 @@ JOIN "User" ON "User"."id" = "users"."user_id";`}
 	}
 	.style-bar select,
 	.style-reset {
-		font: 500 0.82rem "IBM Plex Sans", sans-serif;
+		font:
+			500 0.82rem "IBM Plex Sans",
+			sans-serif;
 		color: var(--ink);
 		background: var(--inset);
 		border: 1px solid var(--edge);

@@ -84,9 +84,15 @@ export async function highlightHost(code, lang, spans) {
 					kind: classify(scopes),
 				};
 				if (heredocOpened) {
-					Object.assign(piece, { kind: "host", color: colors.fg, fontStyle: 0 });
+					Object.assign(piece, {
+						kind: "host",
+						color: colors.fg,
+						fontStyle: 0,
+					});
 				}
-				heredocOpened ||= scopes.some((s) => s.startsWith("string.definition.begin"));
+				heredocOpened ||= scopes.some((s) =>
+					s.startsWith("string.definition.begin"),
+				);
 				pieces.push(piece);
 				offset += part.content.length;
 			}
@@ -109,7 +115,8 @@ export async function highlightHost(code, lang, spans) {
 			return part;
 		});
 	});
-	const spanAt = (at) => spans.findIndex(([start, end]) => at >= start && at < end);
+	const spanAt = (at) =>
+		spans.findIndex(([start, end]) => at >= start && at < end);
 
 	const sql = [];
 	const plain = [];
@@ -188,7 +195,10 @@ function render(pieces) {
 	for (const piece of pieces) {
 		piece.text.split("\n").forEach((text, i) => {
 			if (i > 0) lines.push([]);
-			if (text) lines.at(-1).push(`<span style="${style(piece)}">${escape(text)}</span>`);
+			if (text)
+				lines
+					.at(-1)
+					.push(`<span style="${style(piece)}">${escape(text)}</span>`);
 		});
 	}
 	const body = lines

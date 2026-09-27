@@ -44,7 +44,10 @@ Embedded SQL is only formatted in files that an `[[embedded]]` rule in your `squ
 {
 	"lsp": {
 		"squill": {
-			"binary": { "path": "/path/to/squill", "arguments": ["language-server", "start"] }
+			"binary": {
+				"path": "/path/to/squill",
+				"arguments": ["language-server", "start"]
+			}
 		}
 	}
 }

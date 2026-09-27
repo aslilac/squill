@@ -12,17 +12,17 @@ import Recipe from "../../../components/Recipe.astro";
 		<h2>Which strings squill rewrites</h2>
 		<p>
 			Every Gleam string takes raw newlines, so any string the query finds is
-			fair game, one line or many: squill puts the quotes on their own lines
-			and lays the query out one clause per line.
+			fair game, one line or many: squill puts the quotes on their own lines and
+			lays the query out one clause per line.
 		</p>
 		<p>
-			The built-in <code>gleam</code> grammar&rsquo;s default query looks for
-			a string passed straight to a <code>query</code>, <code>exec</code>, or{" "}
+			The built-in <code>gleam</code> grammar&rsquo;s default query looks for a
+			string passed straight to a <code>query</code>, <code>exec</code>, or{" "}
 			<code>execute</code> call, module-qualified (<code>sqlight.query</code>)
-			or imported bare, or piped into one (<code>"&hellip;" |&gt;
-			pog.query</code>). A string bound to a variable first
-			(<code>let sql = "&hellip;"</code>, then <code>pog.query(sql)</code>) is
-			out of its sight.
+			or imported bare, or piped into one (
+			<code>"&hellip;" |&gt; pog.query</code>). A string bound to a variable
+			first (<code>let sql = "&hellip;"</code>, then <code>pog.query(sql)</code>
+			) is out of its sight.
 		</p>
 	</section>
 
@@ -30,10 +30,10 @@ import Recipe from "../../../components/Recipe.astro";
 		<h2>sqlight</h2>
 		<p>
 			sqlight is SQLite, and the default query knows it:{" "}
-			<code>sqlight.query</code> and <code>sqlight.exec</code> format as
-			SQLite whatever the configured dialect. (Imported bare, the calls
-			can&rsquo;t be told apart from pog&rsquo;s, and use the configured
-			dialect &mdash; set <code>dialect = "sqlite"</code> in the rule.)
+			<code>sqlight.query</code> and <code>sqlight.exec</code> format as SQLite
+			whatever the configured dialect. (Imported bare, the calls can&rsquo;t be
+			told apart from pog&rsquo;s, and use the configured dialect &mdash; set{" "}
+			<code>dialect = "sqlite"</code> in the rule.)
 		</p>
 		<Recipe name="gleam-sqlight" lang="gleam" />
 	</section>
@@ -42,9 +42,8 @@ import Recipe from "../../../components/Recipe.astro";
 		<h2>pog</h2>
 		<p>
 			pog&rsquo;s calls use the configured dialect, Postgres unless you say
-			otherwise. The string can be passed in or piped in
-			(<code>"&hellip;" |&gt; pog.query</code>); the default query finds
-			both:
+			otherwise. The string can be passed in or piped in (
+			<code>"&hellip;" |&gt; pog.query</code>); the default query finds both:
 		</p>
 		<Recipe name="gleam-pog" lang="gleam" />
 	</section>
@@ -55,10 +54,10 @@ import Recipe from "../../../components/Recipe.astro";
 			squirrel keeps each query in its own <code>.sql</code> file under a{" "}
 			<code>sql/</code> directory, and <code>.sql</code> files format with no
 			rule at all. The comment at the top of a file becomes the generated
-			function&rsquo;s documentation, and squill never moves or drops a
-			comment. The one thing to configure is the <code>sql.gleam</code>{" "}
-			module squirrel generates from them: it&rsquo;s squirrel&rsquo;s output,
-			so leave it to squirrel.
+			function&rsquo;s documentation, and squill never moves or drops a comment.
+			The one thing to configure is the <code>sql.gleam</code> module squirrel
+			generates from them: it&rsquo;s squirrel&rsquo;s output, so leave it to
+			squirrel.
 		</p>
 		<Recipe name="gleam-squirrel" lang="sql" />
 		<p>

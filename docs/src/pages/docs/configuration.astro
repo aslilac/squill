@@ -18,18 +18,18 @@ import Docs from "../../layouts/Docs.astro";
 		</p>
 		<p>
 			The config can be YAML instead, as <code>squill.yaml</code> or{" "}
-			<code>squill.yml</code> &mdash; <a href="docs/configuration/#yaml">the
-			same keys and rules</a>. Two configs for one directory is an error, not
-			a guess.
+			<code>squill.yml</code> &mdash;{" "}
+			<a href="docs/configuration/#yaml">the same keys and rules</a>. Two
+			configs for one directory is an error, not a guess.
 		</p>
 		<p>
 			<code>squill init</code> writes a starter config. It lists the languages
-			squill has grammars for as checkboxes &mdash; pre-checking the ones
-			where it already finds SQL &mdash; then asks for the dialect of plain{" "}
+			squill has grammars for as checkboxes &mdash; pre-checking the ones where
+			it already finds SQL &mdash; then asks for the dialect of plain{" "}
 			<code>.sql</code> files and of each language you chose.{" "}
 			<code>--dialect</code> sets where those answers start, and{" "}
-			<code>--yes</code> (or running without a terminal) takes every
-			default. <code>--yaml</code> writes <code>squill.yaml</code>.
+			<code>--yes</code> (or running without a terminal) takes every default.{" "}
+			<code>--yaml</code> writes <code>squill.yaml</code>.
 		</p>
 		<p>
 			The search upward stops at a git repository root, a mount point, or a
@@ -40,9 +40,9 @@ import Docs from "../../layouts/Docs.astro";
 		<div class="note">
 			<p>
 				Layers, lowest first: built-in defaults, the config file&rsquo;s
-				top-level keys, every <a href="docs/configuration/#rules">rule</a>{" "}
-				that matches the file being formatted (in file order), then
-				command-line flags.
+				top-level keys, every <a href="docs/configuration/#rules">rule</a> that
+				matches the file being formatted (in file order), then command-line
+				flags.
 			</p>
 		</div>
 	</section>
@@ -50,10 +50,10 @@ import Docs from "../../layouts/Docs.astro";
 	<section>
 		<h2>Options</h2>
 		<p>
-			Every key has a matching flag, and flags win over both config layers.
-			The flags with no key &mdash; <code>--check</code>,{" "}
-			<code>--strict</code>, <code>--locked</code>, and the rest &mdash; are
-			on the <a href="docs/cli/">command line</a> page.
+			Every key has a matching flag, and flags win over both config layers. The
+			flags with no key &mdash; <code>--check</code>, <code>--strict</code>,{" "}
+			<code>--locked</code>, and the rest &mdash; are on the{" "}
+			<a href="docs/cli/">command line</a> page.
 		</p>
 
 		<h3>Style</h3>
@@ -61,57 +61,96 @@ import Docs from "../../layouts/Docs.astro";
 		<div class="scroll">
 			<table class="options">
 				<thead>
-					<tr><th>key</th><th>flag</th><th>values</th><th>default</th></tr>
+					<tr>
+						<th>key</th>
+						<th>flag</th>
+						<th>values</th>
+						<th>default</th>
+					</tr>
 				</thead>
 				<tbody>
 					<tr>
-						<td><code>indent</code></td>
-						<td><code>--indent</code></td>
-						<td><code>tabs</code> | <code>spaces</code></td>
 						<td>
-							<code>tabs</code>; embedded SQL, the <a
-								href="docs/embedded/#indentation">host file&rsquo;s</a
-							>
+							<code>indent</code>
+						</td>
+						<td>
+							<code>--indent</code>
+						</td>
+						<td>
+							<code>tabs</code> | <code>spaces</code>
+						</td>
+						<td>
+							<code>tabs</code>; embedded SQL, the{" "}
+							<a href="docs/embedded/#indentation">host file&rsquo;s</a>
 						</td>
 					</tr>
 					<tr>
-						<td><code>indent-width</code></td>
-						<td><code>--indent-width</code></td>
+						<td>
+							<code>indent-width</code>
+						</td>
+						<td>
+							<code>--indent-width</code>
+						</td>
 						<td>width of one level, and the measure of a tab; 1 to 16</td>
 						<td>
-							<code>2</code>; embedded SQL, the <a
-								href="docs/embedded/#indentation">host file&rsquo;s</a
-							>
+							<code>2</code>; embedded SQL, the{" "}
+							<a href="docs/embedded/#indentation">host file&rsquo;s</a>
 						</td>
 					</tr>
 					<tr>
-						<td><code>max-width</code></td>
-						<td><code>--max-width</code></td>
+						<td>
+							<code>max-width</code>
+						</td>
+						<td>
+							<code>--max-width</code>
+						</td>
 						<td>target line width, 20 to 500</td>
-						<td><code>80</code></td>
+						<td>
+							<code>80</code>
+						</td>
 					</tr>
 					<tr>
-						<td><code>keyword-case</code></td>
-						<td><code>--keyword-case</code></td>
-						<td><code>lower</code> | <code>upper</code></td>
-						<td><code>lower</code></td>
+						<td>
+							<code>keyword-case</code>
+						</td>
+						<td>
+							<code>--keyword-case</code>
+						</td>
+						<td>
+							<code>lower</code> | <code>upper</code>
+						</td>
+						<td>
+							<code>lower</code>
+						</td>
 					</tr>
 					<tr>
-						<td><code>quote-idents</code></td>
-						<td><code>--quote-idents</code></td>
-						<td><code>as-needed</code> | <code>always</code></td>
-						<td><code>as-needed</code></td>
+						<td>
+							<code>quote-idents</code>
+						</td>
+						<td>
+							<code>--quote-idents</code>
+						</td>
+						<td>
+							<code>as-needed</code> | <code>always</code>
+						</td>
+						<td>
+							<code>as-needed</code>
+						</td>
 					</tr>
 					<tr>
-						<td><code>trailing-semicolons</code></td>
-						<td><code>--trailing-semicolons</code></td>
-						<td
-							><code>always</code> | <code>none</code>: whether the last
-							statement ends in <code>;</code></td
-						>
-						<td
-							><code>always</code> (<code>none</code> for embedded SQL)</td
-						>
+						<td>
+							<code>trailing-semicolons</code>
+						</td>
+						<td>
+							<code>--trailing-semicolons</code>
+						</td>
+						<td>
+							<code>always</code> | <code>none</code>: whether the last
+							statement ends in <code>;</code>
+						</td>
+						<td>
+							<code>always</code> (<code>none</code> for embedded SQL)
+						</td>
 					</tr>
 				</tbody>
 			</table>
@@ -120,115 +159,180 @@ import Docs from "../../layouts/Docs.astro";
 		<h3>Dialect and parameters</h3>
 		<p>
 			How squill reads the SQL. The <code>*-params</code> keys make a
-			driver&rsquo;s placeholders lex as parameters where the dialect has
-			other plans for them &mdash; in Postgres, <code>?</code> and{" "}
-			<code>@</code> are operators and <code>%</code> is modulo. They&rsquo;re
-			all off until you turn them on: which one you want depends on the
-			driver, not the language. Each recipe says which its library needs.
+			driver&rsquo;s placeholders lex as parameters where the dialect has other
+			plans for them &mdash; in Postgres, <code>?</code> and <code>@</code> are
+			operators and <code>%</code> is modulo. They&rsquo;re all off until you
+			turn them on: which one you want depends on the driver, not the language.
+			Each recipe says which its library needs.
 		</p>
 		<div class="scroll">
 			<table class="options">
 				<thead>
-					<tr><th>key</th><th>flag</th><th>values</th><th>default</th></tr>
+					<tr>
+						<th>key</th>
+						<th>flag</th>
+						<th>values</th>
+						<th>default</th>
+					</tr>
 				</thead>
 				<tbody>
 					<tr>
-						<td><code>dialect</code></td>
-						<td><code>--dialect</code></td>
-						<td
-							><code>postgres</code> | <code>sqlite</code>; in embedded SQL,
-							a <a href="docs/embedded/#dialects">query can set</a> a
-							string&rsquo;s own</td
-						>
-						<td><code>postgres</code></td>
+						<td>
+							<code>dialect</code>
+						</td>
+						<td>
+							<code>--dialect</code>
+						</td>
+						<td>
+							<code>postgres</code> | <code>sqlite</code>; in embedded SQL, a{" "}
+							<a href="docs/embedded/#dialects">query can set</a> a
+							string&rsquo;s own
+						</td>
+						<td>
+							<code>postgres</code>
+						</td>
 					</tr>
 					<tr>
-						<td><code>at-params</code></td>
-						<td><code>--at-params</code></td>
-						<td
-							>lex <a
-								href="https://docs.sqlc.dev/en/latest/howto/named_parameters.html"
-								>sqlc-style</a
-							> and ADO.NET-style <code>@name</code> parameters, and
-							Dapper&rsquo;s <code>in @ids</code></td
-						>
-						<td><code>false</code></td>
+						<td>
+							<code>at-params</code>
+						</td>
+						<td>
+							<code>--at-params</code>
+						</td>
+						<td>
+							lex{" "}
+							<a href="https://docs.sqlc.dev/en/latest/howto/named_parameters.html">
+								sqlc-style
+							</a>{" "}
+							and ADO.NET-style <code>@name</code> parameters, and
+							Dapper&rsquo;s <code>in @ids</code>
+						</td>
+						<td>
+							<code>false</code>
+						</td>
 					</tr>
 					<tr>
-						<td><code>question-params</code></td>
-						<td><code>--question-params</code></td>
-						<td
-							>lex JDBC-style <code>?</code> and JPA-style <code>?1</code>{" "}
-							parameters in Postgres</td
-						>
-						<td><code>false</code></td>
+						<td>
+							<code>question-params</code>
+						</td>
+						<td>
+							<code>--question-params</code>
+						</td>
+						<td>
+							lex JDBC-style <code>?</code> and JPA-style <code>?1</code>{" "}
+							parameters in Postgres
+						</td>
+						<td>
+							<code>false</code>
+						</td>
 					</tr>
 					<tr>
-						<td><code>colon-params</code></td>
-						<td><code>--colon-params</code></td>
-						<td
-							>lex <code>:name</code> parameters (SQLAlchemy, Spring, JPA,
-							sqlx&rsquo;s named queries) in Postgres; a <code>:</code>{" "}
-							inside <code>[&hellip;]</code> is still a slice</td
-						>
-						<td><code>false</code></td>
+						<td>
+							<code>colon-params</code>
+						</td>
+						<td>
+							<code>--colon-params</code>
+						</td>
+						<td>
+							lex <code>:name</code> parameters (SQLAlchemy, Spring, JPA,
+							sqlx&rsquo;s named queries) in Postgres; a <code>:</code> inside{" "}
+							<code>[&hellip;]</code> is still a slice
+						</td>
+						<td>
+							<code>false</code>
+						</td>
 					</tr>
 					<tr>
-						<td><code>pyformat-params</code></td>
-						<td><code>--pyformat-params</code></td>
-						<td
-							>lex Python DB-API <code>%s</code> / <code>%(name)s</code>
-							parameters</td
-						>
-						<td><code>false</code></td>
+						<td>
+							<code>pyformat-params</code>
+						</td>
+						<td>
+							<code>--pyformat-params</code>
+						</td>
+						<td>
+							lex Python DB-API <code>%s</code> / <code>%(name)s</code>
+							parameters
+						</td>
+						<td>
+							<code>false</code>
+						</td>
 					</tr>
-
 				</tbody>
 			</table>
 		</div>
 
 		<h3>Which files</h3>
 		<p>
-			What squill leaves alone. These apply to the whole config file, so
-			they belong at its top level rather than in a rule; see{" "}
+			What squill leaves alone. These apply to the whole config file, so they
+			belong at its top level rather than in a rule; see{" "}
 			<a href="docs/configuration/#skipping-files">skipping files</a> and{" "}
 			<a href="docs/frozen/">frozen paths</a>.
 		</p>
 		<div class="scroll">
 			<table class="options">
 				<thead>
-					<tr><th>key</th><th>flag</th><th>values</th><th>default</th></tr>
+					<tr>
+						<th>key</th>
+						<th>flag</th>
+						<th>values</th>
+						<th>default</th>
+					</tr>
 				</thead>
 				<tbody>
 					<tr>
-						<td><code>ignore</code></td>
-						<td><code>--ignore</code></td>
+						<td>
+							<code>ignore</code>
+						</td>
+						<td>
+							<code>--ignore</code>
+						</td>
 						<td>glob patterns to skip when recursing</td>
-						<td><code>[]</code></td>
+						<td>
+							<code>[]</code>
+						</td>
 					</tr>
 					<tr>
-						<td><code>frozen</code></td>
-						<td><code>--frozen</code></td>
-						<td
-							>glob patterns that are immutable once on the baseline ref (see{" "}
-							<a href="docs/frozen/">frozen paths</a>)</td
-						>
-						<td><code>[]</code></td>
+						<td>
+							<code>frozen</code>
+						</td>
+						<td>
+							<code>--frozen</code>
+						</td>
+						<td>
+							glob patterns that are immutable once on the baseline ref (see{" "}
+							<a href="docs/frozen/">frozen paths</a>)
+						</td>
+						<td>
+							<code>[]</code>
+						</td>
 					</tr>
 					<tr>
-						<td><code>frozen-ref</code></td>
-						<td><code>--frozen-ref</code></td>
-						<td>the baseline ref <code>frozen</code> compares against</td>
+						<td>
+							<code>frozen-ref</code>
+						</td>
+						<td>
+							<code>--frozen-ref</code>
+						</td>
+						<td>
+							the baseline ref <code>frozen</code> compares against
+						</td>
 						<td>discovered from the remote</td>
 					</tr>
 					<tr>
-						<td><code>frozen-fetch</code></td>
-						<td><code>--no-frozen-fetch</code></td>
-						<td>let <code>frozen</code> ask the remote for its HEAD when it is
-							not recorded locally</td>
-						<td><code>true</code></td>
+						<td>
+							<code>frozen-fetch</code>
+						</td>
+						<td>
+							<code>--no-frozen-fetch</code>
+						</td>
+						<td>
+							let <code>frozen</code> ask the remote for its HEAD when it is not
+							recorded locally
+						</td>
+						<td>
+							<code>true</code>
+						</td>
 					</tr>
-
 				</tbody>
 			</table>
 		</div>
@@ -243,7 +347,11 @@ import Docs from "../../layouts/Docs.astro";
 			<code>&lbrace;a,b&rbrace;</code> glob syntax. Patterns are relative to the
 			config file that declares them.
 		</p>
-		<Code lang="toml" file="squill.toml" code={`ignore = ["legacy/**", "*.gen.sql"]`} />
+		<Code
+			lang="toml"
+			file="squill.toml"
+			code={`ignore = ["legacy/**", "*.gen.sql"]`}
+		/>
 		<p>
 			A file named explicitly on the command line always formats, ignore
 			patterns included &mdash; if you asked for that file by name, you meant
@@ -254,11 +362,11 @@ import Docs from "../../layouts/Docs.astro";
 	<section id="rules">
 		<h2>Rules</h2>
 		<p>
-			Rules scope settings to paths. There are two kinds, each written as a
-			TOML array of tables, and each needs an <code>include</code> list of
-			glob patterns (relative to the config, like <code>ignore</code>). Every
-			rule whose <code>include</code> matches a file applies, in file order,
-			later rules winning key by key.
+			Rules scope settings to paths. There are two kinds, each written as a TOML
+			array of tables, and each needs an <code>include</code> list of glob
+			patterns (relative to the config, like <code>ignore</code>). Every rule
+			whose <code>include</code> matches a file applies, in file order, later
+			rules winning key by key.
 		</p>
 		<h3>[[files]]</h3>
 		<p>
@@ -267,14 +375,18 @@ import Docs from "../../layouts/Docs.astro";
 			brings in files by other names &mdash; a mixed-dialect tree needs no
 			second config:
 		</p>
-		<Code lang="toml" file="squill.toml" code={`dialect = "postgres"
+		<Code
+			lang="toml"
+			file="squill.toml"
+			code={`dialect = "postgres"
 
 [[files]]
 include = ["**/*.sql.sqlite", "storage/sqlite/**"]
 dialect = "sqlite"
 
 [[files]]
-include = ["**/*.sql.postgres"]`} />
+include = ["**/*.sql.postgres"]`}
+		/>
 		<h3>[[embedded]]</h3>
 		<p>
 			SQL inside host-language files. A rule names the tree-sitter{" "}
@@ -283,7 +395,10 @@ include = ["**/*.sql.postgres"]`} />
 			whenever squill walks past them. See{" "}
 			<a href="docs/embedded/">embedded SQL</a> for the grammars and queries.
 		</p>
-		<Code lang="toml" file="squill.toml" code={`indent = "tabs"
+		<Code
+			lang="toml"
+			file="squill.toml"
+			code={`indent = "tabs"
 
 [[embedded]]
 include = ["**/*.rs"]
@@ -294,20 +409,21 @@ dialect = "sqlite"
 include = ["web/**/*.ts", "web/**/*.tsx"]
 grammar = "typescript"
 indent = "spaces"
-indent-width = 2`} />
+indent-width = 2`}
+		/>
 		<p>
 			A rule without a <code>grammar</code> only layers options &mdash; say, a
 			different dialect for one directory of a language another rule already
 			covers. A file some <code>[[embedded]]</code> rule gives a grammar is a
-			host file, and only <code>[[embedded]]</code> rules apply to it;
-			otherwise only <code>[[files]]</code> rules do.
+			host file, and only <code>[[embedded]]</code> rules apply to it; otherwise
+			only <code>[[files]]</code> rules do.
 		</p>
 		<p>
 			The path-selecting keys &mdash; <code>ignore</code>, <code>frozen</code>,{" "}
 			<code>frozen-ref</code>, and <code>frozen-fetch</code> &mdash; apply to
 			the whole config file, so they stay at the top level. A misplaced key, an
-			unknown grammar, or a rule without <code>include</code> is an error with
-			a line number rather than a silent surprise.
+			unknown grammar, or a rule without <code>include</code> is an error with a
+			line number rather than a silent surprise.
 		</p>
 	</section>
 
@@ -317,7 +433,10 @@ indent-width = 2`} />
 			In <code>squill.yaml</code>, the top-level keys are a mapping and each
 			kind of rule is a list under its name. This is the rules example above:
 		</p>
-		<Code lang="yaml" file="squill.yaml" code={`dialect: postgres
+		<Code
+			lang="yaml"
+			file="squill.yaml"
+			code={`dialect: postgres
 indent: tabs
 
 files:
@@ -331,7 +450,8 @@ embedded:
   - include: ["web/**/*.ts", "web/**/*.tsx"]
     grammar: typescript
     indent: spaces
-    indent-width: 2`} />
+    indent-width: 2`}
+		/>
 		<p>
 			A file holds one YAML document. Grammars downloaded from https URLs are
 			locked in the same <code>squill.lock</code> either way.

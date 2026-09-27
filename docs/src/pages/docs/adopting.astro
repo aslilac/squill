@@ -13,16 +13,15 @@ import Docs from "../../layouts/Docs.astro";
 		<Code lang="sh" code={`squill init`} />
 		<p>
 			<code>init</code> walks the project the way <code>fmt</code> would and
-			lists the languages squill has grammars for, checking the ones where
-			it already finds SQL. Then it asks which dialect each is in, and which
+			lists the languages squill has grammars for, checking the ones where it
+			already finds SQL. Then it asks which dialect each is in, and which
 			placeholder styles your queries use &mdash; <code>@name</code>,{" "}
-			<code>?</code>, <code>:name</code>, <code>%s</code>. Nothing is
-			checked for that last one: it depends on your driver, not your
-			language, and the{" "}
-			<a href="docs/recipes/rust/">recipes</a> say which each library needs.
-			It writes a <code>squill.toml</code> (<code>--yaml</code> for{" "}
-			<code>squill.yaml</code>), which is yours to edit from there &mdash;
-			see <a href="docs/configuration/">configuration</a>.
+			<code>?</code>, <code>:name</code>, <code>%s</code>. Nothing is checked
+			for that last one: it depends on your driver, not your language, and the{" "}
+			<a href="docs/recipes/rust/">recipes</a> say which each library needs. It
+			writes a <code>squill.toml</code> (<code>--yaml</code> for{" "}
+			<code>squill.yaml</code>), which is yours to edit from there &mdash; see{" "}
+			<a href="docs/configuration/">configuration</a>.
 		</p>
 	</section>
 
@@ -40,9 +39,9 @@ import Docs from "../../layouts/Docs.astro";
 			Migration tools&rsquo; directives &mdash; goose&rsquo;s{" "}
 			<code>-- +goose StatementBegin</code>, dbmate&rsquo;s{" "}
 			<code>-- migrate:up</code>, sqlc&rsquo;s{" "}
-			<code>-- name: GetUser :one</code> &mdash; are comments, and squill
-			never moves a comment off its line or past a statement, so new
-			migrations and query files format safely.
+			<code>-- name: GetUser :one</code> &mdash; are comments, and squill never
+			moves a comment off its line or past a statement, so new migrations and
+			query files format safely.
 		</p>
 	</section>
 
@@ -50,62 +49,66 @@ import Docs from "../../layouts/Docs.astro";
 		<h2>3. See what squill would do</h2>
 		<Code lang="sh" code={`squill fmt --check .`} />
 		<p>
-			<code>--check</code> writes nothing: it prints a diff for each file
-			that would change, and a line on stderr for everything squill
-			would leave alone &mdash; a statement it can&rsquo;t parse, an
-			embedded string it can&rsquo;t safely rewrite. That second list is
-			the one to read. Most of it comes from a few causes:
+			<code>--check</code> writes nothing: it prints a diff for each file that
+			would change, and a line on stderr for everything squill would leave alone
+			&mdash; a statement it can&rsquo;t parse, an embedded string it
+			can&rsquo;t safely rewrite. That second list is the one to read. Most of
+			it comes from a few causes:
 		</p>
 		<ul>
 			<li>
 				<strong>Placeholders.</strong> <code>did not parse</code> at a{" "}
-				<code>?</code>, <code>@</code>, <code>:</code>, or <code>%</code>{" "}
-				means the query uses a placeholder style that isn&rsquo;t turned
-				on. Set the matching <code>*-params</code> key in the rule.
+				<code>?</code>, <code>@</code>, <code>:</code>, or <code>%</code> means
+				the query uses a placeholder style that isn&rsquo;t turned on. Set the
+				matching <code>*-params</code> key in the rule.
 			</li>
 			<li>
-				<strong>The dialect.</strong> SQLite code read as Postgres, or the
-				other way round. Set <code>dialect</code> in the rule that covers it.
+				<strong>The dialect.</strong> SQLite code read as Postgres, or the other
+				way round. Set <code>dialect</code> in the rule that covers it.
 			</li>
 			<li>
-				<strong>Strings squill can&rsquo;t see.</strong> A query built up
-				from pieces, or passed through a helper the default query
-				doesn&rsquo;t know. <code>squill locate</code> lists every string
-				the rules find, so a missing one is a query to{" "}
-				<a href="docs/embedded/#queries">extend</a>.
+				<strong>Strings squill can&rsquo;t see.</strong> A query built up from
+				pieces, or passed through a helper the default query doesn&rsquo;t know.{" "}
+				<code>squill locate</code> lists every string the rules find, so a
+				missing one is a query to <a href="docs/embedded/#queries">extend</a>.
 			</li>
 		</ul>
 		<p>
-			What&rsquo;s left is SQL squill doesn&rsquo;t parse yet. It passes
-			through exactly as written, so it&rsquo;s safe to leave &mdash; and
-			worth <a href="https://github.com/aslilac/squill/issues">reporting</a>.
+			What&rsquo;s left is SQL squill doesn&rsquo;t parse yet. It passes through
+			exactly as written, so it&rsquo;s safe to leave &mdash; and worth{" "}
+			<a href="https://github.com/aslilac/squill/issues">reporting</a>.
 		</p>
 	</section>
 
 	<section>
 		<h2>4. Reformat in one commit</h2>
-		<Code lang="sh" code={`squill fmt .
-git commit -am "Format SQL with squill"`} />
+		<Code
+			lang="sh"
+			code={`squill fmt .
+git commit -am "Format SQL with squill"`}
+		/>
 		<p>
 			Keep the reformat in a commit of its own, with nothing else in it, so
-			it&rsquo;s easy to review and easy to skip: squill only changes
-			layout, keyword case, identifier quoting, and the final{" "}
-			<code>;</code>, and turns a multi-line Rust or Go string into a raw
-			one. To keep{" "}
-			<code>git blame</code> pointing at the commits that wrote each line,
-			list it in <code>.git-blame-ignore-revs</code>:
+			it&rsquo;s easy to review and easy to skip: squill only changes layout,
+			keyword case, identifier quoting, and the final <code>;</code>, and turns
+			a multi-line Rust or Go string into a raw one. To keep{" "}
+			<code>git blame</code> pointing at the commits that wrote each line, list
+			it in <code>.git-blame-ignore-revs</code>:
 		</p>
-		<Code lang="sh" code={`git rev-parse HEAD >> .git-blame-ignore-revs
-git config blame.ignoreRevsFile .git-blame-ignore-revs`} />
+		<Code
+			lang="sh"
+			code={`git rev-parse HEAD >> .git-blame-ignore-revs
+git config blame.ignoreRevsFile .git-blame-ignore-revs`}
+		/>
 		<p>
 			GitHub reads that file on its own; locally, each clone needs the{" "}
 			<code>git config</code> line once.
 		</p>
 		<p>
-			Branches that were open across the reformat will conflict wherever
-			they touched SQL. The quickest way through is to run{" "}
-			<code>squill fmt .</code> on the branch before merging trunk into it:
-			with both sides formatted, the conflicts that remain are real ones.
+			Branches that were open across the reformat will conflict wherever they
+			touched SQL. The quickest way through is to run <code>squill fmt .</code>{" "}
+			on the branch before merging trunk into it: with both sides formatted, the
+			conflicts that remain are real ones.
 		</p>
 	</section>
 
@@ -115,11 +118,11 @@ git config blame.ignoreRevsFile .git-blame-ignore-revs`} />
 		<Code lang="sh" code={`squill fmt --check --locked .`} />
 		<p>
 			<code>--locked</code> fails on a grammar URL that isn&rsquo;t in{" "}
-			<code>squill.lock</code>, rather than downloading one nobody has
-			reviewed. Once the list of things squill leaves alone is down to
-			what you&rsquo;ve decided to live with, add <code>--strict</code> too,
-			so new SQL that squill can&rsquo;t format fails the build instead of
-			slipping by. See <a href="docs/cli/#exit-codes">exit codes</a>.
+			<code>squill.lock</code>, rather than downloading one nobody has reviewed.
+			Once the list of things squill leaves alone is down to what you&rsquo;ve
+			decided to live with, add <code>--strict</code> too, so new SQL that
+			squill can&rsquo;t format fails the build instead of slipping by. See{" "}
+			<a href="docs/cli/#exit-codes">exit codes</a>.
 		</p>
 		<p>
 			And in your editor, format on save &mdash; see{" "}

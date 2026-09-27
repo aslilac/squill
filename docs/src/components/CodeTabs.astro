@@ -7,7 +7,10 @@ import { highlight } from "./highlight.js";
 
 const { tabs, selected = tabs[0].id } = Astro.props;
 const panes = await Promise.all(
-	tabs.map(async (tab) => ({ ...tab, html: await highlight(tab.code.trim(), tab.lang) })),
+	tabs.map(async (tab) => ({
+		...tab,
+		html: await highlight(tab.code.trim(), tab.lang),
+	})),
 );
 ---
 
@@ -15,29 +18,25 @@ const panes = await Promise.all(
 	<figure>
 		<figcaption class="tabbar prose-tabs">
 			<span role="tablist">
-				{
-					panes.map((tab) => (
-						<button
-							type="button"
-							role="tab"
-							data-tab={tab.id}
-							data-os={tab.os}
-							data-arch={tab.arch}
-							aria-selected={String(tab.id === selected)}
-						>
-							{tab.label}
-						</button>
-					))
-				}
+				{panes.map((tab) => (
+					<button
+						type="button"
+						role="tab"
+						data-tab={tab.id}
+						data-os={tab.os}
+						data-arch={tab.arch}
+						aria-selected={String(tab.id === selected)}
+					>
+						{tab.label}
+					</button>
+				))}
 			</span>
 		</figcaption>
-		{
-			panes.map((tab) => (
-				<div role="tabpanel" data-panel={tab.id} hidden={tab.id !== selected}>
-					<div set:html={tab.html} />
-				</div>
-			))
-		}
+		{panes.map((tab) => (
+			<div role="tabpanel" data-panel={tab.id} hidden={tab.id !== selected}>
+				<div set:html={tab.html} />
+			</div>
+		))}
 	</figure>
 </div>
 
@@ -90,8 +89,9 @@ const panes = await Promise.all(
 			for (const group of groups) {
 				const tabs = [...group.querySelectorAll<HTMLElement>("[data-os]")];
 				const match =
-					tabs.find((tab) => tab.dataset.os === os && tab.dataset.arch === arch) ??
-					tabs.find((tab) => tab.dataset.os === os);
+					tabs.find(
+						(tab) => tab.dataset.os === os && tab.dataset.arch === arch,
+					) ?? tabs.find((tab) => tab.dataset.os === os);
 				if (match) select(group, match);
 			}
 		});

@@ -21,7 +21,11 @@ const groups = [
 		heading: "Reference",
 		items: [
 			{ href: "docs/cli/", label: "Command line", key: "cli" },
-			{ href: "docs/configuration/", label: "Configuration", key: "configuration" },
+			{
+				href: "docs/configuration/",
+				label: "Configuration",
+				key: "configuration",
+			},
 			{ href: "docs/embedded/", label: "Embedded SQL", key: "embedded" },
 			{ href: "docs/frozen/", label: "Frozen paths", key: "frozen" },
 		],
@@ -56,25 +60,23 @@ const groups = [
 	<div class="docs-shell">
 		<aside class="sidebar">
 			<nav aria-label="Documentation">
-				{
-					groups.map((group) => (
-						<>
-							<h2>{group.heading}</h2>
-							<ul>
-								{group.items.map((item) => (
-									<li>
-										<a
-											href={item.href}
-											aria-current={item.key === page ? "page" : undefined}
-										>
-											{item.label}
-										</a>
-									</li>
-								))}
-							</ul>
-						</>
-					))
-				}
+				{groups.map((group) => (
+					<>
+						<h2>{group.heading}</h2>
+						<ul>
+							{group.items.map((item) => (
+								<li>
+									<a
+										href={item.href}
+										aria-current={item.key === page ? "page" : undefined}
+									>
+										{item.label}
+									</a>
+								</li>
+							))}
+						</ul>
+					</>
+				))}
 			</nav>
 		</aside>
 

@@ -13,13 +13,12 @@ import Recipe from "../../../components/Recipe.astro";
 		<p>
 			Multi-line string literals (<code>"""</code>) without interpolation.
 			squill lays the query out one clause per line, with the closing{" "}
-			<code>"""</code> at the statement&rsquo;s indent and every line of SQL
-			at or past it, which is how Swift measures the string&rsquo;s
-			indentation. Single-line strings are left exactly as written, and so
-			is any string with a <code>\(&hellip;)</code> interpolation &mdash;
-			SQL with holes in it isn&rsquo;t SQL squill can parse &mdash; or a
-			backslash escape. Raw strings (<code>#"""</code>) aren&rsquo;t taken
-			either.
+			<code>"""</code> at the statement&rsquo;s indent and every line of SQL at
+			or past it, which is how Swift measures the string&rsquo;s indentation.
+			Single-line strings are left exactly as written, and so is any string with
+			a <code>\(&hellip;)</code> interpolation &mdash; SQL with holes in it
+			isn&rsquo;t SQL squill can parse &mdash; or a backslash escape. Raw
+			strings (<code>#"""</code>) aren&rsquo;t taken either.
 		</p>
 		<p>
 			The SQL is indented the way the file is, so a project indented with four
@@ -32,9 +31,9 @@ import Recipe from "../../../components/Recipe.astro";
 		<p>
 			The built-in <code>swift</code> grammar&rsquo;s default query takes any
 			string passed as a <code>sql:</code> argument &mdash;{" "}
-			<code>db.execute(sql:)</code>, <code>Row.fetchAll(db, sql:)</code>,
-			and the rest of GRDB&rsquo;s API &mdash; and reads it as SQLite,
-			whatever the configured dialect. No query file needed:
+			<code>db.execute(sql:)</code>, <code>Row.fetchAll(db, sql:)</code>, and
+			the rest of GRDB&rsquo;s API &mdash; and reads it as SQLite, whatever the
+			configured dialect. No query file needed:
 		</p>
 		<Recipe name="swift-grdb" lang="swift" />
 		<p>
@@ -46,10 +45,9 @@ import Recipe from "../../../components/Recipe.astro";
 	<section>
 		<h2>SQLite.swift</h2>
 		<p>
-			The default query also takes the first argument of{" "}
-			<code>run</code>, <code>execute</code>, <code>prepare</code>, and{" "}
-			<code>scalar</code>, in the configured dialect &mdash; so set the rule
-			to SQLite:
+			The default query also takes the first argument of <code>run</code>,{" "}
+			<code>execute</code>, <code>prepare</code>, and <code>scalar</code>, in
+			the configured dialect &mdash; so set the rule to SQLite:
 		</p>
 		<Recipe name="swift-sqlite" lang="swift" />
 	</section>
@@ -57,11 +55,11 @@ import Recipe from "../../../components/Recipe.astro";
 	<section>
 		<h2>PostgresNIO and SQLKit</h2>
 		<p>
-			PostgresNIO&rsquo;s <code>query</code> and SQLKit&rsquo;s{" "}
-			<code>raw</code> take their SQL first, too. Both bind values through
-			string interpolation (<code>\(id)</code>), and a string with an
-			interpolation is never touched, so squill formats the queries that
-			take no values and leaves the rest as written:
+			PostgresNIO&rsquo;s <code>query</code> and SQLKit&rsquo;s <code>raw</code>{" "}
+			take their SQL first, too. Both bind values through string interpolation (
+			<code>\(id)</code>), and a string with an interpolation is never touched,
+			so squill formats the queries that take no values and leaves the rest as
+			written:
 		</p>
 		<Recipe name="swift-postgresnio" lang="swift" />
 	</section>

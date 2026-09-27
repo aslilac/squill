@@ -13,19 +13,19 @@ import Recipe from "../../../components/Recipe.astro";
 		<p>
 			Text blocks (<code>"""</code>, Java 15 and later). Java strips a text
 			block&rsquo;s common indentation, so squill can lay the query out one
-			clause per line without changing what the database sees beyond
-			whitespace. Plain strings, and queries built up with <code>+</code>,
-			are left exactly as written &mdash; to have squill format a query,
-			write it as a text block. A text block holding an escape
-			(<code>\n</code>, <code>\"</code>) is reported rather than rewritten.
+			clause per line without changing what the database sees beyond whitespace.
+			Plain strings, and queries built up with <code>+</code>, are left exactly
+			as written &mdash; to have squill format a query, write it as a text
+			block. A text block holding an escape (<code>\n</code>, <code>\"</code>)
+			is reported rather than rewritten.
 		</p>
 		<p>
-			The built-in <code>java</code> grammar&rsquo;s default query finds a
-			text block passed straight to a JDBC, JPA, or <code>JdbcTemplate</code>{" "}
-			method. One assigned to a variable or a constant first is out of its
-			sight. Set <code>question-params = true</code> in the rule, as below,
-			so JDBC&rsquo;s <code>?</code> placeholders parse as parameters rather
-			than Postgres operators.
+			The built-in <code>java</code> grammar&rsquo;s default query finds a text
+			block passed straight to a JDBC, JPA, or <code>JdbcTemplate</code> method.
+			One assigned to a variable or a constant first is out of its sight. Set{" "}
+			<code>question-params = true</code> in the rule, as below, so JDBC&rsquo;s{" "}
+			<code>?</code> placeholders parse as parameters rather than Postgres
+			operators.
 		</p>
 	</section>
 
@@ -42,17 +42,16 @@ import Recipe from "../../../components/Recipe.astro";
 	<section>
 		<h2>Spring JdbcTemplate</h2>
 		<p>
-			<code>query</code>, <code>queryForObject</code>,{" "}
-			<code>queryForList</code>, <code>update</code>,{" "}
-			<code>batchUpdate</code>, and the rest of the family. The single-line
-			string at the end stays as written:
+			<code>query</code>, <code>queryForObject</code>, <code>queryForList</code>
+			, <code>update</code>, <code>batchUpdate</code>, and the rest of the
+			family. The single-line string at the end stays as written:
 		</p>
 		<Recipe name="java-spring" lang="java" />
 		<p>
 			Named parameters (<code>:customerId</code>, as{" "}
 			<code>NamedParameterJdbcTemplate</code> and JPA use them) need{" "}
-			<code>colon-params</code> as well. JPA&rsquo;s numbered{" "}
-			<code>?1</code> is covered by <code>question-params</code>.
+			<code>colon-params</code> as well. JPA&rsquo;s numbered <code>?1</code> is
+			covered by <code>question-params</code>.
 		</p>
 	</section>
 </Docs>

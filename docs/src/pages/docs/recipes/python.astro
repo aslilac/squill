@@ -13,16 +13,15 @@ import Recipe from "../../../components/Recipe.astro";
 		<p>
 			Triple-quoted strings (<code>"""&hellip;"""</code>) take newlines as
 			written, so squill lays the query out one clause per line. A string in
-			single quotes, <code>"&hellip;"</code> or <code>'&hellip;'</code>, is
-			left exactly as written &mdash; to have squill format a short query,
+			single quotes, <code>"&hellip;"</code> or <code>'&hellip;'</code>, is left
+			exactly as written &mdash; to have squill format a short query,
 			triple-quote it. f-strings are never touched: SQL with a{" "}
 			<code>&lbrace;hole&rbrace;</code> in it isn&rsquo;t SQL squill can parse.
 		</p>
 		<p>
-			Set <code>pyformat-params = true</code> in the rule when your driver
-			uses the DB-API&rsquo;s <code>%s</code> and <code>%(name)s</code>{" "}
-			placeholders, as psycopg does, so they read as parameters rather than
-			modulo.
+			Set <code>pyformat-params = true</code> in the rule when your driver uses
+			the DB-API&rsquo;s <code>%s</code> and <code>%(name)s</code> placeholders,
+			as psycopg does, so they read as parameters rather than modulo.
 		</p>
 	</section>
 
@@ -30,10 +29,9 @@ import Recipe from "../../../components/Recipe.astro";
 		<h2>psycopg</h2>
 		<p>
 			The built-in <code>python</code> grammar&rsquo;s default query finds the
-			first string argument of <code>execute</code>,{" "}
-			<code>executemany</code>, and <code>executescript</code> on any object,
-			which covers psycopg 2 and 3 cursors and connections. No query file
-			needed:
+			first string argument of <code>execute</code>, <code>executemany</code>,
+			and <code>executescript</code> on any object, which covers psycopg 2 and 3
+			cursors and connections. No query file needed:
 		</p>
 		<Recipe name="python-psycopg" lang="python" />
 	</section>
@@ -41,8 +39,8 @@ import Recipe from "../../../components/Recipe.astro";
 	<section>
 		<h2>sqlite3</h2>
 		<p>
-			The same methods, with the dialect set to SQLite, which is also what
-			makes its <code>?</code> and <code>:name</code> placeholders parse:
+			The same methods, with the dialect set to SQLite, which is also what makes
+			its <code>?</code> and <code>:name</code> placeholders parse:
 		</p>
 		<Recipe name="python-sqlite3" lang="python" />
 	</section>
@@ -51,8 +49,8 @@ import Recipe from "../../../components/Recipe.astro";
 		<h2>asyncpg</h2>
 		<p>
 			The default query also knows asyncpg&rsquo;s <code>fetch</code>,{" "}
-			<code>fetchrow</code>, and <code>fetchval</code>, and its{" "}
-			<code>$1</code> placeholders are Postgres&rsquo;s own:
+			<code>fetchrow</code>, and <code>fetchval</code>, and its <code>$1</code>{" "}
+			placeholders are Postgres&rsquo;s own:
 		</p>
 		<Recipe name="python-asyncpg" lang="python" />
 	</section>
@@ -60,14 +58,14 @@ import Recipe from "../../../components/Recipe.astro";
 	<section>
 		<h2>SQLAlchemy</h2>
 		<p>
-			The default query finds a string passed to <code>text()</code>, called
-			by that name (not as <code>sqlalchemy.text()</code>).
+			The default query finds a string passed to <code>text()</code>, called by
+			that name (not as <code>sqlalchemy.text()</code>).
 		</p>
 		<Recipe name="python-sqlalchemy" lang="python" />
 		<p>
 			<code>text()</code> spells every parameter <code>:name</code>, which
-			Postgres would read as a stray colon; <code>colon-params</code> makes
-			them parameters. SQLite reads <code>:name</code> natively, so with{" "}
+			Postgres would read as a stray colon; <code>colon-params</code> makes them
+			parameters. SQLite reads <code>:name</code> natively, so with{" "}
 			<code>dialect = "sqlite"</code> you don&rsquo;t need it.
 		</p>
 	</section>
@@ -76,16 +74,15 @@ import Recipe from "../../../components/Recipe.astro";
 		<h2>Django</h2>
 		<p>
 			<code>cursor.execute</code> is covered already, but{" "}
-			<code>Manager.raw()</code> isn&rsquo;t. A rule&rsquo;s{" "}
-			<code>query</code> replaces the default rather than adding to it, so
-			this one keeps the <code>execute</code> family alongside{" "}
-			<code>raw</code>:
+			<code>Manager.raw()</code> isn&rsquo;t. A rule&rsquo;s <code>query</code>{" "}
+			replaces the default rather than adding to it, so this one keeps the{" "}
+			<code>execute</code> family alongside <code>raw</code>:
 		</p>
 		<Recipe name="python-django" lang="python" />
 		<p>
 			Migrations write SQL through <code>migrations.RunSQL</code>: add{" "}
-			<code>"RunSQL"</code> to the method names to format its first argument.
-			A keyword argument like <code>reverse_sql=</code> isn&rsquo;t the first
+			<code>"RunSQL"</code> to the method names to format its first argument. A
+			keyword argument like <code>reverse_sql=</code> isn&rsquo;t the first
 			positional string, so it takes a pattern of its own.
 		</p>
 	</section>

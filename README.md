@@ -25,7 +25,7 @@ nix shell github:aslilac/squill
 
 ### Compile from source
 
-Cargo can clone the source, checkout the latest release tag, and install the binary in a single command. 
+Cargo can clone the source, checkout the latest release tag, and install the binary in a single command.
 
 ```sh
 cargo install --git https://github.com/aslilac/squill.git --tag v0.4.0 cli --bin squill
@@ -73,7 +73,7 @@ When recursing directories, squill honors `.gitignore` and skips hidden files; t
 
 ### Frozen paths
 
-Some files can't be rewritten after they ship, even into an identical-meaning form. sqlx records a checksum of every migration and refuses to run when one changes — but a *new* migration should still be formatted, and ignoring the whole directory gives that up.
+Some files can't be rewritten after they ship, even into an identical-meaning form. sqlx records a checksum of every migration and refuses to run when one changes — but a _new_ migration should still be formatted, and ignoring the whole directory gives that up.
 
 `frozen` marks paths that squill formats only while they are new:
 
@@ -89,7 +89,7 @@ The baseline is read with one `git ls-tree` per repository, and only the ref's t
 
 Every baseline comes from the remote, never from a guess about which branch is which. In order: `frozen-ref` if you set one; then `refs/remotes/<remote>/HEAD`, which `git clone` records; then a `--depth=1` fetch of the remote's HEAD. Whatever your default branch is called, it just works.
 
-That last step is why CI works unchanged. A `pull_request` checkout has no base-branch ref at all, and a push build of a topic branch has exactly one remote-tracking ref which is the *topic* branch — taking it as the baseline would freeze migrations that never shipped. Only the remote can tell those apart.
+That last step is why CI works unchanged. A `pull_request` checkout has no base-branch ref at all, and a push build of a topic branch has exactly one remote-tracking ref which is the _topic_ branch — taking it as the baseline would freeze migrations that never shipped. Only the remote can tell those apart.
 
 `--no-frozen-fetch` (or `frozen-fetch = false`) keeps squill off the network, for an offline or air-gapped build. A normal clone still works, because `git clone` already recorded the remote's HEAD. When nothing authoritative is available, squill stops and asks for `frozen-ref` rather than inferring one.
 

@@ -11,19 +11,26 @@ import Docs from "../../layouts/Docs.astro";
 	<section id="built-ins">
 		<h2>What gets formatted</h2>
 		<p>
-			An <a href="docs/configuration/#rules"><code>[[embedded]]</code> rule</a>{" "}
+			An{" "}
+			<a href="docs/configuration/#rules">
+				<code>[[embedded]]</code> rule
+			</a>{" "}
 			tells squill which files hold SQL: it parses them with a tree-sitter
 			grammar, runs an extraction query over the tree to find the strings
 			holding SQL, and reformats those in place. The rest of the file is
 			untouched &mdash; squill never reprints host code, only the string
 			contents it was pointed at.
 		</p>
-		<Code lang="toml" file="squill.toml" code={`[[embedded]]
+		<Code
+			lang="toml"
+			file="squill.toml"
+			code={`[[embedded]]
 include = ["**/*.rs"]
-grammar = "rust"`} />
+grammar = "rust"`}
+		/>
 		<p>
-			Built-in grammars, and what their default queries find. In a rule, each
-			is named in lowercase: <code>rust</code>, <code>go</code>,{" "}
+			Built-in grammars, and what their default queries find. In a rule, each is
+			named in lowercase: <code>rust</code>, <code>go</code>,{" "}
 			<code>python</code>, <code>javascript</code>, <code>typescript</code>,{" "}
 			<code>tsx</code>, <code>gleam</code>, <code>cpp</code>,{" "}
 			<code>csharp</code>, <code>java</code>, <code>kotlin</code>, and{" "}
@@ -33,12 +40,11 @@ grammar = "rust"`} />
 			<li>
 				<img src="langs/rust.svg" alt="" />
 				Rust: sqlx&rsquo;s <code class="boxed">query!</code>,{" "}
-				<code class="boxed">query_as!</code>, <code class="boxed"
-					>query_scalar!</code
-				>, <code class="boxed">query_unchecked!</code> macros and{" "}
-				<code class="boxed">query</code>/<code class="boxed">query_as</code>/<code
-					class="boxed">query_scalar</code
-				> functions
+				<code class="boxed">query_as!</code>,{" "}
+				<code class="boxed">query_scalar!</code>,{" "}
+				<code class="boxed">query_unchecked!</code> macros and{" "}
+				<code class="boxed">query</code>/<code class="boxed">query_as</code>/
+				<code class="boxed">query_scalar</code> functions
 			</li>
 			<li>
 				<img src="langs/go.svg" alt="" />
@@ -48,17 +54,16 @@ grammar = "rust"`} />
 			</li>
 			<li>
 				<img src="langs/python.svg" alt="" />
-				Python: <code class="boxed">execute</code>-family methods
-				and SQLAlchemy&rsquo;s <code class="boxed">text(...)</code>, with{" "}
+				Python: <code class="boxed">execute</code>-family methods and
+				SQLAlchemy&rsquo;s <code class="boxed">text(...)</code>, with{" "}
 				<code>%s</code> / <code>%(name)s</code> params preserved under{" "}
 				<code>pyformat-params</code>
 			</li>
 			<li>
 				<img src="langs/typescript.svg" alt="" />
-				JavaScript, TypeScript, and TSX:{" "}
-				<code class="boxed">.query</code>/<code class="boxed">.execute</code>/<code
-					class="boxed">.prepare</code
-				> calls and <code class="boxed">sql`&hellip;`</code> tagged templates
+				JavaScript, TypeScript, and TSX: <code class="boxed">.query</code>/
+				<code class="boxed">.execute</code>/<code class="boxed">.prepare</code>{" "}
+				calls and <code class="boxed">sql`&hellip;`</code> tagged templates
 			</li>
 			<li>
 				<img src="langs/gleam.svg" alt="" />
@@ -67,26 +72,25 @@ grammar = "rust"`} />
 			</li>
 			<li>
 				<img src="langs/cpp.svg" alt="" />
-				C++: raw strings passed to <code class="boxed"
-					>sqlite3_prepare*</code
-				>/<code class="boxed">sqlite3_exec</code> (as SQLite), libpq&rsquo;s{" "}
-				<code class="boxed">PQexec</code>-family (as Postgres), and libpqxx-style{" "}
-				<code class="boxed">exec</code>/<code class="boxed">query</code> methods
+				C++: raw strings passed to <code class="boxed">sqlite3_prepare*</code>/
+				<code class="boxed">sqlite3_exec</code> (as SQLite), libpq&rsquo;s{" "}
+				<code class="boxed">PQexec</code>-family (as Postgres), and
+				libpqxx-style <code class="boxed">exec</code>/
+				<code class="boxed">query</code> methods
 			</li>
 			<li>
 				<img src="langs/csharp.svg" alt="" />
 				C#: raw strings passed to EF Core&rsquo;s{" "}
 				<code class="boxed">migrationBuilder.Sql</code> and raw-SQL methods,
 				Dapper&rsquo;s query/execute family, or assigned to{" "}
-				<code class="boxed">CommandText</code>, with <code>@name</code>{" "}
-				params preserved under <code>at-params</code>
+				<code class="boxed">CommandText</code>, with <code>@name</code> params
+				preserved under <code>at-params</code>
 			</li>
 			<li>
 				<img src="langs/java.svg" alt="" />
 				Java: text blocks passed to JDBC, JPA, or Spring{" "}
 				<code class="boxed">JdbcTemplate</code> calls, with JDBC&rsquo;s{" "}
-				<code>?</code> placeholders preserved under{" "}
-				<code>question-params</code>
+				<code>?</code> placeholders preserved under <code>question-params</code>
 			</li>
 			<li>
 				<img src="langs/kotlin.svg" alt="" />
@@ -99,22 +103,22 @@ grammar = "rust"`} />
 				<img src="langs/swift.svg" alt="" />
 				Swift: <code>"""</code> strings passed to GRDB as its{" "}
 				<code class="boxed">sql:</code> argument (as SQLite), or first to
-				SQLite.swift&rsquo;s <code class="boxed">run</code>/<code
-					class="boxed">execute</code
-				>/<code class="boxed">prepare</code>/<code class="boxed">scalar</code
-				>, PostgresNIO&rsquo;s <code class="boxed">query</code>, or
-				SQLKit&rsquo;s <code class="boxed">raw</code>
+				SQLite.swift&rsquo;s <code class="boxed">run</code>/
+				<code class="boxed">execute</code>/<code class="boxed">prepare</code>/
+				<code class="boxed">scalar</code>, PostgresNIO&rsquo;s{" "}
+				<code class="boxed">query</code>, or SQLKit&rsquo;s{" "}
+				<code class="boxed">raw</code>
 			</li>
 		</ul>
 		<p>
-			The <a href="docs/recipes/rust/">recipes</a> show each of these at
-			work, library by library, along with queries for the libraries the
-			defaults don&rsquo;t cover.
+			The <a href="docs/recipes/rust/">recipes</a> show each of these at work,
+			library by library, along with queries for the libraries the defaults
+			don&rsquo;t cover.
 		</p>
 		<p>
-			A file named explicitly on the command line that no rule covers formats
-			as plain SQL &mdash; unless it is in a language squill has a grammar for,
-			in which case squill stops and shows the rule to add.
+			A file named explicitly on the command line that no rule covers formats as
+			plain SQL &mdash; unless it is in a language squill has a grammar for, in
+			which case squill stops and shows the rule to add.
 		</p>
 	</section>
 
@@ -124,11 +128,10 @@ grammar = "rust"`} />
 			Only <em>multiline string syntaxes</em> are rewritten: Rust raw strings,
 			Go backticks, Python triple quotes, JS template literals, Gleam strings,
 			C++ and C# raw strings, Java text blocks, Kotlin raw strings, and Swift
-			multi-line strings. Those
-			already support a vertical layout, so squill puts the quotes on their own
-			lines and formats one clause per line &mdash; a raw string written on
-			one line (<code>R"(&hellip;)"</code>, <code>"""&hellip;"""</code>)
-			included.
+			multi-line strings. Those already support a vertical layout, so squill
+			puts the quotes on their own lines and formats one clause per line &mdash;
+			a raw string written on one line (<code>R"(&hellip;)"</code>,{" "}
+			<code>"""&hellip;"""</code>) included.
 		</p>
 		<p>
 			A plain Rust or Go string joins them once it already spans lines &mdash;
@@ -142,20 +145,19 @@ grammar = "rust"`} />
 				Strings with interpolation holes are never touched &mdash; Python
 				f-strings, <code>$&lbrace;&hellip;&rbrace;</code> in JS templates,
 				C#&rsquo;s <code>$"""</code>, Kotlin&rsquo;s <code>$name</code>{" "}
-				templates, and Swift&rsquo;s <code>\(&hellip;)</code>. SQL with a hole in it is not SQL squill can parse, so it
-				leaves it exactly as written.
+				templates, and Swift&rsquo;s <code>\(&hellip;)</code>. SQL with a hole
+				in it is not SQL squill can parse, so it leaves it exactly as written.
 			</p>
 		</div>
 		<h3>Safety</h3>
 		<p>
-			Every rewritten string passes the same safety check as a{" "}
-			<code>.sql</code> file, and then the host file is parsed again: an edit
-			that would add a syntax error, or whose string no longer reads back
-			through the query exactly as written, is dropped. A string squill
-			declines to rewrite &mdash; SQL that doesn&rsquo;t parse, an escape it
-			can&rsquo;t decode, a result the string can&rsquo;t hold &mdash; is
-			reported as a diagnostic with its line and column, and fails the run
-			under <code>--strict</code>.
+			Every rewritten string passes the same safety check as a <code>.sql</code>{" "}
+			file, and then the host file is parsed again: an edit that would add a
+			syntax error, or whose string no longer reads back through the query
+			exactly as written, is dropped. A string squill declines to rewrite
+			&mdash; SQL that doesn&rsquo;t parse, an escape it can&rsquo;t decode, a
+			result the string can&rsquo;t hold &mdash; is reported as a diagnostic
+			with its line and column, and fails the run under <code>--strict</code>.
 		</p>
 	</section>
 
@@ -164,42 +166,52 @@ grammar = "rust"`} />
 		<p>
 			A rule&rsquo;s <code>query</code> replaces its grammar&rsquo;s default
 			with a{" "}
-			<a
-				href="https://tree-sitter.github.io/tree-sitter/using-parsers/queries/1-syntax.html"
-				>tree-sitter query</a
-			>{" "}
-			file, found relative to the config. A capture
-			named <code>@sql</code> marks a string whose contents are SQL in the
-			configured dialect.
+			<a href="https://tree-sitter.github.io/tree-sitter/using-parsers/queries/1-syntax.html">
+				tree-sitter query
+			</a>{" "}
+			file, found relative to the config. A capture named <code>@sql</code>{" "}
+			marks a string whose contents are SQL in the configured dialect.
 		</p>
 		<p id="dialects">
-			A capture can name the dialect instead: <code>@sql.postgres</code>{" "}
-			or <code>@sql.sqlite</code> reads that string in that dialect,
-			whatever <code>dialect</code> says. It&rsquo;s for calls into a
-			library that only speaks one &mdash; the built-in queries read
-			sqlight&rsquo;s, GRDB&rsquo;s, and SQLite&rsquo;s C API&rsquo;s
-			strings as SQLite, and libpq&rsquo;s as Postgres, so a project whose{" "}
-			<code>dialect</code> is set for its other SQL still gets them right.{" "}
-			<a href="docs/cli/#locate"><code>squill locate</code></a> marks each
-			string whose dialect came from the query, and a warning about one
-			names the dialect it was read in. Any other <code>@sql.</code>{" "}
-			suffix is an error.
+			A capture can name the dialect instead: <code>@sql.postgres</code> or{" "}
+			<code>@sql.sqlite</code> reads that string in that dialect, whatever{" "}
+			<code>dialect</code> says. It&rsquo;s for calls into a library that only
+			speaks one &mdash; the built-in queries read sqlight&rsquo;s,
+			GRDB&rsquo;s, and SQLite&rsquo;s C API&rsquo;s strings as SQLite, and
+			libpq&rsquo;s as Postgres, so a project whose <code>dialect</code> is set
+			for its other SQL still gets them right.{" "}
+			<a href="docs/cli/#locate">
+				<code>squill locate</code>
+			</a>{" "}
+			marks each string whose dialect came from the query, and a warning about
+			one names the dialect it was read in. Any other <code>@sql.</code> suffix
+			is an error.
 		</p>
-		<Code lang="toml" file="squill.toml" code={`[[embedded]]
+		<Code
+			lang="toml"
+			file="squill.toml"
+			code={`[[embedded]]
 include = ["**/*.rs"]
 grammar = "rust"
-query = ".config/squill/rust.scm"`} />
-		<Code lang="query" file=".config/squill/rust.scm" code={`((macro_invocation
+query = ".config/squill/rust.scm"`}
+		/>
+		<Code
+			lang="query"
+			file=".config/squill/rust.scm"
+			code={`((macro_invocation
    macro: (identifier) @_name
    (token_tree (raw_string_literal) @sql))
- (#eq? @_name "my_sql"))`} />
+ (#eq? @_name "my_sql"))`}
+		/>
 		<p>
 			Captures whose names start with <code>_</code> are the usual tree-sitter
 			convention for "match this, but it isn't the thing I want" &mdash; squill
 			only rewrites <code>@sql</code> captures.{" "}
-			<a href="docs/cli/#locate"><code>squill locate</code></a> lists what a
-			query captures, file by file, so you can check it before formatting
-			anything.
+			<a href="docs/cli/#locate">
+				<code>squill locate</code>
+			</a>{" "}
+			lists what a query captures, file by file, so you can check it before
+			formatting anything.
 		</p>
 		<h3>Learning the query language</h3>
 		<p>
@@ -209,55 +221,57 @@ query = ".config/squill/rust.scm"`} />
 		<ol>
 			<li>
 				Paste some code into the{" "}
-				<a href="https://tree-sitter.github.io/tree-sitter/7-playground.html"
-					>tree-sitter playground</a
-				>{" "}
-				to see its node and field names, and try a query live. For a grammar
-				the playground doesn&rsquo;t have,{" "}
-				<code class="boxed">tree-sitter parse file.ext</code> prints the same tree.
+				<a href="https://tree-sitter.github.io/tree-sitter/7-playground.html">
+					tree-sitter playground
+				</a>{" "}
+				to see its node and field names, and try a query live. For a grammar the
+				playground doesn&rsquo;t have,{" "}
+				<code class="boxed">tree-sitter parse file.ext</code> prints the same
+				tree.
 			</li>
 			<li>
 				Write the pattern: tree-sitter&rsquo;s docs cover the{" "}
-				<a
-					href="https://tree-sitter.github.io/tree-sitter/using-parsers/queries/1-syntax.html"
-					>syntax</a
-				>{" "}
+				<a href="https://tree-sitter.github.io/tree-sitter/using-parsers/queries/1-syntax.html">
+					syntax
+				</a>{" "}
 				(nodes, fields, captures) and the{" "}
-				<a
-					href="https://tree-sitter.github.io/tree-sitter/using-parsers/queries/2-operators.html"
-					>operators</a
-				>{" "}
-				&mdash; alternations like <code class="boxed">[(string) (raw_string)]</code>, and
-				the <code class="boxed">.</code> anchor, which the default queries use to take
-				only a call&rsquo;s first argument.
+				<a href="https://tree-sitter.github.io/tree-sitter/using-parsers/queries/2-operators.html">
+					operators
+				</a>{" "}
+				&mdash; alternations like{" "}
+				<code class="boxed">[(string) (raw_string)]</code>, and the{" "}
+				<code class="boxed">.</code> anchor, which the default queries use to
+				take only a call&rsquo;s first argument.
 			</li>
 			<li>
 				Filter with{" "}
-				<a
-					href="https://tree-sitter.github.io/tree-sitter/using-parsers/queries/3-predicates-and-directives.html"
-					>predicates</a
-				>, within the three squill supports (below).
+				<a href="https://tree-sitter.github.io/tree-sitter/using-parsers/queries/3-predicates-and-directives.html">
+					predicates
+				</a>
+				, within the three squill supports (below).
 			</li>
 			<li>
 				Check it with{" "}
-				<a href="docs/cli/#locate"><code class="boxed">squill locate</code></a>. The{" "}
-				<a href="docs/recipes/rust/">recipes</a> are worked examples, and
+				<a href="docs/cli/#locate">
+					<code class="boxed">squill locate</code>
+				</a>
+				. The <a href="docs/recipes/rust/">recipes</a> are worked examples, and
 				the default queries are{" "}
-				<a
-					href="https://github.com/aslilac/squill/blob/trunk/crates/embed/src/lib.rs"
-					>in squill&rsquo;s source</a
-				>.
+				<a href="https://github.com/aslilac/squill/blob/trunk/crates/embed/src/lib.rs">
+					in squill&rsquo;s source
+				</a>
+				.
 			</li>
 		</ol>
 		<h3 id="properties">What a string allows</h3>
 		<p>
-			For most grammars &mdash; C++, C#, Java, Kotlin, Swift, and every
-			grammar you bring &mdash; squill captures a string&rsquo;s text as
-			written, and knows nothing about its syntax. Unless the query says
-			otherwise, it assumes the worst: a string is formatted only when it
-			already spans lines (proof the syntax takes line breaks), and never
-			when it holds a backslash (which might be an escape). A pattern can
-			promise more with tree-sitter&rsquo;s <code>#set!</code>:
+			For most grammars &mdash; C++, C#, Java, Kotlin, Swift, and every grammar
+			you bring &mdash; squill captures a string&rsquo;s text as written, and
+			knows nothing about its syntax. Unless the query says otherwise, it
+			assumes the worst: a string is formatted only when it already spans lines
+			(proof the syntax takes line breaks), and never when it holds a backslash
+			(which might be an escape). A pattern can promise more with
+			tree-sitter&rsquo;s <code>#set!</code>:
 		</p>
 		<ul>
 			<li>
@@ -267,42 +281,45 @@ query = ".config/squill/rust.scm"`} />
 				Elixir&rsquo;s <code>~S</code>.
 			</li>
 			<li>
-				<code>(#set! squill.multiline)</code>: the string takes raw line
-				breaks, so one written on a single line can be given the
-				multi-line layout. Promise it for a syntax meant for it, like
-				Lua&rsquo;s long strings, and not for a language&rsquo;s everyday
-				string, or every short query becomes three lines.
+				<code>(#set! squill.multiline)</code>: the string takes raw line breaks,
+				so one written on a single line can be given the multi-line layout.
+				Promise it for a syntax meant for it, like Lua&rsquo;s long strings, and
+				not for a language&rsquo;s everyday string, or every short query becomes
+				three lines.
 			</li>
 		</ul>
-		<Code lang="query" file=".config/squill/lua.scm" code={`((function_call
+		<Code
+			lang="query"
+			file=".config/squill/lua.scm"
+			code={`((function_call
    name: (method_index_expression method: (identifier) @_m)
    arguments: (arguments . (string start: _ @_open content: (string_content) @sql)))
  (#eq? @_m "exec")
  (#any-of? @_open "[[" "[=[" "[==[")
  (#set! squill.raw)
- (#set! squill.multiline))`} />
+ (#set! squill.multiline))`}
+		/>
 		<p>
 			The built-in queries make their promises the same way; see them{" "}
-			<a
-				href="https://github.com/aslilac/squill/blob/trunk/crates/embed/src/lib.rs"
-				>in squill&rsquo;s source</a
-			>. squill checks what it can. Under <code>squill.raw</code>, formatting
-			must leave whatever follows each backslash exactly as it was, so a
-			line continuation can&rsquo;t be moved. A false{" "}
-			<code>squill.multiline</code> is caught by the re-parse only when the
-			grammar rejects a line break in the string, and not every grammar
-			does: Java&rsquo;s, Kotlin&rsquo;s, and Swift&rsquo;s accept one in
-			a <code>"&hellip;"</code> string that the compiler wouldn&rsquo;t. Make
-			that promise only for strings that keep it.
+			<a href="https://github.com/aslilac/squill/blob/trunk/crates/embed/src/lib.rs">
+				in squill&rsquo;s source
+			</a>
+			. squill checks what it can. Under <code>squill.raw</code>, formatting
+			must leave whatever follows each backslash exactly as it was, so a line
+			continuation can&rsquo;t be moved. A false <code>squill.multiline</code>{" "}
+			is caught by the re-parse only when the grammar rejects a line break in
+			the string, and not every grammar does: Java&rsquo;s, Kotlin&rsquo;s, and
+			Swift&rsquo;s accept one in a <code>"&hellip;"</code> string that the
+			compiler wouldn&rsquo;t. Make that promise only for strings that keep it.
 		</p>
 		<h3>Supported predicates</h3>
 		<p>
 			<code>#eq?</code>, <code>#not-eq?</code>, and <code>#any-of?</code>{" "}
 			&mdash; three of the{" "}
-			<a
-				href="https://tree-sitter.github.io/tree-sitter/using-parsers/queries/3-predicates-and-directives.html"
-				>predicates tree-sitter defines</a
-			>. Regex predicates (<code>#match?</code>, <code>#not-match?</code>) are
+			<a href="https://tree-sitter.github.io/tree-sitter/using-parsers/queries/3-predicates-and-directives.html">
+				predicates tree-sitter defines
+			</a>
+			. Regex predicates (<code>#match?</code>, <code>#not-match?</code>) are
 			rejected up front, and so is any other custom predicate: a predicate the
 			engine does not evaluate would silently widen your query to match things
 			you never intended, so squill refuses the query instead of quietly
@@ -314,58 +331,70 @@ query = ".config/squill/rust.scm"`} />
 		<h2>Bringing your own grammar</h2>
 		<p>
 			Any language with a tree-sitter grammar works: build it to wasm with{" "}
-			<code>tree-sitter build --wasm</code> (many grammars publish one with
-			each release) and point a rule at the file. The language name comes from
-			the file name, the way that command writes it:{" "}
-			<code>tree-sitter-lua.wasm</code> holds <code>lua</code>. A loaded
-			grammar has no default query, so the rule needs one.
+			<code>tree-sitter build --wasm</code> (many grammars publish one with each
+			release) and point a rule at the file. The language name comes from the
+			file name, the way that command writes it:{" "}
+			<code>tree-sitter-lua.wasm</code> holds <code>lua</code>. A loaded grammar
+			has no default query, so the rule needs one.
 		</p>
-		<Code lang="toml" file="squill.toml" code={`[[embedded]]
+		<Code
+			lang="toml"
+			file="squill.toml"
+			code={`[[embedded]]
 include = ["**/*.lua"]
 grammar = ".config/squill/tree-sitter-lua.wasm"
 query = ".config/squill/lua.scm"
-dialect = "sqlite"`} />
-		<Code lang="query" file=".config/squill/lua.scm" code={`((function_call
+dialect = "sqlite"`}
+		/>
+		<Code
+			lang="query"
+			file=".config/squill/lua.scm"
+			code={`((function_call
    name: (method_index_expression method: (identifier) @_m)
    arguments: (arguments . (string) @sql))
- (#eq? @_m "exec"))`} />
+ (#eq? @_m "exec"))`}
+		/>
 		<p>
 			Capture either the string&rsquo;s content node or the whole literal
-			(squill takes the text between its opening and closing delimiter
-			tokens). squill knows nothing about a loaded grammar&rsquo;s string
-			syntax until the query <a href="docs/embedded/#properties">says what
-			its strings allow</a>.
+			(squill takes the text between its opening and closing delimiter tokens).
+			squill knows nothing about a loaded grammar&rsquo;s string syntax until
+			the query{" "}
+			<a href="docs/embedded/#properties">says what its strings allow</a>.
 		</p>
 		<h3 id="urls">From a URL</h3>
 		<p>
 			A grammar can also come straight from where it&rsquo;s published, as an{" "}
 			<code>https</code> URL naming the <code>.wasm</code> file:
 		</p>
-		<Code lang="toml" file="squill.toml" code={`[[embedded]]
+		<Code
+			lang="toml"
+			file="squill.toml"
+			code={`[[embedded]]
 include = ["**/*.lua"]
 grammar = "https://github.com/tree-sitter-grammars/tree-sitter-lua/releases/download/v0.5.0/tree-sitter-lua.wasm"
-query = ".config/squill/lua.scm"`} />
+query = ".config/squill/lua.scm"`}
+		/>
 		<p>
-			The first time squill downloads it, it records the grammar&rsquo;s
-			SHA-256 in a <code>squill.lock</code> beside the config; commit that
-			file. Every later download must match it, or squill stops and shows
-			both hashes. Downloads are cached by hash in your user cache directory
-			(<code>$XDG_CACHE_HOME/squill</code>, or the platform&rsquo;s own), so
-			a locked grammar that&rsquo;s already cached never touches the network.
-			In CI, <code>squill fmt --locked</code> refuses to record anything new:
-			a grammar URL missing from <code>squill.lock</code> is an error instead
-			of a download trusted on sight.
+			The first time squill downloads it, it records the grammar&rsquo;s SHA-256
+			in a <code>squill.lock</code> beside the config; commit that file. Every
+			later download must match it, or squill stops and shows both hashes.
+			Downloads are cached by hash in your user cache directory (
+			<code>$XDG_CACHE_HOME/squill</code>, or the platform&rsquo;s own), so a
+			locked grammar that&rsquo;s already cached never touches the network. In
+			CI, <code>squill fmt --locked</code> refuses to record anything new: a
+			grammar URL missing from <code>squill.lock</code> is an error instead of a
+			download trusted on sight.
 		</p>
 	</section>
 
 	<section id="indentation">
 		<h2>Indentation</h2>
 		<p>
-			Embedded SQL is anchored to the host statement&rsquo;s indentation,
-			and by default indents the way the file around it does: the same
-			character, so a spaces-indented file never gains tabs, and the same
-			step, so a file indented by four spaces gets four-space SQL. Set{" "}
-			<code>indent</code> or <code>indent-width</code> in the{" "}
+			Embedded SQL is anchored to the host statement&rsquo;s indentation, and by
+			default indents the way the file around it does: the same character, so a
+			spaces-indented file never gains tabs, and the same step, so a file
+			indented by four spaces gets four-space SQL. Set <code>indent</code> or{" "}
+			<code>indent-width</code> in the{" "}
 			<a href="docs/configuration/#rules">rule</a> (or at the top level) to
 			choose deliberately instead. Lines inside a SQL string that itself spans
 			lines are data, and are never re-indented. A closing delimiter at the
@@ -373,10 +402,10 @@ query = ".config/squill/lua.scm"`} />
 			heredoc&rsquo;s terminator only ends it at the start of a line.
 		</p>
 		<p>
-			<code>max-width</code> counts from the left edge of the file, not from
-			the anchor, so a query nested deep in a function breaks sooner than the
-			same query at the top level &mdash; though it always gets at least half
-			the width to itself.
+			<code>max-width</code> counts from the left edge of the file, not from the
+			anchor, so a query nested deep in a function breaks sooner than the same
+			query at the top level &mdash; though it always gets at least half the
+			width to itself.
 		</p>
 	</section>
 
@@ -384,9 +413,9 @@ query = ".config/squill/lua.scm"`} />
 		<h2>Semicolons</h2>
 		<p>
 			A query in host code usually goes without a final <code>;</code>, so
-			embedded SQL loses its last one, where a <code>.sql</code> file gains
-			one. Only the last: the <code>;</code> between statements in a
-			multi-statement string are what separate them. Set{" "}
+			embedded SQL loses its last one, where a <code>.sql</code> file gains one.
+			Only the last: the <code>;</code> between statements in a multi-statement
+			string are what separate them. Set{" "}
 			<code>trailing-semicolons = "always"</code> in the rule to keep them
 			instead.
 		</p>

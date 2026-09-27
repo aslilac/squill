@@ -79,7 +79,8 @@ const live = recipe && {
 	lang,
 	// What each style setting is when left alone, for its menu.
 	defaults: {
-		indent: recipe.options.indent ?? (recipe.host === "sql" ? "tabs" : "the file's"),
+		indent:
+			recipe.options.indent ?? (recipe.host === "sql" ? "tabs" : "the file's"),
 		indent_width:
 			recipe.options.indent_width ?? (recipe.host === "sql" ? 2 : "the file's"),
 		max_width: recipe.options.max_width ?? 80,
@@ -98,106 +99,113 @@ const settings = live && [
 	{ key: "indent_width", label: "indent-width", values: [2, 4, 8] },
 	{ key: "max_width", label: "max-width", values: [40, 60, 80, 100, 120] },
 	{ key: "keyword_case", label: "keyword-case", values: ["lower", "upper"] },
-	{ key: "quote_idents", label: "quote-idents", values: ["as-needed", "always"] },
-	{ key: "trailing_semicolons", label: "trailing-semicolons", values: ["always", "none"] },
+	{
+		key: "quote_idents",
+		label: "quote-idents",
+		values: ["as-needed", "always"],
+	},
+	{
+		key: "trailing_semicolons",
+		label: "trailing-semicolons",
+		values: ["always", "none"],
+	},
 ];
 ---
 
 <div class="recipe" data-live={live ? JSON.stringify(live) : undefined}>
 	<div class="pair stacked">
-		{
-			files.map(async (path) => (
-				<figure data-file={path}>
-					<figcaption>
-						<span class="filename">{path}</span>
-						<span class="caption-tools">
-							<span>{kind(path)}</span>
-							<CopyButton />
-						</span>
-					</figcaption>
-					<div set:html={await highlight(read(path), kind(path))} />
-				</figure>
-			))
-		}
+		{files.map(async (path) => (
+			<figure data-file={path}>
+				<figcaption>
+					<span class="filename">{path}</span>
+					<span class="caption-tools">
+						<span>{kind(path)}</span>
+						<CopyButton />
+					</span>
+				</figcaption>
+				<div set:html={await highlight(read(path), kind(path))} />
+			</figure>
+		))}
 	</div>
 	<div class="pair stacked" data-tabs data-current="after">
 		<figure>
 			<figcaption class="tabbar">
 				<span role="tablist">
-					{
-						panes.map(({ tab }) => (
-							<button
-								type="button"
-								role="tab"
-								data-tab={tab}
-								aria-selected={String(tab === "after")}
-							>
-								{tab}
-							</button>
-						))
-					}
+					{panes.map(({ tab }) => (
+						<button
+							type="button"
+							role="tab"
+							data-tab={tab}
+							aria-selected={String(tab === "after")}
+						>
+							{tab}
+						</button>
+					))}
 				</span>
 				<span class="tab-tools">
-					{
-						menu && (
-							<span class="recipe-menu">
-								<button
-									type="button"
-									class="recipe-gear"
-									popovertarget={`menu-${name}`}
-									title="View options"
-									aria-label="View options"
-									set:html={settingsIcon}
-								/>
-								<div class="recipe-popover" id={`menu-${name}`} popover>
-									{lang !== "sql" && (
-										<button
-											type="button"
-											class="sql-toggle"
-											role="switch"
-											aria-checked="true"
-										>
-											sql highlighting
-											<span class="switch" aria-hidden="true" />
+					{menu && (
+						<span class="recipe-menu">
+							<button
+								type="button"
+								class="recipe-gear"
+								popovertarget={`menu-${name}`}
+								title="View options"
+								aria-label="View options"
+								set:html={settingsIcon}
+							/>
+							<div class="recipe-popover" id={`menu-${name}`} popover>
+								{lang !== "sql" && (
+									<button
+										type="button"
+										class="sql-toggle"
+										role="switch"
+										aria-checked="true"
+									>
+										sql highlighting
+										<span class="switch" aria-hidden="true" />
+									</button>
+								)}
+								{live && (
+									<div class="live-options">
+										<p class="menu-heading">style options, for the after tab</p>
+										{settings.map(({ key, label, values }) => (
+											<label>
+												{label}
+												<select data-option={key}>
+													<option value="">{`default (${live.defaults[key]})`}</option>
+													{values
+														.filter((value) => value !== live.defaults[key])
+														.map((value) => (
+															<option value={String(value)}>
+																{String(value)}
+															</option>
+														))}
+												</select>
+											</label>
+										))}
+										<span class="live-status" aria-live="polite" />
+										<button type="button" class="live-reset">
+											reset
 										</button>
-									)}
-									{live && (
-										<div class="live-options">
-											<p class="menu-heading">style options, for the after tab</p>
-											{settings.map(({ key, label, values }) => (
-												<label>
-													{label}
-													<select data-option={key}>
-														<option value="">{`default (${live.defaults[key]})`}</option>
-														{values
-															.filter((value) => value !== live.defaults[key])
-															.map((value) => (
-																<option value={String(value)}>{String(value)}</option>
-															))}
-													</select>
-												</label>
-											))}
-											<span class="live-status" aria-live="polite" />
-											<button type="button" class="live-reset">
-												reset
-											</button>
-										</div>
-									)}
-								</div>
-							</span>
-						)
-					}
+									</div>
+								)}
+							</div>
+						</span>
+					)}
 					<span>{label(lang)}</span>
 				</span>
 			</figcaption>
-			{
-				panes.map(({ tab, sql, plain }) => (
-					<div role="tabpanel" data-panel={tab} hidden={tab !== "after"} data-pane={tab}>
-						<div class="sql-on" set:html={sql} />
-						<div class="sql-off" set:html={plain} />
-					</div>
-				))
-			}
+			{panes.map(({ tab, sql, plain }) => (
+				<div
+					role="tabpanel"
+					data-panel={tab}
+					hidden={tab !== "after"}
+					data-pane={tab}
+				>
+					<div class="sql-on" set:html={sql} />
+					<div class="sql-off" set:html={plain} />
+				</div>
+			))}
 		</figure>
 	</div>
 </div>

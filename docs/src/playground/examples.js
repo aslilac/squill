@@ -6,7 +6,12 @@ export const languages = [
 	{ host: "sql", label: "SQL", monacoLang: "sql", shikiLang: "sql" },
 	{ host: "rust", label: "Rust", monacoLang: "rust", shikiLang: "rust" },
 	{ host: "go", label: "Go", monacoLang: "go", shikiLang: "go" },
-	{ host: "python", label: "Python", monacoLang: "python", shikiLang: "python" },
+	{
+		host: "python",
+		label: "Python",
+		monacoLang: "python",
+		shikiLang: "python",
+	},
 	{
 		host: "javascript",
 		label: "JavaScript",
@@ -24,7 +29,12 @@ export const languages = [
 	{ host: "cpp", label: "C++", monacoLang: "cpp", shikiLang: "cpp" },
 	{ host: "csharp", label: "C#", monacoLang: "csharp", shikiLang: "csharp" },
 	{ host: "java", label: "Java", monacoLang: "java", shikiLang: "java" },
-	{ host: "kotlin", label: "Kotlin", monacoLang: "kotlin", shikiLang: "kotlin" },
+	{
+		host: "kotlin",
+		label: "Kotlin",
+		monacoLang: "kotlin",
+		shikiLang: "kotlin",
+	},
 	{ host: "swift", label: "Swift", monacoLang: "swift", shikiLang: "swift" },
 ];
 

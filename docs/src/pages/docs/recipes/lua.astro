@@ -11,26 +11,27 @@ import Recipe from "../../../components/Recipe.astro";
 	<section>
 		<h2>Loading the grammar</h2>
 		<p>
-			squill doesn&rsquo;t compile Lua in, so the rule names the grammar by
-			its release URL. The first run downloads it and records its SHA-256 in
-			a <code>squill.lock</code> beside the config; commit that, and run CI
-			with <code>squill fmt --locked</code>. A loaded grammar has no default
-			query, so every rule brings one. See{" "}
-			<a href="docs/embedded/#grammars">bringing your own grammar</a> for how both work.
+			squill doesn&rsquo;t compile Lua in, so the rule names the grammar by its
+			release URL. The first run downloads it and records its SHA-256 in a{" "}
+			<code>squill.lock</code> beside the config; commit that, and run CI with{" "}
+			<code>squill fmt --locked</code>. A loaded grammar has no default query,
+			so every rule brings one. See{" "}
+			<a href="docs/embedded/#grammars">bringing your own grammar</a> for how
+			both work.
 		</p>
 	</section>
 
 	<section>
 		<h2>Which strings squill rewrites</h2>
 		<p>
-			Long strings, <code>[[&hellip;]]</code> or{" "}
-			<code>[==[&hellip;]==]</code>, on one line or several. squill knows
-			nothing about a loaded grammar&rsquo;s strings until the query{" "}
+			Long strings, <code>[[&hellip;]]</code> or <code>[==[&hellip;]==]</code>,
+			on one line or several. squill knows nothing about a loaded
+			grammar&rsquo;s strings until the query{" "}
 			<a href="docs/embedded/#properties">says what they allow</a>, so the
-			queries below promise that a long string takes line breaks and no
-			escapes: a backslash in one is just a backslash. A quoted string
-			can&rsquo;t hold a raw newline, so it&rsquo;s never rewritten; write a
-			query you want formatted as a long string.
+			queries below promise that a long string takes line breaks and no escapes:
+			a backslash in one is just a backslash. A quoted string can&rsquo;t hold a
+			raw newline, so it&rsquo;s never rewritten; write a query you want
+			formatted as a long string.
 		</p>
 		<p>
 			A query built with <code>..</code> isn&rsquo;t one string, and is never
@@ -41,9 +42,9 @@ import Recipe from "../../../components/Recipe.astro";
 	<section>
 		<h2>lsqlite3</h2>
 		<p>
-			The query takes the first string argument of the database methods that
-			run SQL, with or without parentheses. lsqlite3 is SQLite, so the rule
-			sets the dialect:
+			The query takes the first string argument of the database methods that run
+			SQL, with or without parentheses. lsqlite3 is SQLite, so the rule sets the
+			dialect:
 		</p>
 		<Recipe name="lua-lsqlite3" lang="lua" />
 	</section>
@@ -51,9 +52,9 @@ import Recipe from "../../../components/Recipe.astro";
 	<section>
 		<h2>pgmoon</h2>
 		<p>
-			The same shape for <code>pg:query</code>, in the default Postgres
-			dialect. LuaSQL&rsquo;s <code>conn:execute</code> works the same way
-			with its method name in the list.
+			The same shape for <code>pg:query</code>, in the default Postgres dialect.
+			LuaSQL&rsquo;s <code>conn:execute</code> works the same way with its
+			method name in the list.
 		</p>
 		<Recipe name="lua-pgmoon" lang="lua" />
 	</section>

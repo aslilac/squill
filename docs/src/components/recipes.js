@@ -11,8 +11,18 @@ const recipesDir = resolve(process.cwd(), "recipes");
 // Every grammar with a playground wasm module (scripts/build-wasm.sh):
 // the built-ins, not grammars loaded from a URL.
 export const LIVE_HOSTS = [
-	"rust", "go", "python", "javascript", "typescript", "tsx", "gleam",
-	"cpp", "csharp", "java", "kotlin", "swift",
+	"rust",
+	"go",
+	"python",
+	"javascript",
+	"typescript",
+	"tsx",
+	"gleam",
+	"cpp",
+	"csharp",
+	"java",
+	"kotlin",
+	"swift",
 ];
 
 // The request options a config can set, as squill.toml spells them.
@@ -56,7 +66,8 @@ export function liveRecipe(name) {
 	const options = {};
 	for (const layer of [config, rule]) {
 		for (const key of KEYS) {
-			if (layer[key] !== undefined) options[key.replaceAll("-", "_")] = layer[key];
+			if (layer[key] !== undefined)
+				options[key.replaceAll("-", "_")] = layer[key];
 		}
 	}
 	// The dialect squill reads before's SQL in, from `squill locate`
@@ -92,7 +103,9 @@ export function recipeTitles() {
 		const source = readFileSync(join(pagesDir, file), "utf8");
 		for (const match of source.matchAll(/<Recipe name="([^"]+)"/g)) {
 			const headings = [
-				...source.slice(0, match.index).matchAll(/<h[23][^>]*>(.*?)<\/h[23]>/gs),
+				...source
+					.slice(0, match.index)
+					.matchAll(/<h[23][^>]*>(.*?)<\/h[23]>/gs),
 			];
 			const heading = headings.at(-1)?.[1] ?? match[1];
 			titles.push({

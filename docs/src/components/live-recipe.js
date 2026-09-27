@@ -61,7 +61,8 @@ for (const recipe of recipes) {
 		select.addEventListener("change", () => {
 			const key = select.dataset.option;
 			if (select.value === "") delete overrides[key];
-			else overrides[key] = numeric.has(key) ? Number(select.value) : select.value;
+			else
+				overrides[key] = numeric.has(key) ? Number(select.value) : select.value;
 			syncMenus();
 			showAfter(root);
 			for (const each of recipes) update(each);
@@ -170,7 +171,8 @@ function configWith(live, overrides) {
 		const key = option.replaceAll("_", "-");
 		const line = `${key} = ${typeof value === "number" ? value : `"${value}"`}`;
 		const existing = lines.findIndex(
-			(text, i) => i >= start && i < end && new RegExp(`^\\s*${key}\\s*=`).test(text),
+			(text, i) =>
+				i >= start && i < end && new RegExp(`^\\s*${key}\\s*=`).test(text),
 		);
 		if (existing >= 0) {
 			lines[existing] = line;
