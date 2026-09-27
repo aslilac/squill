@@ -7,8 +7,8 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import CopyButton from "./CopyButton.astro";
 import settingsIcon from "lucide-static/icons/settings-2.svg?raw";
-import { parse as parseToml } from "smol-toml";
 import { highlight as shiki, highlightHost } from "./highlight.js";
+import { liveRecipe } from "./recipes.js";
 
 const { name, lang } = Astro.props;
 
@@ -73,66 +73,23 @@ const kind = (path) =>
 // pane shows the keys that would do it. Found from the
 // config: the rule covering `before`, its grammar and query, and every
 // option it (or the top level) sets.
-const LIVE_HOSTS = [
-	"rust", "go", "python", "javascript", "typescript", "tsx", "gleam",
-	"cpp", "csharp", "java", "kotlin", "swift",
-];
-const configPath = files.find((path) => path === "squill.toml");
-const extension = before.split(".").pop();
-const live = (() => {
-	if (!configPath) return null;
-	const config = parseToml(read(configPath));
-	const kind = extension === "sql" ? "files" : "embedded";
-	const rules = config[kind] ?? [];
-	const index = rules.findIndex((rule) =>
-		rule.include?.some((glob) => glob.endsWith(`.${extension}`)),
-	);
-	const rule = rules[index] ?? {};
-	const host = extension === "sql" ? "sql" : rule.grammar;
-	if (host !== "sql" && !LIVE_HOSTS.includes(host)) return null;
-	// Request options, top level first and the rule over it, as squill
-	// layers them.
-	const keys = [
-		"dialect",
-		"indent",
-		"indent-width",
-		"max-width",
-		"keyword-case",
-		"quote-idents",
-		"trailing-semicolons",
-		"at-params",
-		"question-params",
-		"colon-params",
-		"pyformat-params",
-	];
-	const options = {};
-	for (const layer of [config, rule]) {
-		for (const key of keys) {
-			if (layer[key] !== undefined) options[key.replaceAll("-", "_")] = layer[key];
-		}
-	}
+const recipe = liveRecipe(name);
+const live = recipe && {
+	...recipe,
+	lang,
 	// What each style setting is when left alone, for its menu.
-	const defaults = {
-		indent: options.indent ?? (host === "sql" ? "tabs" : "the file's"),
-		indent_width: options.indent_width ?? (host === "sql" ? 2 : "the file's"),
-		max_width: options.max_width ?? 80,
-		keyword_case: options.keyword_case ?? "lower",
-		quote_idents: options.quote_idents ?? "as-needed",
+	defaults: {
+		indent: recipe.options.indent ?? (recipe.host === "sql" ? "tabs" : "the file's"),
+		indent_width:
+			recipe.options.indent_width ?? (recipe.host === "sql" ? 2 : "the file's"),
+		max_width: recipe.options.max_width ?? 80,
+		keyword_case: recipe.options.keyword_case ?? "lower",
+		quote_idents: recipe.options.quote_idents ?? "as-needed",
 		trailing_semicolons:
-			options.trailing_semicolons ?? (host === "sql" ? "always" : "none"),
-	};
-	return {
-		host,
-		lang,
-		query: rule.query ? read(rule.query) : undefined,
-		options,
-		defaults,
-		source: read(before),
-		config: read(configPath),
-		// Where new keys go in the config: the rule's table, or the top.
-		rule: index >= 0 ? { kind, index } : null,
-	};
-})();
+			recipe.options.trailing_semicolons ??
+			(recipe.host === "sql" ? "always" : "none"),
+	},
+};
 // The view menu: the SQL highlighting switch for host code, and the style
 // options for a live recipe.
 const menu = lang !== "sql" || live;
