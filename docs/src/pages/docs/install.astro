@@ -2,7 +2,7 @@
 import Code from "../../components/Code.astro";
 import CodeTabs from "../../components/CodeTabs.astro";
 import Docs from "../../layouts/Docs.astro";
-const version = "v0.3.0";
+const version = "v0.4.0";
 const release = `https://github.com/aslilac/squill/releases/download/${version}`;
 ---
 
@@ -19,11 +19,14 @@ const release = `https://github.com/aslilac/squill/releases/download/${version}`
 			whatever it is running on. Nothing has to know the machine&rsquo;s os or
 			architecture, which is what makes it the easy one to drop into CI.
 		</p>
-		<Code lang="sh" code={`mise use -g github:aslilac/squill
-squill --check .`} />
+		<Code
+			lang="sh"
+			code={`mise use -g github:aslilac/squill
+squill --check .`}
+		/>
 		<p>
-			Pin a version with <code>github:aslilac/squill@0.3.0</code>. mise verifies
-			GitHub artifact attestations and SLSA provenance on install.
+			Pin a version with <code>github:aslilac/squill@{version}</code>. mise
+			verifies GitHub artifact attestations and SLSA provenance on install.
 		</p>
 	</section>
 
@@ -31,8 +34,8 @@ squill --check .`} />
 		<h2>Nix</h2>
 		<p>
 			The flake builds squill from source for Linux on x86_64 and arm64 and
-			macOS on arm64, as its default package. Run it once, keep it for a
-			shell, install it, or make it part of your own flake:
+			macOS on arm64, as its default package. Run it once, keep it for a shell,
+			install it, or make it part of your own flake:
 		</p>
 		<CodeTabs
 			tabs={[
@@ -90,16 +93,19 @@ squill --check .`,
 			Cargo can clone the source, check out the release tag, and install the
 			binary in one command. This is the route that needs a Rust toolchain.
 		</p>
-		<Code lang="sh" code={`cargo install --git https://github.com/aslilac/squill.git --tag v0.3.0 cli --bin squill`} />
+		<Code
+			lang="sh"
+			code={`cargo install --git https://github.com/aslilac/squill.git --tag ${version} cli --bin squill`}
+		/>
 	</section>
 
 	<section>
 		<h2>Release archives</h2>
 		<p>
-			Every tag publishes archives to <a
-				href="https://github.com/aslilac/squill/releases">GitHub releases</a
-			>: Linux and Windows on x86_64 and arm64, and macOS on arm64. The tab
-			for the machine you&rsquo;re reading this on opens first.
+			Every tag publishes archives to{" "}
+			<a href="https://github.com/aslilac/squill/releases">GitHub releases</a>:
+			Linux and Windows on x86_64 and arm64, and macOS on arm64. The tab for the
+			machine you&rsquo;re reading this on opens first.
 		</p>
 		<CodeTabs
 			tabs={[
@@ -148,9 +154,8 @@ Expand-Archive "$env:TEMP\\squill.zip" -DestinationPath $dir -Force
 			selected="linux-x86_64"
 		/>
 		<p>
-			There&rsquo;s no build for Intel Macs; <a href="docs/install/#cargo"
-				>Cargo</a
-			> builds one from source.
+			There&rsquo;s no build for Intel Macs;{" "}
+			<a href="docs/install/#cargo">Cargo</a> builds one from source.
 		</p>
 	</section>
 </Docs>

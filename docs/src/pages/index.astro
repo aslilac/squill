@@ -58,10 +58,10 @@ const body = inner(await sql(lines.slice(open + 1, close).join("\n")));
 const tail = inner(
 	await rust(['\t\tr#"', ...lines.slice(close)].join("\n")),
 ).replace(/^<span class="line">[\s\S]*?<\/span>\n/, "");
-const afterHtml = themed(`<pre class="shiki squill-dark" style="color:${colors.fg}"><code>${head}
+const afterHtml =
+	themed(`<pre class="shiki squill-dark" style="color:${colors.fg}"><code>${head}
 ${body}
 ${tail}</code></pre>`);
-
 ---
 
 <Base bare>
@@ -75,38 +75,45 @@ ${tail}</code></pre>`);
 				</p>
 			</div>
 			<nav>
-				<span class="badge">v0.3.0 · MPL-2.0</span>
+				<span class="badge">v0.4.0 · MPL-2.0</span>
 			</nav>
 		</div>
 		<div class="actions">
-			<a class="button primary" href="playground/">Try it first</a>
-			<a class="button" href="docs/install/">Install squill</a>
+			<a class="button primary" href="playground/">
+				Try it first
+			</a>
+			<a class="button" href="docs/install/">
+				Install squill
+			</a>
 		</div>
 		<p>
 			squill (/skwɪl/) is a formatter for SQL code that's built to reliably
 			format SQL wherever it may live. It uses Tree-sitter grammars to locate
-			your SQL code, even when it's embedded in another language. It plucks
-			your queries out surgically and formats them in-place without disturbing
-			your other code. It aims to support all features of Postgres and SQLite,
+			your SQL code, even when it's embedded in another language. It plucks your
+			queries out surgically and formats them in-place without disturbing your
+			other code. It aims to support all features of Postgres and SQLite,
 			however you use them.
 		</p>
 		<p>
-			Every statement squill rewrites is{" "}
-			<em>self-checked</em>: the output must re-lex to the same tokens —
-			allowing only named, verified transforms like keyword case and pg_dump's
-			clause order — and keep every comment, or squill emits your original
-			bytes untouched. Output is never less correct than input.
+			Every statement squill rewrites is <em>self-checked</em>: the output must
+			re-lex to the same tokens — allowing only named, verified transforms like
+			keyword case and pg_dump's clause order — and keep every comment, or
+			squill emits your original bytes untouched. Output is never less correct
+			than input.
 		</p>
 		<p class="flower">
-			named for the <a href="https://en.wikipedia.org/wiki/Scilla_siberica"
-				>Siberian squill</a
-			>
+			named for the{" "}
+			<a href="https://en.wikipedia.org/wiki/Scilla_siberica">
+				Siberian squill
+			</a>
 		</p>
 	</header>
 
 	<div class="pair">
 		<figure>
-			<figcaption>input <span>rust · sqlx</span></figcaption>
+			<figcaption>
+				input <span>rust · sqlx</span>
+			</figcaption>
 			<div set:html={beforeHtml} />
 		</figure>
 		<figure>
@@ -119,9 +126,12 @@ ${tail}</code></pre>`);
 
 	<section>
 		<h2>Get started</h2>
-		<Code lang="sh" code={`mise use -g github:aslilac/squill
+		<Code
+			lang="sh"
+			code={`mise use -g github:aslilac/squill
 
-squill fmt --check .`} />
+squill fmt --check .`}
+		/>
 		<p>
 			That is the short version; <a href="docs/install/">Install</a> covers Nix,
 			Cargo, and release archives, and what to run in CI.
@@ -132,7 +142,8 @@ squill fmt --check .`} />
 		<h2>Where to go next</h2>
 		<ul>
 			<li>
-				<a href="docs/install/">Install</a> — mise, Nix, Cargo, release archives.
+				<a href="docs/install/">Install</a> — mise, Nix, Cargo, release
+				archives.
 			</li>
 			<li>
 				<a href="docs/configuration/">Configuration</a> — every option, where
@@ -144,12 +155,12 @@ squill fmt --check .`} />
 				tree-sitter extraction query.
 			</li>
 			<li>
-				<a href="docs/frozen/">Frozen paths</a> — formatting new migrations without
-				ever rewriting the ones that already shipped.
+				<a href="docs/frozen/">Frozen paths</a> — formatting new migrations
+				without ever rewriting the ones that already shipped.
 			</li>
 			<li>
-				<a href="playground/">Playground</a> — try it in the browser; your
-				input stays on your machine.
+				<a href="playground/">Playground</a> — try it in the browser; your input
+				stays on your machine.
 			</li>
 		</ul>
 	</section>
@@ -164,9 +175,8 @@ squill fmt --check .`} />
 		<ul class="lang-list">
 			<li>
 				<img src="langs/rust.svg" alt="" />
-				<code class="boxed">sqlx::query!</code> and <code class="boxed"
-					>sqlx::query_as!</code
-				> in Rust
+				<code class="boxed">sqlx::query!</code> and{" "}
+				<code class="boxed">sqlx::query_as!</code> in Rust
 			</li>
 			<li>
 				<img src="langs/go.svg" alt="" />
@@ -174,11 +184,13 @@ squill fmt --check .`} />
 			</li>
 			<li>
 				<img src="langs/typescript.svg" alt="" />
-				<code class="boxed">sql`&hellip;`</code> templates in JavaScript and TypeScript
+				<code class="boxed">sql`&hellip;`</code> templates in JavaScript and
+				TypeScript
 			</li>
 			<li>
 				<img src="langs/gleam.svg" alt="" />
-				<code class="boxed">sqlight</code> and <code class="boxed">pog</code> in Gleam
+				<code class="boxed">sqlight</code> and <code class="boxed">pog</code> in
+				Gleam
 			</li>
 			<li>
 				<img src="langs/python.svg" alt="" />
@@ -187,12 +199,13 @@ squill fmt --check .`} />
 			</li>
 			<li>
 				<img src="langs/csharp.svg" alt="" />
-				Dapper, EF Core, and ADO.NET&rsquo;s <code class="boxed">CommandText</code>{" "}
-				in C#
+				Dapper, EF Core, and ADO.NET&rsquo;s{" "}
+				<code class="boxed">CommandText</code> in C#
 			</li>
 			<li>
 				<img src="langs/java.svg" alt="" />
-				JDBC, JPA, and Spring&rsquo;s <code class="boxed">JdbcTemplate</code> in Java
+				JDBC, JPA, and Spring&rsquo;s <code class="boxed">JdbcTemplate</code> in
+				Java
 			</li>
 			<li>
 				<img src="langs/kotlin.svg" alt="" />
@@ -220,17 +233,19 @@ squill fmt --check .`} />
 			</li>
 		</ul>
 		<p>
-			<a href="docs/embedded/">How it works, and how to point it at your own APIs</a
-			>.
+			<a href="docs/embedded/">
+				How it works, and how to point it at your own APIs
+			</a>
+			.
 		</p>
 	</section>
 
 	<p>
-		It's quick, too: the entire SQL corpus of <a
-			href="https://github.com/coder/coder">coder/coder</a
-		> — 1,255 files, 36,000+ lines of migrations, queries, and fixtures — formats
-		in about <strong>215&nbsp;ms</strong>. A single 15,000-line file takes <strong
-			>94&nbsp;ms</strong
-		>. Fast enough for pre-commit, save-on-format, everything.
+		It's quick, too: the entire SQL corpus of{" "}
+		<a href="https://github.com/coder/coder">coder/coder</a> — 1,255 files,
+		36,000+ lines of migrations, queries, and fixtures — formats in about{" "}
+		<strong>215&nbsp;ms</strong>. A single 15,000-line file takes{" "}
+		<strong>94&nbsp;ms</strong>. Fast enough for pre-commit, save-on-format,
+		everything.
 	</p>
 </Base>
