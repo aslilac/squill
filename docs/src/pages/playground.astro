@@ -108,6 +108,10 @@ const baseHref = import.meta.env.BASE_URL;
 						question-params
 					</label>
 					<label class="row">
+						<input data-opt="colon_params" type="checkbox" />
+						colon-params
+					</label>
+					<label class="row">
 						<input data-opt="pyformat_params" type="checkbox" />
 						pyformat-params
 					</label>
@@ -273,6 +277,7 @@ const baseHref = import.meta.env.BASE_URL;
 				quote_idents: "as-needed",
 				at_params: false,
 				question_params: false,
+				colon_params: false,
 				pyformat_params: false,
 			};
 			let lastGoodOutput = "";
@@ -353,7 +358,12 @@ const baseHref = import.meta.env.BASE_URL;
 			// An example turns on the `*-params` options its driver needs, as
 			// its recipe's config would, and the rest off.
 			function applyParams() {
-				for (const key of ["at_params", "question_params", "pyformat_params"]) {
+				for (const key of [
+					"at_params",
+					"question_params",
+					"colon_params",
+					"pyformat_params",
+				]) {
 					options[key] = current.params?.[key] ?? false;
 					settingsPopover.querySelector(`[data-opt="${key}"]`).checked =
 						options[key];

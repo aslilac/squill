@@ -58,7 +58,8 @@ Set in the nearest `squill.toml` or `.config/squill.toml` (or `squill.yaml` / `s
 | `quote-idents` | `--quote-idents` | `as-needed` \| `always` | `as-needed` |
 | `trailing-semicolons` | `--trailing-semicolons` | `always` \| `none`: whether the last statement ends in `;` | `always` (`none` for embedded SQL) |
 | `at-params` | `--at-params` | lex [sqlc-style](https://docs.sqlc.dev/en/latest/howto/named_parameters.html) and ADO.NET-style `@name` parameters | `false` |
-| `question-params` | `--question-params` | lex JDBC-style `?` parameters in Postgres | `false` |
+| `question-params` | `--question-params` | lex JDBC-style `?` and JPA-style `?1` parameters in Postgres | `false` |
+| `colon-params` | `--colon-params` | lex `:name` parameters (SQLAlchemy, Spring, JPA, sqlx) in Postgres; `:` inside `[…]` is still a slice | `false` |
 | `pyformat-params` | `--pyformat-params` | lex Python DB-API `%s` / `%(name)s` parameters | `false` |
 | `ignore` | `--ignore` | glob patterns to skip when recursing | `[]` |
 | `frozen` | `--frozen` | glob patterns that are immutable once on the baseline ref | `[]` |

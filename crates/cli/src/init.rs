@@ -6,8 +6,10 @@
 //! the languages that already hold SQL — found by walking the tree the
 //! way `fmt` does (honoring .gitignore, skipping hidden files) and
 //! running each grammar's default query over its files. Then it asks for
-//! the dialect of plain .sql files and of each chosen language. A new
-//! project with nothing to find simply starts with nothing checked.
+//! the dialect of plain .sql files and of each chosen language, and which
+//! placeholder styles the code writes (none checked: that depends on the
+//! driver, not the language). A new project with nothing to find simply
+//! starts with nothing checked.
 //!
 //! Without a terminal to ask on (or with `--yes`), every default is
 //! taken: the languages found, in the `--dialect` dialect.
@@ -29,8 +31,8 @@ Usage: squill init [OPTIONS]
 
 Writes a squill.toml (or squill.yaml) for the project in the working
 directory. squill lists the languages it has grammars for — checking
-the ones where it finds SQL already — and asks which to format, and
-in which dialect.
+the ones where it finds SQL already — and asks which to format, in
+which dialect, and which placeholder styles your queries use.
 
 Options:
   --dialect <D>   postgres (default) | sqlite: the dialect every answer
@@ -163,7 +165,22 @@ struct Answers {
 	dialect: Dialect,
 	/// The chosen languages, each with its SQL's dialect.
 	hosts: Vec<(embed::Host, Dialect)>,
+	/// The `*-params` keys to turn on.
+	params: Vec<&'static str>,
 }
+
+/// The placeholder styles init offers: config key, what it looks like
+/// and who writes it, and whether SQLite reads it without the option.
+const PARAMS: &[(&str, &str, bool)] = &[
+	("at-params", "@name (sqlc, Dapper, ADO.NET)", true),
+	("question-params", "? and ?1 (JDBC, JPA, sqlx's Rebind)", true),
+	(
+		"colon-params",
+		":name (SQLAlchemy, Spring, JPA, sqlx's named queries)",
+		true,
+	),
+	("pyformat-params", "%s and %(name)s (psycopg, Python's DB-API)", false),
+];
 
 /// Every default: the languages that hold SQL, all in `dialect`.
 fn defaults(dialect: Dialect, found: &[Found]) -> Answers {
@@ -173,7 +190,7 @@ fn defaults(dialect: Dialect, found: &[Found]) -> Answers {
 		.filter(|(_, found)| found.strings > 0)
 		.map(|(&host, _)| (host, dialect))
 		.collect();
-	Answers { dialect, hosts }
+	Answers { dialect, hosts, params: Vec::new() }
 }
 
 /// Ask on the terminal. `None` when the user backs out (Esc or q).
@@ -241,7 +258,26 @@ fn ask(
 		};
 		hosts.push((host, host_dialect));
 	}
-	Ok(Some(Answers { dialect, hosts }))
+
+	// SQLite reads `@name`, `?`, and `:name` as parameters already: only
+	// offer those when something is Postgres.
+	let postgres = dialect == Dialect::Postgres
+		|| hosts.iter().any(|&(_, dialect)| dialect == Dialect::Postgres);
+	let offered: Vec<&(&str, &str, bool)> = PARAMS
+		.iter()
+		.filter(|(_, _, sqlite_native)| postgres || !sqlite_native)
+		.collect();
+	let Some(chosen) = MultiSelect::with_theme(&theme)
+		.with_prompt(
+			"Which placeholders do your queries use? (space to toggle, enter to confirm)",
+		)
+		.items(offered.iter().map(|(_, label, _)| label))
+		.interact_on_opt(&term)?
+	else {
+		return Ok(None);
+	};
+	let params = chosen.into_iter().map(|index| offered[index].0).collect();
+	Ok(Some(Answers { dialect, hosts, params }))
 }
 
 /// The config file text for the answers given, as YAML.
@@ -250,6 +286,9 @@ fn render_yaml(answers: &Answers) -> String {
 		"# squill configuration: https://mckayla.dev/squill/docs/configuration/\n\n",
 	);
 	out.push_str(&format!("dialect: {}\n", dialect_name(answers.dialect)));
+	for key in &answers.params {
+		out.push_str(&format!("{key}: true\n"));
+	}
 	if !answers.hosts.is_empty() {
 		out.push_str("\nembedded:\n");
 	}
@@ -275,6 +314,9 @@ fn render(answers: &Answers) -> String {
 		"# squill configuration: https://mckayla.dev/squill/docs/configuration/\n\n",
 	);
 	out.push_str(&format!("dialect = \"{}\"\n", dialect_name(answers.dialect)));
+	for key in &answers.params {
+		out.push_str(&format!("{key} = true\n"));
+	}
 	for &(host, dialect) in &answers.hosts {
 		let include: Vec<String> =
 			host.extensions().iter().map(|ext| format!("\"**/*.{ext}\"")).collect();
@@ -366,11 +408,14 @@ mod tests {
 				(embed::Host::Go, Dialect::Postgres),
 				(embed::Host::Python, Dialect::Sqlite),
 			],
+			params: vec!["colon-params", "pyformat-params"],
 		};
 		assert_eq!(
 			render(&answers),
 			"# squill configuration: https://mckayla.dev/squill/docs/configuration/\n\n\
-			 dialect = \"postgres\"\n\n\
+			 dialect = \"postgres\"\n\
+			 colon-params = true\n\
+			 pyformat-params = true\n\n\
 			 [[embedded]]\ninclude = [\"**/*.go\"]\ngrammar = \"go\"\n\n\
 			 [[embedded]]\ninclude = [\"**/*.py\"]\ngrammar = \"python\"\ndialect = \"sqlite\"\n"
 		);

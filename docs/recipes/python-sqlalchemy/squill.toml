@@ -1,4 +1,5 @@
 [[embedded]]
 include = ["**/*.py"]
 grammar = "python"
-dialect = "sqlite"
+# text() binds `:name` placeholders.
+colon-params = true

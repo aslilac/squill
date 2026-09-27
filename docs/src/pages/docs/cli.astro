@@ -102,7 +102,8 @@ squill language-server start`} />
 			<code>--indent</code>, <code>--indent-width</code>,{" "}
 			<code>--max-width</code>, <code>--keyword-case</code>,{" "}
 			<code>--quote-idents</code>, <code>--at-params</code>,{" "}
-			<code>--question-params</code>, and <code>--pyformat-params</code>{" "}
+			<code>--question-params</code>, <code>--colon-params</code>, and{" "}
+			<code>--pyformat-params</code>{" "}
 			&mdash; each set the config key of the same name, and win over the
 			config. <a href="docs/configuration/">Configuration</a> lists their
 			values.
@@ -187,7 +188,7 @@ src/db.rs:24:26-24:68 postgres  SELECT count(*) FROM members`} />
 			<code>path</code>, <code>start</code> and <code>end</code> (byte
 			offsets), <code>line</code>, <code>column</code>,{" "}
 			<code>end_line</code>, <code>end_column</code>,{" "}
-			<code>dialect</code>, and <code>pinned</code> (whether the query set
+			<code>dialect</code>, and <code>pinned_dialect</code> (whether the query set
 			the dialect, which the plain output marks{" "}
 			<code>(from the query)</code>) &mdash; for tools that want to know where the SQL
 			is; these docs highlight the SQL in their recipes with it.

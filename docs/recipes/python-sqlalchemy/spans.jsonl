@@ -1,2 +1,2 @@
-{"path":"after.py","start":118,"end":297,"line":7,"column":16,"end_line":12,"end_column":13,"dialect":"sqlite","pinned":false}
-{"path":"before.py","start":118,"end":235,"line":7,"column":16,"end_line":7,"end_column":133,"dialect":"sqlite","pinned":false}
+{"path":"after.py","start":118,"end":297,"line":7,"column":16,"end_line":12,"end_column":13,"dialect":"postgres","pinned_dialect":false}
+{"path":"before.py","start":118,"end":235,"line":7,"column":16,"end_line":7,"end_column":133,"dialect":"postgres","pinned_dialect":false}

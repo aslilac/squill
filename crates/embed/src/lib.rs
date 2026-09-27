@@ -866,7 +866,7 @@ pub struct Located {
 	pub dialect: Dialect,
 	/// The query named the dialect (`@sql.sqlite`), over the configured
 	/// one.
-	pub pinned: bool,
+	pub pinned_dialect: bool,
 }
 
 /// Every SQL string the query captures in `source`, in order, whether or
@@ -894,7 +894,7 @@ pub fn locate_sql(
 					}
 					Codec::Content { .. } => range,
 				};
-				Located { range, dialect, pinned }
+				Located { range, dialect, pinned_dialect: pinned }
 			})
 			.collect();
 		found.sort_by_key(|located| (located.range.start, located.range.end));

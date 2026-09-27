@@ -1,4 +1,4 @@
-{"path":"after.ts","start":148,"end":348,"line":5,"column":6,"end_line":10,"end_column":5,"dialect":"postgres","pinned":false}
-{"path":"after.ts","start":465,"end":514,"line":17,"column":21,"end_line":17,"end_column":70,"dialect":"postgres","pinned":false}
-{"path":"before.ts","start":148,"end":326,"line":5,"column":6,"end_line":5,"end_column":184,"dialect":"postgres","pinned":false}
-{"path":"before.ts","start":443,"end":492,"line":12,"column":21,"end_line":12,"end_column":70,"dialect":"postgres","pinned":false}
+{"path":"after.ts","start":148,"end":348,"line":5,"column":6,"end_line":10,"end_column":5,"dialect":"postgres","pinned_dialect":false}
+{"path":"after.ts","start":465,"end":514,"line":17,"column":21,"end_line":17,"end_column":70,"dialect":"postgres","pinned_dialect":false}
+{"path":"before.ts","start":148,"end":326,"line":5,"column":6,"end_line":5,"end_column":184,"dialect":"postgres","pinned_dialect":false}
+{"path":"before.ts","start":443,"end":492,"line":12,"column":21,"end_line":12,"end_column":70,"dialect":"postgres","pinned_dialect":false}

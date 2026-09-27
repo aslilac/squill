@@ -78,6 +78,9 @@ pub struct Options {
 	/// [`LexOptions::question_params`]); used when re-lexing for the
 	/// safety check.
 	pub question_params: bool,
+	/// `:name` placeholders in Postgres (see [`LexOptions::colon_params`]);
+	/// used when re-lexing for the safety check.
+	pub colon_params: bool,
 	/// Never collapse a statement onto one line (clause-per-line even
 	/// when it would fit). Used by embedding for multi-line string
 	/// literals, where the author already chose a vertical layout. Not
@@ -98,6 +101,7 @@ impl Default for Options {
 			at_params: false,
 			pyformat_params: false,
 			question_params: false,
+			colon_params: false,
 			always_break_statements: false,
 		}
 	}
@@ -109,6 +113,7 @@ impl Options {
 			at_params: self.at_params,
 			pyformat_params: self.pyformat_params,
 			question_params: self.question_params,
+			colon_params: self.colon_params,
 		}
 	}
 }

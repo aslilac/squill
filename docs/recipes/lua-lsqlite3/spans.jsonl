@@ -1,6 +1,6 @@
-{"path":"after.lua","start":116,"end":372,"line":7,"column":12,"end_line":16,"end_column":3,"dialect":"sqlite","pinned":false}
-{"path":"after.lua","start":467,"end":570,"line":22,"column":29,"end_line":28,"end_column":3,"dialect":"sqlite","pinned":false}
-{"path":"after.lua","start":735,"end":753,"line":38,"column":12,"end_line":38,"end_column":30,"dialect":"sqlite","pinned":false}
-{"path":"before.lua","start":116,"end":353,"line":7,"column":12,"end_line":10,"end_column":3,"dialect":"sqlite","pinned":false}
-{"path":"before.lua","start":448,"end":545,"line":16,"column":29,"end_line":18,"end_column":3,"dialect":"sqlite","pinned":false}
-{"path":"before.lua","start":710,"end":728,"line":28,"column":12,"end_line":28,"end_column":30,"dialect":"sqlite","pinned":false}
+{"path":"after.lua","start":116,"end":372,"line":7,"column":12,"end_line":16,"end_column":3,"dialect":"sqlite","pinned_dialect":false}
+{"path":"after.lua","start":467,"end":570,"line":22,"column":29,"end_line":28,"end_column":3,"dialect":"sqlite","pinned_dialect":false}
+{"path":"after.lua","start":735,"end":753,"line":38,"column":12,"end_line":38,"end_column":30,"dialect":"sqlite","pinned_dialect":false}
+{"path":"before.lua","start":116,"end":353,"line":7,"column":12,"end_line":10,"end_column":3,"dialect":"sqlite","pinned_dialect":false}
+{"path":"before.lua","start":448,"end":545,"line":16,"column":29,"end_line":18,"end_column":3,"dialect":"sqlite","pinned_dialect":false}
+{"path":"before.lua","start":710,"end":728,"line":28,"column":12,"end_line":28,"end_column":30,"dialect":"sqlite","pinned_dialect":false}

@@ -48,14 +48,11 @@ import Recipe from "../../../components/Recipe.astro";
 			string at the end stays as written:
 		</p>
 		<Recipe name="java-spring" lang="java" />
-		<div class="note">
-			<p>
-				Named parameters (<code>:customerId</code>, as{" "}
-				<code>NamedParameterJdbcTemplate</code> and JPA use them) and
-				JPA&rsquo;s numbered <code>?1</code> don&rsquo;t parse in the
-				Postgres dialect yet. squill reports those queries and leaves them as
-				written.
-			</p>
-		</div>
+		<p>
+			Named parameters (<code>:customerId</code>, as{" "}
+			<code>NamedParameterJdbcTemplate</code> and JPA use them) need{" "}
+			<code>colon-params</code> as well. JPA&rsquo;s numbered{" "}
+			<code>?1</code> is covered by <code>question-params</code>.
+		</p>
 	</section>
 </Docs>

@@ -64,14 +64,12 @@ import Recipe from "../../../components/Recipe.astro";
 			by that name (not as <code>sqlalchemy.text()</code>).
 		</p>
 		<Recipe name="python-sqlalchemy" lang="python" />
-		<div class="note">
-			<p>
-				<code>text()</code> spells every parameter <code>:name</code>, which is
-				SQLite syntax but not Postgres. With the Postgres dialect, squill
-				reports those queries and leaves them as written; with SQLite, as
-				here, they format.
-			</p>
-		</div>
+		<p>
+			<code>text()</code> spells every parameter <code>:name</code>, which
+			Postgres would read as a stray colon; <code>colon-params</code> makes
+			them parameters. SQLite reads <code>:name</code> natively, so with{" "}
+			<code>dialect = "sqlite"</code> you don&rsquo;t need it.
+		</p>
 	</section>
 
 	<section>

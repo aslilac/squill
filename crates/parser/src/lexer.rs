@@ -33,11 +33,16 @@ pub struct LexOptions {
 	/// `@` is a legal Postgres operator, so this is opt-in for sqlc
 	/// projects.
 	pub at_params: bool,
-	/// Lex JDBC-style `?` placeholders as `Param` tokens in Postgres
-	/// (they are always params in SQLite). A `?` that starts a jsonb
+	/// Lex JDBC-style `?` placeholders, and JPA's numbered `?1`, as
+	/// `Param` tokens in Postgres (they are always params in SQLite). A `?` that starts a jsonb
 	/// operator (`??`, `?|`, `?&`) stays an operator — JDBC spells the
 	/// literal operator with a doubled `??`.
 	pub question_params: bool,
+	/// Lex `:name` placeholders (SQLAlchemy, Spring, JPA, sqlx's named
+	/// queries) as `Param` tokens in Postgres (they are always params in
+	/// SQLite). Inside `[...]` a `:` stays a slice separator, so
+	/// `arr[lo:hi]` still reads as a slice.
+	pub colon_params: bool,
 }
 
 /// Lex with explicit [`LexOptions`]. Infallible and lossless.
@@ -46,8 +51,14 @@ pub fn lex_with(
 	dialect: Dialect,
 	options: LexOptions,
 ) -> Vec<Token<'_>> {
-	let mut lexer =
-		Lexer { input, bytes: input.as_bytes(), dialect, options, pos: 0 };
+	let mut lexer = Lexer {
+		input,
+		bytes: input.as_bytes(),
+		dialect,
+		options,
+		pos: 0,
+		brackets: 0,
+	};
 	let mut tokens = Vec::new();
 	while lexer.pos < lexer.bytes.len() {
 		let start = lexer.pos;
@@ -80,6 +91,8 @@ struct Lexer<'src> {
 	dialect: Dialect,
 	options: LexOptions,
 	pos: usize,
+	/// How many `[` are open: a `:` inside them is a slice's.
+	brackets: usize,
 }
 
 impl Lexer<'_> {
@@ -179,6 +192,7 @@ impl Lexer<'_> {
 			b'[' => match self.dialect {
 				Dialect::Postgres => {
 					self.bump(1);
+					self.brackets += 1;
 					SyntaxKind::LBracket
 				}
 				Dialect::Sqlite => self.bracket_ident(),
@@ -186,7 +200,10 @@ impl Lexer<'_> {
 			b']' => {
 				self.bump(1);
 				match self.dialect {
-					Dialect::Postgres => SyntaxKind::RBracket,
+					Dialect::Postgres => {
+						self.brackets = self.brackets.saturating_sub(1);
+						SyntaxKind::RBracket
+					}
 					// A `]` outside a bracket identifier is not SQLite syntax.
 					Dialect::Sqlite => SyntaxKind::Error,
 				}
@@ -222,7 +239,13 @@ impl Lexer<'_> {
 				self.bump(2);
 				SyntaxKind::Operator
 			}
-			b':' if self.dialect == Dialect::Sqlite && self.is_ident_start_at(1) => {
+			// `:name` params: always in SQLite, behind an option in
+			// Postgres, and never inside a `[lo:hi]` slice.
+			b':'
+				if self.is_ident_start_at(1)
+					&& (self.dialect == Dialect::Sqlite
+						|| (self.options.colon_params && self.brackets == 0)) =>
+			{
 				self.bump(1);
 				self.eat_ident();
 				SyntaxKind::Param
@@ -248,12 +271,16 @@ impl Lexer<'_> {
 					SyntaxKind::Error
 				}
 			}
-			// JDBC-style `?` params in Postgres, behind an option.
+			// JDBC-style `?` params in Postgres, behind an option, and
+			// JPA's numbered `?1`.
 			b'?'
 				if self.options.question_params
 					&& !matches!(self.at(1), Some(b'?' | b'|' | b'&')) =>
 			{
 				self.bump(1);
+				while self.at(0).is_some_and(|b| b.is_ascii_digit()) {
+					self.bump(1);
+				}
 				SyntaxKind::Param
 			}
 			// sqlc-style `@name` params in Postgres, behind an option.

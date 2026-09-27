@@ -1,6 +1,6 @@
-{"path":"after.go","start":161,"end":328,"line":5,"column":44,"end_line":11,"end_column":2,"dialect":"postgres","pinned":false}
-{"path":"after.go","start":494,"end":551,"line":17,"column":40,"end_line":21,"end_column":2,"dialect":"postgres","pinned":false}
-{"path":"after.go","start":674,"end":759,"line":26,"column":24,"end_line":30,"end_column":2,"dialect":"postgres","pinned":false}
-{"path":"before.go","start":161,"end":320,"line":5,"column":44,"end_line":5,"end_column":203,"dialect":"postgres","pinned":false}
-{"path":"before.go","start":486,"end":537,"line":11,"column":40,"end_line":11,"end_column":91,"dialect":"postgres","pinned":false}
-{"path":"before.go","start":660,"end":739,"line":16,"column":24,"end_line":16,"end_column":103,"dialect":"postgres","pinned":false}
+{"path":"after.go","start":161,"end":328,"line":5,"column":44,"end_line":11,"end_column":2,"dialect":"postgres","pinned_dialect":false}
+{"path":"after.go","start":494,"end":551,"line":17,"column":40,"end_line":21,"end_column":2,"dialect":"postgres","pinned_dialect":false}
+{"path":"after.go","start":674,"end":759,"line":26,"column":24,"end_line":30,"end_column":2,"dialect":"postgres","pinned_dialect":false}
+{"path":"before.go","start":161,"end":320,"line":5,"column":44,"end_line":5,"end_column":203,"dialect":"postgres","pinned_dialect":false}
+{"path":"before.go","start":486,"end":537,"line":11,"column":40,"end_line":11,"end_column":91,"dialect":"postgres","pinned_dialect":false}
+{"path":"before.go","start":660,"end":739,"line":16,"column":24,"end_line":16,"end_column":103,"dialect":"postgres","pinned_dialect":false}

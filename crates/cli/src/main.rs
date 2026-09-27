@@ -93,12 +93,11 @@ Options:
                           in `;` (default always for SQL files, none for
                           embedded SQL)
   --at-params             Treat sqlc- and ADO.NET-style @name as
-                          parameters (Postgres; on by default for the
-                          csharp grammar)
-  --question-params       Treat JDBC-style ? as parameters (Postgres; on
-                          by default for java and kotlin grammars)
+                          parameters (Postgres)
+  --question-params       Treat JDBC-style ? as parameters (Postgres)
+  --colon-params          Treat :name as parameters (Postgres)
   --pyformat-params       Treat Python DB-API %s / %(name)s as
-                          parameters (on by default for python grammars)
+                          parameters
   --no-config             Ignore config files
   --frozen <GLOB>         Treat matching paths as immutable once they
                           exist on the baseline ref: format them while
@@ -114,7 +113,7 @@ Configuration: the nearest squill.toml or .config/squill.toml (or
 squill.yaml / squill.yml, same keys) at or above each formatted file
 supplies defaults. Top-level keys: dialect, indent, indent-width,
 max-width, keyword-case, quote-idents, trailing-semicolons, at-params,
-question-params, pyformat-params, ignore and frozen (arrays of glob
+question-params, colon-params, pyformat-params, ignore and frozen (arrays of glob
 patterns), frozen-ref, and frozen-fetch. Explicit flags override the
 config. The search upward stops at a git repository root, a mount
 point, or a symlinked directory, so a config outside a checkout never
@@ -182,10 +181,10 @@ Options:
   --json                  One JSON object per line instead: path, start
                           and end (byte offsets, end exclusive), line,
                           column, end_line, end_column, dialect, and
-                          pinned (the query set the dialect)
+                          pinned_dialect (the query set the dialect)
   --stdin-filepath <PATH> Read stdin as the file at PATH
   --locked, --no-config, --ignore <GLOB>, --dialect <D>, --at-params,
-  --question-params, --pyformat-params
+  --question-params, --colon-params, --pyformat-params
                           As for `squill fmt`
   -h, --help              Show this help
 ";
@@ -311,6 +310,7 @@ fn parse_args() -> Result<Invocation, String> {
 			"--no-frozen-fetch" => args.frozen_fetch = Some(false),
 			"--at-params" => args.overrides.at_params = Some(true),
 			"--question-params" => args.overrides.question_params = Some(true),
+			"--colon-params" => args.overrides.colon_params = Some(true),
 			"--pyformat-params" => args.overrides.pyformat_params = Some(true),
 			"--dialect" => {
 				args.overrides.dialect =
@@ -961,7 +961,7 @@ fn locate_resolved(
 		Kind::Sql => Ok(vec![embed::Located {
 			range: 0..source.len(),
 			dialect: resolved.options.dialect,
-			pinned: false,
+			pinned_dialect: false,
 		}]),
 	}
 }
@@ -982,17 +982,18 @@ fn print_located(
 		};
 		if json {
 			println!(
-				"{{\"path\":{},\"start\":{},\"end\":{},\"line\":{line},\"column\":{column},\"end_line\":{end_line},\"end_column\":{end_column},\"dialect\":\"{dialect}\",\"pinned\":{}}}",
+				"{{\"path\":{},\"start\":{},\"end\":{},\"line\":{line},\"column\":{column},\"end_line\":{end_line},\"end_column\":{end_column},\"dialect\":\"{dialect}\",\"pinned_dialect\":{}}}",
 				json_string(label),
 				located.range.start,
 				located.range.end,
-				located.pinned,
+				located.pinned_dialect,
 			);
 		} else {
 			let text = source[located.range.clone()].trim();
 			let first = text.lines().next().unwrap_or("");
 			let more = if first.len() < text.len() { "…" } else { "" };
-			let pinned = if located.pinned { " (from the query)" } else { "" };
+			let pinned =
+				if located.pinned_dialect { " (from the query)" } else { "" };
 			println!(
 				"{label}:{line}:{column}-{end_line}:{end_column} {dialect}{pinned}  {first}{more}"
 			);

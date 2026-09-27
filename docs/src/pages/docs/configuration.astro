@@ -157,7 +157,20 @@ import Docs from "../../layouts/Docs.astro";
 					<tr>
 						<td><code>question-params</code></td>
 						<td><code>--question-params</code></td>
-						<td>lex JDBC-style <code>?</code> parameters in Postgres</td>
+						<td
+							>lex JDBC-style <code>?</code> and JPA-style <code>?1</code>{" "}
+							parameters in Postgres</td
+						>
+						<td><code>false</code></td>
+					</tr>
+					<tr>
+						<td><code>colon-params</code></td>
+						<td><code>--colon-params</code></td>
+						<td
+							>lex <code>:name</code> parameters (SQLAlchemy, Spring, JPA,
+							sqlx&rsquo;s named queries) in Postgres; a <code>:</code>{" "}
+							inside <code>[&hellip;]</code> is still a slice</td
+						>
 						<td><code>false</code></td>
 					</tr>
 					<tr>

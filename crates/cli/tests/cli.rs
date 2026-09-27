@@ -1900,8 +1900,8 @@ fn locate_lists_the_sql() {
 	);
 	assert_eq!(
 		run(&["locate", "--json", "db.rs"]),
-		"{\"path\":\"db.rs\",\"start\":28,\"end\":36,\"line\":2,\"column\":20,\"end_line\":2,\"end_column\":28,\"dialect\":\"postgres\",\"pinned\":false}\n\
-		 {\"path\":\"db.rs\",\"start\":58,\"end\":68,\"line\":3,\"column\":18,\"end_line\":3,\"end_column\":28,\"dialect\":\"postgres\",\"pinned\":false}\n"
+		"{\"path\":\"db.rs\",\"start\":28,\"end\":36,\"line\":2,\"column\":20,\"end_line\":2,\"end_column\":28,\"dialect\":\"postgres\",\"pinned_dialect\":false}\n\
+		 {\"path\":\"db.rs\",\"start\":58,\"end\":68,\"line\":3,\"column\":18,\"end_line\":3,\"end_column\":28,\"dialect\":\"postgres\",\"pinned_dialect\":false}\n"
 	);
 	// Nothing is written.
 	assert!(
@@ -1953,6 +1953,36 @@ fn trailing_semicolons_by_kind() {
 	);
 	assert!(
 		run(&["fmt", "--stdout", "keep.rs"]).contains("r\"\n    select 1;\n    \"")
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// SQLAlchemy's, Spring's, and JPA's `:name` placeholders, by key.
+#[test]
+fn colon_params_are_configured() {
+	let dir = temp_dir("colonparams");
+	let python = "def f(session):\n    session.execute(text(\"\"\"SELECT id FROM users WHERE org = :org AND tags[1:2] = :tags\"\"\"))\n";
+	std::fs::write(dir.join("q.py"), python).expect("write");
+	std::fs::write(
+		dir.join("squill.toml"),
+		"[[embedded]]\ninclude = [\"*.py\"]\ngrammar = \"python\"\ncolon-params = true\n",
+	)
+	.expect("write config");
+	let output = squill()
+		.args(["fmt", "--strict", "--stdout"])
+		.arg(dir.join("q.py"))
+		.output()
+		.expect("run");
+	assert!(
+		output.status.success(),
+		"{}",
+		String::from_utf8_lossy(&output.stderr)
+	);
+	assert!(
+		String::from_utf8_lossy(&output.stdout)
+			.contains("    where org = :org and tags[1:2] = :tags\n"),
+		"{}",
+		String::from_utf8_lossy(&output.stdout)
 	);
 	let _ = std::fs::remove_dir_all(&dir);
 }

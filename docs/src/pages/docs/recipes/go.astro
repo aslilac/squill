@@ -63,15 +63,12 @@ import Recipe from "../../../components/Recipe.astro";
 			<code>Rebind</code>. Leave it off if you write <code>$1</code>{" "}
 			throughout.
 		</p>
-		<div class="note">
-			<p>
-				sqlx&rsquo;s named parameters (<code>:name</code>, for{" "}
-				<code>NamedExec</code> and <code>NamedQuery</code>) aren&rsquo;t
-				Postgres syntax, so squill reports those queries and leaves them as
-				written. As SQLite they parse fine: <code>:name</code> is one of
-				SQLite&rsquo;s own parameter forms.
-			</p>
-		</div>
+		<p>
+			sqlx&rsquo;s named parameters (<code>:name</code>, for{" "}
+			<code>NamedExec</code> and <code>NamedQuery</code>) need{" "}
+			<code>colon-params</code> in Postgres. In SQLite they parse as they
+			are: <code>:name</code> is one of SQLite&rsquo;s own parameter forms.
+		</p>
 	</section>
 
 	<section>

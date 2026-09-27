@@ -28,6 +28,7 @@ struct RequestOptions {
 	trailing_semicolons: Option<String>,
 	at_params: Option<bool>,
 	question_params: Option<bool>,
+	colon_params: Option<bool>,
 	pyformat_params: Option<bool>,
 }
 
@@ -83,6 +84,9 @@ fn build_options(req: &RequestOptions) -> formatter::Options {
 	}
 	if let Some(question_params) = req.question_params {
 		options.question_params = question_params;
+	}
+	if let Some(colon_params) = req.colon_params {
+		options.colon_params = colon_params;
 	}
 	if let Some(pyformat_params) = req.pyformat_params {
 		options.pyformat_params = pyformat_params;

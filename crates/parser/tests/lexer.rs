@@ -401,11 +401,37 @@ fn question_params_lex_as_params_in_postgres() {
 	use parser::lexer::lex_with;
 	let options = LexOptions { question_params: true, ..LexOptions::default() };
 	let params: Vec<_> =
-		lex_with("a = ? and b ?| c and d ?? e", Postgres, options)
+		lex_with("a = ? and b ?| c and d ?? e and f = ?12", Postgres, options)
 			.into_iter()
 			.filter(|token| token.kind == K::Param)
 			.map(|token| token.text)
 			.collect();
 	// jsonb operators, and JDBC's doubled `??`, stay operators.
-	assert_eq!(params, ["?"]);
+	assert_eq!(params, ["?", "?12"]);
+}
+
+#[test]
+fn colon_params_lex_as_params_in_postgres() {
+	use parser::lexer::LexOptions;
+	use parser::lexer::lex_with;
+	let source =
+		"a =:id and b in :ids and c::text = x and arr[lo:hi] = arr[:n] and d = :d";
+	let params = |options| -> Vec<_> {
+		lex_with(source, Postgres, options)
+			.into_iter()
+			.filter(|token| token.kind == K::Param)
+			.map(|token| token.text)
+			.collect()
+	};
+	// Off by default.
+	assert!(params(LexOptions::default()).is_empty());
+	// Casts stay casts, and a slice's bounds stay names, even after one.
+	let options = LexOptions { colon_params: true, ..LexOptions::default() };
+	assert_eq!(params(options), [":id", ":ids", ":d"]);
+	// PL/pgSQL's `:=` is still assignment.
+	assert!(
+		lex_with("x := :y", Postgres, options)
+			.iter()
+			.any(|token| token.kind == K::Operator && token.text == ":=")
+	);
 }

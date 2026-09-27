@@ -47,6 +47,7 @@ pub struct PartialOptions {
 	pub trailing_semicolons: Option<TrailingSemicolons>,
 	pub at_params: Option<bool>,
 	pub question_params: Option<bool>,
+	pub colon_params: Option<bool>,
 	pub pyformat_params: Option<bool>,
 }
 
@@ -78,6 +79,9 @@ impl PartialOptions {
 		}
 		if let Some(value) = self.question_params {
 			options.question_params = value;
+		}
+		if let Some(value) = self.colon_params {
+			options.colon_params = value;
 		}
 		if let Some(value) = self.pyformat_params {
 			options.pyformat_params = value;
@@ -631,6 +635,7 @@ fn apply_key(
 		"at-params" => options.at_params = Some(boolean(key_name)?),
 		"pyformat-params" => options.pyformat_params = Some(boolean(key_name)?),
 		"question-params" => options.question_params = Some(boolean(key_name)?),
+		"colon-params" => options.colon_params = Some(boolean(key_name)?),
 		"include" if scope != Scope::TopLevel => {
 			let patterns = glob_list(key_name, value, context)?;
 			if patterns.is_empty() {

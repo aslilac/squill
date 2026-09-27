@@ -24,6 +24,7 @@ const PLAIN: LexOptions = LexOptions {
 	at_params: false,
 	pyformat_params: false,
 	question_params: false,
+	colon_params: false,
 };
 
 const CORPORA: &[Corpus] = &[

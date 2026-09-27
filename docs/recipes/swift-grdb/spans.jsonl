@@ -1,4 +1,4 @@
-{"path":"after.swift","start":220,"end":501,"line":9,"column":36,"end_line":17,"end_column":13,"dialect":"sqlite","pinned":true}
-{"path":"after.swift","start":684,"end":841,"line":24,"column":42,"end_line":30,"end_column":13,"dialect":"sqlite","pinned":true}
-{"path":"before.swift","start":220,"end":435,"line":9,"column":36,"end_line":12,"end_column":17,"dialect":"sqlite","pinned":true}
-{"path":"before.swift","start":618,"end":735,"line":19,"column":42,"end_line":21,"end_column":17,"dialect":"sqlite","pinned":true}
+{"path":"after.swift","start":220,"end":501,"line":9,"column":36,"end_line":17,"end_column":13,"dialect":"sqlite","pinned_dialect":true}
+{"path":"after.swift","start":684,"end":841,"line":24,"column":42,"end_line":30,"end_column":13,"dialect":"sqlite","pinned_dialect":true}
+{"path":"before.swift","start":220,"end":435,"line":9,"column":36,"end_line":12,"end_column":17,"dialect":"sqlite","pinned_dialect":true}
+{"path":"before.swift","start":618,"end":735,"line":19,"column":42,"end_line":21,"end_column":17,"dialect":"sqlite","pinned_dialect":true}
