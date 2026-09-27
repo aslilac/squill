@@ -205,18 +205,25 @@ const choices = [
 	.theme-menu[hidden] {
 		display: none;
 	}
+	/* Not the page's list-item spacing: the rows space themselves. */
+	.theme-menu li {
+		padding: 0;
+	}
 	.theme-menu button {
 		display: flex;
 		align-items: center;
 		gap: 0.55rem;
 		width: 100%;
-		padding: 0.35rem 0.5rem;
+		/* A short line box, so the space around each row's content is its
+		   padding alone, the same on every side of the menu. */
+		padding: 0.45rem 0.5rem;
 		border: none;
 		border-radius: 5px;
 		background: transparent;
 		color: var(--ink);
 		font: inherit;
 		font-size: 0.88rem;
+		line-height: 1.2;
 		text-align: left;
 		cursor: pointer;
 	}
