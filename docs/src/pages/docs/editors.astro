@@ -158,45 +158,14 @@ language-servers = ["rust-analyzer", { name = "squill", only-features = ["diagno
 	<section>
 		<h2>VS Code</h2>
 		<p>
-			squill&rsquo;s VS Code extension, in{" "}
-			<a href="https://github.com/aslilac/squill/tree/trunk/integrations/vscode">
-				<code>integrations/vscode</code>
-			</a>
-			, runs squill&rsquo;s language server: it formats SQL files, and a{" "}
-			<code>source.formatSql</code> code action formats embedded SQL on save,
-			after the language&rsquo;s own formatter. Build it with{" "}
+			squill&rsquo;s VS Code extension runs squill&rsquo;s language server: it
+			formats SQL files, and a <code>source.formatSql</code> code action formats
+			embedded SQL on save, after the language&rsquo;s own formatter. Build it
+			with{" "}
 			<code>
 				pnpm install &amp;&amp; pnpm run build &amp;&amp; pnpm run package
 			</code>{" "}
 			and install the <code>.vsix</code>; its README covers the settings.
 		</p>
-		<p>
-			VS Code has no built-in way to run a command-line formatter, so without
-			the extension, the{" "}
-			<a href="https://marketplace.visualstudio.com/items?itemName=jkillian.custom-local-formatters">
-				Custom Local Formatters
-			</a>{" "}
-			extension can run it for SQL files:
-		</p>
-		<Code
-			lang="jsonc"
-			file="settings.json"
-			code={`{
-  "customLocalFormatters.formatters": [
-    { "command": "squill fmt --stdin", "languages": ["sql"] }
-  ],
-  "[sql]": {
-    "editor.defaultFormatter": "jkillian.custom-local-formatters"
-  }
-}`}
-		/>
-		<div class="note">
-			<p>
-				That extension can&rsquo;t pass the buffer&rsquo;s path, so squill reads
-				the <code>squill.toml</code> at the workspace root: its top-level
-				settings apply, but not its rules, and SQL embedded in other languages
-				isn&rsquo;t formatted.
-			</p>
-		</div>
 	</section>
 </Docs>
