@@ -2,10 +2,52 @@
 // for. `host` is the wasm request host (and names its module),
 // `monacoLang` drives the input editor, and `shikiLang` highlights the
 // formatted output.
-export const languages = [
-	{ host: "sql", label: "SQL", monacoLang: "sql", shikiLang: "sql" },
-	{ host: "rust", label: "Rust", monacoLang: "rust", shikiLang: "rust" },
-	{ host: "go", label: "Go", monacoLang: "go", shikiLang: "go" },
+
+export const languages: PlaygroundLanguage[] = [
+	{
+		host: "sql",
+		label: "SQL",
+		monacoLang: "sql",
+		shikiLang: "sql",
+	},
+
+	// Host languages with built-in grammars.
+	{
+		host: "csharp",
+		label: "C#",
+		monacoLang: "csharp",
+		shikiLang: "csharp",
+	},
+	{
+		host: "cxx",
+		label: "C++",
+		monacoLang: "cpp",
+		shikiLang: "cpp",
+	},
+	{
+		host: "gleam",
+		label: "Gleam",
+		monacoLang: "gleam",
+		shikiLang: "gleam",
+	},
+	{
+		host: "go",
+		label: "Go",
+		monacoLang: "go",
+		shikiLang: "go",
+	},
+	{
+		host: "java",
+		label: "Java",
+		monacoLang: "java",
+		shikiLang: "java",
+	},
+	{
+		host: "kotlin",
+		label: "Kotlin",
+		monacoLang: "kotlin",
+		shikiLang: "kotlin",
+	},
 	{
 		host: "python",
 		label: "Python",
@@ -13,10 +55,16 @@ export const languages = [
 		shikiLang: "python",
 	},
 	{
-		host: "javascript",
-		label: "JavaScript",
-		monacoLang: "javascript",
-		shikiLang: "javascript",
+		host: "rust",
+		label: "Rust",
+		monacoLang: "rust",
+		shikiLang: "rust",
+	},
+	{
+		host: "swift",
+		label: "Swift",
+		monacoLang: "swift",
+		shikiLang: "swift",
 	},
 	{
 		host: "typescript",
@@ -24,19 +72,32 @@ export const languages = [
 		monacoLang: "typescript",
 		shikiLang: "typescript",
 	},
-	{ host: "tsx", label: "TSX", monacoLang: "typescript", shikiLang: "tsx" },
-	{ host: "gleam", label: "Gleam", monacoLang: "gleam", shikiLang: "gleam" },
-	{ host: "cpp", label: "C++", monacoLang: "cpp", shikiLang: "cpp" },
-	{ host: "csharp", label: "C#", monacoLang: "csharp", shikiLang: "csharp" },
-	{ host: "java", label: "Java", monacoLang: "java", shikiLang: "java" },
 	{
-		host: "kotlin",
-		label: "Kotlin",
-		monacoLang: "kotlin",
-		shikiLang: "kotlin",
+		host: "tsx",
+		label: "TSX",
+		monacoLang: "typescript",
+		shikiLang: "tsx",
 	},
-	{ host: "swift", label: "Swift", monacoLang: "swift", shikiLang: "swift" },
+	// CLEANUP: Could I get away with just removing this? TSX is strictly superior
+	// for this use-case afaik. Any valid JS syntax, including JSX, should be
+	// valid TSX, which makes this feel moot. Also JS has no recipes right now.
+	{
+		host: "javascript",
+		label: "JavaScript",
+		monacoLang: "javascript",
+		shikiLang: "javascript",
+	},
 ];
+
+// TODO: I don't like these field names. I think `id`, `displayName`,
+// `monacoLanguageId`, and `shikiLanguageId` would all be more appropriate, but
+// I'm gonna wait until I finish adding TypeScript types to rename them.
+type PlaygroundLanguage = {
+	readonly host: string;
+	readonly label: string;
+	readonly monacoLang: string;
+	readonly shikiLang: string;
+};
 
 // Plain SQL's examples, one per dialect; every other language's come
 // from the docs recipes (see the playground page).

@@ -1,7 +1,7 @@
 ---
 // The docs shell: the page shell plus a sidebar. One place to add a doc
 // page — the sidebar and the page order both come from this list.
-import Footer from "../components/Footer.astro";
+import Footer from "#/components/Footer.astro";
 import Base from "./Base.astro";
 
 const { title, lede, page } = Astro.props;
@@ -43,7 +43,7 @@ const groups = [
 			["java", "Java"],
 			["kotlin", "Kotlin"],
 			["swift", "Swift"],
-			["cpp", "C++"],
+			["cxx", "C++"],
 			["lua", "Lua"],
 			["ruby", "Ruby"],
 			["elixir", "Elixir"],

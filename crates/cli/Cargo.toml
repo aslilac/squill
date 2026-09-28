@@ -12,7 +12,7 @@ default = [
 	"external-grammars",
 	"lsp",
 	"rust", "go", "python", "javascript", "typescript", "gleam",
-	"cpp", "csharp", "java", "kotlin", "swift",
+	"cxx", "csharp", "java", "kotlin", "swift",
 ]
 # Load tree-sitter grammars compiled to wasm (`grammar = "x.wasm"`, or
 # an https URL locked in squill.lock). Pulls in wasmtime, whose build
@@ -28,7 +28,7 @@ python = ["embed/python"]
 javascript = ["embed/javascript"]
 typescript = ["embed/typescript"]
 gleam = ["embed/gleam"]
-cpp = ["embed/cpp"]
+cxx = ["embed/cxx"]
 csharp = ["embed/csharp"]
 java = ["embed/java"]
 kotlin = ["embed/kotlin"]

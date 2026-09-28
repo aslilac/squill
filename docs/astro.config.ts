@@ -6,4 +6,9 @@ export default {
 	site: "https://mckayla.dev",
 	base,
 	trailingSlash: "ignore",
+	vite: {
+		resolve: {
+			tsconfigPaths: true,
+		},
+	},
 } satisfies import("astro").AstroUserConfig;

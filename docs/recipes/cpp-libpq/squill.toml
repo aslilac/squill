@@ -1,3 +1,0 @@
-[[embedded]]
-include = ["**/*.cpp", "**/*.hpp"]
-grammar = "cpp"

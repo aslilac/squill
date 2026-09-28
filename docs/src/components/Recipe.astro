@@ -14,7 +14,11 @@ const { name, lang } = Astro.props;
 
 // Astro runs from docs/, next to the recipes.
 const dir = resolve(process.cwd(), "recipes", name);
-const read = (path) => readFileSync(join(dir, path), "utf8");
+const read = (path: string) => readFileSync(join(dir, path), "utf8");
+
+// How a language is named in a pane's corner, where shiki's id differs.
+const labels: Record<string, string> = { cxx: "c++", csharp: "c#" };
+const label = (id: string) => labels[id] ?? id;
 
 // Every file the reader would write, in the order they'd write them:
 // the config, then any queries. squill.lock is squill's to write.
@@ -32,10 +36,7 @@ const files = readdirSync(dir, { recursive: true, withFileTypes: true })
 const all = readdirSync(dir);
 const before = all.find((file) => file.startsWith("before."));
 const after = all.find((file) => file.startsWith("after."));
-// How a language is named in a pane's corner, where shiki's id differs.
-const labels = { cpp: "c++", csharp: "c#" };
-const label = (id) => labels[id] ?? id;
-const highlight = (code, as = lang) => shiki(code.trimEnd(), as);
+const highlight = (code: string, as = lang) => shiki(code.trimEnd(), as);
 // Host code comes in two versions, its SQL highlighted or left as plain
 // string, for the page-wide toggle; a plain .sql recipe is SQL either way.
 const host = async (file) => {
@@ -64,7 +65,7 @@ const panes = [
 	{ tab: "after", ...(await host(after)) },
 ];
 // What each config-side file is written in, for its caption and colors.
-const kind = (path) =>
+const kind = (path: string) =>
 	path.endsWith(".scm") ? "query" : path.endsWith(".toml") ? "toml" : "yaml";
 
 // Live recipes: where there's a playground wasm module for the grammar
@@ -136,7 +137,7 @@ const settings = live && [
 							type="button"
 							role="tab"
 							data-tab={tab}
-							aria-selected={String(tab === "after")}
+							aria-selected={tab === "after"}
 						>
 							{tab}
 						</button>

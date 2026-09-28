@@ -145,7 +145,7 @@ a tree-sitter grammar and query:
     dialect = \"sqlite\"
 
 Built-in grammars: rust, go, python, javascript, typescript, tsx,
-gleam, cpp, csharp, java, kotlin, swift — each with a default query.
+gleam, c++, csharp, java, kotlin, swift — each with a default query.
 Any other language works with a grammar built by `tree-sitter build
 --wasm` (grammar = \"grammars/tree-sitter-lua.wasm\", or an https
 URL, whose SHA-256 is locked in squill.lock) and a query. Queries
@@ -536,7 +536,7 @@ impl Caches {
 			feature = "javascript",
 			feature = "typescript",
 			feature = "gleam",
-			feature = "cpp",
+			feature = "cxx",
 			feature = "csharp",
 			feature = "java",
 			feature = "kotlin",

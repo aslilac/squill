@@ -1,3 +1,7 @@
+// CLEANUP: Could we upstream this? Or take the upstream's grammar and modify it
+// with attribution and source links, rather than just whipping out whatever is
+// going on here and calling it good?
+
 // The docs' SQL highlighting: a TextMate grammar in place of shiki's
 // bundled one, whose keyword list mixes dialects and colors column names
 // like `name` while missing Postgres words like `conflict`.
@@ -248,7 +252,7 @@ const phrases = [
 	"without\\s+rowid",
 ];
 
-const words = (list) => list.join("|");
+const words = (list: string[]) => list.join("|");
 
 export const sqlGrammar = {
 	name: "sql",

@@ -18,7 +18,7 @@ export const LIVE_HOSTS = [
 	"typescript",
 	"tsx",
 	"gleam",
-	"cpp",
+	"cxx",
 	"csharp",
 	"java",
 	"kotlin",

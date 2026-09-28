@@ -12,7 +12,7 @@ workspace = true
 # playground, or anyone after a tiny binary) carries only what it needs.
 default = [
 	"rust", "go", "python", "javascript", "typescript", "gleam",
-	"cpp", "csharp", "java", "kotlin", "swift",
+	"cxx", "csharp", "java", "kotlin", "swift",
 ]
 rust = ["dep:tree-sitter-rust"]
 go = ["dep:tree-sitter-go"]
@@ -21,7 +21,7 @@ javascript = ["dep:tree-sitter-javascript"]
 # TypeScript and TSX: one crate, two grammars.
 typescript = ["dep:tree-sitter-typescript"]
 gleam = ["dep:tree-sitter-gleam"]
-cpp = ["dep:tree-sitter-cpp"]
+cxx = ["dep:tree-sitter-cpp"]
 csharp = ["dep:tree-sitter-c-sharp"]
 java = ["dep:tree-sitter-java"]
 kotlin = ["dep:tree-sitter-kotlin-ng"]

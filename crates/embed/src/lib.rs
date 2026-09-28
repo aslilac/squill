@@ -39,7 +39,7 @@
 		feature = "javascript",
 		feature = "typescript",
 		feature = "gleam",
-		feature = "cpp",
+		feature = "cxx",
 		feature = "csharp",
 		feature = "java",
 		feature = "kotlin",
@@ -61,31 +61,31 @@ use tree_sitter::Tree;
 /// The host languages with built-in grammars.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Host {
-	#[cfg(feature = "rust")]
-	Rust,
+	#[cfg(feature = "csharp")]
+	CSharp,
+	#[cfg(feature = "cxx")]
+	Cxx,
+	#[cfg(feature = "gleam")]
+	Gleam,
 	#[cfg(feature = "go")]
 	Go,
-	#[cfg(feature = "python")]
-	Python,
 	#[cfg(feature = "javascript")]
 	JavaScript,
+	#[cfg(feature = "java")]
+	Java,
+	#[cfg(feature = "kotlin")]
+	Kotlin,
+	#[cfg(feature = "python")]
+	Python,
+	#[cfg(feature = "rust")]
+	Rust,
+	#[cfg(feature = "swift")]
+	Swift,
 	#[cfg(feature = "typescript")]
 	TypeScript,
 	/// TypeScript with JSX (`.tsx`) — a distinct grammar, same codec.
 	#[cfg(feature = "typescript")]
 	Tsx,
-	#[cfg(feature = "gleam")]
-	Gleam,
-	#[cfg(feature = "cpp")]
-	Cpp,
-	#[cfg(feature = "csharp")]
-	CSharp,
-	#[cfg(feature = "java")]
-	Java,
-	#[cfg(feature = "kotlin")]
-	Kotlin,
-	#[cfg(feature = "swift")]
-	Swift,
 }
 
 impl Host {
@@ -105,8 +105,8 @@ impl Host {
 		Host::Tsx,
 		#[cfg(feature = "gleam")]
 		Host::Gleam,
-		#[cfg(feature = "cpp")]
-		Host::Cpp,
+		#[cfg(feature = "cxx")]
+		Host::Cxx,
 		#[cfg(feature = "csharp")]
 		Host::CSharp,
 		#[cfg(feature = "java")]
@@ -134,8 +134,8 @@ impl Host {
 			Host::Tsx => "tsx",
 			#[cfg(feature = "gleam")]
 			Host::Gleam => "gleam",
-			#[cfg(feature = "cpp")]
-			Host::Cpp => "cpp",
+			#[cfg(feature = "cxx")]
+			Host::Cxx => "c++",
 			#[cfg(feature = "csharp")]
 			Host::CSharp => "csharp",
 			#[cfg(feature = "java")]
@@ -168,8 +168,8 @@ impl Host {
 			Host::Tsx => &["tsx"],
 			#[cfg(feature = "gleam")]
 			Host::Gleam => &["gleam"],
-			#[cfg(feature = "cpp")]
-			Host::Cpp => &["cc", "cpp", "cxx", "hh", "hpp", "hxx"],
+			#[cfg(feature = "cxx")]
+			Host::Cxx => &["cc", "cpp", "cxx", "hh", "hpp", "hxx"],
 			#[cfg(feature = "csharp")]
 			Host::CSharp => &["cs"],
 			#[cfg(feature = "java")]
@@ -196,8 +196,8 @@ impl Host {
 			Host::TypeScript | Host::Tsx => JS_SQL_QUERY,
 			#[cfg(feature = "gleam")]
 			Host::Gleam => GLEAM_SQL_QUERY,
-			#[cfg(feature = "cpp")]
-			Host::Cpp => CPP_SQL_QUERY,
+			#[cfg(feature = "cxx")]
+			Host::Cxx => CXX_SQL_QUERY,
 			#[cfg(feature = "csharp")]
 			Host::CSharp => CSHARP_SQL_QUERY,
 			#[cfg(feature = "java")]
@@ -225,8 +225,8 @@ impl Host {
 			Host::Tsx => tree_sitter_typescript::LANGUAGE_TSX.into(),
 			#[cfg(feature = "gleam")]
 			Host::Gleam => tree_sitter_gleam::LANGUAGE.into(),
-			#[cfg(feature = "cpp")]
-			Host::Cpp => tree_sitter_cpp::LANGUAGE.into(),
+			#[cfg(feature = "cxx")]
+			Host::Cxx => tree_sitter_cpp::LANGUAGE.into(),
 			#[cfg(feature = "csharp")]
 			Host::CSharp => tree_sitter_c_sharp::LANGUAGE.into(),
 			#[cfg(feature = "java")]
@@ -254,8 +254,8 @@ impl Host {
 			Host::Gleam => Codec::Literal,
 			// What their strings allow, their default queries say, with
 			// the same `#set!` properties any query can use.
-			#[cfg(feature = "cpp")]
-			Host::Cpp => Codec::Content,
+			#[cfg(feature = "cxx")]
+			Host::Cxx => Codec::Content,
 			#[cfg(feature = "csharp")]
 			Host::CSharp => Codec::Content,
 			#[cfg(feature = "kotlin")]
@@ -272,7 +272,7 @@ impl Host {
 #[derive(Clone, Copy)]
 #[cfg_attr(
 	not(any(
-		feature = "cpp",
+		feature = "cxx",
 		feature = "csharp",
 		feature = "java",
 		feature = "kotlin",
@@ -629,8 +629,8 @@ pub const GLEAM_SQL_QUERY: &str = r#"
 /// of sqlite3, libpq, and libpqxx calls. The C APIs name their dialect;
 /// pqxx-style `exec`/`query` calls, templated (`tx.query<int>`) or not,
 /// use the configured one. Raw strings take line breaks and no escapes.
-#[cfg(feature = "cpp")]
-pub const CPP_SQL_QUERY: &str = r#"
+#[cfg(feature = "cxx")]
+pub const CXX_SQL_QUERY: &str = r#"
 ((call_expression
    function: (identifier) @_fn
    arguments: (argument_list (raw_string_literal (raw_string_content) @sql.sqlite)))
@@ -1963,7 +1963,7 @@ fn min_raw_hashes(content: &str) -> usize {
 	needed
 }
 
-#[cfg(all(test, feature = "cpp"))]
+#[cfg(all(test, feature = "cxx"))]
 mod tests {
 	use super::*;
 
@@ -1973,10 +1973,10 @@ mod tests {
 		// so the second string no longer reads back either. Only the
 		// first is at fault.
 		let source = "void f() {\n  txn.exec(R\"(select 1)\");\n  txn.exec(R\"(select 2)\");\n}\n";
-		let grammar = Grammar::from(Host::Cpp);
+		let grammar = Grammar::from(Host::Cxx);
 		grammar
 			.with_parser(|ts, language| {
-				let query = compile_query(language, CPP_SQL_QUERY)?;
+				let query = compile_query(language, CXX_SQL_QUERY)?;
 				let tree = ts.parse(source, None).ok_or(EmbedError::HostParse)?;
 				let extraction = Extraction {
 					query: &query,

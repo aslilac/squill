@@ -1,0 +1,32 @@
+{
+	"compilerOptions": {
+		"declaration": true,
+		"exactOptionalPropertyTypes": false,
+		"experimentalDecorators": true,
+		"forceConsistentCasingInFileNames": true,
+		"incremental": true,
+		"isolatedModules": true,
+		"module": "preserve",
+		"moduleResolution": "bundler",
+		"noEmitOnError": false,
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitOverride": false,
+		"noImplicitReturns": true,
+		"noPropertyAccessFromIndexSignature": true,
+		"noUncheckedIndexedAccess": false,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"outDir": ".build/",
+		"preserveWatchOutput": true,
+		"sourceMap": true,
+		"strict": true,
+		"target": "esnext",
+		"types": ["node"],
+		"useDefineForClassFields": true,
+		"verbatimModuleSyntax": true,
+		"paths": {
+			"#/*": ["./src/*"]
+		}
+	},
+	"include": ["./src/**/*"]
+}

@@ -1,0 +1,3 @@
+[[embedded]]
+include = ["**/*.cxx", "**/*.hxx"]
+grammar = "c++"

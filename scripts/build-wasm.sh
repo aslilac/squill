@@ -20,7 +20,7 @@ out=docs/public/wasm
 mkdir -p "$out"
 # The playground crate's features; `sql` is none of them.
 for module in sql rust go python javascript typescript gleam \
-	cpp csharp java kotlin swift; do
+	cxx csharp java kotlin swift; do
 	features=()
 	[ "$module" = sql ] || features=(--features "$module")
 	cargo build --profile wasm-release --target wasm32-wasip1 -p playground \

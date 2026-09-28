@@ -205,7 +205,7 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 		</template>
 		<script>
 			import * as monaco from "monaco-editor";
-			import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
+			import EditorWorker from "monaco-editor/editor/editor.worker?worker";
 			import { highlight, highlightHost } from "../components/highlight.js";
 			import { languages, sqlExamples } from "../playground/examples.js";
 			import {

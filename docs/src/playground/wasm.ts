@@ -8,24 +8,31 @@
 
 const loading = new Map();
 
-// The module that formats `host`: TypeScript's grammar crate carries TSX
-// too.
-const moduleFor = (host) =>
-	host === "sql" ? "squill" : `squill-${host === "tsx" ? "typescript" : host}`;
+function moduleFor(host: string): string {
+	switch (host) {
+		case "sql":
+			return "squill";
+		case "tsx":
+		case "typescript":
+			return "squill-typescript";
+		default:
+			return `squill-${host}`;
+	}
+}
 
 // The module reports byte offsets (a response's `spans`); JS strings
 // count UTF-16 units. Converts `[start, end]` pairs into `text`.
-export function charSpans(text, spans) {
+export function charSpans(text: string, spans: any[]) {
 	const bytes = new TextEncoder().encode(text);
 	const decoder = new TextDecoder();
-	const at = (byte) =>
+	const at = (byte: number) =>
 		decoder.decode(bytes.subarray(0, Math.min(byte, bytes.length))).length;
 	return spans.map(([start, end]) => [at(start), at(end)]);
 }
 
 // Load `host`'s module, once per page; resolves to `format(request)`,
 // which returns the parsed response plus how long formatting took (`ms`).
-export function loadSquill(host) {
+export function loadSquill(host: string) {
 	const module = moduleFor(host);
 	if (!loading.has(module)) {
 		const compiled = WebAssembly.compileStreaming(fetch(`wasm/${module}.wasm`));

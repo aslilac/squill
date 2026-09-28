@@ -12,7 +12,7 @@ export const colors = {
 	comment: "#6f6878",
 	func: "#7ba3e0",
 	selection: "#3a3348",
-};
+} as const;
 
 // The light theme's, for the playground's editor: the light halves of
 // styles/theme.css's code variables.
@@ -39,18 +39,21 @@ const variables = {
 	number: "--code-number",
 	comment: "--code-comment",
 	func: "--code-func",
-};
+} as const;
+
 const byHex = new Map(
 	Object.entries(variables).map(([name, variable]) => [
-		colors[name].toLowerCase(),
+		colors[name as keyof typeof variables].toLowerCase(),
 		`var(${variable})`,
 	]),
 );
-export const themed = (html) =>
-	html.replace(
+
+export function themed(html: string): string {
+	return html.replace(
 		/#[0-9a-f]{6}\b/gi,
 		(hex) => byHex.get(hex.toLowerCase()) ?? hex,
 	);
+}
 
 export const shikiTheme = {
 	name: "squill-dark",

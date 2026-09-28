@@ -1,0 +1,4 @@
+{"path":"after.cxx","start":222,"end":397,"line":5,"column":17,"end_line":10,"end_column":14,"dialect":"postgres","pinned_dialect":false}
+{"path":"after.cxx","start":537,"end":624,"line":15,"column":12,"end_line":19,"end_column":9,"dialect":"postgres","pinned_dialect":false}
+{"path":"before.cxx","start":222,"end":396,"line":5,"column":17,"end_line":9,"end_column":14,"dialect":"postgres","pinned_dialect":false}
+{"path":"before.cxx","start":536,"end":611,"line":14,"column":12,"end_line":16,"end_column":9,"dialect":"postgres","pinned_dialect":false}

@@ -31,7 +31,7 @@ Cargo can clone the source, checkout the latest release tag, and install the bin
 cargo install --git https://github.com/aslilac/squill.git --tag v0.4.0 cli --bin squill
 ```
 
-Every built-in grammar for embedded SQL is its own cargo feature (`rust`, `go`, `python`, `javascript`, `typescript`, `gleam`, `cpp`, `csharp`, `java`, `kotlin`, `swift`), as is `external-grammars`, which loads grammars from `.wasm` files at runtime (and needs `cmake` to build). All are on by default; for a smaller binary, pick just the ones you need:
+Every built-in grammar for embedded SQL is its own cargo feature (`rust`, `go`, `python`, `javascript`, `typescript`, `gleam`, `c++`, `csharp`, `java`, `kotlin`, `swift`), as is `external-grammars`, which loads grammars from `.wasm` files at runtime (and needs `cmake` to build). All are on by default; for a smaller binary, pick just the ones you need:
 
 ```sh
 cargo install --git https://github.com/aslilac/squill.git --tag v0.4.0 cli --bin squill --no-default-features --features rust,go

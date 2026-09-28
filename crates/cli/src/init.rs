@@ -85,7 +85,7 @@ fn display_name(host: embed::Host) -> &'static str {
 		"typescript" => "TypeScript",
 		"tsx" => "TSX",
 		"gleam" => "Gleam",
-		"cpp" => "C++",
+		"c++" => "C++",
 		"csharp" => "C#",
 		"java" => "Java",
 		"kotlin" => "Kotlin",

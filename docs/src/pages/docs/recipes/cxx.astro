@@ -4,7 +4,7 @@ import Recipe from "../../../components/Recipe.astro";
 ---
 
 <Docs
-	page="recipes/cpp"
+	page="recipes/cxx"
 	title="C++"
 	lede="sqlite3, libpq, and libpqxx work out of the box, the C APIs each in their own dialect."
 >
@@ -18,7 +18,7 @@ import Recipe from "../../../components/Recipe.astro";
 			squill format a query, write it as a raw string.
 		</p>
 		<p>
-			The built-in <code>cpp</code> grammar&rsquo;s default query knows which
+			The built-in <code>c++</code> grammar&rsquo;s default query knows which
 			database each C API talks to, so sqlite3&rsquo;s calls format as SQLite
 			and libpq&rsquo;s as Postgres, whatever the configured dialect.
 		</p>
@@ -30,7 +30,7 @@ import Recipe from "../../../components/Recipe.astro";
 			<code>sqlite3_prepare</code>, <code>sqlite3_prepare_v2</code>,{" "}
 			<code>sqlite3_prepare_v3</code>, and <code>sqlite3_exec</code>:
 		</p>
-		<Recipe name="cpp-sqlite" lang="cpp" />
+		<Recipe name="cxx-sqlite" lang="cxx" />
 	</section>
 
 	<section>
@@ -39,7 +39,7 @@ import Recipe from "../../../components/Recipe.astro";
 			<code>PQexec</code>, <code>PQexecParams</code>, <code>PQprepare</code>,
 			and <code>PQsendQuery</code>:
 		</p>
-		<Recipe name="cpp-libpq" lang="cpp" />
+		<Recipe name="cxx-libpq" lang="cxx" />
 	</section>
 
 	<section>
@@ -50,6 +50,6 @@ import Recipe from "../../../components/Recipe.astro";
 			arguments (<code>tx.query&lt;int, std::string&gt;(&hellip;)</code>) or
 			without:
 		</p>
-		<Recipe name="cpp-libpqxx" lang="cpp" />
+		<Recipe name="cxx-libpqxx" lang="cxx" />
 	</section>
 </Docs>

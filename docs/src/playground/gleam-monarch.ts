@@ -1,3 +1,6 @@
+// CLEANUP: I don't understand why this file exists. Monaco doesn't have
+// built-in Kotlin support either but there's no Kotlin file here.
+
 // Monaco has no built-in Gleam support; a small Monarch grammar covers
 // the input-editor basics (keywords, strings, numbers, comments, types).
 

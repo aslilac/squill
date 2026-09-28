@@ -15,15 +15,15 @@
 	feature = "javascript",
 	feature = "typescript",
 	feature = "gleam",
-	feature = "cpp",
+	feature = "cxx",
 	feature = "csharp",
 	feature = "java",
 	feature = "kotlin",
 	feature = "swift",
 ))]
 
-use embed::CPP_SQL_QUERY;
 use embed::CSHARP_SQL_QUERY;
+use embed::CXX_SQL_QUERY;
 use embed::GLEAM_SQL_QUERY;
 use embed::GO_DB_QUERY;
 use embed::Host;
@@ -632,9 +632,9 @@ fn csharp_raw_strings() {
 }
 
 #[test]
-fn cpp_raw_strings() {
+fn cxx_raw_strings() {
 	let source = "void f() {\n  sqlite3_prepare_v2(db, R\"sql(\n    SELECT a FROM t LIMIT 1\n  )sql\", -1, &s, 0);\n  txn.exec(R\"(select   1)\");\n}\n";
-	let formatted = format_host(Host::Cpp, CPP_SQL_QUERY, source);
+	let formatted = format_host(Host::Cxx, CXX_SQL_QUERY, source);
 	// sqlite3_* calls are SQLite. The query promises raw strings take
 	// line breaks, so a one-line one gets the multi-line layout too.
 	assert_eq!(
@@ -820,8 +820,8 @@ fn generic_and_wrapped_calls_are_found() {
 			"conn.QueryAsync<Order>(\"\"\"\n        select 1\n        \"\"\");",
 		),
 		(
-			Host::Cpp,
-			CPP_SQL_QUERY,
+			Host::Cxx,
+			CXX_SQL_QUERY,
 			"void f() {\n  tx.query<int>(R\"(\n    SELECT  1\n  )\");\n}\n",
 			"tx.query<int>(R\"(\n  select 1\n  )\");",
 		),
@@ -893,7 +893,7 @@ fn swift_multi_line_strings() {
 fn dialect_captures() {
 	let unknown = format_embedded(
 		"",
-		&Host::Cpp.into(),
+		&Host::Cxx.into(),
 		"((raw_string_content) @sql.mysql)",
 		&options(),
 		Indent::FROM_HOST,
@@ -902,7 +902,7 @@ fn dialect_captures() {
 	assert!(err.to_string().contains("unknown capture `@sql.mysql`"), "{err}");
 
 	let source = "void f() {\n  sqlite3_exec(db, R\"(\n    frobnicate 1\n  )\", 0, 0, 0);\n  txn.exec(R\"(\n    frobnicate 2\n  )\");\n}\n";
-	let formatted = format_host(Host::Cpp, CPP_SQL_QUERY, source);
+	let formatted = format_host(Host::Cxx, CXX_SQL_QUERY, source);
 	let messages: Vec<&str> =
 		formatted.warnings.iter().map(|w| w.message.as_str()).collect();
 	assert_eq!(messages.len(), 2, "{messages:?}");
@@ -950,25 +950,25 @@ fn unpromised_strings_are_left_alone() {
 	// one-line string may not take line breaks, and a backslash may be
 	// an escape.
 	let query =
-		CPP_SQL_QUERY.replace(" (#set! squill.raw) (#set! squill.multiline)", "");
+		CXX_SQL_QUERY.replace(" (#set! squill.raw) (#set! squill.multiline)", "");
 	assert!(!query.contains("#set!"));
 	let source = "void f() {\n  txn.exec(R\"(select   1)\");\n  txn.exec(R\"(\n    SELECT '\\d'\n  )\");\n}\n";
-	let formatted = format_host(Host::Cpp, &query, source);
+	let formatted = format_host(Host::Cxx, &query, source);
 	assert_eq!(formatted.text, source);
 	assert_eq!(formatted.warnings.len(), 1, "{:?}", formatted.warnings);
 	assert!(formatted.warnings[0].message.contains("squill.raw"));
 	// Promised raw, the backslash is just a character.
-	let formatted = format_host(Host::Cpp, CPP_SQL_QUERY, source);
+	let formatted = format_host(Host::Cxx, CXX_SQL_QUERY, source);
 	assert!(formatted.text.contains("  select '\\d'\n"), "{}", formatted.text);
 	assert!(formatted.warnings.is_empty(), "{:?}", formatted.warnings);
 }
 
 #[test]
 fn unknown_properties_are_refused() {
-	let query = CPP_SQL_QUERY.replace("squill.multiline", "squill.multi-line");
+	let query = CXX_SQL_QUERY.replace("squill.multiline", "squill.multi-line");
 	let result = format_embedded(
 		"",
-		&Host::Cpp.into(),
+		&Host::Cxx.into(),
 		&query,
 		&options(),
 		Indent::FROM_HOST,
@@ -984,7 +984,7 @@ fn a_closing_delimiter_at_the_margin_stays_there() {
 	// Some syntaxes need it there (a bare Ruby heredoc's terminator), so
 	// a string closed at the margin is closed at the margin again.
 	let source = "void f() {\n  txn.exec(R\"(\n    SELECT a FROM t\n)\");\n}\n";
-	let formatted = format_host(Host::Cpp, CPP_SQL_QUERY, source);
+	let formatted = format_host(Host::Cxx, CXX_SQL_QUERY, source);
 	assert_eq!(
 		formatted.text,
 		"void f() {\n  txn.exec(R\"(\n  select a\n  from t\n)\");\n}\n"
@@ -1014,7 +1014,7 @@ fn a_broken_multiline_promise_fails_the_reparse() {
 "#;
 	let source =
 		"void f() {\n  run(\"select   1\");\n  txn.exec(R\"(select   2)\");\n}\n";
-	let formatted = format_host(Host::Cpp, query, source);
+	let formatted = format_host(Host::Cxx, query, source);
 	assert!(formatted.text.contains("run(\"select   1\")"), "{}", formatted.text);
 	assert!(
 		formatted.text.contains("txn.exec(R\"(\n  select 2\n  )\")"),

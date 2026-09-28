@@ -6,3 +6,7 @@ allowBuilds:
   esbuild: true
   # Only needed to sign a .vsix, which squill doesn't.
   "@vscode/vsce-sign": false
+
+catalog:
+  "prettier": "~3.9.9"
+  "typescript": "~7.0.2"

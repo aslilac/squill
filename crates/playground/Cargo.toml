@@ -15,7 +15,7 @@ crate-type = ["cdylib", "rlib"]
 # tests and clippy.
 default = [
 	"rust", "go", "python", "javascript", "typescript", "gleam",
-	"cpp", "csharp", "java", "kotlin", "swift",
+	"cxx", "csharp", "java", "kotlin", "swift",
 ]
 embedded = ["dep:embed"]
 rust = ["embedded", "embed/rust"]
@@ -24,7 +24,7 @@ python = ["embedded", "embed/python"]
 javascript = ["embedded", "embed/javascript"]
 typescript = ["embedded", "embed/typescript"]
 gleam = ["embedded", "embed/gleam"]
-cpp = ["embedded", "embed/cpp"]
+cxx = ["embedded", "embed/cxx"]
 csharp = ["embedded", "embed/csharp"]
 java = ["embedded", "embed/java"]
 kotlin = ["embedded", "embed/kotlin"]

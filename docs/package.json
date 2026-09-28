@@ -10,13 +10,14 @@
 		"preview": "astro preview"
 	},
 	"dependencies": {
-		"lucide-static": "^1.25.0",
-		"monaco-editor": "^0.55.1",
-		"shiki": "^4.3.1"
+		"lucide-static": "^1.48.0",
+		"monaco-editor": "^0.57.0",
+		"shiki": "^4.4.3"
 	},
 	"devDependencies": {
-		"@types/node": "^24.13.3",
-		"astro": "^7.1.1",
-		"smol-toml": "^1.7.0"
+		"@types/node": "^24.19.0",
+		"astro": "^7.3.5",
+		"smol-toml": "^1.9.0",
+		"typescript": "catalog:"
 	}
 }
