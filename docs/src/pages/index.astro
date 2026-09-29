@@ -71,7 +71,7 @@ ${tail}</code></pre>`);
 			<div>
 				<h1>squill</h1>
 				<p class="tagline">
-					A robust, friendly, and flexible formatter for SQL code everywhere.
+					A formatter and syntax highlighter for SQL, everywhere.
 				</p>
 			</div>
 			<nav>
@@ -112,13 +112,13 @@ ${tail}</code></pre>`);
 	<div class="pair">
 		<figure>
 			<figcaption>
-				input <span>rust · sqlx</span>
+				without <span>Rust + sqlx</span>
 			</figcaption>
 			<div set:html={beforeHtml} />
 		</figure>
 		<figure>
 			<figcaption>
-				output <span class="tidy">✓ formatted</span>
+				with squill <span class="tidy">✓ formatted</span>
 			</figcaption>
 			<div set:html={afterHtml} />
 		</figure>
@@ -129,7 +129,6 @@ ${tail}</code></pre>`);
 		<Code
 			lang="sh"
 			code={`mise use -g github:aslilac/squill
-
 squill fmt --check .`}
 		/>
 		<p>
