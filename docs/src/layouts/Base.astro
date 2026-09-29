@@ -796,6 +796,13 @@ const topNav = [
 				margin: 0 auto;
 				padding: 2.5rem 2.5rem 4rem;
 			}
+			/* Following a link to a section leaves a little air above its
+			   heading, plus room for anything the page keeps stuck to the top
+			   of the window (the style tour's options bar sets
+			   --anchor-offset to its height). */
+			.docs-shell > article :is(section, h2, h3)[id] {
+				scroll-margin-top: calc(var(--anchor-offset, 0px) + 3rem);
+			}
 			@media (max-width: 720px) {
 				.docs-shell {
 					grid-template-columns: minmax(0, 1fr);

@@ -221,6 +221,13 @@ JOIN "User" ON "User"."id" = "users"."user_id";`}
 
 	const bar = document.querySelector<HTMLFormElement>(".style-bar")!;
 	const status = bar.querySelector<HTMLElement>(".style-status")!;
+	// Sections a link jumps to land below the bar, however tall it wraps.
+	new ResizeObserver(() => {
+		document.documentElement.style.setProperty(
+			"--anchor-offset",
+			`${bar.offsetHeight}px`,
+		);
+	}).observe(bar);
 	const examples = [
 		...document.querySelectorAll<HTMLElement>(".style-example"),
 	].map((root) => {
