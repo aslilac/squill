@@ -587,10 +587,11 @@ fn explicit_rust_path_formats_under_an_embedded_rule() {
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// A host file no rule covers is an error when named explicitly — with
-/// the rule to add — rather than a wall of SQL parse errors.
+/// A file no rule covers, and not named *.sql, is an error when named
+/// explicitly — with the rule to add — rather than formatted as SQL: a
+/// host file as SQL is a wall of parse errors.
 #[test]
-fn explicit_host_path_without_a_rule_explains_itself() {
+fn explicit_path_without_a_rule_explains_itself() {
 	let dir = temp_dir("embednorule");
 	let file = dir.join("q.rs");
 	std::fs::write(&file, RS_FIXTURE).expect("write");
@@ -606,11 +607,23 @@ fn explicit_host_path_without_a_rule_explains_itself() {
 	assert_eq!(output.status.code(), Some(2));
 	let stderr = String::from_utf8_lossy(&output.stderr);
 	assert!(
-		stderr.contains("no [[embedded]] rule covers this file")
+		stderr.contains("no rule covers it")
+			&& stderr.contains("[[embedded]]")
 			&& stderr.contains("grammar = \"rust\""),
 		"{stderr}"
 	);
 	assert_eq!(std::fs::read_to_string(&file).expect("read"), RS_FIXTURE);
+	// Anything else: a [[files]] rule would make it SQL.
+	let notes = dir.join("notes.pgsql");
+	std::fs::write(&notes, "SELECT   1;\n").expect("write");
+	let output = squill().arg("fmt").arg(&notes).output().expect("run");
+	assert_eq!(output.status.code(), Some(2));
+	let stderr = String::from_utf8_lossy(&output.stderr);
+	assert!(
+		stderr.contains("[[files]]") && stderr.contains("\"**/*.pgsql\""),
+		"{stderr}"
+	);
+	assert_eq!(std::fs::read_to_string(&notes).expect("read"), "SELECT   1;\n");
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -1303,6 +1316,28 @@ fn init_defaults_to_the_languages_that_hold_sql() {
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// A rule's `include` names the extensions the project uses, not every
+/// one the language might: here `.cc` sources with `.h` headers.
+#[cfg(feature = "cxx")]
+#[test]
+fn init_includes_the_extensions_it_finds() {
+	let dir = temp_dir("initcxx");
+	std::fs::write(
+		dir.join("db.cc"),
+		"void f(sqlite3 *db) {\n  sqlite3_exec(db, R\"(\n    DELETE FROM t\n  )\", 0, 0, 0);\n}\n",
+	)
+	.expect("write");
+	std::fs::write(dir.join("db.h"), "void f(sqlite3 *db);\n").expect("write");
+	let (code, stderr) = init_in(&dir, &["--yes"]);
+	assert_eq!(code, Some(0), "{stderr}");
+	let config = std::fs::read_to_string(dir.join("squill.toml")).expect("read");
+	assert!(
+		config.contains("include = [\"**/*.cc\", \"**/*.h\"]\ngrammar = \"c++\""),
+		"{config}"
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// A new project: nothing to find, so just the dialect.
 #[test]
 fn init_in_an_empty_project() {
@@ -1434,7 +1469,8 @@ fn stdin_filepath_resolves_rules_against_the_path() {
 }
 
 /// What squill wouldn't format as a file, it hands back unchanged from
-/// stdin: an ignored path, or a host file no rule covers.
+/// stdin: an ignored path, or a file neither named *.sql nor covered by
+/// a rule.
 #[test]
 fn stdin_filepath_passes_through_what_it_would_not_format() {
 	let dir = temp_dir("stdinpassthrough");
@@ -1445,8 +1481,16 @@ fn stdin_filepath_passes_through_what_it_would_not_format() {
 	assert_eq!((code, out.as_str()), (Some(0), messy));
 	let (code, out, _) = stdin_as(&dir, "src/q.rs", RS_FIXTURE, &[]);
 	assert_eq!((code, out.as_str()), (Some(0), RS_FIXTURE));
-	// Anything else is SQL, as a named file would be.
-	let (code, out, _) = stdin_as(&dir, "notes.txt", messy, &[]);
+	// Nor is anything else not named *.sql: a C header, say.
+	let (code, out, _) = stdin_as(&dir, "row.h", messy, &[]);
+	assert_eq!((code, out.as_str()), (Some(0), messy));
+	// A [[files]] rule makes it SQL.
+	std::fs::write(
+		dir.join("squill.toml"),
+		"ignore = [\"generated/**\"]\n\n[[files]]\ninclude = [\"*.pgsql\"]\n",
+	)
+	.expect("write config");
+	let (code, out, _) = stdin_as(&dir, "notes.pgsql", messy, &[]);
 	assert_eq!((code, out.as_str()), (Some(0), "select 1;\n"));
 	let _ = std::fs::remove_dir_all(&dir);
 }
@@ -1526,7 +1570,14 @@ fn language_server_formats_and_reports() {
 				"rust",
 				"fn f() {\n    sqlx::query!(r#\"select (\n\"#);\n}\n",
 			),
-			json!({"jsonrpc": "2.0", "id": 3, "method": "shutdown"}),
+			// A C header: an extension no grammar claims, in a language
+			// that isn't SQL. Left alone, not read as SQL.
+			open("row.h", "cpp", "struct row { int id; };\n"),
+			json!({"jsonrpc": "2.0", "id": 3, "method": "textDocument/formatting", "params": {
+				"textDocument": {"uri": uri("row.h")},
+				"options": {"tabSize": 4, "insertSpaces": false}
+			}}),
+			json!({"jsonrpc": "2.0", "id": 4, "method": "shutdown"}),
 			json!({"jsonrpc": "2.0", "method": "exit"}),
 		],
 	);
@@ -1560,12 +1611,21 @@ fn language_server_formats_and_reports() {
 			.is_some_and(|message| message.contains("did not parse")),
 		"{diagnostics}"
 	);
+
+	assert_eq!(reply(3)["result"], json!([]));
+	let header = replies
+		.iter()
+		.filter(|reply| reply["method"] == "textDocument/publishDiagnostics")
+		.find(|reply| reply["params"]["uri"] == uri("row.h"))
+		.expect("diagnostics for row.h");
+	assert_eq!(header["params"]["diagnostics"], json!([]), "{header}");
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// For clients that run one formatter per file: formatting registered
-/// for just the documents asked about, and a `source.formatSql` code
-/// action to run after another language's formatter.
+/// For clients that run one formatter per file: formatting (and
+/// highlighting) for just the documents asked about, and a
+/// `source.formatSql` code action to run after another language's
+/// formatter.
 #[cfg(feature = "lsp")]
 #[test]
 fn language_server_serves_one_formatter_editors() {
@@ -1578,7 +1638,10 @@ fn language_server_serves_one_formatter_editors() {
 		&[
 			json!({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
 				"capabilities": {"textDocument": {"formatting": {"dynamicRegistration": true}}},
-				"initializationOptions": {"formattingSelector": [{"language": "sql"}]}
+				"initializationOptions": {
+					"formattingSelector": [{"language": "sql"}],
+					"semanticTokensSelector": []
+				}
 			}}),
 			json!({"jsonrpc": "2.0", "method": "initialized", "params": {}}),
 			json!({"jsonrpc": "2.0", "method": "textDocument/didOpen", "params": {
@@ -1607,6 +1670,11 @@ fn language_server_serves_one_formatter_editors() {
 		capabilities["documentFormattingProvider"].is_null(),
 		"{capabilities}"
 	);
+	// Highlighting for no documents, but the legend is still there for a
+	// client that asks for tokens itself.
+	let tokens = &capabilities["semanticTokensProvider"];
+	assert_eq!(tokens["documentSelector"], json!([]), "{capabilities}");
+	assert!(tokens["legend"]["tokenTypes"].is_array(), "{capabilities}");
 	let registration = replies
 		.iter()
 		.find(|reply| reply["method"] == "client/registerCapability")
@@ -1626,6 +1694,84 @@ fn language_server_serves_one_formatter_editors() {
 		"{action}"
 	);
 	assert_eq!(reply(3)["result"], json!([]));
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The language server highlights the SQL a host file's rule finds, and
+/// nothing else in the file. SQL files it leaves to the editor.
+#[cfg(feature = "lsp")]
+#[test]
+fn language_server_highlights_embedded_sql() {
+	use serde_json::json;
+	let dir = temp_dir("lsptokens");
+	std::fs::write(dir.join("squill.toml"), RUST_RULE).expect("write config");
+	let uri = format!("file://{}", dir.join("q.rs").display());
+	let sql_uri = format!("file://{}", dir.join("q.sql").display());
+	let replies = lsp_session(
+		&dir,
+		&[
+			json!({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"capabilities": {}}}),
+			json!({"jsonrpc": "2.0", "method": "initialized", "params": {}}),
+			json!({"jsonrpc": "2.0", "method": "textDocument/didOpen", "params": {
+				"textDocument": {"uri": uri, "languageId": "rust", "version": 1, "text": RS_FIXTURE}
+			}}),
+			json!({"jsonrpc": "2.0", "id": 2, "method": "textDocument/semanticTokens/full", "params": {
+				"textDocument": {"uri": uri}
+			}}),
+			json!({"jsonrpc": "2.0", "method": "textDocument/didOpen", "params": {
+				"textDocument": {"uri": sql_uri, "languageId": "sql", "version": 1, "text": "select 1;"}
+			}}),
+			json!({"jsonrpc": "2.0", "id": 3, "method": "textDocument/semanticTokens/full", "params": {
+				"textDocument": {"uri": sql_uri}
+			}}),
+			json!({"jsonrpc": "2.0", "id": 4, "method": "shutdown"}),
+			json!({"jsonrpc": "2.0", "method": "exit"}),
+		],
+	);
+	let reply = |id: i64| {
+		replies.iter().find(|reply| reply["id"] == id).expect("reply").clone()
+	};
+	let legend = reply(1)["result"]["capabilities"]["semanticTokensProvider"]
+		["legend"]["tokenTypes"]
+		.clone();
+	let data: Vec<u64> = reply(2)["result"]["data"]
+		.as_array()
+		.expect("tokens")
+		.iter()
+		.map(|n| n.as_u64().expect("a number"))
+		.collect();
+	// Undo the relative encoding: each token's text, and its type's name.
+	let lines: Vec<&str> = RS_FIXTURE.lines().collect();
+	let (mut line, mut column) = (0, 0);
+	let mut tokens = Vec::new();
+	for token in data.chunks(5) {
+		if token[0] > 0 {
+			column = 0;
+		}
+		line += token[0] as usize;
+		column += token[1] as usize;
+		let text = &lines[line][column..column + token[2] as usize];
+		let kind = legend[token[3] as usize].as_str().expect("a type name");
+		tokens.push((text, kind));
+	}
+	assert_eq!(
+		tokens,
+		[
+			("SELECT", "keyword"),
+			("id", "variable"),
+			("name", "variable"),
+			("FROM", "keyword"),
+			("users", "variable"),
+			("WHERE", "keyword"),
+			("org", "variable"),
+			("=", "operator"),
+			("$1", "parameter"),
+			("ORDER", "keyword"),
+			("BY", "keyword"),
+			("name", "variable"),
+		]
+	);
+	assert!(reply(3)["result"].is_null(), "{}", reply(3));
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -1837,7 +1983,7 @@ fn params_are_off_until_configured() {
 	let dir = temp_dir("csharpat");
 	let source = "class A {\n    void M() {\n        conn.Execute(\"\"\"\n            DELETE FROM t WHERE id=@id OR id IN @ids\n            \"\"\");\n    }\n}\n";
 	std::fs::write(dir.join("a.cs"), source).expect("write");
-	let rule = "[[embedded]]\ninclude = [\"*.cs\"]\ngrammar = \"csharp\"\n";
+	let rule = "[[embedded]]\ninclude = [\"*.cs\"]\ngrammar = \"c#\"\n";
 	std::fs::write(dir.join("squill.toml"), rule).expect("write config");
 	let run = || {
 		squill()

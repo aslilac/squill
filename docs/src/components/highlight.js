@@ -1,6 +1,6 @@
 import { createHighlighter } from "shiki";
-import { sqlGrammar } from "../playground/sql-grammar.js";
-import { colors, shikiTheme, themed } from "../playground/theme.js";
+import { sqlGrammar } from "../playground/sql-grammar";
+import { colors, shikiTheme, themed } from "../playground/theme";
 
 // A TextMate grammar for tree-sitter queries (.scm), which shiki doesn't
 // bundle. Small on purpose: it colors what a reader scans for — node

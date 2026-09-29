@@ -59,11 +59,11 @@ squill version`}
 			<code>ignore</code> globs and any <code>--ignore</code> flags.
 		</p>
 		<p>
-			A file named on the command line is always formatted, ignored or not. If
-			no rule covers it, it formats as plain SQL &mdash; unless it is in a
-			language squill has a grammar for, in which case squill stops and shows
-			the rule to add. <a href="docs/frozen/">Frozen</a> files are the
-			exception: they are never rewritten, however they are named.
+			A file named on the command line is always formatted, ignored or not.
+			squill never guesses what a file is from its name, beyond{" "}
+			<code>*.sql</code>: any other file needs a rule, and if none covers it,
+			squill stops and shows the rule to add. <a href="docs/frozen/">Frozen</a>{" "}
+			files are the exception: they are never rewritten, however they are named.
 		</p>
 	</section>
 
@@ -112,9 +112,10 @@ squill version`}
 						<td>
 							Reads stdin as the file at <code>PATH</code>, which need not
 							exist: its config and rules apply, so a host file&rsquo;s embedded
-							SQL formats too. An ignored, frozen, or unconfigured host file
-							comes back unchanged. This is the one for editors that pipe a
-							buffer through a formatter.
+							SQL formats too. An ignored or frozen file, or one that is neither{" "}
+							<code>*.sql</code> nor covered by a rule, comes back unchanged.
+							This is the one for editors that pipe a buffer through a
+							formatter.
 						</td>
 					</tr>
 				</tbody>

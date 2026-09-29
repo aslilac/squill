@@ -1,6 +1,6 @@
 ---
-import Code from "../../components/Code.astro";
-import Docs from "../../layouts/Docs.astro";
+import Code from "#/components/Code.astro";
+import Docs from "#/layouts/Docs.astro";
 ---
 
 <Docs
@@ -67,8 +67,10 @@ formatter = { command = "sh", args = ["-c", "rustfmt | squill fmt --stdin-filepa
 			and stdout. It formats documents the same way (by their path, config and
 			rules included), and it reports what squill leaves alone as warnings where
 			they are: statements it passed through verbatim, and embedded strings it
-			declined to rewrite. Config is re-read for every request, so edits to{" "}
-			<code>squill.toml</code> apply without a restart.
+			declined to rewrite. It also highlights the SQL embedded in host-language
+			files, as semantic tokens, for editors that layer them over the
+			language&rsquo;s own highlighting. Config is re-read for every request, so
+			edits to <code>squill.toml</code> apply without a restart.
 		</p>
 		<p>In Helix, register it and use it for SQL:</p>
 		<Code
@@ -94,6 +96,36 @@ auto-format = true`}
 name = "rust"
 language-servers = ["rust-analyzer", { name = "squill", only-features = ["diagnostics"] }]`}
 		/>
+	</section>
+
+	<section>
+		<h2>Neovim</h2>
+		<p>
+			Neovim 0.11 and later set up language servers without plugins. Register
+			squill for SQL and every language it finds SQL in, next to those
+			languages&rsquo; own servers:
+		</p>
+		<Code
+			lang="lua"
+			file="init.lua"
+			code={`vim.lsp.config("squill", {
+  cmd = { "squill", "language-server", "start" },
+  filetypes = {
+    "sql", "rust", "go", "python", "javascript", "javascriptreact",
+    "typescript", "typescriptreact", "gleam", "cpp", "cs", "java",
+    "kotlin", "swift",
+  },
+  root_markers = { "squill.toml", ".config/squill.toml", ".git" },
+})
+vim.lsp.enable("squill")`}
+		/>
+		<p>
+			Neovim layers the semantic tokens of every server attached to a buffer, so
+			the SQL in a Rust file&rsquo;s strings is highlighted on top of
+			rust-analyzer&rsquo;s highlighting. Formatting runs every attached
+			server&rsquo;s formatter in turn; to run just squill&rsquo;s, name it:
+		</p>
+		<Code lang="lua" code={`vim.lsp.buf.format({ name = "squill" })`} />
 	</section>
 
 	<section>
@@ -159,9 +191,9 @@ language-servers = ["rust-analyzer", { name = "squill", only-features = ["diagno
 		<h2>VS Code</h2>
 		<p>
 			squill&rsquo;s VS Code extension runs squill&rsquo;s language server: it
-			formats SQL files, and a <code>source.formatSql</code> code action formats
-			embedded SQL on save, after the language&rsquo;s own formatter. Build it
-			with{" "}
+			formats SQL files, a <code>source.formatSql</code> code action formats
+			embedded SQL on save, after the language&rsquo;s own formatter, and it
+			highlights embedded SQL. Build it with{" "}
 			<code>
 				pnpm install &amp;&amp; pnpm run build &amp;&amp; pnpm run package
 			</code>{" "}

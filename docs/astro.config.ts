@@ -10,5 +10,12 @@ export default {
 		resolve: {
 			tsconfigPaths: true,
 		},
+		// Pages import shiki in the browser only once they need it (a style
+		// option changed), and it loads each language lazily too. Found that
+		// late, the dev server re-bundles its dependencies mid-page, and the
+		// import that found it fails; bundling it up front avoids that.
+		optimizeDeps: {
+			include: ["shiki"],
+		},
 	},
 } satisfies import("astro").AstroUserConfig;

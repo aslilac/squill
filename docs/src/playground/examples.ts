@@ -7,76 +7,55 @@ export const languages: PlaygroundLanguage[] = [
 	{
 		host: "sql",
 		label: "SQL",
-		monacoLang: "sql",
-		shikiLang: "sql",
 	},
 
 	// Host languages with built-in grammars.
 	{
-		host: "csharp",
+		host: "c#",
 		label: "C#",
 		monacoLang: "csharp",
-		shikiLang: "csharp",
 	},
 	{
-		host: "cxx",
+		host: "c++",
 		label: "C++",
 		monacoLang: "cpp",
-		shikiLang: "cpp",
 	},
 	{
 		host: "gleam",
 		label: "Gleam",
-		monacoLang: "gleam",
-		shikiLang: "gleam",
 	},
 	{
 		host: "go",
 		label: "Go",
-		monacoLang: "go",
-		shikiLang: "go",
 	},
 	{
 		host: "java",
 		label: "Java",
-		monacoLang: "java",
-		shikiLang: "java",
 	},
 	{
 		host: "kotlin",
 		label: "Kotlin",
-		monacoLang: "kotlin",
-		shikiLang: "kotlin",
 	},
 	{
 		host: "python",
 		label: "Python",
-		monacoLang: "python",
-		shikiLang: "python",
 	},
 	{
 		host: "rust",
 		label: "Rust",
-		monacoLang: "rust",
-		shikiLang: "rust",
 	},
 	{
 		host: "swift",
 		label: "Swift",
-		monacoLang: "swift",
-		shikiLang: "swift",
 	},
 	{
 		host: "typescript",
 		label: "TypeScript",
-		monacoLang: "typescript",
-		shikiLang: "typescript",
 	},
 	{
 		host: "tsx",
 		label: "TSX",
 		monacoLang: "typescript",
-		shikiLang: "tsx",
 	},
 	// CLEANUP: Could I get away with just removing this? TSX is strictly superior
 	// for this use-case afaik. Any valid JS syntax, including JSX, should be
@@ -84,8 +63,6 @@ export const languages: PlaygroundLanguage[] = [
 	{
 		host: "javascript",
 		label: "JavaScript",
-		monacoLang: "javascript",
-		shikiLang: "javascript",
 	},
 ];
 
@@ -95,8 +72,11 @@ export const languages: PlaygroundLanguage[] = [
 type PlaygroundLanguage = {
 	readonly host: string;
 	readonly label: string;
-	readonly monacoLang: string;
-	readonly shikiLang: string;
+
+	/** Monaco's id for the language, where it differs from `host`. */
+	readonly monacoLang?: string;
+	/** Shiki's id for the language, where it differs from `host`. */
+	readonly shikiLang?: string;
 };
 
 // Plain SQL's examples, one per dialect; every other language's come

@@ -3,13 +3,15 @@
 //
 // VS Code runs one formatter per document, so squill registers as the
 // formatter only for SQL. In other languages it contributes its
-// diagnostics about embedded SQL, and a `source.formatSql` code action
-// that runs on save after that language's own formatter.
+// diagnostics about embedded SQL, a `source.formatSql` code action that
+// runs on save after that language's own formatter, and highlighting
+// for the embedded SQL (see ./highlight.ts).
 
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { downloadedSquill } from "./download";
+import { SqlHighlighter } from "./highlight";
 import {
 	LanguageClient,
 	type LanguageClientOptions,
@@ -35,6 +37,7 @@ const LANGUAGES = [
 ];
 
 let client: LanguageClient | undefined;
+let highlighter: SqlHighlighter | undefined;
 let extensionContext: vscode.ExtensionContext;
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -44,6 +47,8 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.workspace.onDidChangeConfiguration((event) => {
 			if (event.affectsConfiguration("squill.path")) {
 				void restart();
+			} else if (event.affectsConfiguration("squill.highlightEmbeddedSql")) {
+				updateHighlighter();
 			}
 		}),
 	);
@@ -51,6 +56,7 @@ export async function activate(context: vscode.ExtensionContext) {
 }
 
 export async function deactivate() {
+	highlighter?.dispose();
 	await client?.stop();
 }
 
@@ -114,11 +120,16 @@ async function start() {
 		]),
 		initializationOptions: {
 			formattingSelector: [{ language: "sql" }],
+			// No semantic tokens anywhere: in SQL files VS Code's own
+			// highlighting is fine, and elsewhere they'd replace the host
+			// language server's. The highlighter asks for them itself.
+			semanticTokensSelector: [],
 		},
 	};
 	client = new LanguageClient("squill", "squill", serverOptions, clientOptions);
 	try {
 		await client.start();
+		updateHighlighter();
 	} catch (err) {
 		client = undefined;
 		const message = err instanceof Error ? err.message : String(err);
@@ -128,7 +139,25 @@ async function start() {
 	}
 }
 
+// Highlight embedded SQL while the server runs, unless turned off.
+function updateHighlighter() {
+	const enabled = vscode.workspace
+		.getConfiguration("squill")
+		.get<boolean>("highlightEmbeddedSql", true);
+	if (enabled && client && !highlighter) {
+		highlighter = new SqlHighlighter(
+			client,
+			LANGUAGES.filter((language) => language !== "sql"),
+		);
+	} else if (!enabled && highlighter) {
+		highlighter.dispose();
+		highlighter = undefined;
+	}
+}
+
 async function restart() {
+	highlighter?.dispose();
+	highlighter = undefined;
 	await client?.stop();
 	client = undefined;
 	await start();

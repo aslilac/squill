@@ -206,14 +206,14 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 		<script>
 			import * as monaco from "monaco-editor";
 			import EditorWorker from "monaco-editor/editor/editor.worker?worker";
-			import { highlight, highlightHost } from "../components/highlight.js";
-			import { languages, sqlExamples } from "../playground/examples.js";
+			import { highlight, highlightHost } from "#/components/highlight";
+			import { languages, sqlExamples } from "#/playground/examples";
 			import {
 				gleamConfiguration,
 				gleamLanguage,
-			} from "../playground/gleam-monarch.js";
-			import { colors, lightColors } from "../playground/theme.js";
-			import { charSpans, loadSquill } from "../playground/wasm.js";
+			} from "#/playground/gleam-monarch";
+			import { colors, lightColors } from "#/playground/theme";
+			import { charSpans, loadSquill } from "#/playground/wasm";
 
 			self.MonacoEnvironment = { getWorker: () => new EditorWorker() };
 
@@ -226,7 +226,7 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 			for (const [name, base, palette] of [
 				["squill-dark", "vs-dark", colors],
 				["squill-light", "vs", lightColors],
-			]) {
+			] as const) {
 				monaco.editor.defineTheme(name, {
 					base,
 					inherit: true,
@@ -253,7 +253,7 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 			}
 			const prefersDark = matchMedia("(prefers-color-scheme: dark)");
 			const editorTheme = () =>
-				`squill-${document.documentElement.dataset.theme ?? (prefersDark.matches ? "dark" : "light")}`;
+				`squill-${document.documentElement.dataset["theme"] ?? (prefersDark.matches ? "dark" : "light")}`;
 			const followTheme = () => monaco.editor.setTheme(editorTheme());
 			prefersDark.addEventListener("change", followTheme);
 			new MutationObserver(followTheme).observe(document.documentElement, {
@@ -270,7 +270,7 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 			const gear = document.getElementById("gear");
 			const settingsPopover = document.getElementById("settings");
 
-			const languageOf = (host) =>
+			const languageOf = (host: string) =>
 				languages.find((language) => language.host === host);
 			// The docs recipes, as the page was built with them.
 			const frameworks = JSON.parse(
@@ -319,7 +319,7 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 
 			const editor = monaco.editor.create(document.getElementById("editor"), {
 				value: sqlExamples[0].source,
-				language: current.monacoLang,
+				language: current.monacoLang ?? current.host,
 				theme: editorTheme(),
 				minimap: { enabled: false },
 				overviewRulerBorder: false,
@@ -375,7 +375,7 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 						: (
 								await highlightHost(
 									output,
-									language.shikiLang,
+									language.shikiLang ?? language.host,
 									charSpans(output, result.spans),
 								)
 							).sql;
@@ -406,9 +406,22 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 				}
 			}
 
-			// The indent-width setting drives how both panes measure tabs.
+			// The editor indents the way its code already does: tabs at the
+			// indent-width setting (and tabs when there's no indentation to
+			// go by), or spaces at the width the code uses. Monaco only
+			// guesses when a model is made, and the editor keeps one.
+			function fitIndentation() {
+				editor.getModel().detectIndentation(false, options.indent_width);
+			}
+			fitIndentation();
+
+			// The indent-width setting drives how both panes measure tabs;
+			// code indented with spaces keeps its own width.
 			function applyIndentWidth() {
-				editor.getModel().updateOptions({ tabSize: options.indent_width });
+				const model = editor.getModel();
+				if (!model.getOptions().insertSpaces) {
+					model.updateOptions({ tabSize: options.indent_width });
+				}
 				outputPane.style.setProperty(
 					"--tab-width",
 					String(options.indent_width),
@@ -516,9 +529,13 @@ const frameworksJson = JSON.stringify(frameworks).replace(/</g, "\\u003c");
 				pickerLabel.textContent = choice.empty
 					? language.label
 					: `${language.label} · ${choice.title}`;
-				monaco.editor.setModelLanguage(editor.getModel(), current.monacoLang);
+				monaco.editor.setModelLanguage(
+					editor.getModel(),
+					current.monacoLang ?? current.host,
+				);
 				closePicker(false);
 				editor.setValue(choice.source);
+				fitIndentation();
 				editor.focus();
 				render();
 			}

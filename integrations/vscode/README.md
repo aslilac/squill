@@ -33,9 +33,25 @@ VS Code runs one formatter per file, and your Rust files already have one. squil
 
 Embedded SQL is only formatted in files that an `[[embedded]]` rule in your `squill.toml` covers; run `squill init` to set one up. See [embedded SQL](https://mckayla.dev/squill/docs/embedded/).
 
+## Highlighting embedded SQL
+
+The SQL in strings that an `[[embedded]]` rule covers is highlighted: its keywords, names, functions, types, numbers, parameters, and comments. Its own strings and punctuation keep your theme's string color. VS Code doesn't let an extension use the theme's syntax colors here, so these are theme colors of their own, matching the Dark+ and Light+ themes by default. A theme can set them, or you can:
+
+```json
+{
+	"workbench.colorCustomizations": {
+		"squill.sql.keyword": "#c678dd",
+		"squill.sql.name": "#e06c75"
+	}
+}
+```
+
+The others are `squill.sql.function`, `squill.sql.type`, `squill.sql.number`, `squill.sql.parameter`, and `squill.sql.comment`. To turn the highlighting off, set `squill.highlightEmbeddedSql` to `false`.
+
 ## Settings
 
 - `squill.path`: the `squill` executable to run. Empty (the default) means the one on `PATH`, else a downloaded one.
+- `squill.highlightEmbeddedSql`: highlight the SQL embedded in other languages' strings (on by default).
 - `squill.trace.server`: log the messages to and from the language server (`off`, `messages`, `verbose`).
 
 The **squill: Restart Language Server** command restarts it, and changing `squill.path` restarts it too. Edits to `squill.toml` apply without a restart.

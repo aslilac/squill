@@ -1,4 +1,5 @@
 .astro/
+.build/
 .direnv/
 dist/
 docs/public/wasm/

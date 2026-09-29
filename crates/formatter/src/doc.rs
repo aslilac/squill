@@ -19,8 +19,9 @@ pub enum Doc {
 	Text(String),
 	/// A SQL keyword; case-normalized at render time per
 	/// [`crate::KeywordCase`]. Never used for identifiers, strings, or
-	/// comments.
-	Keyword(String),
+	/// comments. `offset` is where the word starts in the source the
+	/// statement was lowered from, for [`crate::highlight`].
+	Keyword { text: String, offset: usize },
 	/// An identifier; the quoting transform is applied at render time per
 	/// [`crate::IdentQuoting`] and the dialect's safety rules.
 	Ident { text: String, pos: IdentPos },
@@ -65,8 +66,11 @@ pub fn text(text: impl Into<String>) -> Doc {
 	Doc::Text(text)
 }
 
-pub fn keyword(keyword: impl Into<String>) -> Doc {
-	Doc::Keyword(keyword.into())
+pub fn keyword(token: &parser::syntax::SyntaxToken) -> Doc {
+	Doc::Keyword {
+		text: token.text().to_string(),
+		offset: u32::from(token.text_range().start()) as usize,
+	}
 }
 
 pub fn ident(text: impl Into<String>, pos: IdentPos) -> Doc {

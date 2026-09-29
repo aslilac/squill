@@ -49,6 +49,11 @@
 					"default": "",
 					"markdownDescription": "The `squill` executable. Empty (the default) uses the `squill` on your `PATH`, or else downloads the latest release."
 				},
+				"squill.highlightEmbeddedSql": {
+					"type": "boolean",
+					"default": true,
+					"description": "Highlight the SQL embedded in other languages' strings."
+				},
 				"squill.trace.server": {
 					"type": "string",
 					"enum": [
@@ -66,6 +71,78 @@
 				"command": "squill.restartServer",
 				"title": "Restart Language Server",
 				"category": "squill"
+			}
+		],
+		"colors": [
+			{
+				"id": "squill.sql.keyword",
+				"description": "Keywords in SQL embedded in other languages' strings.",
+				"defaults": {
+					"dark": "#569CD6",
+					"light": "#0000FF",
+					"highContrast": "#569CD6",
+					"highContrastLight": "#0000FF"
+				}
+			},
+			{
+				"id": "squill.sql.name",
+				"description": "Names (tables, columns, aliases) in SQL embedded in other languages' strings.",
+				"defaults": {
+					"dark": "#9CDCFE",
+					"light": "#001080",
+					"highContrast": "#9CDCFE",
+					"highContrastLight": "#001080"
+				}
+			},
+			{
+				"id": "squill.sql.function",
+				"description": "Function names in SQL embedded in other languages' strings.",
+				"defaults": {
+					"dark": "#DCDCAA",
+					"light": "#795E26",
+					"highContrast": "#DCDCAA",
+					"highContrastLight": "#795E26"
+				}
+			},
+			{
+				"id": "squill.sql.type",
+				"description": "Type names in SQL embedded in other languages' strings.",
+				"defaults": {
+					"dark": "#4EC9B0",
+					"light": "#267F99",
+					"highContrast": "#4EC9B0",
+					"highContrastLight": "#267F99"
+				}
+			},
+			{
+				"id": "squill.sql.number",
+				"description": "Numbers in SQL embedded in other languages' strings.",
+				"defaults": {
+					"dark": "#B5CEA8",
+					"light": "#098658",
+					"highContrast": "#B5CEA8",
+					"highContrastLight": "#098658"
+				}
+			},
+			{
+				"id": "squill.sql.parameter",
+				"description": "Query parameters in SQL embedded in other languages' strings.",
+				"defaults": {
+					"dark": "#9CDCFE",
+					"light": "#001080",
+					"highContrast": "#9CDCFE",
+					"highContrastLight": "#001080"
+				}
+			},
+			{
+				"id": "squill.sql.comment",
+				"description": "Comments in SQL embedded in other languages' strings.",
+				"defaults": {
+					"dark": "#6A9955",
+					"light": "#008000",
+					"highContrast": "#6A9955",
+					"highContrastLight": "#008000"
+				}
 			}
 		]
 	},

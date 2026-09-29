@@ -557,12 +557,12 @@ const topNav = [
 			[role="tabpanel"][hidden] {
 				display: none;
 			}
-			/* A pane caption's right side: the file's language, and a button
-			   that copies the pane. */
+			/* A pane caption's right side: a button that copies the pane, and
+			   the file's language, laid out like the tab bar's gear and label. */
 			.caption-tools {
 				display: inline-flex;
 				align-items: center;
-				gap: 0.6rem;
+				gap: 0.75rem;
 			}
 			.copy-code {
 				display: inline-flex;
@@ -570,7 +570,7 @@ const topNav = [
 				justify-content: center;
 				width: 1.6rem;
 				height: 1.6rem;
-				margin: -0.35rem -0.4rem -0.35rem 0;
+				margin: -0.35rem 0;
 				padding: 0;
 				border: 1px solid transparent;
 				border-radius: 50%;
@@ -581,6 +581,11 @@ const topNav = [
 					background 0.12s,
 					border-color 0.12s,
 					color 0.12s;
+			}
+			/* Alone in its caption, the button's icon lines up with the pane's
+			   edge. */
+			.copy-code:last-child {
+				margin-right: -0.4rem;
 			}
 			.copy-code:hover {
 				color: var(--pane-text);
@@ -759,11 +764,17 @@ const topNav = [
 			}
 			/* Docs shell: the sidebar rail beside the content, stacked on
 			   narrow screens. The rail stretches the full height of the page;
-			   its nav sticks to the top of the window as the page scrolls. */
+			   its nav sticks to the top of the window as the page scrolls. On
+			   wide screens the page's outline takes a column on the right. */
 			.docs-shell {
 				flex: 1;
 				display: grid;
 				grid-template-columns: 16rem minmax(0, 1fr);
+			}
+			@media (min-width: 1200px) {
+				.docs-shell:has(> .outline) {
+					grid-template-columns: 16rem minmax(0, 1fr) 14rem;
+				}
 			}
 			.sidebar {
 				background: var(--rail);

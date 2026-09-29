@@ -1,6 +1,6 @@
 ---
-import Code from "../../components/Code.astro";
-import Docs from "../../layouts/Docs.astro";
+import Code from "#/components/Code.astro";
+import Docs from "#/layouts/Docs.astro";
 ---
 
 <Docs
@@ -32,9 +32,8 @@ grammar = "rust"`}
 			Built-in grammars, and what their default queries find. In a rule, each is
 			named in lowercase: <code>rust</code>, <code>go</code>,{" "}
 			<code>python</code>, <code>javascript</code>, <code>typescript</code>,{" "}
-			<code>tsx</code>, <code>gleam</code>, <code>cxx</code>,{" "}
-			<code>csharp</code>, <code>java</code>, <code>kotlin</code>, and{" "}
-			<code>swift</code>.
+			<code>tsx</code>, <code>gleam</code>, <code>c++</code>, <code>c#</code>,{" "}
+			<code>java</code>, <code>kotlin</code>, and <code>swift</code>.
 		</p>
 		<ul class="lang-list">
 			<li>
@@ -116,9 +115,9 @@ grammar = "rust"`}
 			don&rsquo;t cover.
 		</p>
 		<p>
-			A file named explicitly on the command line that no rule covers formats as
-			plain SQL &mdash; unless it is in a language squill has a grammar for, in
-			which case squill stops and shows the rule to add.
+			A file named explicitly on the command line that no rule covers, and that
+			isn&rsquo;t named <code>*.sql</code>, doesn&rsquo;t format: squill stops
+			and shows the rule to add.
 		</p>
 	</section>
 
@@ -139,6 +138,12 @@ grammar = "rust"`}
 			as a raw string (<code>r#"&hellip;"#</code>, or backticks in Go), so the
 			SQL reads as written with no escaped quotes. A single-line plain string
 			stays byte-identical.
+		</p>
+		<p>
+			That is also why there is no C grammar. A C string literal ends with its
+			line, and SQL written over several lines in C is several literals side by
+			side (<code>"SELECT id " "FROM t"</code>), so there is no single string to
+			rewrite.
 		</p>
 		<div class="note">
 			<p>

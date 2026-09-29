@@ -124,7 +124,8 @@ patterns), frozen-ref, and frozen-fetch. Explicit flags override the
 config. The search upward stops at a git repository root, a mount
 point, or a symlinked directory, so a config outside a checkout never
 reaches inside it. Directory recursion honors .gitignore and skips
-hidden files; explicitly listed files always format.
+hidden files; explicitly listed files always format, given a rule
+(or a .sql name) that says what they are.
 
 Rules scope settings to paths. Every rule whose `include` matches a
 file applies, later rules winning key by key; paths are relative to
@@ -145,7 +146,7 @@ a tree-sitter grammar and query:
     dialect = \"sqlite\"
 
 Built-in grammars: rust, go, python, javascript, typescript, tsx,
-gleam, c++, csharp, java, kotlin, swift — each with a default query.
+gleam, c++, c#, java, kotlin, swift — each with a default query.
 Any other language works with a grammar built by `tree-sitter build
 --wasm` (grammar = \"grammars/tree-sitter-lua.wasm\", or an https
 URL, whose SHA-256 is locked in squill.lock) and a query. Queries
@@ -730,61 +731,77 @@ fn resolve(
 	Ok(Some(Resolved { options, indent, kind }))
 }
 
-/// Resolve a file named on the command line. Explicit files always
-/// format: as whatever the config makes them, else as SQL — except a
-/// file in a language squill has a grammar for, which would only fill
-/// the screen with parse errors as SQL.
-fn resolve_explicit(
-	path: &Path,
-	args: &Args,
-	caches: &mut Caches,
-) -> Result<Resolved, String> {
-	if let Some(resolved) = resolve(path, args, caches)? {
-		return Ok(resolved);
+/// Why a file named on the command line doesn't format: it isn't
+/// `*.sql`, and no rule covers it. Says which rule would, guessing the
+/// language from the extension the way `squill init` does.
+fn unclaimed(path: &Path, args: &Args, caches: &mut Caches) -> String {
+	let config = if args.no_config {
+		None
+	} else {
+		match caches.discover(parent_dir(path)) {
+			Ok(config) => config,
+			Err(message) => return message,
+		}
+	};
+	let name = path.file_name().and_then(|name| name.to_str()).unwrap_or("");
+	let glob = match path.extension().and_then(|ext| ext.to_str()) {
+		Some(extension) => format!("**/*.{extension}"),
+		None => format!("**/{name}"),
+	};
+	// What formatting it would mean, the rule that would say so, and
+	// whether `squill init` writes that rule.
+	let (kind, what, rule, wizard) = match init::host_for(path) {
+		Some((host, _)) => (
+			"[[embedded]]",
+			format!("the SQL embedded in this {} file", init::display_name(host)),
+			format!(
+				"[[embedded]]\n    include = [\"{glob}\"]\n    grammar = \"{}\"",
+				host.name()
+			),
+			true,
+		),
+		None => (
+			"[[files]]",
+			"it as SQL".to_string(),
+			format!("[[files]]\n    include = [\"{glob}\"]"),
+			false,
+		),
+	};
+	let path = path.display();
+	match config {
+		None if args.no_config => format!(
+			"{path}: not a .sql file; formatting {what} needs a {kind} rule, and \
+			 --no-config ignores them"
+		),
+		None if wizard => format!(
+			"{path}: not a .sql file, and no squill config covers it; to format \
+			 {what}, run `squill init`, or write a squill.toml with a rule:\n\n    {rule}"
+		),
+		None => format!(
+			"{path}: not a .sql file, and no squill config covers it; to format \
+			 {what}, write a squill.toml with a rule:\n\n    {rule}"
+		),
+		Some(config) => format!(
+			"{path}: not a .sql file, and no rule covers it; to format {what}, \
+			 add one to {}:\n\n    {rule}",
+			config.display()
+		),
 	}
-	let extension = path.extension().and_then(|ext| ext.to_str()).unwrap_or("");
-	if let Some(host) =
-		embed::Host::ALL.iter().find(|host| host.extensions().contains(&extension))
-	{
-		let dir = parent_dir(path);
-		let config = if args.no_config { None } else { caches.discover(dir)? };
-		return Err(match config {
-			// No config yet: the wizard writes one, rule included.
-			None if !args.no_config => format!(
-				"{}: no squill config covers this file; run `squill init` to set one \
-				 up, and it will offer to format the SQL embedded in {} files",
-				path.display(),
-				host.name()
-			),
-			None => format!(
-				"{}: formatting SQL embedded in {} files needs an [[embedded]] rule, \
-				 and --no-config ignores them",
-				path.display(),
-				host.name()
-			),
-			Some(config) => format!(
-				"{}: no [[embedded]] rule covers this file; to format its SQL, add one \
-				 to {}:\n\n    [[embedded]]\n    include = [\"**/*.{extension}\"]\n    grammar = \"{}\"",
-				path.display(),
-				config.display(),
-				host.name()
-			),
-		});
-	}
-	let mut resolved = resolve_sql_defaults(parent_dir(path), args, caches)?;
-	resolved.kind = Kind::Sql;
-	Ok(resolved)
 }
 
 /// Resolve the stdin stream as the file at `path` (`--stdin-filepath`).
 /// `None` means hand it back untouched: the path is ignored or frozen,
-/// or it's a host-language file no `[[embedded]]` rule covers. The file
-/// itself need not exist, so an unsaved editor buffer works.
+/// or it's neither `*.sql` nor covered by a rule. The file itself need
+/// not exist, so an unsaved editor buffer works. `known_sql` is for a
+/// caller that knows the text is SQL whatever its name (the language
+/// server, for a document its client calls SQL), which makes a file no
+/// rule covers SQL too.
 fn stdin_as(
 	path: &Path,
 	args: &Args,
 	cwd: &Path,
 	caches: &mut Caches,
+	known_sql: bool,
 ) -> Result<Option<Resolved>, String> {
 	let dir = parent_dir(path);
 	let absolute = std::path::absolute(path).ok();
@@ -811,9 +828,7 @@ fn stdin_as(
 	if let Some(resolved) = resolve(path, args, caches)? {
 		return Ok(Some(resolved));
 	}
-	let extension = path.extension().and_then(|ext| ext.to_str()).unwrap_or("");
-	if embed::Host::ALL.iter().any(|host| host.extensions().contains(&extension))
-	{
+	if !known_sql {
 		return Ok(None);
 	}
 	let mut resolved = resolve_sql_defaults(dir, args, caches)?;
@@ -821,8 +836,8 @@ fn stdin_as(
 	Ok(Some(resolved))
 }
 
-/// Options for SQL with no path to match rules against (stdin, or an
-/// unclaimed explicit file): defaults, top-level keys, flags.
+/// Options for SQL no rule covers (stdin, or an editor's SQL document):
+/// defaults, top-level keys, flags.
 fn resolve_sql_defaults(
 	dir: &Path,
 	args: &Args,
@@ -1267,7 +1282,7 @@ fn main() -> ExitCode {
 		let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
 		let resolved = match &args.stdin_path {
 			// With a path, the stream is whatever that file would be.
-			Some(path) => stdin_as(path, &args, &cwd, &mut caches),
+			Some(path) => stdin_as(path, &args, &cwd, &mut caches, false),
 			// Without one, it is always SQL, never a host file.
 			None => resolve_sql_defaults(&cwd, &args, &mut caches).map(Some),
 		};
@@ -1409,10 +1424,10 @@ fn main() -> ExitCode {
 	// path); a config error is a hard error before any file is touched.
 	let mut per_file_options = Vec::with_capacity(files.len());
 	for path in &files {
-		// Only an explicit file can go unclaimed; it formats anyway.
+		// Only an explicit file can go unclaimed, and then it's an error.
 		let resolved = match resolve(path, &args, &mut caches) {
 			Ok(Some(resolved)) => Ok(resolved),
-			Ok(None) => resolve_explicit(path, &args, &mut caches),
+			Ok(None) => Err(unclaimed(path, &args, &mut caches)),
 			Err(message) => Err(message),
 		};
 		match resolved {

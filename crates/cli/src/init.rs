@@ -5,7 +5,10 @@
 //! The wizard lists every built-in grammar as a checkbox, pre-checking
 //! the languages that already hold SQL — found by walking the tree the
 //! way `fmt` does (honoring .gitignore, skipping hidden files) and
-//! running each grammar's default query over its files. Then it asks for
+//! running each grammar's default query over its files. Which files are
+//! in which language is a guess from their extensions, and only here:
+//! each rule written lists the extensions found, for the user to see and
+//! correct, and nothing else in squill reads a language from a name. Then it asks for
 //! the dialect of plain .sql files and of each chosen language, and which
 //! placeholder styles the code writes (none checked: that depends on the
 //! driver, not the language). A new project with nothing to find simply
@@ -71,12 +74,16 @@ pub fn parse(
 
 /// What the survey found for one language.
 struct Found {
+	/// Files holding SQL, and the SQL strings in them.
 	files: usize,
 	strings: usize,
+	/// The language's extensions that any file has, in [`extensions`]
+	/// order.
+	extensions: Vec<&'static str>,
 }
 
 /// A language's name the way people write it.
-fn display_name(host: embed::Host) -> &'static str {
+pub fn display_name(host: embed::Host) -> &'static str {
 	match host.name() {
 		"rust" => "Rust",
 		"go" => "Go",
@@ -86,7 +93,7 @@ fn display_name(host: embed::Host) -> &'static str {
 		"tsx" => "TSX",
 		"gleam" => "Gleam",
 		"c++" => "C++",
-		"csharp" => "C#",
+		"c#" => "C#",
 		"java" => "Java",
 		"kotlin" => "Kotlin",
 		"swift" => "Swift",
@@ -101,12 +108,46 @@ fn dialect_name(dialect: Dialect) -> &'static str {
 	}
 }
 
-fn host_for(path: &Path) -> Option<embed::Host> {
+/// File extensions conventionally written in a language. C and C++
+/// share `.h`; C has nothing squill can rewrite (no string literal spans
+/// lines), so a header counts as C++.
+fn extensions(host: embed::Host) -> &'static [&'static str] {
+	match host {
+		#[cfg(feature = "rust")]
+		embed::Host::Rust => &["rs"],
+		#[cfg(feature = "go")]
+		embed::Host::Go => &["go"],
+		#[cfg(feature = "python")]
+		embed::Host::Python => &["py"],
+		#[cfg(feature = "javascript")]
+		embed::Host::JavaScript => &["js", "mjs", "cjs", "jsx"],
+		#[cfg(feature = "typescript")]
+		embed::Host::TypeScript => &["ts", "mts", "cts"],
+		#[cfg(feature = "typescript")]
+		embed::Host::Tsx => &["tsx"],
+		#[cfg(feature = "gleam")]
+		embed::Host::Gleam => &["gleam"],
+		#[cfg(feature = "cxx")]
+		embed::Host::Cxx => &["cc", "cpp", "cxx", "h", "hh", "hpp", "hxx"],
+		#[cfg(feature = "csharp")]
+		embed::Host::CSharp => &["cs"],
+		#[cfg(feature = "java")]
+		embed::Host::Java => &["java"],
+		#[cfg(feature = "kotlin")]
+		embed::Host::Kotlin => &["kt", "kts"],
+		#[cfg(feature = "swift")]
+		embed::Host::Swift => &["swift"],
+	}
+}
+
+/// The language a file is probably in, by its extension, and which of
+/// the language's extensions that is.
+pub fn host_for(path: &Path) -> Option<(embed::Host, &'static str)> {
 	let extension = path.extension()?.to_str()?;
-	embed::Host::ALL
-		.iter()
-		.copied()
-		.find(|host| host.extensions().contains(&extension))
+	embed::Host::ALL.iter().find_map(|&host| {
+		let known = extensions(host).iter().find(|&&known| known == extension)?;
+		Some((host, *known))
+	})
 }
 
 /// Walk `root` and count the SQL each built-in grammar's default query
@@ -114,6 +155,7 @@ fn host_for(path: &Path) -> Option<embed::Host> {
 fn survey(root: &Path) -> (usize, Vec<Found>) {
 	let mut sql_files = 0;
 	let mut candidates: Vec<(PathBuf, embed::Host)> = Vec::new();
+	let mut seen: Vec<(embed::Host, &'static str)> = Vec::new();
 	for entry in ignore::WalkBuilder::new(root).build().flatten() {
 		if !entry.file_type().is_some_and(|kind| kind.is_file()) {
 			continue;
@@ -121,7 +163,10 @@ fn survey(root: &Path) -> (usize, Vec<Found>) {
 		let path = entry.into_path();
 		if path.extension().is_some_and(|ext| ext == "sql") {
 			sql_files += 1;
-		} else if let Some(host) = host_for(&path) {
+		} else if let Some((host, extension)) = host_for(&path) {
+			if !seen.contains(&(host, extension)) {
+				seen.push((host, extension));
+			}
 			candidates.push((path, host));
 		}
 	}
@@ -145,7 +190,12 @@ fn survey(root: &Path) -> (usize, Vec<Found>) {
 				.filter(|(of, strings)| *of == host && *strings > 0)
 				.map(|(_, strings)| *strings)
 				.collect();
-			Found { files: mine.len(), strings: mine.iter().sum() }
+			let extensions = extensions(host)
+				.iter()
+				.copied()
+				.filter(|&ext| seen.contains(&(host, ext)))
+				.collect();
+			Found { files: mine.len(), strings: mine.iter().sum(), extensions }
 		})
 		.collect();
 	(sql_files, found)
@@ -164,9 +214,36 @@ struct Answers {
 	/// doesn't say otherwise.
 	dialect: Dialect,
 	/// The chosen languages, each with its SQL's dialect.
-	hosts: Vec<(embed::Host, Dialect)>,
+	hosts: Vec<Chosen>,
 	/// The `*-params` keys to turn on.
 	params: Vec<&'static str>,
+}
+
+/// A language to write an `[[embedded]]` rule for.
+struct Chosen {
+	host: embed::Host,
+	dialect: Dialect,
+	/// What its `include` covers: the extensions the project has, or all
+	/// the language's when it has none yet.
+	extensions: Vec<&'static str>,
+}
+
+impl Chosen {
+	fn new(host: embed::Host, dialect: Dialect, found: &Found) -> Chosen {
+		let extensions = if found.extensions.is_empty() {
+			extensions(host).to_vec()
+		} else {
+			found.extensions.clone()
+		};
+		Chosen { host, dialect, extensions }
+	}
+
+	/// The `include` globs, as a TOML or YAML flow list.
+	fn include(&self) -> String {
+		let globs: Vec<String> =
+			self.extensions.iter().map(|ext| format!("\"**/*.{ext}\"")).collect();
+		format!("[{}]", globs.join(", "))
+	}
 }
 
 /// The placeholder styles init offers: config key, what it looks like
@@ -188,7 +265,7 @@ fn defaults(dialect: Dialect, found: &[Found]) -> Answers {
 		.iter()
 		.zip(found)
 		.filter(|(_, found)| found.strings > 0)
-		.map(|(&host, _)| (host, dialect))
+		.map(|(&host, found)| Chosen::new(host, dialect, found))
 		.collect();
 	Answers { dialect, hosts, params: Vec::new() }
 }
@@ -256,13 +333,13 @@ fn ask(
 		let Some(host_dialect) = pick(prompt, dialect)? else {
 			return Ok(None);
 		};
-		hosts.push((host, host_dialect));
+		hosts.push(Chosen::new(host, host_dialect, &found[index]));
 	}
 
 	// SQLite reads `@name`, `?`, and `:name` as parameters already: only
 	// offer those when something is Postgres.
 	let postgres = dialect == Dialect::Postgres
-		|| hosts.iter().any(|&(_, dialect)| dialect == Dialect::Postgres);
+		|| hosts.iter().any(|chosen| chosen.dialect == Dialect::Postgres);
 	let offered: Vec<&(&str, &str, bool)> = PARAMS
 		.iter()
 		.filter(|(_, _, sqlite_native)| postgres || !sqlite_native)
@@ -292,16 +369,14 @@ fn render_yaml(answers: &Answers) -> String {
 	if !answers.hosts.is_empty() {
 		out.push_str("\nembedded:\n");
 	}
-	for &(host, dialect) in &answers.hosts {
-		let include: Vec<String> =
-			host.extensions().iter().map(|ext| format!("\"**/*.{ext}\"")).collect();
+	for chosen in &answers.hosts {
 		out.push_str(&format!(
-			"  - include: [{}]\n    grammar: {}\n",
-			include.join(", "),
-			host.name()
+			"  - include: {}\n    grammar: {}\n",
+			chosen.include(),
+			chosen.host.name()
 		));
-		if dialect != answers.dialect {
-			out.push_str(&format!("    dialect: {}\n", dialect_name(dialect)));
+		if chosen.dialect != answers.dialect {
+			out.push_str(&format!("    dialect: {}\n", dialect_name(chosen.dialect)));
 		}
 	}
 	out
@@ -317,16 +392,15 @@ fn render(answers: &Answers) -> String {
 	for key in &answers.params {
 		out.push_str(&format!("{key} = true\n"));
 	}
-	for &(host, dialect) in &answers.hosts {
-		let include: Vec<String> =
-			host.extensions().iter().map(|ext| format!("\"**/*.{ext}\"")).collect();
+	for chosen in &answers.hosts {
 		out.push_str(&format!(
-			"\n[[embedded]]\ninclude = [{}]\ngrammar = \"{}\"\n",
-			include.join(", "),
-			host.name()
+			"\n[[embedded]]\ninclude = {}\ngrammar = \"{}\"\n",
+			chosen.include(),
+			chosen.host.name()
 		));
-		if dialect != answers.dialect {
-			out.push_str(&format!("dialect = \"{}\"\n", dialect_name(dialect)));
+		if chosen.dialect != answers.dialect {
+			out
+				.push_str(&format!("dialect = \"{}\"\n", dialect_name(chosen.dialect)));
 		}
 	}
 	out
@@ -367,12 +441,12 @@ pub fn run(args: InitArgs) -> ExitCode {
 	} else {
 		let answers = defaults(args.dialect, &found);
 		// Say what was decided, since nobody was asked.
-		for &(host, _) in &answers.hosts {
-			let found =
-				&found[embed::Host::ALL.iter().position(|h| *h == host).unwrap_or(0)];
+		for chosen in &answers.hosts {
+			let index = embed::Host::ALL.iter().position(|h| *h == chosen.host);
+			let found = &found[index.unwrap_or(0)];
 			eprintln!(
 				"Formatting SQL in {}: found {} in {}.",
-				display_name(host),
+				display_name(chosen.host),
 				plural(found.strings, "SQL string", "SQL strings"),
 				plural(found.files, "file", "files"),
 			);
@@ -405,8 +479,16 @@ mod tests {
 		let answers = Answers {
 			dialect: Dialect::Postgres,
 			hosts: vec![
-				(embed::Host::Go, Dialect::Postgres),
-				(embed::Host::Python, Dialect::Sqlite),
+				Chosen {
+					host: embed::Host::Go,
+					dialect: Dialect::Postgres,
+					extensions: vec!["go"],
+				},
+				Chosen {
+					host: embed::Host::Python,
+					dialect: Dialect::Sqlite,
+					extensions: vec!["py"],
+				},
 			],
 			params: vec!["colon-params", "pyformat-params"],
 		};

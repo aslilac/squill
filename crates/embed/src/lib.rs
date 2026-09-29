@@ -137,7 +137,7 @@ impl Host {
 			#[cfg(feature = "cxx")]
 			Host::Cxx => "c++",
 			#[cfg(feature = "csharp")]
-			Host::CSharp => "csharp",
+			Host::CSharp => "c#",
 			#[cfg(feature = "java")]
 			Host::Java => "java",
 			#[cfg(feature = "kotlin")]
@@ -149,36 +149,6 @@ impl Host {
 
 	pub fn from_name(name: &str) -> Option<Host> {
 		Host::ALL.iter().copied().find(|host| host.name() == name)
-	}
-
-	/// File extensions conventionally written in this language.
-	pub fn extensions(self) -> &'static [&'static str] {
-		match self {
-			#[cfg(feature = "rust")]
-			Host::Rust => &["rs"],
-			#[cfg(feature = "go")]
-			Host::Go => &["go"],
-			#[cfg(feature = "python")]
-			Host::Python => &["py"],
-			#[cfg(feature = "javascript")]
-			Host::JavaScript => &["js", "mjs", "cjs", "jsx"],
-			#[cfg(feature = "typescript")]
-			Host::TypeScript => &["ts", "mts", "cts"],
-			#[cfg(feature = "typescript")]
-			Host::Tsx => &["tsx"],
-			#[cfg(feature = "gleam")]
-			Host::Gleam => &["gleam"],
-			#[cfg(feature = "cxx")]
-			Host::Cxx => &["cc", "cpp", "cxx", "hh", "hpp", "hxx"],
-			#[cfg(feature = "csharp")]
-			Host::CSharp => &["cs"],
-			#[cfg(feature = "java")]
-			Host::Java => &["java"],
-			#[cfg(feature = "kotlin")]
-			Host::Kotlin => &["kt", "kts"],
-			#[cfg(feature = "swift")]
-			Host::Swift => &["swift"],
-		}
 	}
 
 	/// The extraction query used when a config names none.

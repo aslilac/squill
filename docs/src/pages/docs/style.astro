@@ -217,7 +217,7 @@ JOIN "User" ON "User"."id" = "users"."user_id";`}
 
 <script>
 	import { highlight } from "../../components/highlight.js";
-	import { loadSquill } from "../../playground/wasm.js";
+	import { loadSquill } from "#/playground/wasm";
 
 	const bar = document.querySelector<HTMLFormElement>(".style-bar")!;
 	const status = bar.querySelector<HTMLElement>(".style-status")!;

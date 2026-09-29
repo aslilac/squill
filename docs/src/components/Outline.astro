@@ -1,0 +1,121 @@
+---
+// "On this page": a docs page's headings, down the right edge on wide
+// screens, marking the section being read.
+import type { Heading } from "./outline";
+
+const { headings }: { headings: Heading[] } = Astro.props;
+// Page-relative links: `<base>` would send a bare `#id` to the site root.
+const page = Astro.url.pathname;
+---
+
+<aside class="outline">
+	<nav aria-label="On this page">
+		<h2>On this page</h2>
+		<ul>
+			{headings.map((heading) => (
+				<li class={`level-${heading.level}`}>
+					<a href={`${page}#${heading.id}`} set:html={heading.label} />
+				</li>
+			))}
+		</ul>
+	</nav>
+</aside>
+
+<script>
+	// The section being read is the last one whose heading has passed a
+	// line a third of the way down the window. Short sections at the end
+	// of a page never scroll that far, so over the last stretch of the
+	// page the line slides down, reaching the window's bottom edge at the
+	// page's: each of them is marked in turn, and the last one at the end.
+	const links = Array.from(
+		document.querySelectorAll<HTMLAnchorElement>(".outline a"),
+	);
+	const targets = links.map((link) =>
+		document.getElementById(decodeURIComponent(link.hash.slice(1))),
+	);
+	function mark() {
+		// The slide spans the page's last two-thirds of a window of
+		// scrolling, or all of it on a page that scrolls less than that.
+		const scrollable = document.documentElement.scrollHeight - innerHeight;
+		const span = Math.min((innerHeight * 2) / 3, scrollable);
+		const left = scrollable - scrollY;
+		const slid = span > 0 ? Math.min(Math.max(1 - left / span, 0), 1) : 0;
+		const line = innerHeight / 3 + ((innerHeight * 2) / 3) * slid;
+		let current = 0;
+		targets.forEach((target, index) => {
+			if (target && target.getBoundingClientRect().top < line) {
+				current = index;
+			}
+		});
+		links.forEach((link, index) => {
+			if (index === current) {
+				link.setAttribute("aria-current", "location");
+			} else {
+				link.removeAttribute("aria-current");
+			}
+		});
+	}
+	addEventListener("scroll", mark, { passive: true });
+	addEventListener("resize", mark);
+	mark();
+</script>
+
+<style>
+	.outline {
+		display: none;
+		font-size: 0.85rem;
+	}
+	/* Only beside content that still has room to breathe. */
+	@media (min-width: 1200px) {
+		.outline {
+			display: block;
+		}
+	}
+	nav {
+		position: sticky;
+		top: 0;
+		max-height: 100vh;
+		overflow-y: auto;
+		scrollbar-width: thin;
+		scrollbar-color: var(--edge) transparent;
+		padding: 2.5rem 1.25rem 2rem 0;
+	}
+	h2 {
+		font-family: inherit;
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: var(--ink);
+		margin: 0 0 0.75rem;
+		padding: 0 0 0 0.9rem;
+		border: none;
+	}
+	ul {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		border-left: 1px solid var(--edge);
+	}
+	li {
+		padding: 0;
+	}
+	a {
+		display: block;
+		/* Over the rail's line, so the current section's bar replaces it. */
+		margin-left: -1px;
+		padding: 0.35rem 0 0.35rem 0.9rem;
+		border-left: 2px solid transparent;
+		color: var(--muted);
+		line-height: 1.35;
+	}
+	.level-3 a {
+		padding-left: 1.7rem;
+	}
+	a:hover {
+		color: var(--violet);
+	}
+	a[aria-current="location"] {
+		color: var(--violet-deep);
+		border-left-color: var(--violet);
+		font-weight: 600;
+	}
+</style>

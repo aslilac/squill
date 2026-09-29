@@ -23,7 +23,8 @@ fn text_renders_verbatim() {
 
 #[test]
 fn keyword_case_applies_only_to_keywords() {
-	let doc = concat([keyword("SeLeCt"), space(), text("MiXeD")]);
+	let keyword = Doc::Keyword { text: "SeLeCt".to_string(), offset: 0 };
+	let doc = concat([keyword, space(), text("MiXeD")]);
 	assert_render(&doc, &opts(), "select MiXeD");
 	let upper = Options { keyword_case: KeywordCase::Upper, ..opts() };
 	assert_render(&doc, &upper, "SELECT MiXeD");

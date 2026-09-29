@@ -43,7 +43,7 @@ const PL_KEYWORDS: &[&str] = &[
 const SQLITE_TABLE_OPTIONS: &[&str] = &["rowid", "strict"];
 
 /// Does this bare word change case under the keyword-case option?
-fn cases_as_keyword(word: &str, dialect: parser::Dialect) -> bool {
+pub(crate) fn cases_as_keyword(word: &str, dialect: parser::Dialect) -> bool {
 	let lower = word.to_ascii_lowercase();
 	match dialect {
 		parser::Dialect::Postgres => {
@@ -124,7 +124,7 @@ impl Printer<'_> {
 		};
 		match doc {
 			Doc::Text(text) => self.push_text(text),
-			Doc::Keyword(keyword) => {
+			Doc::Keyword { text: keyword, .. } => {
 				// Only real keywords change case; a bare word in keyword
 				// position that is actually a name (table, column, type
 				// like `uuid`) keeps the author's spelling.
@@ -362,7 +362,9 @@ impl Printer<'_> {
 			};
 			match doc {
 				Doc::Text(text) => remaining -= self.width(text) as isize,
-				Doc::Keyword(keyword) => remaining -= self.width(keyword) as isize,
+				Doc::Keyword { text: keyword, .. } => {
+					remaining -= self.width(keyword) as isize
+				}
 				Doc::Ident { text, pos } => {
 					let rendered = quoting::render_ident(text, *pos, self.options);
 					remaining -= self.width(&rendered) as isize;

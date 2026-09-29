@@ -1,9 +1,11 @@
 //! `squill language-server start`: a language server, for editors that
 //! speak LSP.
 //!
-//! It offers whole-document formatting and publishes squill's
-//! diagnostics (statements passed through verbatim, embedded strings it
-//! declined) as warnings. A document resolves against its path exactly
+//! It offers whole-document formatting, publishes squill's diagnostics
+//! (statements passed through verbatim, embedded strings it declined) as
+//! warnings, and highlights the SQL embedded in a host file (every
+//! string the rule's query finds) as semantic tokens; editors highlight
+//! SQL files well themselves. A document resolves against its path exactly
 //! as `squill fmt --stdin-filepath` does: config, rules, `ignore`, and
 //! `frozen` all apply, and a host file's embedded SQL formats too.
 //! Config is re-read for every request, so editing `squill.toml` takes
@@ -15,6 +17,10 @@
 //! pass `{"formattingSelector": [...document filters]}` as initialization
 //! options, and squill registers as a formatter for just those documents
 //! (dynamically, when the client supports it) instead of for all.
+//! `semanticTokensSelector` does the same for highlighting, for editors
+//! that take one server's semantic tokens per document and would lose
+//! the host language server's; with `[]`, a client can still ask for
+//! tokens itself and draw them its own way.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -38,6 +44,7 @@ use lsp_types::DidChangeTextDocumentParams;
 use lsp_types::DidCloseTextDocumentParams;
 use lsp_types::DidOpenTextDocumentParams;
 use lsp_types::DocumentFormattingParams;
+use lsp_types::DocumentSelector;
 use lsp_types::InitializeParams;
 use lsp_types::OneOf;
 use lsp_types::Position;
@@ -46,8 +53,18 @@ use lsp_types::PublishDiagnosticsParams;
 use lsp_types::Range;
 use lsp_types::Registration;
 use lsp_types::RegistrationParams;
+use lsp_types::SemanticToken;
+use lsp_types::SemanticTokenType;
+use lsp_types::SemanticTokens;
+use lsp_types::SemanticTokensFullOptions;
+use lsp_types::SemanticTokensLegend;
+use lsp_types::SemanticTokensOptions;
+use lsp_types::SemanticTokensParams;
+use lsp_types::SemanticTokensRegistrationOptions;
 use lsp_types::ServerCapabilities;
 use lsp_types::ServerInfo;
+use lsp_types::StaticRegistrationOptions;
+use lsp_types::TextDocumentRegistrationOptions;
 use lsp_types::TextDocumentSyncCapability;
 use lsp_types::TextDocumentSyncKind;
 use lsp_types::TextEdit;
@@ -55,6 +72,9 @@ use lsp_types::Uri;
 use lsp_types::WorkspaceEdit;
 use lsp_types::notification::Notification as _;
 use lsp_types::request::Request as _;
+
+use formatter::highlight::HighlightKind;
+use formatter::highlight::highlight;
 
 use crate::Args;
 use crate::Caches;
@@ -122,6 +142,19 @@ fn serve(connection: Connection) -> Result<(), String> {
 				.and_then(|formatting| formatting.dynamic_registration)
 				.unwrap_or(false)
 		});
+	// Highlighting for only the documents the client asked about. A
+	// static registration can carry its own selector, so this needs
+	// nothing dynamic.
+	let semantic_tokens_selector: Option<DocumentSelector> = params
+		.initialization_options
+		.as_ref()
+		.and_then(|options| options.get("semanticTokensSelector"))
+		.and_then(|selector| serde_json::from_value(selector.clone()).ok());
+	let semantic_tokens = SemanticTokensOptions {
+		legend: legend(),
+		full: Some(SemanticTokensFullOptions::Bool(true)),
+		..SemanticTokensOptions::default()
+	};
 	let capabilities = ServerCapabilities {
 		position_encoding: Some(if utf8 {
 			PositionEncodingKind::UTF8
@@ -140,6 +173,17 @@ fn serve(connection: Connection) -> Result<(), String> {
 				..CodeActionOptions::default()
 			},
 		)),
+		semantic_tokens_provider: Some(match semantic_tokens_selector {
+			None => semantic_tokens.into(),
+			Some(selector) => SemanticTokensRegistrationOptions {
+				text_document_registration_options: TextDocumentRegistrationOptions {
+					document_selector: Some(selector),
+				},
+				semantic_tokens_options: semantic_tokens,
+				static_registration_options: StaticRegistrationOptions::default(),
+			}
+			.into(),
+		}),
 		..ServerCapabilities::default()
 	};
 	let result = serde_json::json!({
@@ -177,6 +221,32 @@ fn serve(connection: Connection) -> Result<(), String> {
 		)?;
 	}
 	server.main_loop()
+}
+
+/// Each highlight kind's semantic token type. A token's type is its
+/// index here, and the legend lists them in this order.
+const TOKEN_TYPES: [(HighlightKind, SemanticTokenType); 9] = [
+	(HighlightKind::Keyword, SemanticTokenType::KEYWORD),
+	(HighlightKind::Name, SemanticTokenType::VARIABLE),
+	(HighlightKind::Function, SemanticTokenType::FUNCTION),
+	(HighlightKind::Type, SemanticTokenType::TYPE),
+	(HighlightKind::String, SemanticTokenType::STRING),
+	(HighlightKind::Number, SemanticTokenType::NUMBER),
+	(HighlightKind::Parameter, SemanticTokenType::PARAMETER),
+	(HighlightKind::Operator, SemanticTokenType::OPERATOR),
+	(HighlightKind::Comment, SemanticTokenType::COMMENT),
+];
+
+fn legend() -> SemanticTokensLegend {
+	SemanticTokensLegend {
+		token_types: TOKEN_TYPES.into_iter().map(|(_, name)| name).collect(),
+		token_modifiers: Vec::new(),
+	}
+}
+
+fn token_type(kind: HighlightKind) -> u32 {
+	let index = TOKEN_TYPES.iter().position(|(listed, _)| *listed == kind);
+	index.expect("every highlight kind is in the legend") as u32
 }
 
 /// `source.formatSql`: squill's formatting, as a code action.
@@ -244,6 +314,19 @@ impl Server {
 					),
 				}
 			}
+			lsp_types::request::SemanticTokensFullRequest::METHOD => {
+				match serde_json::from_value::<SemanticTokensParams>(request.params) {
+					Ok(params) => {
+						let tokens = self.semantic_tokens(&params.text_document.uri);
+						Response::new_ok(request.id, tokens)
+					}
+					Err(err) => Response::new_err(
+						request.id,
+						ErrorCode::InvalidParams as i32,
+						err.to_string(),
+					),
+				}
+			}
 			_ => Response::new_err(
 				request.id,
 				ErrorCode::MethodNotFound as i32,
@@ -303,20 +386,23 @@ impl Server {
 		}
 	}
 
-	/// Resolve a document the way `--stdin-filepath` would. `None` when
-	/// squill leaves it alone. Config is re-read every time.
+	/// Resolve a document the way `--stdin-filepath` would, except that
+	/// only a document the client calls SQL can be SQL for want of any
+	/// rule saying so. `None` when squill leaves it alone. Config is
+	/// re-read every time.
 	fn resolve(&mut self, uri: &Uri) -> Result<Option<Resolved>, String> {
 		self.caches.forget_config();
 		let Some(document) = self.documents.get(uri) else {
 			return Ok(None);
 		};
+		let is_sql = document.language_id == "sql";
 		match file_path(uri) {
 			Some(path) => {
-				crate::stdin_as(&path, &self.args, &self.cwd, &mut self.caches)
+				crate::stdin_as(&path, &self.args, &self.cwd, &mut self.caches, is_sql)
 			}
 			// An unsaved, untitled buffer has no path to resolve rules
 			// against: plain SQL on the workspace's top-level config.
-			None if document.language_id == "sql" => {
+			None if is_sql => {
 				crate::resolve_sql_defaults(&self.cwd, &self.args, &mut self.caches)
 					.map(Some)
 			}
@@ -376,6 +462,35 @@ impl Server {
 			..CodeAction::default()
 		};
 		vec![CodeActionOrCommand::CodeAction(action)]
+	}
+
+	/// Where the keywords, names, literals and comments are in a host
+	/// file's embedded SQL. `None` for a SQL file, which the editor
+	/// highlights well itself. Like code actions, a failure is no tokens,
+	/// not an error; the diagnostics say what went wrong.
+	fn semantic_tokens(&mut self, uri: &Uri) -> Option<SemanticTokens> {
+		let resolved = self.resolve(uri).ok()??;
+		if matches!(resolved.kind, crate::Kind::Sql) {
+			return None;
+		}
+		let document = self.documents.get(uri)?;
+		let located = crate::locate_resolved(&document.text, &resolved).ok()?;
+		let mut spans = Vec::new();
+		for sql in located {
+			let options =
+				formatter::Options { dialect: sql.dialect, ..resolved.options };
+			let offset = sql.range.start;
+			let highlights = highlight(&document.text[sql.range], &options);
+			spans.extend(highlights.into_iter().map(|highlight| {
+				let range =
+					highlight.range.start + offset..highlight.range.end + offset;
+				(range, token_type(highlight.kind))
+			}));
+		}
+		Some(SemanticTokens {
+			result_id: None,
+			data: encode_tokens(&document.text, &spans, self.utf8),
+		})
 	}
 
 	fn publish_diagnostics(&mut self, uri: &Uri) -> Result<(), String> {
@@ -472,6 +587,65 @@ fn position(text: &str, offset: usize, utf8: bool) -> Position {
 	Position::new(line as u32, character as u32)
 }
 
+/// LSP's encoding of `spans`, byte ranges into `text` in order, each
+/// with its token type: every token placed relative to the one before,
+/// in the negotiated position encoding. A span over several lines is a
+/// token per line, since clients needn't take tokens that cross lines. A
+/// span overlapping the one before it (a string captured twice, by
+/// nested patterns) is dropped.
+fn encode_tokens(
+	text: &str,
+	spans: &[(std::ops::Range<usize>, u32)],
+	utf8: bool,
+) -> Vec<SemanticToken> {
+	let width = |text: &str| {
+		let units =
+			if utf8 { text.len() } else { text.chars().map(char::len_utf16).sum() };
+		units as u32
+	};
+	let mut tokens = Vec::new();
+	// Lines are counted up to `scanned`; `line` starts at `line_start`.
+	let (mut scanned, mut line, mut line_start) = (0, 0, 0);
+	// Where the last token was, which the next is relative to.
+	let (mut last_line, mut last_column) = (0, 0);
+	let mut covered = 0;
+	for (range, token_type) in spans {
+		if range.start < covered {
+			continue;
+		}
+		covered = range.end;
+		let mut start = range.start;
+		while start < range.end {
+			for (at, byte) in text[scanned..start].bytes().enumerate() {
+				if byte == b'\n' {
+					line += 1;
+					line_start = scanned + at + 1;
+				}
+			}
+			scanned = start;
+			let end =
+				text[start..range.end].find('\n').map_or(range.end, |at| start + at);
+			let piece = text[start..end].trim_end_matches('\r');
+			if !piece.is_empty() {
+				let column = width(&text[line_start..start]);
+				let delta_start =
+					if line == last_line { column - last_column } else { column };
+				tokens.push(SemanticToken {
+					delta_line: line - last_line,
+					delta_start,
+					length: width(piece),
+					token_type: *token_type,
+					token_modifiers_bitset: 0,
+				});
+				(last_line, last_column) = (line, column);
+			}
+			// Past the newline, onto the span's next line.
+			start = end + 1;
+		}
+	}
+	tokens
+}
+
 /// The local path a `file:` URI names; `None` for any other scheme.
 fn file_path(uri: &Uri) -> Option<PathBuf> {
 	let rest = uri.as_str().strip_prefix("file://")?;
@@ -543,5 +717,41 @@ mod tests {
 		assert_eq!(position(text, x, false), Position::new(1, 13));
 		assert_eq!(position(text, 0, false), Position::new(0, 0));
 		assert_eq!(position(text, text.len(), false), Position::new(1, 15));
+	}
+
+	#[test]
+	fn tokens_are_relative_and_split_at_lines() {
+		// `(delta line, delta start, length, type)` for each token.
+		let encode = |text: &str, spans: &[(std::ops::Range<usize>, u32)]| {
+			encode_tokens(text, spans, false)
+				.into_iter()
+				.map(|token| {
+					let SemanticToken { delta_line, delta_start, length, .. } = token;
+					(delta_line, delta_start, length, token.token_type)
+				})
+				.collect::<Vec<_>>()
+		};
+		let text = "x = '\u{1f600}' /* a\r\nb */ y";
+		let at = |word: &str| text.find(word).expect("word");
+		let string = at("'")..at(" /*");
+		let comment = at("/*")..at(" y");
+		let y = at("y")..text.len();
+		assert_eq!(
+			encode(text, &[(0..1, 0), (string.clone(), 1), (comment, 2), (y, 0)]),
+			[
+				(0, 0, 1, 0),
+				// The emoji is two UTF-16 units.
+				(0, 4, 4, 1),
+				// A comment over two lines is two tokens, without the `\r`.
+				(0, 5, 4, 2),
+				(1, 0, 4, 2),
+				(0, 5, 1, 0),
+			]
+		);
+		// A span overlapping the one before is dropped.
+		assert_eq!(
+			encode(text, &[(string.clone(), 1), (string.start + 1..string.end, 2)]),
+			[(0, 4, 4, 1)]
+		);
 	}
 }

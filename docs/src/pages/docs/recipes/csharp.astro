@@ -28,11 +28,11 @@ import Recipe from "../../../components/Recipe.astro";
 	<section>
 		<h2>Dapper</h2>
 		<p>
-			The built-in <code>csharp</code> grammar&rsquo;s default query knows
+			The built-in <code>c#</code> grammar&rsquo;s default query knows
 			Dapper&rsquo;s query and execute methods, generic (
 			<code>QueryAsync&lt;Order&gt;</code>) or not. No query file needed:
 		</p>
-		<Recipe name="csharp-dapper" lang="csharp" />
+		<Recipe name="csharp-dapper" lang="c#" />
 		<p>
 			<code>at-params</code> makes <code>@name</code> parameters pass through as
 			written &mdash; written tight against an operator (
@@ -49,7 +49,7 @@ import Recipe from "../../../components/Recipe.astro";
 			string, <code>FromSqlRaw</code> and <code>ExecuteSqlRaw</code> and their
 			async forms, and <code>SqlQueryRaw&lt;T&gt;</code>.
 		</p>
-		<Recipe name="csharp-efcore" lang="csharp" />
+		<Recipe name="csharp-efcore" lang="c#" />
 		<p>
 			Two things to know. <code>FromSql</code> and <code>ExecuteSql</code> take
 			an interpolated string, which squill leaves alone. And the{" "}
@@ -67,6 +67,6 @@ import Recipe from "../../../components/Recipe.astro";
 			Npgsql&rsquo;s and Microsoft.Data.Sqlite&rsquo;s alike. Set the dialect to
 			match the database:
 		</p>
-		<Recipe name="csharp-adonet" lang="csharp" />
+		<Recipe name="csharp-adonet" lang="c#" />
 	</section>
 </Docs>

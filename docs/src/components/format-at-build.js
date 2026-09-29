@@ -3,7 +3,7 @@
 // so a page's examples are always what squill does today.
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { instantiate } from "../playground/wasm.js";
+import { instantiate } from "../playground/wasm";
 
 let loading;
 

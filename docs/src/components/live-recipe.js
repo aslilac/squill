@@ -5,7 +5,7 @@
 // writes the keys that would do it into the config pane. The choices are
 // page-wide — every live recipe on the page follows them — and last
 // until the page reloads, so the docs always open on the defaults.
-import { charSpans, loadSquill } from "../playground/wasm.js";
+import { charSpans, loadSquill } from "../playground/wasm";
 
 // The style options changed from the recipe's own, by request key.
 const overrides = {};

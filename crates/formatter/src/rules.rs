@@ -951,7 +951,7 @@ impl Lowerer {
 					if !head_first {
 						head.push(space());
 					}
-					self.push(&mut head, keyword(token.text()));
+					self.push(&mut head, keyword(token));
 					head_first = false;
 				}
 				element => {
@@ -1038,7 +1038,7 @@ impl Lowerer {
 					if head_words > 0 {
 						head.push(space());
 					}
-					self.push(&mut head, keyword(token.text()));
+					self.push(&mut head, keyword(token));
 					head_words += 1;
 				}
 				element => {
@@ -1074,7 +1074,7 @@ impl Lowerer {
 					if !head_first {
 						head.push(space());
 					}
-					self.push(&mut head, keyword(token.text()));
+					self.push(&mut head, keyword(token));
 					head_first = false;
 				}
 				element => {
@@ -1185,7 +1185,7 @@ impl Lowerer {
 					let leaf = if token.kind() == SyntaxKind::Ident
 						&& token.text().eq_ignore_ascii_case("as")
 					{
-						keyword(token.text())
+						keyword(token)
 					} else {
 						name_leaf(token, IdentPos::ColumnOrTable)
 					};
@@ -1249,7 +1249,7 @@ impl Lowerer {
 						{
 							name_leaf(token, name_pos)
 						}
-						SyntaxKind::Ident if is_marker => keyword(token.text()),
+						SyntaxKind::Ident if is_marker => keyword(token),
 						SyntaxKind::Ident | SyntaxKind::QuotedIdent => {
 							let pos = if seen_name {
 								IdentPos::ColumnOrTable // alias / column names
@@ -1339,7 +1339,7 @@ impl Lowerer {
 					} else {
 						docs.push(space());
 					}
-					self.push(docs, keyword(token.text()));
+					self.push(docs, keyword(token));
 					first = false;
 				}
 				SyntaxElement::Node(child) => {
@@ -1425,7 +1425,7 @@ impl Lowerer {
 								if lower == "as" {
 									seen_as = true;
 								}
-								keyword(token.text())
+								keyword(token)
 							}
 							SyntaxKind::Ident | SyntaxKind::QuotedIdent => {
 								name_leaf(token, IdentPos::ColumnOrTable)
@@ -1633,12 +1633,12 @@ impl Lowerer {
 					match lower.as_str() {
 						"end" => {
 							stage = 2;
-							self.push(&mut tail, keyword(token.text()));
+							self.push(&mut tail, keyword(token));
 						}
 						"else" => {
 							stage = 1;
 							arms.push(soft_line_or_space());
-							self.push(&mut arms, keyword(token.text()));
+							self.push(&mut arms, keyword(token));
 						}
 						_ => {
 							let docs = match stage {
@@ -1649,7 +1649,7 @@ impl Lowerer {
 							if !docs.is_empty() {
 								docs.push(space());
 							}
-							self.push(docs, keyword(token.text()));
+							self.push(docs, keyword(token));
 						}
 					}
 				}
@@ -1695,13 +1695,13 @@ impl Lowerer {
 				SyntaxElement::Token(token) => {
 					if token.text().eq_ignore_ascii_case("then") {
 						in_then = true;
-						self.push(&mut then, keyword(token.text()));
+						self.push(&mut then, keyword(token));
 					} else {
 						let docs = if in_then { &mut then } else { &mut head };
 						if !docs.is_empty() {
 							docs.push(space());
 						}
-						self.push(docs, keyword(token.text()));
+						self.push(docs, keyword(token));
 					}
 				}
 				SyntaxElement::Node(child) => {
@@ -1882,7 +1882,7 @@ impl Lowerer {
 				SyntaxElement::Token(token) => {
 					if token.kind() == SyntaxKind::Ident {
 						// `not x`
-						self.push(&mut docs, keyword(token.text()));
+						self.push(&mut docs, keyword(token));
 						needs_space = true;
 					} else {
 						// `-x`, `@name`: tight.
@@ -1974,7 +1974,7 @@ impl Lowerer {
 						docs.push(soft_line_or_space());
 					}
 					let leaf = match token.kind() {
-						SyntaxKind::Ident => keyword(token.text()),
+						SyntaxKind::Ident => keyword(token),
 						_ => raw_leaf(token),
 					};
 					self.push(docs, leaf);
@@ -2670,7 +2670,7 @@ fn raw_leaf(token: &SyntaxToken) -> Doc {
 /// case-insensitively); everything else passes through.
 fn token_leaf(token: &SyntaxToken) -> Doc {
 	match token.kind() {
-		SyntaxKind::Ident => keyword(token.text()),
+		SyntaxKind::Ident => keyword(token),
 		_ => raw_leaf(token),
 	}
 }
