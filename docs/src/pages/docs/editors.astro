@@ -9,6 +9,30 @@ import Docs from "#/layouts/Docs.astro";
 	lede="Format on save: squill as your editor's SQL formatter, and for the SQL inside your other code."
 >
 	<section>
+		<h2>Editor integration</h2>
+		<p>
+			Editors hand a formatter the buffer on stdin and read the result back from
+			stdout. Tell squill which file the buffer is with{" "}
+			<code>--stdin-filepath</code>, and it formats it exactly as{" "}
+			<code>squill fmt</code> would format that file on disk: the nearest{" "}
+			<code>squill.toml</code> applies, and so do its{" "}
+			<a href="docs/configuration/#rules">rules</a>, so a Rust buffer gets its
+			embedded SQL formatted and a <code>*.sql.sqlite</code> file its dialect.
+			The file doesn&rsquo;t need to exist yet.
+		</p>
+		<Code
+			lang="sh"
+			code={`squill fmt --stdin-filepath src/db.rs < src/db.rs`}
+		/>
+		<p>
+			A buffer squill wouldn&rsquo;t format as a file comes back unchanged: an{" "}
+			<code>ignore</code>d or <a href="docs/frozen/">frozen</a> path, or a
+			host-language file no <code>[[embedded]]</code> rule covers. So it is safe
+			to turn on for every file of a language, in every project.
+		</p>
+	</section>
+
+	<section>
 		<h2>VS Code</h2>
 		<p>
 			Install{" "}
@@ -145,30 +169,6 @@ import Docs from "#/layouts/Docs.astro";
 		<p>
 			For embedded SQL, put the same <code>external</code> entry after the
 			language server in that language&rsquo;s list of formatters.
-		</p>
-	</section>
-
-	<section>
-		<h2>How it works</h2>
-		<p>
-			Editors hand a formatter the buffer on stdin and read the result back from
-			stdout. Tell squill which file the buffer is with{" "}
-			<code>--stdin-filepath</code>, and it formats it exactly as{" "}
-			<code>squill fmt</code> would format that file on disk: the nearest{" "}
-			<code>squill.toml</code> applies, and so do its{" "}
-			<a href="docs/configuration/#rules">rules</a>, so a Rust buffer gets its
-			embedded SQL formatted and a <code>*.sql.sqlite</code> file its dialect.
-			The file doesn&rsquo;t need to exist yet.
-		</p>
-		<Code
-			lang="sh"
-			code={`squill fmt --stdin-filepath src/db.rs < src/db.rs`}
-		/>
-		<p>
-			A buffer squill wouldn&rsquo;t format as a file comes back unchanged: an{" "}
-			<code>ignore</code>d or <a href="docs/frozen/">frozen</a> path, or a
-			host-language file no <code>[[embedded]]</code> rule covers. So it is safe
-			to turn on for every file of a language, in every project.
 		</p>
 	</section>
 
