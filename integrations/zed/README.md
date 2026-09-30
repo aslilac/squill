@@ -4,7 +4,7 @@ Runs [squill](https://github.com/aslilac/squill)'s language server, `squill lang
 
 The extension uses the `squill` on your `PATH` if there is one, so the editor formats exactly as your CLI and CI do; otherwise it downloads the latest release from GitHub (macOS on Apple silicon, Linux and Windows on x86-64 and ARM64). Syntax support for SQL files comes from Zed's SQL extension.
 
-To install this extension from a checkout, run **zed: install dev extension** and pick this directory.
+Install it from Zed's extensions: run **zed: extensions** and search for squill.
 
 ## Formatting SQL files
 

@@ -131,16 +131,19 @@ vim.lsp.enable("squill")`}
 	<section>
 		<h2>Zed</h2>
 		<p>
-			squill&rsquo;s Zed extension, in{" "}
-			<a href="https://github.com/aslilac/squill/tree/trunk/integrations/zed">
-				<code>integrations/zed</code>
+			Install{" "}
+			<a href="https://zed.dev/extensions/squill-language-server">
+				squill&rsquo;s Zed extension
 			</a>
-			, runs squill&rsquo;s language server for SQL files and for the languages
-			squill finds SQL in: it formats both, highlights the embedded SQL, and
-			reports what squill leaves alone. It uses the <code>squill</code> on your{" "}
-			<code>PATH</code>, or else downloads the latest release. Install it from a
-			checkout with <strong>zed: install dev extension</strong>; syntax support
-			for SQL files comes from Zed&rsquo;s SQL extension.
+			, or run <strong>zed: extensions</strong> and search for squill. Syntax
+			support for SQL files comes from Zed&rsquo;s SQL extension.
+		</p>
+		<p>
+			The extension runs squill&rsquo;s language server for SQL files and for
+			the languages squill finds SQL in: it formats both, highlights the
+			embedded SQL, and reports what squill leaves alone. It uses the{" "}
+			<code>squill</code> on your <code>PATH</code>, or else downloads the
+			latest release.
 		</p>
 		<p>
 			Then in <code>settings.json</code>, format SQL files with squill&rsquo;s
