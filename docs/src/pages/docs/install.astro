@@ -1,7 +1,7 @@
 ---
-import Code from "../../components/Code.astro";
-import CodeTabs from "../../components/CodeTabs.astro";
-import Docs from "../../layouts/Docs.astro";
+import Code from "#/components/Code.astro";
+import CodeTabs from "#/components/CodeTabs.astro";
+import Docs from "#/layouts/Docs.astro";
 const version = "v0.4.0";
 const release = `https://github.com/aslilac/squill/releases/download/${version}`;
 ---
@@ -19,11 +19,7 @@ const release = `https://github.com/aslilac/squill/releases/download/${version}`
 			whatever it is running on. Nothing has to know the machine&rsquo;s os or
 			architecture, which is what makes it the easy one to drop into CI.
 		</p>
-		<Code
-			lang="sh"
-			code={`mise use -g github:aslilac/squill
-squill --check .`}
-		/>
+		<Code lang="sh" code={`mise use -g github:aslilac/squill`} />
 		<p>
 			Pin a version with <code>github:aslilac/squill@{version}</code>. mise
 			verifies GitHub artifact attestations and SLSA provenance on install.
@@ -49,15 +45,13 @@ squill --check .`}
 					id: "nix-shell",
 					label: "nix shell",
 					lang: "sh",
-					code: `nix shell github:aslilac/squill
-squill --check .`,
+					code: `nix shell github:aslilac/squill`,
 				},
 				{
 					id: "nix-profile",
 					label: "nix profile",
 					lang: "sh",
-					code: `nix profile install github:aslilac/squill
-squill --check .`,
+					code: `nix profile install github:aslilac/squill`,
 				},
 				{
 					id: "nix-flake",
@@ -119,8 +113,7 @@ squill --check .`,
 					arch,
 					lang: "sh",
 					code: `curl -fsSL ${release}/squill-${version}-${target}-unknown-linux-gnu.tar.gz \\
-	| sudo tar xz -C /usr/local/bin/
-squill --version`,
+	| sudo tar xz -C /usr/local/bin/`,
 				})),
 				{
 					id: "macos-arm64",
@@ -130,8 +123,7 @@ squill --version`,
 					lang: "sh",
 					code: `sudo mkdir -p /usr/local/bin
 curl -fsSL ${release}/squill-${version}-aarch64-apple-darwin.tar.gz \\
-	| sudo tar xz -C /usr/local/bin/
-squill --version`,
+	| sudo tar xz -C /usr/local/bin/`,
 				},
 				...[
 					["x86_64", "x86_64"],
