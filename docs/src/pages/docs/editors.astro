@@ -136,11 +136,11 @@ vim.lsp.enable("squill")`}
 				<code>integrations/zed</code>
 			</a>
 			, runs squill&rsquo;s language server for SQL files and for the languages
-			it formats embedded SQL in, and reports what squill leaves alone. It uses
-			the <code>squill</code> on your <code>PATH</code>, or else downloads the
-			latest release. Install it from a checkout with{" "}
-			<strong>zed: install dev extension</strong>; syntax support for SQL files
-			comes from Zed&rsquo;s SQL extension.
+			squill finds SQL in: it formats both, highlights the embedded SQL, and
+			reports what squill leaves alone. It uses the <code>squill</code> on your{" "}
+			<code>PATH</code>, or else downloads the latest release. Install it from a
+			checkout with <strong>zed: install dev extension</strong>; syntax support
+			for SQL files comes from Zed&rsquo;s SQL extension.
 		</p>
 		<p>
 			Then in <code>settings.json</code>, format SQL files with squill&rsquo;s
@@ -161,7 +161,10 @@ vim.lsp.enable("squill")`}
 		<p>
 			Zed runs a list of formatters in order, so for SQL embedded in another
 			language, keep its language server&rsquo;s formatting and follow it with
-			squill&rsquo;s:
+			squill&rsquo;s. squill highlights the embedded SQL too, as semantic
+			tokens, which Zed only asks for when <code>semantic_tokens</code> is on:{" "}
+			<code>"combined"</code> lays them over Zed&rsquo;s own highlighting (
+			<code>"full"</code> would replace it, leaving only the SQL colored).
 		</p>
 		<Code
 			lang="jsonc"
@@ -172,7 +175,8 @@ vim.lsp.enable("squill")`}
       "formatter": [
         { "language_server": { "name": "rust-analyzer" } },
         { "language_server": { "name": "squill" } }
-      ]
+      ],
+      "semantic_tokens": "combined"
     }
   }
 }`}

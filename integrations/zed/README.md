@@ -1,6 +1,6 @@
 # squill for Zed
 
-Runs [squill](https://github.com/aslilac/squill)'s language server, `squill language-server start`: formatting for SQL files and for the SQL embedded in your Rust, Go, Python, JavaScript/TypeScript, Gleam, C++, C#, Java, Kotlin, and Swift, plus warnings for what squill leaves alone (statements it can't parse, embedded strings it won't rewrite).
+Runs [squill](https://github.com/aslilac/squill)'s language server, `squill language-server start`: formatting for SQL files and for the SQL embedded in your Rust, Go, Python, JavaScript/TypeScript, Gleam, C++, C#, Java, Kotlin, and Swift, plus highlighting for that embedded SQL and warnings for what squill leaves alone (statements it can't parse, embedded strings it won't rewrite).
 
 The extension uses the `squill` on your `PATH` if there is one, so the editor formats exactly as your CLI and CI do; otherwise it downloads the latest release from GitHub (macOS on Apple silicon, Linux and Windows on x86-64 and ARM64). Syntax support for SQL files comes from Zed's SQL extension.
 
@@ -21,7 +21,7 @@ To install this extension from a checkout, run **zed: install dev extension** an
 
 ## Formatting embedded SQL
 
-Zed runs formatters in order, so keep the language's own and follow it with squill:
+Zed runs formatters in order, so keep the language's own and follow it with squill. squill highlights the embedded SQL too, as semantic tokens, which Zed only asks for when `semantic_tokens` is on: `"combined"` lays them over Zed's own highlighting (`"full"` would replace it, leaving only the SQL colored).
 
 ```json
 {
@@ -30,7 +30,8 @@ Zed runs formatters in order, so keep the language's own and follow it with squi
 			"formatter": [
 				{ "language_server": { "name": "rust-analyzer" } },
 				{ "language_server": { "name": "squill" } }
-			]
+			],
+			"semantic_tokens": "combined"
 		}
 	}
 }
