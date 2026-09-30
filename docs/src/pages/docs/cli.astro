@@ -12,6 +12,7 @@ import Docs from "../../layouts/Docs.astro";
 		<h2>Commands</h2>
 		<Code
 			lang="text"
+			copy={false}
 			code={`squill [fmt] [OPTIONS] [PATHS...]
 squill locate [--json] [OPTIONS] [PATHS...]
 squill init [--dialect <D>] [--yaml] [--yes]
@@ -217,6 +218,7 @@ squill version`}
 		</p>
 		<Code
 			lang="text"
+			copy={false}
 			code={`$ squill locate src/db.rs
 src/db.rs:12:9-17:9 postgres  select m.id, m.name…
 src/db.rs:24:26-24:68 postgres  SELECT count(*) FROM members`}
@@ -244,6 +246,7 @@ src/db.rs:24:26-24:68 postgres  SELECT count(*) FROM members`}
 		</p>
 		<Code
 			lang="text"
+			copy={false}
 			code={`queries/report.sql:14:1: expected a statement, found \`frobnicate\` (statement passed through verbatim)
 src/db.rs:42:25: embedded SQL did not parse (expected a statement, found \`frobnicate\`); left unformatted`}
 		/>
