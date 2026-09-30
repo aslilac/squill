@@ -180,7 +180,7 @@ dependencies = [
 
 [[package]]
 name = "cli"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "dialoguer",
  "embed",
@@ -279,14 +279,14 @@ checksum = "7f8f80099a98041a3d1622845c271458a2d73e688351bf3cb999266764b81d48"
 
 [[package]]
 name = "corpus"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "parser",
 ]
 
 [[package]]
 name = "corpus-report"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "corpus",
  "formatter",
@@ -564,7 +564,7 @@ checksum = "91622ff5e7162018101f2fea40d6ebf4a78bbe5a49736a2020649edf9693679e"
 
 [[package]]
 name = "embed"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "formatter",
  "parser",
@@ -696,7 +696,7 @@ dependencies = [
 
 [[package]]
 name = "formatter"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "corpus",
  "insta",
@@ -1407,7 +1407,7 @@ dependencies = [
 
 [[package]]
 name = "parser"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "corpus",
  "cstree",
@@ -1434,7 +1434,7 @@ checksum = "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548"
 
 [[package]]
 name = "playground"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "embed",
  "formatter",
