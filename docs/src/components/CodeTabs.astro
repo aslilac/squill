@@ -3,6 +3,7 @@
 // (a platform's install command, say). A tab may name the `os` and
 // `arch` it's for; the one matching the reader's machine opens first,
 // else the first tab for their os, else `selected`.
+import CopyButton from "./CopyButton.astro";
 import { highlight } from "./highlight.js";
 
 const { tabs, selected = tabs[0].id } = Astro.props;
@@ -30,6 +31,9 @@ const panes = await Promise.all(
 						{tab.label}
 					</button>
 				))}
+			</span>
+			<span class="caption-tools">
+				<CopyButton />
 			</span>
 		</figcaption>
 		{panes.map((tab) => (

@@ -1,6 +1,7 @@
 ---
 // A highlighted code block: the same pane as the recipes, with the
-// file it belongs in as its caption when there is one. The code comes as a
+// file it belongs in as its caption when there is one, and a button that
+// copies it: in the caption, or in the pane's corner without one. The code comes as a
 // prop, not as children, so nothing collapses its whitespace on the way.
 import CopyButton from "./CopyButton.astro";
 import { highlight } from "./highlight.js";
@@ -10,13 +11,15 @@ const { lang, code, file } = Astro.props;
 
 <div class:list={["pair", "stacked", "code-block", { captioned: file }]}>
 	<figure>
-		{file && (
+		{file ? (
 			<figcaption>
 				<span class="filename">{file}</span>
 				<span class="caption-tools">
 					<CopyButton />
 				</span>
 			</figcaption>
+		) : (
+			<CopyButton />
 		)}
 		<div set:html={await highlight(code.trim(), lang)} />
 	</figure>
