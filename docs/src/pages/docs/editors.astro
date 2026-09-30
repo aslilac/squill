@@ -135,15 +135,53 @@ vim.lsp.enable("squill")`}
 			<a href="https://github.com/aslilac/squill/tree/trunk/integrations/zed">
 				<code>integrations/zed</code>
 			</a>
-			, runs squill&rsquo;s language server for SQL and the languages it formats
-			embedded SQL in; install it with{" "}
-			<strong>zed: install dev extension</strong>, and see its README for
-			settings. Without it, an external formatter works too.
+			, runs squill&rsquo;s language server for SQL files and for the languages
+			it formats embedded SQL in, and reports what squill leaves alone. It uses
+			the <code>squill</code> on your <code>PATH</code>, or else downloads the
+			latest release. Install it from a checkout with{" "}
+			<strong>zed: install dev extension</strong>; syntax support for SQL files
+			comes from Zed&rsquo;s SQL extension.
 		</p>
 		<p>
-			Install the SQL extension for syntax support, then in{" "}
-			<code>settings.json</code> set squill as an external formatter.{" "}
-			<code>&lbrace;buffer_path&rbrace;</code> passes the buffer&rsquo;s path:
+			Then in <code>settings.json</code>, format SQL files with squill&rsquo;s
+			language server:
+		</p>
+		<Code
+			lang="jsonc"
+			file="settings.json"
+			code={`{
+  "languages": {
+    "SQL": {
+      "formatter": { "language_server": { "name": "squill" } },
+      "format_on_save": "on"
+    }
+  }
+}`}
+		/>
+		<p>
+			Zed runs a list of formatters in order, so for SQL embedded in another
+			language, keep its language server&rsquo;s formatting and follow it with
+			squill&rsquo;s:
+		</p>
+		<Code
+			lang="jsonc"
+			file="settings.json"
+			code={`{
+  "languages": {
+    "Rust": {
+      "formatter": [
+        { "language_server": { "name": "rust-analyzer" } },
+        { "language_server": { "name": "squill" } }
+      ]
+    }
+  }
+}`}
+		/>
+		<h3>Without the extension</h3>
+		<p>
+			squill works as an external formatter too, with{" "}
+			<code>&lbrace;buffer_path&rbrace;</code> passing the buffer&rsquo;s path
+			so its config and rules apply. For SQL files:
 		</p>
 		<Code
 			lang="jsonc"
@@ -162,29 +200,9 @@ vim.lsp.enable("squill")`}
 }`}
 		/>
 		<p>
-			Zed runs a list of formatters in order, so for SQL embedded in another
-			language, keep its language server&rsquo;s formatting and follow it with
-			squill:
+			For embedded SQL, put the same <code>external</code> entry after the
+			language server in that language&rsquo;s list of formatters.
 		</p>
-		<Code
-			lang="jsonc"
-			file="settings.json"
-			code={`{
-  "languages": {
-    "Rust": {
-      "formatter": [
-        { "language_server": { "name": "rust-analyzer" } },
-        {
-          "external": {
-            "command": "squill",
-            "arguments": ["fmt", "--stdin-filepath", "{buffer_path}"]
-          }
-        }
-      ]
-    }
-  }
-}`}
-		/>
 	</section>
 
 	<section>
