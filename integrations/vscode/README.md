@@ -33,6 +33,8 @@ VS Code runs one formatter per file, and your Rust files already have one. squil
 
 Embedded SQL is only formatted in files that an `[[embedded]]` rule in your `squill.toml` covers; run `squill init` to set one up. See [embedded SQL](https://mckayla.dev/squill/docs/embedded/).
 
+When your squill config has an `[[embedded]]` rule for a language whose settings don't run the code action on save yet, the extension offers to add it to your workspace settings (`.vscode/settings.json`). **Don't ask again** stops it offering in that workspace.
+
 ## Highlighting embedded SQL
 
 The SQL in strings that an `[[embedded]]` rule covers is highlighted: its keywords, names, functions, types, numbers, parameters, and comments. Its own strings and punctuation keep your theme's string color. VS Code doesn't let an extension use the theme's syntax colors here, so these are theme colors of their own, matching the Dark+ and Light+ themes by default. A theme can set them, or you can:
