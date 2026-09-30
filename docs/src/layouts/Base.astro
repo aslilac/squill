@@ -375,17 +375,16 @@ const topNav = [
 				flex-wrap: wrap;
 				gap: 0.4rem 1.1rem;
 			}
-			/* Tabs named in words (platforms), not the pane's small caps. */
-			.pair figcaption.prose-tabs {
-				color: var(--muted);
-				font-family: inherit;
+			/* Tabs are words (a platform, before and after), in the page's face
+			   rather than the pane's small caps, and in line with the code
+			   below; the selected one is marked by a violet rule under it, a
+			   little clear of the text. */
+			.tabbar [role="tab"] {
+				font-family: "IBM Plex Sans", system-ui, sans-serif;
 				font-size: 0.85rem;
 				letter-spacing: normal;
 				text-transform: none;
-			}
-			/* Tabs are words, in line with the code below; the selected one is
-			   marked by a violet rule under it, a little clear of the text. */
-			.tabbar [role="tab"] {
+				color: var(--muted);
 				border: none;
 				border-bottom: 2px solid transparent;
 				padding: 0.2rem 0 0.35rem;
