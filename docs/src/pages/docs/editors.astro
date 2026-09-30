@@ -33,49 +33,51 @@ import Docs from "#/layouts/Docs.astro";
 	</section>
 
 	<section>
-		<h2>Helix</h2>
-		<p>
-			In <code>languages.toml</code>, set squill as the SQL formatter.{" "}
-			<code>%&lbrace;buffer_name&rbrace;</code> passes the buffer&rsquo;s path:
-		</p>
-		<Code
-			lang="toml"
-			file="languages.toml"
-			code={`[[language]]
-name = "sql"
-formatter = { command = "squill", args = ["fmt", "--stdin-filepath", "%{buffer_name}"] }
-auto-format = true`}
-		/>
-		<p>
-			A Helix formatter replaces the language server&rsquo;s, and runs alone.
-			For SQL embedded in another language, pipe that language&rsquo;s own
-			formatter into squill:
-		</p>
-		<Code
-			lang="toml"
-			file="languages.toml"
-			code={`[[language]]
-name = "rust"
-formatter = { command = "sh", args = ["-c", "rustfmt | squill fmt --stdin-filepath \\"$0\\"", "%{buffer_name}"] }`}
-		/>
-	</section>
-
-	<section>
 		<h2>Language server</h2>
 		<p>
 			<code>squill language-server start</code> runs a language server on stdin
-			and stdout. It formats documents the same way (by their path, config and
-			rules included), and it reports what squill leaves alone as warnings where
-			they are: statements it passed through verbatim, and embedded strings it
-			declined to rewrite. It also highlights the SQL embedded in host-language
-			files, as semantic tokens, for editors that layer them over the
-			language&rsquo;s own highlighting. Config is re-read for every request, so
-			edits to <code>squill.toml</code> apply without a restart.
+			and stdout, for any editor that speaks LSP. It resolves each document by
+			its path, as <code>--stdin-filepath</code> does, and offers:
 		</p>
-		<p>In Helix, register it and use it for SQL:</p>
+		<ul>
+			<li>
+				formatting, for a SQL file and for a host file&rsquo;s embedded SQL;
+			</li>
+			<li>
+				warnings where squill leaves something alone: statements it passed
+				through verbatim, and embedded strings it declined to rewrite;
+			</li>
+			<li>
+				highlighting for embedded SQL, as semantic tokens (SQL files it leaves
+				to the editor&rsquo;s own highlighting);
+			</li>
+			<li>
+				a <code>source.formatSql</code> code action that makes the same edit as
+				formatting, for editors that run one formatter per file, so it can run
+				after the language&rsquo;s own.
+			</li>
+		</ul>
+		<p>
+			Config is re-read for every request, so edits to <code>squill.toml</code>{" "}
+			apply without a restart. Run it for SQL and for the languages your{" "}
+			<code>[[embedded]]</code> rules cover. A client that takes one
+			server&rsquo;s formatting or semantic tokens per document can narrow
+			squill&rsquo;s to some documents with the initialization options{" "}
+			<code>formattingSelector</code> and <code>semanticTokensSelector</code>,
+			each a list of document filters (<code>[]</code> for none), as the VS Code
+			extension does.
+		</p>
+	</section>
+
+	<section>
+		<h2>Helix</h2>
+		<p>
+			In <code>languages.toml</code>, register squill&rsquo;s language server
+			and use it for SQL files:
+		</p>
 		<Code
 			lang="toml"
-			file="languages.toml"
+			file="~/.config/helix/languages.toml"
 			code={`[language-server.squill]
 command = "squill"
 args = ["language-server", "start"]
@@ -86,16 +88,25 @@ language-servers = ["squill"]
 auto-format = true`}
 		/>
 		<p>
-			Next to another language&rsquo;s own server, it can contribute just its
-			diagnostics about embedded SQL, while that server keeps formatting:
+			Helix formats a language with one formatter: the first of its language
+			servers that can, unless a <code>formatter</code> command replaces them.
+			So for SQL embedded in another language, keep that language&rsquo;s own
+			server, add squill&rsquo;s for its warnings, and format by piping the
+			language&rsquo;s formatter into squill.{" "}
+			<code>%&lbrace;buffer_name&rbrace;</code> passes the buffer&rsquo;s path:
 		</p>
 		<Code
 			lang="toml"
-			file="languages.toml"
+			file="~/.config/helix/languages.toml"
 			code={`[[language]]
 name = "rust"
-language-servers = ["rust-analyzer", { name = "squill", only-features = ["diagnostics"] }]`}
+language-servers = ["rust-analyzer", { name = "squill", only-features = ["diagnostics"] }]
+formatter = { command = "sh", args = ["-c", "rustfmt | squill fmt --stdin-filepath \\"$0\\"", "%{buffer_name}"] }`}
 		/>
+		<p>
+			Helix doesn&rsquo;t draw semantic tokens, so embedded SQL isn&rsquo;t
+			highlighted there.
+		</p>
 	</section>
 
 	<section>
@@ -107,7 +118,7 @@ language-servers = ["rust-analyzer", { name = "squill", only-features = ["diagno
 		</p>
 		<Code
 			lang="lua"
-			file="init.lua"
+			file="~/.config/nvim/init.lua"
 			code={`vim.lsp.config("squill", {
   cmd = { "squill", "language-server", "start" },
   filetypes = {
