@@ -28,13 +28,13 @@ nix shell github:aslilac/squill
 Cargo can clone the source, checkout the latest release tag, and install the binary in a single command.
 
 ```sh
-cargo install --git https://github.com/aslilac/squill.git --tag v0.4.0 cli --bin squill
+cargo install --git https://github.com/aslilac/squill.git --tag v0.5.0 cli --bin squill
 ```
 
 Every built-in grammar for embedded SQL is its own cargo feature (`rust`, `go`, `python`, `javascript`, `typescript`, `gleam`, `cxx`, `csharp`, `java`, `kotlin`, `swift`), as is `external-grammars`, which loads grammars from `.wasm` files at runtime (and needs `cmake` to build). All are on by default; for a smaller binary, pick just the ones you need:
 
 ```sh
-cargo install --git https://github.com/aslilac/squill.git --tag v0.4.0 cli --bin squill --no-default-features --features rust,go
+cargo install --git https://github.com/aslilac/squill.git --tag v0.5.0 cli --bin squill --no-default-features --features rust,go
 ```
 
 ## Usage
