@@ -1,6 +1,6 @@
-id = "squill"
-name = "squill"
-description = "A SQL formatter for Postgres and SQLite, including the SQL embedded in your code."
+id = "squill-language-server"
+name = "Squill"
+description = "A formatter and syntax highlighter for SQL, everywhere."
 version = "0.1.0"
 schema_version = 1
 authors = ["McKayla Washburn-Love <kayla@tree.camp>"]
