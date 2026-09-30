@@ -190,14 +190,23 @@ vim.lsp.enable("squill")`}
 	<section>
 		<h2>VS Code</h2>
 		<p>
-			squill&rsquo;s VS Code extension runs squill&rsquo;s language server: it
-			formats SQL files and the SQL embedded in other languages, and highlights
-			the embedded SQL. Build it with{" "}
-			<code>
-				pnpm install &amp;&amp; pnpm run build &amp;&amp; pnpm run package
-			</code>{" "}
-			and install the <code>.vsix</code>; its README covers the rest of its
-			settings.
+			Install{" "}
+			<a href="https://marketplace.visualstudio.com/items?itemName=aslilac.squill">
+				squill from the Visual Studio Marketplace
+			</a>
+			, or search for squill in the Extensions view, or from a terminal:
+		</p>
+		<Code lang="sh" code={`code --install-extension aslilac.squill`} />
+		<p>
+			The extension runs squill&rsquo;s language server: it formats SQL files
+			and the SQL embedded in other languages, and highlights the embedded SQL.
+			It uses the <code>squill</code> on your <code>PATH</code>, so the editor
+			formats exactly as your CLI and CI do, or else downloads the latest
+			release. Its{" "}
+			<a href="https://marketplace.visualstudio.com/items?itemName=aslilac.squill">
+				Marketplace page
+			</a>{" "}
+			covers the rest of its settings.
 		</p>
 		<p>
 			In <code>settings.json</code>, make squill the SQL formatter, and format
