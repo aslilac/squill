@@ -1,7 +1,8 @@
 {
 	"name": "squill",
-	"displayName": "squill",
-	"description": "A SQL formatter for Postgres and SQLite, including the SQL embedded in your code.",
+	"displayName": "Squill",
+	"description": "A formatter and syntax highlighter for SQL, everywhere.",
+	"icon": "squill.png",
 	"version": "0.1.0",
 	"publisher": "aslilac",
 	"license": "MPL-2.0",
@@ -11,7 +12,7 @@
 		"directory": "integrations/vscode"
 	},
 	"engines": {
-		"vscode": "^1.91.0"
+		"vscode": "^1.110.0"
 	},
 	"categories": [
 		"Formatters",
@@ -152,11 +153,11 @@
 		"package": "vsce package --no-dependencies"
 	},
 	"dependencies": {
-		"vscode-languageclient": "~10.1.1"
+		"vscode-languageclient": "~10.1.2"
 	},
 	"devDependencies": {
-		"@types/node": "^20.19.0",
-		"@types/vscode": "~1.91.0",
+		"@types/node": "~22.20.4",
+		"@types/vscode": "~1.110.0",
 		"@vscode/vsce": "^4.0.0",
 		"esbuild": "^0.28.2",
 		"typescript": "catalog:"
