@@ -1,0 +1,33 @@
+name: Release IntelliJ plugin
+
+on:
+  workflow_dispatch:
+
+jobs:
+  package:
+    name: Package
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        name: Checkout
+
+      - uses: actions/setup-java@v6
+        name: Configure Java
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+        name: Configure Gradle
+
+      - run: ./gradlew buildPlugin
+        name: Package
+        working-directory: integrations/intellij
+
+      - uses: actions/upload-artifact@v7
+        name: Upload
+        with:
+          name: squill-intellij
+          path: integrations/intellij/build/distributions/*.zip

@@ -13,3 +13,7 @@ crates/parser/fuzz/Cargo.lock
 out/
 *.vsix
 integrations/zed/extension.wasm
+.gradle/
+.intellijPlatform/
+.kotlin/
+integrations/intellij/build/

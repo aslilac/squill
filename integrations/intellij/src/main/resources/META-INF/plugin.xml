@@ -1,0 +1,30 @@
+<idea-plugin>
+	<id>dev.mckayla.squill</id>
+	<name>Squill</name>
+	<vendor url="https://mckayla.dev/squill/">McKayla Washburn-Love</vendor>
+	<description><![CDATA[
+		<p>Formats SQL with <a href="https://github.com/aslilac/squill">squill</a>, a formatter for Postgres and SQLite: <code>.sql</code> files, and the SQL embedded in your Rust, Go, Python, JavaScript/TypeScript, Gleam, C++, C#, Java, Kotlin, and Swift. It highlights that embedded SQL, and shows what squill leaves alone (statements it can't parse, embedded strings it won't rewrite) as warnings in the editor.</p>
+		<p>The plugin runs squill's language server. It uses the <code>squill</code> on your <code>PATH</code> if there is one, so the IDE formats exactly as your CLI and CI do; otherwise it downloads the latest release from GitHub, checked against the SHA-256 digest GitHub reports for it.</p>
+	]]></description>
+
+	<depends>com.intellij.modules.platform</depends>
+	<depends>com.intellij.modules.lsp</depends>
+
+	<extensions defaultExtensionNs="com.intellij">
+		<platform.lsp.integrationProvider implementation="dev.mckayla.squill.SquillLspIntegrationProvider"/>
+
+		<applicationConfigurable
+			parentId="tools"
+			id="dev.mckayla.squill"
+			displayName="squill"
+			instance="dev.mckayla.squill.SquillConfigurable"/>
+
+		<colorSettingsPage implementation="dev.mckayla.squill.SqlColorSettingsPage"/>
+
+		<actionOnSave implementation="dev.mckayla.squill.SquillFormatOnSave" order="last"/>
+		<actionOnSaveInfoProvider implementation="dev.mckayla.squill.SquillActionOnSaveInfoProvider"/>
+		<postStartupActivity implementation="dev.mckayla.squill.SuggestFormatOnSave"/>
+
+		<notificationGroup id="squill" displayType="BALLOON"/>
+	</extensions>
+</idea-plugin>

@@ -85,9 +85,15 @@
               pkgs.typos
               pkgs.nodejs_24
               pkgs.corepack
+              # The IntelliJ plugin: Gradle 9 for the IntelliJ Platform
+              # Gradle Plugin, and Java 21, the oldest runtime among the
+              # IDEs it supports (2026.1).
+              pkgs.gradle_9
+              pkgs.jdk21
             ];
 
             env = {
+              JAVA_HOME = "${pkgs.jdk21.home}";
               CC_wasm32_wasip1 = "${wasiCC}/bin/wasm32-unknown-wasip1-clang";
               AR_wasm32_wasip1 = "${wasiCC}/bin/wasm32-unknown-wasip1-ar";
               # The cc wrapper already knows its sysroot.
