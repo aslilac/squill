@@ -373,14 +373,14 @@ const topNav = [
 				padding: 0.15rem 0.6rem;
 				cursor: pointer;
 			}
-			/* Pulled left by a tab's own padding and border, so the first tab's
-			   label lines up with the code below and its pill sits in the
-			   pane's margin. */
+			/* Pulled left by half a tab's own padding. Not pulled at all, the
+			   labels sit visibly right of the code below; pulled by all of it,
+			   flush with the code, they look too far left. */
 			.tabbar [role="tablist"] {
 				display: inline-flex;
 				flex-wrap: wrap;
 				gap: 0.35rem;
-				margin-left: calc(-0.6rem - 1px);
+				margin-left: -0.3rem;
 			}
 			/* Tabs named in words (platforms), not the pane's small caps. */
 			.pair figcaption.prose-tabs {
