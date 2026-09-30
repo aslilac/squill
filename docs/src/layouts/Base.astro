@@ -617,11 +617,13 @@ const topNav = [
 				display: block;
 				color: var(--green);
 			}
-			/* A file's name in a pane's caption keeps its own case. */
+			/* A file's name in a pane's caption keeps its own case, in the
+			   page's face like the tabs rather than the pane's small caps. */
 			.pair figcaption .filename {
+				font-family: "IBM Plex Sans", system-ui, sans-serif;
 				text-transform: none;
 				letter-spacing: normal;
-				font-size: 0.75rem;
+				font-size: 0.85rem;
 				color: var(--pane-text);
 			}
 			.recipe .pair {
