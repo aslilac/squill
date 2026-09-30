@@ -569,8 +569,8 @@ const topNav = [
 			[role="tabpanel"][hidden] {
 				display: none;
 			}
-			/* A pane caption's right side: a button that copies the pane, and
-			   the file's language, laid out like the tab bar's gear and label. */
+			/* A pane caption's right side: the file's language, then a button
+			   that copies the pane, laid out like the tab bar's label and gear. */
 			.caption-tools {
 				display: inline-flex;
 				align-items: center;
@@ -594,9 +594,11 @@ const topNav = [
 					border-color 0.12s,
 					color 0.12s;
 			}
-			/* Alone in its caption, the button's icon lines up with the pane's
-			   edge. */
-			.copy-code:last-child {
+			/* Last in its caption, a button's icon lines up with the pane's
+			   edge. Last of its type: Astro puts the copy button's script right
+			   after the first one on a page. */
+			.copy-code:last-of-type,
+			.recipe-menu:last-child .recipe-gear {
 				margin-right: -0.4rem;
 			}
 			.copy-code:hover {

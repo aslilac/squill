@@ -116,8 +116,8 @@ const settings = live && [
 				<figcaption>
 					<span class="filename">{path}</span>
 					<span class="caption-tools">
-						<CopyButton />
 						<span>{kind(path)}</span>
+						<CopyButton />
 					</span>
 				</figcaption>
 				<div set:html={await highlight(read(path), kind(path))} />
@@ -140,6 +140,7 @@ const settings = live && [
 					))}
 				</span>
 				<span class="tab-tools">
+					<span>{lang}</span>
 					{menu && (
 						<span class="recipe-menu">
 							<button
@@ -189,7 +190,6 @@ const settings = live && [
 							</div>
 						</span>
 					)}
-					<span>{lang}</span>
 				</span>
 			</figcaption>
 			{panes.map(({ tab, sql, plain }) => (
