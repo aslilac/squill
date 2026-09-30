@@ -191,13 +191,45 @@ vim.lsp.enable("squill")`}
 		<h2>VS Code</h2>
 		<p>
 			squill&rsquo;s VS Code extension runs squill&rsquo;s language server: it
-			formats SQL files, a <code>source.formatSql</code> code action formats
-			embedded SQL on save, after the language&rsquo;s own formatter, and it
-			highlights embedded SQL. Build it with{" "}
+			formats SQL files and the SQL embedded in other languages, and highlights
+			the embedded SQL. Build it with{" "}
 			<code>
 				pnpm install &amp;&amp; pnpm run build &amp;&amp; pnpm run package
 			</code>{" "}
-			and install the <code>.vsix</code>; its README covers the settings.
+			and install the <code>.vsix</code>; its README covers the rest of its
+			settings.
 		</p>
+		<p>
+			In <code>settings.json</code>, make squill the SQL formatter, and format
+			on save:
+		</p>
+		<Code
+			lang="jsonc"
+			file="settings.json"
+			code={`{
+  "[sql]": {
+    "editor.defaultFormatter": "aslilac.squill",
+    "editor.formatOnSave": true
+  }
+}`}
+		/>
+		<p>
+			VS Code runs one formatter per file, so in another language that
+			language&rsquo;s own formatter keeps the job. squill formats the SQL
+			embedded there with a <code>source.formatSql</code> code action instead,
+			which runs on save after the formatter. Turn it on for each language whose
+			SQL a <code>[[embedded]]</code> rule covers:
+		</p>
+		<Code
+			lang="jsonc"
+			file="settings.json"
+			code={`{
+  "[rust]": {
+    "editor.codeActionsOnSave": {
+      "source.formatSql": "explicit"
+    }
+  }
+}`}
+		/>
 	</section>
 </Docs>
