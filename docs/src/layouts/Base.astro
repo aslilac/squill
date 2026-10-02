@@ -612,26 +612,37 @@ const topNav = [
 			.code-block:not(.captioned) .folds:not(.unfolded) pre {
 				max-height: calc(10lh + 1.1rem);
 			}
+			/* A rounded button, centered: floating over the fade while the
+			   query is folded, and below its last line once it isn't. */
+			.folds {
+				position: relative;
+			}
 			.show-more {
-				font-family: "JetBrains Mono", monospace;
-				font-size: 0.65rem;
-				letter-spacing: 0.1em;
-				text-transform: uppercase;
-				color: var(--code-comment);
-				background: transparent;
-				border: 0;
-				border-top: 1px solid var(--pane-edge);
-				padding: 0.7rem 1.25rem;
-				text-align: left;
+				font: inherit;
+				font-size: 0.85rem;
+				color: var(--pane-text);
+				background: var(--pane);
+				border: 1px solid var(--pane-edge);
+				border-radius: 999px;
+				padding: 0.3rem 0.95rem;
 				cursor: pointer;
+				align-self: center;
+				margin: 0 0 1rem;
+				box-shadow: 0 1px 6px rgb(0 0 0 / 0.12);
+			}
+			.folds:not(.unfolded) .show-more {
+				position: absolute;
+				bottom: 0.9rem;
+				left: 50%;
+				transform: translateX(-50%);
+				margin: 0;
 			}
 			.show-more:hover {
-				color: var(--pane-text);
-				background: color-mix(in oklab, var(--pane-edge) 25%, transparent);
+				background: color-mix(in oklab, var(--pane-edge) 40%, var(--pane));
 			}
 			.show-more:focus-visible {
 				outline: 2px solid var(--violet);
-				outline-offset: -2px;
+				outline-offset: 2px;
 			}
 			.folds.unfolded .show-all,
 			.folds:not(.unfolded) .show-fewer {
