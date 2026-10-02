@@ -1511,13 +1511,12 @@ impl Snippet<'_> {
 		}
 		let sql = formatted.text.trim_end();
 
-		// Lines that start inside a value (a string spanning lines) are
-		// data: never indented.
+		// Lines that start inside a value (a string spanning lines), or in
+		// a body that didn't parse, are data: never indented, and the line
+		// endings before them aren't ours to choose. Every other one is,
+		// and with CRLF gets a CR, noted so it isn't taken for one the
+		// string spelled.
 		let verbatim_lines = formatter::verbatim_line_starts(sql, &format_options);
-		// Nor are the line endings before them (or inside a body that
-		// didn't parse) ours to choose: every other one is, and with CRLF
-		// gets a CR, noted so it isn't taken for one the string spelled.
-		let data_lines = formatter::data_line_starts(sql, &format_options);
 		let crlf = self.options.line_ending == formatter::LineEnding::Crlf;
 		let mut anchored =
 			Anchored { text: String::new(), line_ending_crs: vec![] };
@@ -1530,7 +1529,7 @@ impl Snippet<'_> {
 		};
 		let mut line_start = 0;
 		for (index, line) in sql.split('\n').enumerate() {
-			if index == 0 || !data_lines.contains(&line_start) {
+			if index == 0 || !verbatim_lines.contains(&line_start) {
 				end_line(&mut anchored);
 			} else {
 				anchored.text.push('\n');

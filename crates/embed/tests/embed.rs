@@ -723,6 +723,21 @@ fn procedural_bodies_anchor_but_their_strings_do_not() {
 }
 
 #[test]
+fn unparsable_bodies_are_left_as_written() {
+	// A body that doesn't parse has no layout of the formatter's: its
+	// strings are only the lexer's guess, so it takes no indent.
+	let source = "fn f() {\n    sqlx::query!(r#\"create function f() returns int language sql as $$\nfrobnicate\n  the widgets;\n$$\"#);\n}\n";
+	let formatted = format_host(Host::Rust, RUST_SQLX_QUERY, source);
+	assert!(
+		formatted
+			.text
+			.contains("    as $$\nfrobnicate\n  the widgets;\n$$\n    \"#"),
+		"{}",
+		formatted.text
+	);
+}
+
+#[test]
 fn column_zero_strings_take_the_files_indent_character() {
 	// No anchor indentation to copy: the file's own indentation decides,
 	// so a spaces-indented file never gains tabs.

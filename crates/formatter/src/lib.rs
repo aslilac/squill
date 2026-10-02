@@ -492,29 +492,27 @@ pub(crate) fn body_lang(
 	})
 }
 
-/// Byte offsets of the lines in formatted `sql` whose leading whitespace
-/// is part of a value: lines that begin inside a string, quoted
-/// identifier, or dollar-quoted string spanning lines. Re-indenting
-/// those (to anchor SQL inside a host file, say) would change the data.
-/// Procedural bodies are the exception — their layout is the
-/// formatter's own — though a value spanning lines inside one is not.
+/// Byte offsets of the lines in formatted `sql` that are data, not
+/// layout: lines that begin inside a string, quoted identifier, or
+/// dollar-quoted string spanning lines. Re-indenting those (to anchor
+/// SQL inside a host file, say) or re-ending the line before them would
+/// change the data. Procedural bodies are the exception — their layout
+/// is the formatter's own — though a value spanning lines inside one is
+/// not, and a body that doesn't parse is left as written, every line.
 pub fn verbatim_line_starts(
 	sql: &str,
 	options: &Options,
 ) -> std::collections::HashSet<usize> {
 	let mut out = std::collections::HashSet::new();
-	collect_verbatim_lines(sql, 0, options, 0, false, &mut out);
+	collect_verbatim_lines(sql, 0, options, 0, &mut out);
 	out
 }
 
-/// With `unparsed_bodies`, a body that doesn't parse is a value too:
-/// every line of it.
 fn collect_verbatim_lines(
 	sql: &str,
 	base: usize,
 	options: &Options,
 	depth: u32,
-	unparsed_bodies: bool,
 	out: &mut std::collections::HashSet<usize>,
 ) {
 	let tokens =
@@ -545,14 +543,13 @@ fn collect_verbatim_lines(
 				&& let Some(lang) = lang
 				&& depth < MAX_BODY_DEPTH
 				&& let Some((tag, content)) = check::split_dollar(token.text)
-				&& !(unparsed_bodies && !body_parses(content, lang, options))
+				&& body_parses(content, lang, options)
 			{
 				collect_verbatim_lines(
 					content,
 					at + tag.len(),
 					options,
 					depth + 1,
-					unparsed_bodies,
 					out,
 				);
 				continue;
@@ -563,19 +560,6 @@ fn collect_verbatim_lines(
 		}
 		start = end;
 	}
-}
-
-/// Byte offsets of the lines in formatted `sql` whose line break before
-/// them is data, not layout: lines that begin inside a value, or inside
-/// a procedural body that doesn't parse. Those breaks keep the line
-/// endings they came with.
-pub fn data_line_starts(
-	sql: &str,
-	options: &Options,
-) -> std::collections::HashSet<usize> {
-	let mut out = std::collections::HashSet::new();
-	collect_verbatim_lines(sql, 0, options, 0, true, &mut out);
-	out
 }
 
 /// Does a procedural body parse cleanly in its grammar?
@@ -596,7 +580,7 @@ fn body_parses(content: &str, lang: BodyLang, options: &Options) -> bool {
 /// parse, which is left as written. Only `\r\n` and `\n` count as line
 /// endings; a lone `\r` is left as it is.
 fn end_lines(sql: &str, ending: &str, options: &Options) -> String {
-	let verbatim = data_line_starts(sql, options);
+	let verbatim = verbatim_line_starts(sql, options);
 	let mut out = String::with_capacity(sql.len());
 	let mut start = 0;
 	for (newline, _) in sql.match_indices('\n') {
