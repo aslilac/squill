@@ -15,6 +15,6 @@ func remindOverdue(_ client: PostgresClient, logger: Logger) async throws {
 
 func markPaid(_ client: PostgresClient, id: Int, logger: Logger) async throws {
     try await client.query("""
-        UPDATE invoices SET paid_at = now() WHERE id = \(id)
-        """, logger: logger)
+    update invoices set paid_at = now() where id = \(id)
+    """, logger: logger)
 }

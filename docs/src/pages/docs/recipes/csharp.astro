@@ -19,10 +19,11 @@ import Recipe from "../../../components/Recipe.astro";
 		</p>
 		<p>
 			Everything else is left exactly as written: plain strings, verbatim
-			strings (<code>@"&hellip;"</code>). Interpolated strings (
-			<code>$"&hellip;"</code>, <code>$"""&hellip;"""</code>) never are &mdash;
-			SQL with holes in it isn&rsquo;t SQL squill can parse. To have squill
-			format a query, write it as a raw string.
+			strings (<code>@"&hellip;"</code>). An interpolated string (
+			<code>$"&hellip;"</code>, <code>$"""&hellip;"""</code>) pastes its holes
+			into the SQL, so it&rsquo;s left alone too, except where EF Core sends
+			them as parameters (below). To have squill format a query, write it as a
+			raw string.
 		</p>
 	</section>
 
@@ -52,12 +53,15 @@ import Recipe from "../../../components/Recipe.astro";
 		</p>
 		<Recipe name="csharp-efcore" lang="c#" />
 		<p>
-			Two things to know. <code>FromSql</code> and <code>ExecuteSql</code> take
-			an interpolated string, which squill leaves alone. And the{" "}
-			<code>Raw</code> methods&rsquo; <code>{"{0}"}</code> placeholders
-			aren&rsquo;t SQL: squill reports those strings as unparsable rather than
-			guess. Named parameters (<code>@cutoff</code>, bound with a{" "}
-			<code>DbParameter</code>) need <code>at-params</code>, as with Dapper.
+			Two things to know. <code>FromSql</code>, <code>SqlQuery</code>, and{" "}
+			<code>ExecuteSql</code> take an interpolated string and send each{" "}
+			<code>{"{…}"}</code> hole as a parameter, so a{" "}
+			<code>$"""&hellip;"""</code> one is formatted around its holes, written
+			back as they were. And the <code>Raw</code> methods&rsquo;{" "}
+			<code>{"{0}"}</code> placeholders aren&rsquo;t SQL: squill reports those
+			strings as unparsable rather than guess. Named parameters (
+			<code>@cutoff</code>, bound with a <code>DbParameter</code>) need{" "}
+			<code>at-params</code>, as with Dapper.
 		</p>
 	</section>
 

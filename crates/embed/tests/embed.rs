@@ -489,11 +489,13 @@ fn js_smoke_test() {
 	);
 	// Tagged templates format too.
 	assert!(formatted.contains("sql`select 3`"), "{formatted}");
-	// `${}` substitutions and plain quoted strings stay byte-identical.
+	// The `sql` tag sends a `${}` hole as a parameter: formatted around it.
 	assert!(
 		formatted
-			.contains("sql`SELECT count(*) FROM api_keys WHERE user_id = ${id}`")
+			.contains("sql`select count(*) from api_keys where user_id = ${id}`"),
+		"{formatted}"
 	);
+	// Plain quoted strings stay byte-identical.
 	assert!(formatted.contains("'SELECT   2'"));
 	// Idempotent.
 	let twice = format_embedded(
@@ -1169,7 +1171,7 @@ fn a_token_spelled_with_an_escape_must_come_through_unchanged() {
 	let formatted = format_host(Host::Cxx, &query, source);
 	assert_eq!(formatted.text, source);
 	assert!(
-		formatted.warnings[0].message.contains("spelled with a backslash escape"),
+		formatted.warnings[0].message.contains("spelled with an escape"),
 		"{:?}",
 		formatted.warnings
 	);
@@ -1297,5 +1299,92 @@ fn rust_byte_and_c_strings_are_skipped() {
 	let source = "fn f() {\n    sqlx::query(b\"SELECT 1\n    FROM t\");\n    sqlx::query(c\"SELECT 2\n    FROM t\");\n}\n";
 	let formatted = format_host(Host::Rust, RUST_SQLX_QUERY, source);
 	assert_eq!(formatted.text, source);
+	assert!(formatted.warnings.is_empty(), "{:?}", formatted.warnings);
+}
+
+#[test]
+fn interpolations_a_tag_binds_are_parameters() {
+	let source = "async function f() {\n  await sql`SELECT id,name FROM users WHERE org = ${org.id} AND name = '${prefix}%'`;\n  await prisma.$queryRaw`SELECT count(*) FROM posts WHERE author = ${a}`;\n  await sql`SELECT * FROM users WHERE ${sql`id = ${x}`}`;\n  await pool.query(`SELECT   * FROM t WHERE id = ${id}`);\n}\n";
+	let formatted = format_host(Host::JavaScript, JS_SQL_QUERY, source);
+	// Laid out at the holes' real width, and written back as they were.
+	assert!(
+		formatted.text.contains(
+			"sql`\n  select id, name from users where org = ${org.id} and name = '${prefix}%'\n  `"
+		),
+		"{}",
+		formatted.text
+	);
+	assert!(
+		formatted
+			.text
+			.contains("$queryRaw`select count(*) from posts where author = ${a}`"),
+		"{}",
+		formatted.text
+	);
+	// A fragment in a hole is part of the query it's in: left alone.
+	assert!(
+		formatted.text.contains("sql`select * from users where ${sql`id = ${x}`}`"),
+		"{}",
+		formatted.text
+	);
+	// pg's `.query` pastes the hole into the SQL: skipped, without a word.
+	assert!(formatted.text.contains("`SELECT   * FROM t WHERE id = ${id}`"));
+	assert!(formatted.warnings.is_empty(), "{:?}", formatted.warnings);
+}
+
+#[test]
+fn interpolations_squill_cant_place_are_reported() {
+	let source = "async function f() {\n  await sql`SELECT * FROM t WHERE a = ${a}${b}`;\n  await sql`SELECT * FROM t WHERE a = ${\n    a\n  }`;\n  await sql`SELECT * FROM users ${where}`;\n}\n";
+	let formatted = format_host(Host::JavaScript, JS_SQL_QUERY, source);
+	assert_eq!(formatted.text, source);
+	let messages: Vec<_> =
+		formatted.warnings.iter().map(|w| w.message.as_str()).collect();
+	assert_eq!(messages.len(), 3, "{messages:?}");
+	assert!(messages[0].contains("right against SQL text"), "{messages:?}");
+	assert!(messages[1].contains("spanning lines"), "{messages:?}");
+	// A fragment doesn't parse, and says so in the hole's own words.
+	assert!(messages[2].contains("`${where}`"), "{messages:?}");
+}
+
+#[test]
+fn ef_core_python_and_swift_bind_their_holes_too() {
+	let cs = "class A {\n    void M() {\n        ctx.Database.SqlQuery<int>($\"\"\"\n            SELECT id FROM t WHERE x = {x} AND y = {y.Name}\n            \"\"\");\n    }\n}\n";
+	let formatted = format_host(Host::CSharp, CSHARP_SQL_QUERY, cs);
+	assert!(
+		formatted
+			.text
+			.contains("$\"\"\"\n        select id from t where x = {x} and y = {y.Name}\n        \"\"\""),
+		"{}",
+		formatted.text
+	);
+	let py = "def f(cur):\n    cur.execute(t\"\"\"SELECT id FROM users WHERE org = {org.id} AND name = {name!r:i}\"\"\")\n    cur.execute(f\"\"\"SELECT   {x}\"\"\")\n";
+	let formatted = format_host(Host::Python, PYTHON_DB_QUERY, py);
+	assert!(
+		formatted.text.contains(
+			"t\"\"\"\n    select id from users where org = {org.id} and name = {name!r:i}\n    \"\"\""
+		),
+		"{}",
+		formatted.text
+	);
+	// An f-string pastes its holes in: never taken.
+	assert!(formatted.text.contains("f\"\"\"SELECT   {x}\"\"\""));
+	let swift = "func f() async throws {\n    try await db.raw(\"\"\"\n        SELECT * FROM t WHERE id = \\(bind: id)\n        \"\"\").run()\n    try await db.raw(\"\"\"\n        SELECT * FROM t WHERE n = \\(x)\n        \"\"\").run()\n    try db.execute(literal: \"\"\"\n        UPDATE player SET score = \\(score) WHERE id = \\(id)\n        \"\"\")\n}\n";
+	let formatted = format_host(Host::Swift, SWIFT_SQL_QUERY, swift);
+	assert!(
+		formatted.text.contains(
+			"\"\"\"\n    select * from t where id = \\(bind: id)\n    \"\"\""
+		),
+		"{}",
+		formatted.text
+	);
+	// SQLKit's bare `\(x)` pastes text in: skipped.
+	assert!(formatted.text.contains("SELECT * FROM t WHERE n = \\(x)"));
+	assert!(
+		formatted.text.contains(
+			"literal: \"\"\"\n    update player set score = \\(score) where id = \\(id)\n    \"\"\""
+		),
+		"{}",
+		formatted.text
+	);
 	assert!(formatted.warnings.is_empty(), "{:?}", formatted.warnings);
 }

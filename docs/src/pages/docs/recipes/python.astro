@@ -15,9 +15,11 @@ import Recipe from "../../../components/Recipe.astro";
 			written, so a query that outgrows its line can spread over several. A
 			string in single quotes, <code>"&hellip;"</code> or{" "}
 			<code>'&hellip;'</code>, is left exactly as written &mdash; to have squill
-			format a short query, triple-quote it. f-strings are never touched: SQL
-			with a <code>&lbrace;hole&rbrace;</code> in it isn&rsquo;t SQL squill can
-			parse.
+			format a short query, triple-quote it. f-strings are never touched: a{" "}
+			<code>&lbrace;hole&rbrace;</code> pastes text into the SQL. A t-string
+			(Python 3.14) passed to psycopg&rsquo;s <code>execute</code> is different:
+			psycopg sends each hole as a parameter, so squill formats around it and
+			writes it back as it was.
 		</p>
 		<p>
 			Set <code>pyformat-params = true</code> in the rule when your driver uses

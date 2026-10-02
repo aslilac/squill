@@ -6,7 +6,7 @@ import Recipe from "../../../components/Recipe.astro";
 <Docs
 	page="recipes/javascript"
 	title="JavaScript & TypeScript"
-	lede="node-postgres, better-sqlite3, and bun:sqlite work out of the box, and so do sql`…` templates without holes."
+	lede="node-postgres, better-sqlite3, bun:sqlite, postgres.js, and Prisma's raw queries work out of the box."
 >
 	<section>
 		<h2>Which strings squill rewrites</h2>
@@ -15,8 +15,10 @@ import Recipe from "../../../components/Recipe.astro";
 			query that outgrows its line can spread over several. Strings in quotes,{" "}
 			<code>"&hellip;"</code> or <code>'&hellip;'</code>, are left exactly as
 			written &mdash; to have squill format a query, write it as a template
-			literal. A template with a <code>$&lbrace;&hellip;&rbrace;</code> hole is
-			never touched: SQL with a hole in it isn&rsquo;t SQL squill can parse.
+			literal. Passed to <code>.query</code>, a template with a{" "}
+			<code>$&lbrace;&hellip;&rbrace;</code> hole pastes text into the SQL, so
+			it&rsquo;s left alone; a tagged template whose library sends the hole as a
+			parameter is formatted around it (below).
 		</p>
 		<p>
 			Each language is its own grammar: <code>javascript</code> (which includes
@@ -55,11 +57,15 @@ import Recipe from "../../../components/Recipe.astro";
 	<section>
 		<h2>postgres.js and Bun.sql</h2>
 		<p>
-			The default query also finds <code>sql`&hellip;`</code> tagged templates.
-			Those libraries pass parameters as template holes, though, and a template
-			with a hole is never touched &mdash; so squill formats the schema changes
-			and maintenance queries that take no parameters, and leaves the rest as
-			written:
+			The default query also finds <code>sql`&hellip;`</code> tagged templates,
+			and Prisma&rsquo;s <code>$queryRaw`&hellip;`</code> and{" "}
+			<code>$executeRaw`&hellip;`</code>. Those send each{" "}
+			<code>$&lbrace;&hellip;&rbrace;</code> hole as a parameter, so squill
+			reads it as one, formats around it, and writes it back as it was. A
+			fragment nested in a hole (<code>$&lbrace;sql`&hellip;`&rbrace;</code>) is
+			part of the query it&rsquo;s in, and left alone; a fragment on its own
+			isn&rsquo;t a whole statement, and is reported as SQL that doesn&rsquo;t
+			parse.
 		</p>
 		<Recipe name="js-postgres" lang="typescript" />
 	</section>

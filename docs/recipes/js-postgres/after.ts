@@ -18,7 +18,11 @@ export async function refreshStats() {
 }
 
 export async function recent(kind: string) {
-  return sql`SELECT id, payload, created_at FROM events
-      WHERE kind = ${kind} ORDER BY created_at DESC
-      LIMIT 50`;
+  return sql`
+  select id, payload, created_at
+  from events
+  where kind = ${kind}
+  order by created_at desc
+  limit 50
+  `;
 }

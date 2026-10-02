@@ -27,8 +27,10 @@
 //!   string spanning lines is rewritten in when every escape in it was
 //!   layout.
 //!
-//! And `@squill.skip` leaves out any SQL capture it overlaps: a template
-//! hole in the string, or a region the string sits in.
+//! `@squill.parameter` marks an interpolation hole the library sends as
+//! a parameter: read as a parameter as wide as the hole, written back as
+//! it was. And `@squill.skip` leaves out any SQL capture it overlaps: a
+//! template hole in the string, or a region the string sits in.
 //!
 //! Every rewrite is checked by re-parsing the host file:
 //! an edit that adds a syntax error, or whose string no longer comes
@@ -595,11 +597,11 @@ fn compile_query(
 			)));
 		}
 		if name.starts_with("squill.")
-			&& !matches!(*name, "squill.skip" | "squill.escape")
+			&& !matches!(*name, "squill.skip" | "squill.escape" | "squill.parameter")
 		{
 			return Err(EmbedError::Query(format!(
-				"unknown capture `@{name}`: squill reads `@squill.skip` and \
-				 `@squill.escape`"
+				"unknown capture `@{name}`: squill reads `@squill.skip`, \
+				 `@squill.escape`, and `@squill.parameter`"
 			)));
 		}
 	}
@@ -759,6 +761,7 @@ pub fn format_embedded(
 			range: node_range,
 			literal,
 			escapes,
+			holes,
 			dialect,
 			pinned,
 			syntax,
@@ -769,6 +772,7 @@ pub fn format_embedded(
 				range: node_range.clone(),
 				literal: literal.clone(),
 				escapes,
+				holes,
 				dialect,
 				pinned,
 				syntax,
@@ -857,6 +861,9 @@ struct Captured {
 	/// The escapes inside `range`, sorted: `escape_sequence` nodes in the
 	/// captured one, and `@squill.escape` captures.
 	escapes: Vec<std::ops::Range<usize>>,
+	/// The interpolation holes inside `range` the query reads as
+	/// parameters (`@squill.parameter`), sorted.
+	holes: Vec<std::ops::Range<usize>>,
 	dialect: Dialect,
 	pinned: bool,
 	syntax: StringSyntax,
@@ -880,6 +887,7 @@ impl Extraction<'_> {
 		let mut out = Vec::new();
 		let mut skips = Vec::new();
 		let mut escapes = Vec::new();
+		let mut holes = Vec::new();
 		let mut cursor = QueryCursor::new();
 		let mut matches =
 			cursor.matches(query, tree.root_node(), source.as_bytes());
@@ -891,11 +899,23 @@ impl Extraction<'_> {
 			// many nodes a quantifier gave it (a Ruby heredoc's content and
 			// escapes, siblings with nothing spanning just them).
 			let mut strings: Vec<(u32, Vec<tree_sitter::Node<'_>>)> = Vec::new();
+			// A match's parameter captures make one hole, first to last
+			// (Swift's `\(`, expression, and `)` are siblings).
+			let mut hole: Option<std::ops::Range<usize>> = None;
 			for capture in query_match.captures {
 				let name = &query.capture_names()[capture.index as usize];
 				match *name {
 					"squill.skip" => skips.push(capture.node.byte_range()),
 					"squill.escape" => escapes.push(capture.node.byte_range()),
+					"squill.parameter" => {
+						let range = capture.node.byte_range();
+						hole = Some(match hole {
+							Some(hole) => {
+								hole.start.min(range.start)..hole.end.max(range.end)
+							}
+							None => range,
+						});
+					}
 					_ if sql_dialect(name, self.default_dialect).is_some() => {
 						match strings.iter_mut().find(|(index, _)| *index == capture.index)
 						{
@@ -906,6 +926,7 @@ impl Extraction<'_> {
 					_ => {}
 				}
 			}
+			holes.extend(hole);
 			for (index, mut nodes) in strings {
 				let name = &query.capture_names()[index as usize];
 				let Some(dialect) = sql_dialect(name, self.default_dialect) else {
@@ -916,8 +937,10 @@ impl Extraction<'_> {
 				let (range, literal) = if nodes.len() == 1 {
 					content_range(first, source)
 				} else {
-					let span = content_range(first, source).0.start
-						..content_range(last, source).0.end;
+					// A run of siblings: all of each, from the first to the
+					// last, whatever delimiters they hold (an interpolation's
+					// braces are the hole's, not the string's).
+					let span = recovered_start(first, source)..last.end_byte();
 					(span.clone(), span)
 				};
 				let mut found = Vec::new();
@@ -928,6 +951,7 @@ impl Extraction<'_> {
 					range,
 					literal,
 					escapes: found,
+					holes: Vec::new(),
 					dialect,
 					pinned: *name != "sql",
 					syntax: StringSyntax::of(query, query_match.pattern_index),
@@ -940,6 +964,16 @@ impl Extraction<'_> {
 		out.retain(|captured| {
 			!skips.iter().any(|skip| overlaps(skip, &captured.literal))
 		});
+		// SQL in another string's hole is a fragment of that string's
+		// query (postgres.js's nested sql`…`): not a string of its own.
+		let inside_hole = |captured: &Captured| {
+			holes.iter().any(|hole| {
+				hole.start <= captured.literal.start
+					&& captured.literal.end <= hole.end
+					&& *hole != captured.literal
+			})
+		};
+		out.retain(|captured| !inside_hole(captured));
 		for captured in &mut out {
 			captured.escapes.extend(
 				escapes
@@ -952,6 +986,15 @@ impl Extraction<'_> {
 			);
 			captured.escapes.sort_by_key(|escape| (escape.start, escape.end));
 			captured.escapes.dedup();
+			captured.holes = holes
+				.iter()
+				.filter(|hole| {
+					captured.range.start <= hole.start && hole.end <= captured.range.end
+				})
+				.cloned()
+				.collect();
+			captured.holes.sort_by_key(|hole| (hole.start, hole.end));
+			captured.holes.dedup();
 		}
 		out
 	}
@@ -1066,14 +1109,21 @@ fn content_range(
 	{
 		return (first.end_byte()..last.start_byte(), node.byte_range());
 	}
-	let mut start = node.start_byte();
-	if let Some(parent) = node.parent()
-		&& node.prev_sibling().is_none()
-	{
-		let skipped = source[parent.start_byte()..start].trim_end();
-		start = parent.start_byte() + skipped.len();
-	}
+	let start = recovered_start(node, source);
 	(start..node.end_byte(), start..node.end_byte())
+}
+
+/// Where `node` starts, taking back whitespace before it that the parser
+/// skipped, when it's first in a string whose opening delimiter isn't a
+/// node (see [`content_range`]).
+fn recovered_start(node: tree_sitter::Node<'_>, source: &str) -> usize {
+	let start = node.start_byte();
+	match node.parent() {
+		Some(parent) if node.prev_sibling().is_none() => {
+			parent.start_byte() + source[parent.start_byte()..start].trim_end().len()
+		}
+		_ => start,
+	}
 }
 
 /// The `escape_sequence` nodes in `node` that lie inside `content`.
@@ -1203,6 +1253,8 @@ struct Snippet<'a> {
 	literal: std::ops::Range<usize>,
 	/// Its escapes, sorted.
 	escapes: Vec<std::ops::Range<usize>>,
+	/// Its interpolation holes, read as parameters, sorted.
+	holes: Vec<std::ops::Range<usize>>,
 	dialect: Dialect,
 	/// Did the query set `dialect` (`@sql.sqlite`), over the configured
 	/// one?
@@ -1223,19 +1275,31 @@ impl Snippet<'_> {
 			return Rewrite::Skip;
 		}
 		let backslashes = text.contains('\\');
-		// The SQL the string spells, its escapes read. A raw string
-		// has none: its backslashes are just backslashes.
-		let read = if self.syntax.raw || !backslashes {
+		// The SQL the string spells: its escapes read (a raw string has
+		// none; its backslashes are just backslashes), and its holes read
+		// as parameters.
+		let relative = |ranges: &[std::ops::Range<usize>]| -> Vec<_> {
+			ranges
+				.iter()
+				.map(|range| {
+					range.start - self.range.start..range.end - self.range.start
+				})
+				.collect()
+		};
+		let read = if (self.syntax.raw || !backslashes) && self.holes.is_empty() {
 			None
 		} else {
-			let escapes: Vec<_> = self
-				.escapes
-				.iter()
-				.map(|escape| {
-					escape.start - self.range.start..escape.end - self.range.start
-				})
-				.collect();
-			match escapes::read(text, &escapes, &self.syntax.escapes) {
+			let reading = escapes::Reading {
+				escapes: &relative(&self.escapes),
+				holes: &relative(&self.holes),
+				groups: &self.syntax.escapes,
+				raw: self.syntax.raw,
+				sigil: match self.dialect {
+					Dialect::Postgres => '$',
+					Dialect::Sqlite => '?',
+				},
+			};
+			match escapes::read(text, &reading) {
 				Ok(read) => Some(read),
 				Err(escapes::Unreadable::Backslash) => {
 					return Rewrite::Warn(
@@ -1253,8 +1317,24 @@ impl Snippet<'_> {
 						escape = escape.escape_debug(),
 					));
 				}
+				Err(escapes::Unreadable::HoleSpansLines) => {
+					return Rewrite::Warn(
+						"string holds an interpolation spanning lines; left \
+						 unformatted"
+							.to_string(),
+					);
+				}
 			}
 		};
+		if let Some(read) = &read
+			&& read.glued(self.dialect, self.options.lex_options())
+		{
+			return Rewrite::Warn(
+				"an interpolation sits right against SQL text, so where it ends \
+				 is the host's to say; left unformatted"
+					.to_string(),
+			);
+		}
 		let sql = read.as_ref().map_or(text, |read| read.sql.as_str());
 		// A string that already spans lines, as written or escaped,
 		// proves the syntax takes line breaks of some spelling;
@@ -1269,8 +1349,18 @@ impl Snippet<'_> {
 		let Anchored { text: anchored, line_ending_crs } =
 			match self.format(sql, close_at_margin) {
 				Ok(anchored) => anchored,
+				Err(Rewrite::Warn(message)) => {
+					return Rewrite::Warn(
+						read.as_ref().map_or(message.clone(), |read| read.unread(&message)),
+					);
+				}
 				Err(rewrite) => return rewrite,
 			};
+		if let Some(read) = &read
+			&& let Some(message) = self.body_warning.borrow_mut().as_mut()
+		{
+			*message = read.unread(message);
+		}
 		// Every token spelled as it was, escapes and all.
 		let anchored = match &read {
 			Some(read) => match read.respell(
@@ -1282,8 +1372,8 @@ impl Snippet<'_> {
 				Some(respelled) => respelled,
 				None => {
 					return Rewrite::Warn(
-						"formatting would change SQL spelled with a backslash \
-						 escape; left unformatted"
+						"formatting would change SQL spelled with an escape or \
+						 an interpolation; left unformatted"
 							.to_string(),
 					);
 				}
@@ -1315,7 +1405,7 @@ impl Snippet<'_> {
 		// untouched, since formatting only changes whitespace
 		// between tokens. If it changed, the string may take
 		// escapes after all (a line continuation squill moved).
-		if read.is_none() && backslashes && escapes(text).ne(escapes(&anchored)) {
+		if self.syntax.raw && backslashes && escapes(text).ne(escapes(&anchored)) {
 			return Rewrite::Warn(
 				"formatting would change what follows a backslash, which \
 				 this string may treat as an escape; left unformatted"

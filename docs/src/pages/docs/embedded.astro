@@ -153,11 +153,17 @@ grammar = "rust"`}
 		</p>
 		<div class="note">
 			<p>
-				Strings with interpolation holes are never touched &mdash; Python
-				f-strings, <code>$&lbrace;&hellip;&rbrace;</code> in JS templates,
-				C#&rsquo;s <code>$"""</code>, Kotlin&rsquo;s <code>$name</code>{" "}
-				templates, and Swift&rsquo;s <code>\(&hellip;)</code>. SQL with a hole
-				in it is not SQL squill can parse, so it leaves it exactly as written.
+				A string with interpolation holes is formatted only where the library
+				sends each hole as a parameter: postgres.js&rsquo;s and Bun&rsquo;s{" "}
+				<code>sql`&hellip;`</code>, Prisma&rsquo;s <code>$queryRaw</code>, EF
+				Core&rsquo;s <code>FromSql</code>, psycopg&rsquo;s t-strings,
+				PostgresNIO&rsquo;s <code>query</code>, SQLKit&rsquo;s{" "}
+				<code>\(bind: &hellip;)</code>, and GRDB&rsquo;s <code>literal:</code>.
+				squill reads each hole as a parameter as wide as it is, and writes it
+				back as it was. Everywhere else &mdash; Python f-strings, other JS
+				templates, Kotlin&rsquo;s <code>$name</code>, a bare Swift{" "}
+				<code>\(&hellip;)</code> &mdash; a hole pastes text into the SQL, and
+				the string is left exactly as written.
 			</p>
 		</div>
 		<h3>Safety</h3>
@@ -334,6 +340,27 @@ query = ".config/squill/rust.scm"`}
 			can capture them all as one string, first to last:{" "}
 			<code>[(heredoc_content) (escape_sequence)]+ @sql</code>.
 		</p>
+		<p>
+			A capture named <code>@squill.parameter</code> marks a hole the library
+			sends as a parameter, inside the SQL capture it falls in. squill reads it
+			as a parameter exactly as wide as the hole, so the SQL lays out at its
+			real width, and writes it back as it was. A hole can stand as a token of
+			its own, or inside one (<code>'$&lbrace;x&rbrace;%'</code>); one right
+			against SQL text (<code>$&lbrace;a&rbrace;$&lbrace;b&rbrace;</code>) or
+			spanning lines is reported. One match&rsquo;s parameter captures make one
+			hole, so Swift&rsquo;s <code>\(</code>, expression, and <code>)</code> can
+			be captured together. SQL inside another string&rsquo;s hole (a
+			postgres.js fragment) is part of that string&rsquo;s query, and left
+			alone.
+		</p>
+		<Code
+			lang="query"
+			file=".config/squill/postgres.scm"
+			code={`((call_expression
+   function: (identifier) @_tag
+   arguments: (template_string (template_substitution) @squill.parameter))
+ (#eq? @_tag "sql"))`}
+		/>
 		<p>
 			And a capture named <code>@squill.skip</code> leaves out any SQL capture
 			it overlaps: a hole in the string, like a JS template&rsquo;s{" "}

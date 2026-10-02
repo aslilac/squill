@@ -15,10 +15,13 @@ import Recipe from "../../../components/Recipe.astro";
 			squill lays the query out between the quotes, with the closing{" "}
 			<code>"""</code> at the statement&rsquo;s indent and every line of SQL at
 			or past it, which is how Swift measures the string&rsquo;s indentation.
-			Single-line strings are left exactly as written, and so is any string with
-			a <code>\(&hellip;)</code> interpolation &mdash; SQL with holes in it
-			isn&rsquo;t SQL squill can parse. Escapes come back exactly as written.
-			Raw strings (<code>#"""</code>) aren&rsquo;t taken either.
+			Single-line strings are left exactly as written, and so is a string whose{" "}
+			<code>\(&hellip;)</code> interpolation pastes text into the SQL. One the
+			library sends as a parameter &mdash; GRDB&rsquo;s <code>literal:</code>,
+			PostgresNIO&rsquo;s <code>query</code>, SQLKit&rsquo;s{" "}
+			<code>\(bind: &hellip;)</code> &mdash; is formatted around, and written
+			back as it was. Escapes come back exactly as written. Raw strings (
+			<code>#"""</code>) aren&rsquo;t taken either.
 		</p>
 		<p>
 			The SQL is indented the way the file is, so a project indented with four
@@ -56,10 +59,10 @@ import Recipe from "../../../components/Recipe.astro";
 		<h2>PostgresNIO and SQLKit</h2>
 		<p>
 			PostgresNIO&rsquo;s <code>query</code> and SQLKit&rsquo;s <code>raw</code>{" "}
-			take their SQL first, too. Both bind values through string interpolation (
-			<code>\(id)</code>), and a string with an interpolation is never touched,
-			so squill formats the queries that take no values and leaves the rest as
-			written:
+			take their SQL first, too. PostgresNIO binds every interpolation (
+			<code>\(id)</code>) as a parameter, and SQLKit binds a labeled one (
+			<code>\(bind: id)</code>), so squill formats around them and writes them
+			back as they were:
 		</p>
 		<Recipe name="swift-postgresnio" lang="swift" />
 	</section>

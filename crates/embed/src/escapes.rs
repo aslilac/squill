@@ -6,6 +6,11 @@
 //! as it was spelled, never respelled or inserted: one between SQL
 //! tokens is layout, which squill writes its own way, and one inside a
 //! token comes back with the token.
+//!
+//! An interpolation the query captures as `@squill.parameter` is read
+//! the same way: as a parameter exactly as wide as the hole (`${user.id}`
+//! reads as `$000000003`), so the SQL lays out at its real width, and the
+//! hole comes back as it was spelled.
 
 use std::collections::HashMap;
 use std::collections::VecDeque;
@@ -125,32 +130,101 @@ fn meaning(escape: &str, groups: &[Group]) -> Option<String> {
 pub(crate) struct Read {
 	pub(crate) sql: String,
 	/// Per byte of `sql`, the span of the content that spells it: one
-	/// character, or a whole escape.
+	/// character, a whole escape, or a whole hole.
 	spelled: Vec<Range<usize>>,
+	/// The parameters the holes read as, in order, and the holes.
+	placeholders: Vec<String>,
+	holes: Vec<String>,
 }
 
-/// Why a string's escapes couldn't be read.
+/// How to read a string's content: where its escapes and holes are
+/// (sorted ranges within it), and what its syntax takes.
+pub(crate) struct Reading<'a> {
+	pub(crate) escapes: &'a [Range<usize>],
+	pub(crate) holes: &'a [Range<usize>],
+	pub(crate) groups: &'a [Group],
+	/// No escapes: a backslash is just a backslash.
+	pub(crate) raw: bool,
+	/// What a hole reads as a parameter of: `$` (Postgres) or `?` (SQLite).
+	pub(crate) sigil: char,
+}
+
+/// Why a string couldn't be read.
 pub(crate) enum Unreadable {
 	/// A backslash no escape covers: a raw backslash, in a string that
 	/// takes escapes, or an escape the grammar didn't mark.
 	Backslash,
 	/// An escape none of the string's groups covers.
 	Escape(String),
+	/// An interpolation spanning lines, which squill doesn't lay out.
+	HoleSpansLines,
 }
 
-/// Read `content`, whose escapes are at `escapes` (sorted ranges within
-/// it), taking those `groups` cover.
+/// The parameter each hole reads as: the sigil and a zero-padded number,
+/// as wide as the hole where its number fits, and spelled nowhere else in
+/// the content.
+fn placeholders(
+	content: &str,
+	holes: &[Range<usize>],
+	sigil: char,
+) -> Vec<String> {
+	let mut first = 1;
+	loop {
+		let made: Vec<String> = holes
+			.iter()
+			.enumerate()
+			.map(|(index, hole)| {
+				let width = content[hole.clone()].chars().count();
+				let number = (first + index).to_string();
+				format!("{sigil}{number:0>pad$}", pad = width.saturating_sub(1))
+			})
+			.collect();
+		if !made.iter().any(|placeholder| content.contains(placeholder.as_str())) {
+			return made;
+		}
+		first += holes.len();
+	}
+}
+
+/// Read `content` as SQL, as `reading` says.
 pub(crate) fn read(
 	content: &str,
-	escapes: &[Range<usize>],
-	groups: &[Group],
+	reading: &Reading<'_>,
 ) -> Result<Read, Unreadable> {
+	let groups = reading.groups;
+	if reading.holes.iter().any(|hole| content[hole.clone()].contains('\n')) {
+		return Err(Unreadable::HoleSpansLines);
+	}
+	let placeholders = placeholders(content, reading.holes, reading.sigil);
 	let mut sql = String::with_capacity(content.len());
 	let mut spelled = Vec::with_capacity(content.len());
-	let mut escapes = escapes.iter().peekable();
+	// An escape inside a hole is the host's, not the SQL's.
+	let mut escapes = reading
+		.escapes
+		.iter()
+		.filter(|escape| {
+			!reading
+				.holes
+				.iter()
+				.any(|hole| hole.start < escape.end && escape.start < hole.end)
+		})
+		.peekable();
+	let mut holes = reading.holes.iter().zip(&placeholders).peekable();
 	let mut at = 0;
 	while at < content.len() {
-		if let Some(escape) = escapes.next_if(|escape| escape.start == at) {
+		if let Some((hole, placeholder)) =
+			holes.next_if(|(hole, _)| hole.start == at)
+		{
+			for _ in 0..placeholder.len() {
+				spelled.push(hole.clone());
+			}
+			sql.push_str(placeholder);
+			at = hole.end;
+			continue;
+		}
+		if !reading.raw
+			&& let Some(escape) = escapes.next_if(|escape| escape.start == at)
+		{
 			let text = &content[escape.clone()];
 			let decoded = meaning(text, groups)
 				.ok_or_else(|| Unreadable::Escape(text.to_string()))?;
@@ -168,7 +242,7 @@ pub(crate) fn read(
 			continue;
 		}
 		let c = content[at..].chars().next().expect("in bounds");
-		if c == '\\' {
+		if c == '\\' && !reading.raw {
 			return Err(Unreadable::Backslash);
 		}
 		for _ in 0..c.len_utf8() {
@@ -177,10 +251,52 @@ pub(crate) fn read(
 		sql.push(c);
 		at += c.len_utf8();
 	}
-	Ok(Read { sql, spelled })
+	let holes = reading
+		.holes
+		.iter()
+		.map(|hole| content[hole.clone()].to_string())
+		.collect();
+	Ok(Read { sql, spelled, placeholders, holes })
 }
 
 impl Read {
+	/// `message`, about the SQL as read, with each hole as it was written
+	/// rather than the parameter it read as.
+	pub(crate) fn unread(&self, message: &str) -> String {
+		self.placeholders.iter().zip(&self.holes).fold(
+			message.to_string(),
+			|message, (placeholder, hole)| {
+				message.replace(placeholder.as_str(), hole)
+			},
+		)
+	}
+
+	/// Does a hole read as a parameter of its own sit right against SQL
+	/// text (`${a}${b}`, `${x}abc`)? Then where it ends is the host's
+	/// business, and squill can't move what's around it. A hole inside a
+	/// token (`'${x}'`, `t_${x}`) comes back with the token, so is fine.
+	pub(crate) fn glued(
+		&self,
+		dialect: Dialect,
+		lex_options: LexOptions,
+	) -> bool {
+		let word = |c: Option<char>| {
+			c.is_some_and(|c| c.is_alphanumeric() || "_$?'\"`".contains(c))
+		};
+		let mut at = 0;
+		for token in parser::lexer::lex_with(&self.sql, dialect, lex_options) {
+			let range = at..at + token.text.len();
+			at = range.end;
+			if self.placeholders.iter().any(|placeholder| placeholder == token.text)
+				&& (word(self.sql[..range.start].chars().next_back())
+					|| word(self.sql[range.end..].chars().next()))
+			{
+				return true;
+			}
+		}
+		false
+	}
+
 	/// `formatted`, SQL that differs from what was read only in layout
 	/// (and keyword case, quoting, a final `;`), with every token spelled
 	/// the way the content spelled it. `None` when a token holding an
@@ -214,8 +330,8 @@ impl Read {
 				_ => out.push_str(token.text),
 			}
 		}
-		// A token spelled with an escape that the formatting changed (a
-		// keyword's case) or dropped.
+		// A token spelled with an escape or a hole that the formatting
+		// changed (a keyword's case) or dropped.
 		let lost = spellings
 			.iter()
 			.any(|(text, left)| left.iter().any(|spelling| spelling != text));
@@ -254,11 +370,22 @@ mod tests {
 		assert_eq!(meaning("\\n", &[Group::Hex]), None);
 	}
 
+	/// `content`'s SQL, its escapes at `escapes`, taking `groups`.
+	fn read_escapes(
+		content: &str,
+		escapes: &[Range<usize>],
+		groups: &[Group],
+	) -> Result<Read, Unreadable> {
+		let reading =
+			Reading { escapes, holes: &[], groups, raw: false, sigil: '$' };
+		read(content, &reading)
+	}
+
 	#[test]
 	fn escapes_inside_tokens_keep_their_spelling() {
 		let content = "SELECT 'a\\tb',\\n\\\"Weird\\\" FROM t";
 		let escapes = [9..11, 14..16, 16..18, 23..25];
-		let read = read(content, &escapes, &all()).ok().expect("read");
+		let read = read_escapes(content, &escapes, &all()).ok().expect("read");
 		assert_eq!(read.sql, "SELECT 'a\tb',\n\"Weird\" FROM t");
 		let formatted = "select 'a\tb', \"Weird\"\nfrom t";
 		assert_eq!(
@@ -272,8 +399,9 @@ mod tests {
 	#[test]
 	fn a_token_whose_escape_cant_come_through_declines() {
 		let content = "SEL\\x45CT 1";
-		let read =
-			read(content, std::slice::from_ref(&(3..7)), &all()).ok().expect("read");
+		let read = read_escapes(content, std::slice::from_ref(&(3..7)), &all())
+			.ok()
+			.expect("read");
 		assert_eq!(read.sql, "SELECT 1");
 		assert!(
 			read
@@ -284,9 +412,12 @@ mod tests {
 
 	#[test]
 	fn a_backslash_no_escape_covers_is_unreadable() {
-		assert!(matches!(read("a \\ b", &[], &all()), Err(Unreadable::Backslash)));
 		assert!(matches!(
-			read("a \\q b", std::slice::from_ref(&(2..4)), &all()),
+			read_escapes("a \\ b", &[], &all()),
+			Err(Unreadable::Backslash)
+		));
+		assert!(matches!(
+			read_escapes("a \\q b", std::slice::from_ref(&(2..4)), &all()),
 			Err(Unreadable::Escape(escape)) if escape == "\\q"
 		));
 	}
@@ -294,7 +425,7 @@ mod tests {
 	#[test]
 	fn a_trimming_continuation_takes_the_indentation_with_it() {
 		let content = "select \\\n    1";
-		let read = read(
+		let read = read_escapes(
 			content,
 			std::slice::from_ref(&(7..9)),
 			&[Group::LineContinuationTrim],
@@ -302,5 +433,43 @@ mod tests {
 		.ok()
 		.expect("read");
 		assert_eq!(read.sql, "select 1");
+	}
+
+	fn read_holes(content: &str, holes: &[Range<usize>], sigil: char) -> Read {
+		let reading =
+			Reading { escapes: &[], holes, groups: &[], raw: true, sigil };
+		read(content, &reading).ok().expect("read")
+	}
+
+	#[test]
+	fn holes_read_as_parameters_as_wide_as_they_are() {
+		let content = "SELECT ${a} FROM t WHERE id = ${user.id} AND x = '${x}'";
+		let read = read_holes(content, &[7..11, 30..40, 50..54], '$');
+		assert_eq!(
+			read.sql,
+			"SELECT $001 FROM t WHERE id = $000000002 AND x = '$003'"
+		);
+		assert!(!read.glued(Dialect::Postgres, LexOptions::default()));
+		let formatted = "select $001\nfrom t\nwhere id = $000000002 and x = '$003'";
+		assert_eq!(
+			read
+				.respell(content, formatted, Dialect::Postgres, LexOptions::default())
+				.as_deref(),
+			Some("select ${a}\nfrom t\nwhere id = ${user.id} and x = '${x}'")
+		);
+		// SQLite's parameters, and numbers no other parameter has.
+		let read =
+			read_holes("SELECT ?01, {a}", std::slice::from_ref(&(12..15)), '?');
+		assert_eq!(read.sql, "SELECT ?01, ?02");
+	}
+
+	#[test]
+	fn holes_against_sql_text_are_glued() {
+		let content = "SELECT ${a}${b}, ${c}d FROM t";
+		let read = read_holes(content, &[7..11, 11..15, 17..21], '$');
+		assert!(read.glued(Dialect::Postgres, LexOptions::default()));
+		let read =
+			read_holes("SELECT t_${x} FROM t", std::slice::from_ref(&(9..13)), '$');
+		assert!(!read.glued(Dialect::Postgres, LexOptions::default()));
 	}
 }
