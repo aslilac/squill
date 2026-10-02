@@ -1387,12 +1387,12 @@ impl Snippet<'_> {
 				if !multiline {
 					return Rewrite::Skip;
 				}
-				let anchored = match self.format(&decoded.content, false) {
-					Ok(anchored) => anchored,
-					Err(rewrite) => return rewrite,
-				};
-				let crlf = self.options.line_ending == formatter::LineEnding::Crlf;
-				match encode(&decoded, &anchored, crlf) {
+				let Anchored { text: anchored, line_ending_crs } =
+					match self.format(&decoded.content, false) {
+						Ok(anchored) => anchored,
+						Err(rewrite) => return rewrite,
+					};
+				match encode(&decoded, &anchored, &line_ending_crs) {
 					Some(literal) => Rewrite::Replace(literal),
 					None => Rewrite::Warn(
 						"formatted SQL cannot be written back into this string \
@@ -1422,7 +1422,7 @@ impl Snippet<'_> {
 				// (a bare Ruby heredoc's terminator), so it does.
 				let close_at_margin = text.ends_with('\n');
 				let anchored = match self.format(text, close_at_margin) {
-					Ok(anchored) => anchored,
+					Ok(anchored) => anchored.text,
 					Err(rewrite) => return rewrite,
 				};
 				// Raw, as promised: then whatever follows each backslash is
@@ -1449,7 +1449,7 @@ impl Snippet<'_> {
 		&self,
 		sql: &str,
 		close_at_margin: bool,
-	) -> Result<String, Rewrite> {
+	) -> Result<Anchored, Rewrite> {
 		// The host statement's own indentation: the anchor every SQL line
 		// hangs off, and — unless an indent style was configured — the
 		// indent character too, so continuation lines don't mix tabs into
@@ -1460,6 +1460,9 @@ impl Snippet<'_> {
 		// The author chose a multi-line literal: keep statements
 		// clause-per-line, never collapsed onto one line.
 		format_options.always_break_statements = true;
+		// LF from the formatter; the line endings are settled below,
+		// where the lines are anchored.
+		format_options.line_ending = formatter::LineEnding::Lf;
 		if !self.indent.configured_style {
 			format_options.indent_style =
 				host_indent_style(self.source, &host_indent);
@@ -1511,31 +1514,48 @@ impl Snippet<'_> {
 		// Lines that start inside a value (a string spanning lines) are
 		// data: never indented.
 		let verbatim_lines = formatter::verbatim_line_starts(sql, &format_options);
-		// The formatter ended each line (CRLF keeps its `\r` on the line);
-		// the breaks after the opening quote and before the closing one
-		// are this function's.
-		let eol = match format_options.line_ending {
-			formatter::LineEnding::Lf => "\n",
-			formatter::LineEnding::Crlf => "\r\n",
+		// Nor are the line endings before them (or inside a body that
+		// didn't parse) ours to choose: every other one is, and with CRLF
+		// gets a CR, noted so it isn't taken for one the string spelled.
+		let data_lines = formatter::data_line_starts(sql, &format_options);
+		let crlf = self.options.line_ending == formatter::LineEnding::Crlf;
+		let mut anchored =
+			Anchored { text: String::new(), line_ending_crs: vec![] };
+		let end_line = |anchored: &mut Anchored| {
+			if crlf {
+				anchored.line_ending_crs.push(anchored.text.len());
+				anchored.text.push('\r');
+			}
+			anchored.text.push('\n');
 		};
-		let mut anchored = String::new();
 		let mut line_start = 0;
 		for (index, line) in sql.split('\n').enumerate() {
-			anchored.push_str(if index == 0 { eol } else { "\n" });
+			if index == 0 || !data_lines.contains(&line_start) {
+				end_line(&mut anchored);
+			} else {
+				anchored.text.push('\n');
+			}
 			if !line.trim_end_matches('\r').is_empty()
 				&& !verbatim_lines.contains(&line_start)
 			{
-				anchored.push_str(&host_indent);
+				anchored.text.push_str(&host_indent);
 			}
-			anchored.push_str(line);
+			anchored.text.push_str(line);
 			line_start += line.len() + 1;
 		}
-		anchored.push_str(eol);
+		end_line(&mut anchored);
 		if !close_at_margin {
-			anchored.push_str(&host_indent);
+			anchored.text.push_str(&host_indent);
 		}
 		Ok(anchored)
 	}
+}
+
+/// SQL laid out for its host string, and where in it squill put a CR to
+/// end a line in CRLF.
+struct Anchored {
+	text: String,
+	line_ending_crs: Vec<usize>,
 }
 
 /// The indent character a host file uses: the anchor line's, or — for
@@ -1842,10 +1862,13 @@ fn unescape(body: &str, mode: EscapeMode) -> Option<String> {
 	Some(out)
 }
 
-/// With `crlf`, the content's lines end in CRLF by request, and a CR
-/// before a line feed is one of those line endings, not a character only
-/// an escape can spell.
-fn encode(decoded: &Decoded, content: &str, crlf: bool) -> Option<String> {
+/// `line_ending_crs` are the CRs squill wrote to end lines in CRLF, as
+/// asked: line endings, not characters only an escape can spell.
+fn encode(
+	decoded: &Decoded,
+	content: &str,
+	line_ending_crs: &[usize],
+) -> Option<String> {
 	match &decoded.kind {
 		LiteralKind::RustRaw { hashes } => {
 			// Keep the original hash count unless the content now needs
@@ -1859,7 +1882,7 @@ fn encode(decoded: &Decoded, content: &str, crlf: bool) -> Option<String> {
 			// Rewritten as a raw string, so the SQL reads as written: no
 			// escaped quotes or backslashes. Anything only an escape can
 			// spell (a carriage return, a NUL) stays as it was.
-			if has_unwritable_control(content, crlf) {
+			if has_unwritable_control(content, line_ending_crs) {
 				return None;
 			}
 			let fence = "#".repeat(min_raw_hashes(content).max(1));
@@ -1876,7 +1899,9 @@ fn encode(decoded: &Decoded, content: &str, crlf: bool) -> Option<String> {
 			// Interpreted strings are single-line: a multi-line query
 			// becomes a raw string. Raw strings cannot hold a backtick,
 			// and Go drops carriage returns from them.
-			if content.contains('`') || has_unwritable_control(content, crlf) {
+			if content.contains('`')
+				|| has_unwritable_control(content, line_ending_crs)
+			{
 				None
 			} else {
 				Some(format!("`{content}`"))
@@ -1924,16 +1949,16 @@ fn encode(decoded: &Decoded, content: &str, crlf: bool) -> Option<String> {
 }
 
 /// Characters other than newline and tab that a raw string cannot
-/// hold faithfully; with `crlf`, a CR ending a line is a newline too.
-fn has_unwritable_control(content: &str, crlf: bool) -> bool {
-	let mut chars = content.chars().peekable();
-	while let Some(c) = chars.next() {
-		let line_ending = crlf && c == '\r' && chars.peek() == Some(&'\n');
-		if c.is_control() && c != '\n' && c != '\t' && !line_ending {
-			return true;
-		}
-	}
-	false
+/// hold faithfully, but for the CRs squill wrote to end lines (at the
+/// byte offsets `line_ending_crs`, in order): a CR the string spelled
+/// `\r` stays spelled out, by leaving the string as it was.
+fn has_unwritable_control(content: &str, line_ending_crs: &[usize]) -> bool {
+	content.char_indices().any(|(at, c)| {
+		c.is_control()
+			&& c != '\n'
+			&& c != '\t'
+			&& line_ending_crs.binary_search(&at).is_err()
+	})
 }
 
 /// Fewest `#`s a Rust raw string needs to hold `content`.

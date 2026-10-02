@@ -2158,6 +2158,15 @@ fn line_ending_is_lf_unless_configured() {
 		crlf.contains("r#\"\r\n    select 2\r\n    from t\r\n    \"#"),
 		"{crlf:?}"
 	);
+	// A CR the string spells `\\r` is data: it stays spelled out, so a
+	// string holding one inside a value is left as it was.
+	let spelled =
+		"fn f() {\r\n    sqlx::query(\"select 'a\\r\nb'\nfrom t\");\r\n}\r\n";
+	std::fs::write(dir.join("crlf.rs"), spelled).expect("write");
+	let (ok, out, stderr) = run(&["fmt", "--stdout", "crlf.rs"]);
+	assert!(ok, "{stderr}");
+	assert_eq!(out, spelled);
+	assert!(stderr.contains("cannot be written back"), "{stderr}");
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
