@@ -7,29 +7,29 @@
 //! that cannot be formatted with confidence are left byte-identical and
 //! reported as [`Warning`]s — a host file is never a hard error.
 //!
-//! Two capture shapes, by grammar:
+//! Every grammar, built in or loaded from a `.wasm` file, takes the
+//! same path. The capture is a string's content: a node holding just
+//! that, or a whole string whose delimiters are anonymous tokens. What
+//! the string's syntax allows, its query pattern says with `#set!`
+//! properties (`queries/` holds the built-in queries):
 //!
-//! - **Literal** (the original built-ins: Rust, Go, Python, JS/TS,
-//!   Gleam): the capture is the whole string literal, decoded and
-//!   re-encoded by a hand-written codec per host.
-//! - **Content** (C++, C#, Java, Kotlin, Swift, and every wasm grammar): the
-//!   capture is the string's *content* node, between the delimiters.
-//!   It is taken verbatim. What the string syntax allows, its query
-//!   pattern promises with `#set!` properties, the built-in queries
-//!   included: `squill.multiline` (raw line breaks, so a one-line string
-//!   can be formatted onto several; unpromised, only a string that
-//!   already spans lines is formatted) and `squill.raw` (no backslash
-//!   escapes; unpromised, a string holding a backslash is left alone).
-//!   A string that takes escapes says which with `squill.escape`
-//!   (`"whitespace"`, `"\xHH"`, …; see `escapes.rs`); the grammar's
+//! - `squill.multiline`: raw line breaks, so a one-line string can be
+//!   formatted onto several. Unsaid, only a string that already spans
+//!   lines is formatted.
+//! - `squill.raw`: no escapes; a backslash is just a backslash.
+//! - `squill.escape`, once per kind (`"whitespace"`, `"\xHH"`, …; see
+//!   `escapes.rs`): the escapes squill may read. The grammar's
 //!   `escape_sequence` nodes, and `@squill.escape` captures, say where
-//!   they are. Each is read to read the SQL and written back as it was
-//!   spelled. `squill.promote-to-raw-syntax` names raw syntaxes a string
-//!   spanning lines is rewritten in, when every escape in it was layout.
-//!   And `@squill.skip` excludes any SQL capture it overlaps: a template
-//!   hole in the string, or a region the string sits in.
+//!   they are. Each is read only to read the SQL, and written back as it
+//!   was spelled. Unsaid, a string holding a backslash is left alone.
+//! - `squill.promote-to-raw-syntax`: raw syntaxes, in order, that a
+//!   string spanning lines is rewritten in when every escape in it was
+//!   layout.
 //!
-//! Either way, every rewrite is checked by re-parsing the host file:
+//! And `@squill.skip` leaves out any SQL capture it overlaps: a template
+//! hole in the string, or a region the string sits in.
+//!
+//! Every rewrite is checked by re-parsing the host file:
 //! an edit that adds a syntax error, or whose string no longer comes
 //! back from the query as exactly what was written, is dropped.
 //!
@@ -37,8 +37,8 @@
 //! supported, keeping the no-regex rule — `#match?` is rejected up
 //! front.
 
-// A build with only some grammars leaves codec paths unused; the full
-// build keeps every lint strict.
+// A build with only some grammars leaves code unused; the full build
+// keeps every lint strict.
 #![cfg_attr(
 	not(all(
 		feature = "rust",
@@ -93,7 +93,7 @@ pub enum Host {
 	Swift,
 	#[cfg(feature = "typescript")]
 	TypeScript,
-	/// TypeScript with JSX (`.tsx`) — a distinct grammar, same codec.
+	/// TypeScript with JSX (`.tsx`) — a distinct grammar, same query.
 	#[cfg(feature = "typescript")]
 	Tsx,
 }
@@ -217,57 +217,6 @@ impl Host {
 			Host::Swift => tree_sitter_swift::LANGUAGE.into(),
 		}
 	}
-
-	fn codec(self) -> Codec {
-		match self {
-			#[cfg(feature = "rust")]
-			Host::Rust => Codec::Literal,
-			#[cfg(feature = "go")]
-			Host::Go => Codec::Literal,
-			#[cfg(feature = "python")]
-			Host::Python => Codec::Literal,
-			#[cfg(feature = "javascript")]
-			Host::JavaScript => Codec::Literal,
-			#[cfg(feature = "typescript")]
-			Host::TypeScript | Host::Tsx => Codec::Literal,
-			#[cfg(feature = "gleam")]
-			Host::Gleam => Codec::Literal,
-			// What their strings allow, their default queries say, with
-			// the same `#set!` properties any query can use.
-			#[cfg(feature = "cxx")]
-			Host::Cxx => Codec::Content,
-			#[cfg(feature = "csharp")]
-			Host::CSharp => Codec::Content,
-			#[cfg(feature = "kotlin")]
-			Host::Kotlin => Codec::Content,
-			#[cfg(feature = "swift")]
-			Host::Swift => Codec::Content,
-			#[cfg(feature = "java")]
-			Host::Java => Codec::Content,
-		}
-	}
-}
-
-/// How captured strings are read and written back.
-#[derive(Clone, Copy)]
-#[cfg_attr(
-	not(any(
-		feature = "cxx",
-		feature = "csharp",
-		feature = "java",
-		feature = "kotlin",
-		feature = "swift",
-		feature = "external-grammars"
-	)),
-	allow(dead_code)
-)]
-enum Codec {
-	/// The capture is a whole literal; decoded by the host's codec.
-	Literal,
-	/// The capture is the content between the delimiters, verbatim.
-	/// What the string syntax allows comes from the query's pattern
-	/// ([`StringSyntax`]).
-	Content,
 }
 
 /// What a content capture's string syntax allows, as its query pattern
@@ -340,22 +289,6 @@ impl Grammar {
 			Grammar::Builtin(host) => host.name(),
 			#[cfg(feature = "external-grammars")]
 			Grammar::Wasm(grammar) => grammar.name(),
-		}
-	}
-
-	fn codec(&self) -> Codec {
-		match self {
-			Grammar::Builtin(host) => host.codec(),
-			#[cfg(feature = "external-grammars")]
-			Grammar::Wasm(_) => Codec::Content,
-		}
-	}
-
-	fn host(&self) -> Option<Host> {
-		match self {
-			Grammar::Builtin(host) => Some(*host),
-			#[cfg(feature = "external-grammars")]
-			Grammar::Wasm(_) => None,
 		}
 	}
 
@@ -517,9 +450,9 @@ pub const JS_SQL_QUERY: &str = include_str!("queries/javascript.scm");
 #[cfg(feature = "gleam")]
 pub const GLEAM_SQL_QUERY: &str = include_str!("queries/gleam.scm");
 
-/// The default query for C++: `queries/cpp.scm`.
+/// The default query for C++: `queries/cxx.scm`.
 #[cfg(feature = "cxx")]
-pub const CXX_SQL_QUERY: &str = include_str!("queries/cpp.scm");
+pub const CXX_SQL_QUERY: &str = include_str!("queries/cxx.scm");
 
 /// The default query for C#: `queries/csharp.scm`.
 #[cfg(feature = "csharp")]
@@ -747,11 +680,8 @@ pub fn count_sql(
 	grammar.with_parser(|ts, language| {
 		let query = compile_query(language, query_source)?;
 		let tree = ts.parse(source, None).ok_or(EmbedError::HostParse)?;
-		let extraction = Extraction {
-			query: &query,
-			default_dialect: Dialect::default(),
-			codec: grammar.codec(),
-		};
+		let extraction =
+			Extraction { query: &query, default_dialect: Dialect::default() };
 		Ok(extraction.captures(&tree, source).len())
 	})
 }
@@ -779,51 +709,20 @@ pub fn locate_sql(
 	grammar.with_parser(|ts, language| {
 		let query = compile_query(language, query_source)?;
 		let tree = ts.parse(source, None).ok_or(EmbedError::HostParse)?;
-		let codec = grammar.codec();
-		let extraction = Extraction { query: &query, default_dialect, codec };
+		let extraction = Extraction { query: &query, default_dialect };
 		let mut found: Vec<Located> = extraction
 			.captures(&tree, source)
 			.into_iter()
-			.map(|Captured { range, dialect, pinned, .. }| {
-				let range = match codec {
-					Codec::Literal => {
-						let inner = literal_content(&source[range.clone()]);
-						range.start + inner.start..range.start + inner.end
-					}
-					Codec::Content => range,
-				};
-				Located { range, dialect, pinned_dialect: pinned }
+			.map(|Captured { range, dialect, pinned, .. }| Located {
+				range,
+				dialect,
+				pinned_dialect: pinned,
 			})
 			.collect();
 		found.sort_by_key(|located| (located.range.start, located.range.end));
 		found.dedup_by(|a, b| a.range == b.range);
 		Ok(found)
 	})
-}
-
-/// Where a whole literal's contents are: past its prefix letters (`r`,
-/// `b`, Python's `rb`…), raw-string hashes, and opening quotes, and
-/// before the matching close. A shape it doesn't recognize is all
-/// content.
-fn literal_content(literal: &str) -> std::ops::Range<usize> {
-	let bytes = literal.as_bytes();
-	let mut open = bytes.iter().take_while(|b| b.is_ascii_alphabetic()).count();
-	let hashes = bytes[open..].iter().take_while(|&&b| b == b'#').count();
-	open += hashes;
-	let Some(&quote) =
-		bytes.get(open).filter(|b| matches!(b, b'"' | b'\'' | b'`'))
-	else {
-		return 0..literal.len();
-	};
-	let mut quotes =
-		bytes[open..].iter().take(3).take_while(|&&b| b == quote).count();
-	// `""` is an empty string, not an unclosed triple quote.
-	if quotes == 2 {
-		quotes = 1;
-	}
-	let start = open + quotes;
-	let end = literal.len().saturating_sub(quotes + hashes).max(start);
-	start..end
 }
 
 /// Format every SQL snippet the query captures in `source`, returning the
@@ -843,11 +742,8 @@ pub fn format_embedded(
 
 		let mut edits: Vec<Edit> = Vec::new();
 		let mut warnings: Vec<Warning> = Vec::new();
-		let extraction = Extraction {
-			query: &query,
-			default_dialect: options.dialect,
-			codec: grammar.codec(),
-		};
+		let extraction =
+			Extraction { query: &query, default_dialect: options.dialect };
 		let captures = extraction.captures(&tree, source);
 		let mut options = *options;
 		if !indent.configured_width {
@@ -872,7 +768,6 @@ pub fn format_embedded(
 				range: node_range.clone(),
 				literal: literal.clone(),
 				escapes,
-				grammar,
 				dialect,
 				pinned,
 				syntax,
@@ -971,7 +866,6 @@ struct Extraction<'a> {
 	query: &'a Query,
 	/// The dialect of a bare `@sql` capture.
 	default_dialect: Dialect,
-	codec: Codec,
 }
 
 impl Extraction<'_> {
@@ -1002,15 +896,12 @@ impl Extraction<'_> {
 				let Some(dialect) = sql_dialect(name, self.default_dialect) else {
 					continue;
 				};
-				let range = match self.codec {
-					Codec::Literal => capture.node.byte_range(),
-					Codec::Content => content_range(capture.node),
-				};
+				let (range, literal) = content_range(capture.node, source);
 				let mut found = Vec::new();
 				escape_sequences(capture.node, &range, &mut found);
 				out.push(Captured {
 					range,
-					literal: capture.node.byte_range(),
+					literal,
 					escapes: found,
 					dialect,
 					pinned: *name != "sql",
@@ -1127,11 +1018,20 @@ impl Extraction<'_> {
 	}
 }
 
-/// The content of a content-codec capture. A node whose first and last
-/// children are anonymous tokens is a whole literal, and its content
-/// lies between those delimiters (Java's text blocks have no node that
-/// spans their content); any other node is the content itself.
-fn content_range(node: tree_sitter::Node<'_>) -> std::ops::Range<usize> {
+/// A capture's content, and the whole string as far as the capture
+/// shows it. A node whose first and last children are anonymous tokens
+/// is a whole string, and its content lies between those delimiters
+/// (Rust's plain strings, Java's text blocks). Any other node is the
+/// content itself, and all the capture shows of the string.
+///
+/// A content node first in a string whose opening delimiter isn't a
+/// node (Rust's raw strings) can start past whitespace the delimiter is
+/// followed by: the parser skipped it. It's in the string all the same,
+/// so the content takes it back.
+fn content_range(
+	node: tree_sitter::Node<'_>,
+	source: &str,
+) -> (std::ops::Range<usize>, std::ops::Range<usize>) {
 	let count = node.child_count();
 	if count >= 2
 		&& let (Some(first), Some(last)) =
@@ -1139,9 +1039,16 @@ fn content_range(node: tree_sitter::Node<'_>) -> std::ops::Range<usize> {
 		&& !first.is_named()
 		&& !last.is_named()
 	{
-		return first.end_byte()..last.start_byte();
+		return (first.end_byte()..last.start_byte(), node.byte_range());
 	}
-	node.byte_range()
+	let mut start = node.start_byte();
+	if let Some(parent) = node.parent()
+		&& node.prev_sibling().is_none()
+	{
+		let skipped = source[parent.start_byte()..start].trim_end();
+		start = parent.start_byte() + skipped.len();
+	}
+	(start..node.end_byte(), start..node.end_byte())
 }
 
 /// The `escape_sequence` nodes in `node` that lie inside `content`.
@@ -1271,7 +1178,6 @@ struct Snippet<'a> {
 	literal: std::ops::Range<usize>,
 	/// Its escapes, sorted.
 	escapes: Vec<std::ops::Range<usize>>,
-	grammar: &'a Grammar,
 	dialect: Dialect,
 	/// Did the query set `dialect` (`@sql.sqlite`), over the configured
 	/// one?
@@ -1288,176 +1194,121 @@ struct Snippet<'a> {
 impl Snippet<'_> {
 	fn rewrite(&self) -> Rewrite {
 		let text = &self.source[self.range.clone()];
-		match self.grammar.codec() {
-			Codec::Literal => {
-				let Some(host) = self.grammar.host() else {
-					return Rewrite::Skip;
-				};
-				let decoded = match decode(host, text) {
-					Ok(decoded) => decoded,
-					Err(rewrite) => return rewrite,
-				};
-				if decoded.content.trim().is_empty() {
-					return Rewrite::Skip;
-				}
-				// Only multiline string *syntaxes* are formatted: raw
-				// strings (`r#"..."#`, Go backticks), Python triple quotes,
-				// JS templates, and Gleam strings natively support
-				// multiple lines, so SQL that takes more than one gets the
-				// vertical shape. A plain Rust or Go string joins them once
-				// it already
-				// holds a line break (written, escaped, or continued), and
-				// is rewritten as a raw string; a single-line one never
-				// reformats.
-				let multiline = match decoded.kind {
-					LiteralKind::RustRaw { .. }
-					| LiteralKind::GoRaw
-					| LiteralKind::PyTriple { .. }
-					| LiteralKind::JsTemplate
-					| LiteralKind::GleamString => true,
-					LiteralKind::RustPlain | LiteralKind::GoPlain => {
-						text.contains('\n') || decoded.content.contains('\n')
-					}
-				};
-				if !multiline {
-					return Rewrite::Skip;
-				}
-				// What the quotes and prefix take on the line, for SQL that
-				// stays on it.
-				let delimiters =
-					text.chars().count().saturating_sub(decoded.content.chars().count());
-				let Anchored { text: anchored, line_ending_crs } =
-					match self.format(&decoded.content, false, delimiters) {
-						Ok(anchored) => anchored,
-						Err(rewrite) => return rewrite,
-					};
-				match encode(&decoded, &anchored, &line_ending_crs) {
-					Some(literal) => Rewrite::Replace(literal),
-					None => Rewrite::Warn(
-						"formatted SQL cannot be written back into this string \
-						 literal; left unformatted"
-							.to_string(),
-					),
-				}
-			}
-			Codec::Content => {
-				if text.trim().is_empty() {
-					return Rewrite::Skip;
-				}
-				let backslashes = text.contains('\\');
-				// The SQL the string spells, its escapes read. A raw string
-				// has none: its backslashes are just backslashes.
-				let read = if self.syntax.raw || !backslashes {
-					None
-				} else {
-					let escapes: Vec<_> = self
-						.escapes
-						.iter()
-						.map(|escape| {
-							escape.start - self.range.start..escape.end - self.range.start
-						})
-						.collect();
-					match escapes::read(text, &escapes, &self.syntax.escapes) {
-						Ok(read) => Some(read),
-						Err(escapes::Unreadable::Backslash) => {
-							return Rewrite::Warn(
-								"string holds a backslash, which may be an escape; left \
-								 unformatted (a query can promise the string is raw with \
-								 `(#set! squill.raw)`)"
-									.to_string(),
-							);
-						}
-						Err(escapes::Unreadable::Escape(escape)) => {
-							return Rewrite::Warn(format!(
-								"string holds a backslash escape squill doesn't read \
-								 (`{escape}`); left unformatted (a query says which \
-								 escapes a string takes with `(#set! squill.escape …)`)",
-								escape = escape.escape_debug(),
-							));
-						}
-					}
-				};
-				let sql = read.as_ref().map_or(text, |read| read.sql.as_str());
-				// A string that already spans lines, as written or escaped,
-				// proves the syntax takes line breaks of some spelling;
-				// otherwise the query must promise it.
-				let spans_lines = text.contains('\n') || sql.contains('\n');
-				if !(spans_lines || self.syntax.multiline) {
-					return Rewrite::Skip;
-				}
-				// A closing delimiter at the margin may have to stay there
-				// (a bare Ruby heredoc's terminator), so it does.
-				let close_at_margin = text.ends_with('\n');
-				let anchored = match self.format(sql, close_at_margin, 0) {
-					Ok(anchored) => anchored.text,
-					Err(rewrite) => return rewrite,
-				};
-				// Every token spelled as it was, escapes and all.
-				let anchored = match &read {
-					Some(read) => match read.respell(
-						text,
-						&anchored,
-						self.dialect,
-						self.options.lex_options(),
-					) {
-						Some(respelled) => respelled,
-						None => {
-							return Rewrite::Warn(
-								"formatting would change SQL spelled with a backslash \
-								 escape; left unformatted"
-									.to_string(),
-							);
-						}
-					},
-					None => anchored,
-				};
-				if anchored.contains('\n') {
-					// Raw syntax, when the string asks for it and every escape
-					// was layout (squill never respells one).
-					if !self.syntax.raw
-						&& self.literal != self.range
-						&& !anchored.contains('\\')
-						&& let Some((string, sql)) = self.promote(&anchored)
-					{
-						return Rewrite::ReplaceString(string, sql);
-					}
-					// Line breaks only an escape spelled: the syntax may not
-					// take them raw.
-					if !(text.contains('\n') || self.syntax.multiline) {
-						return Rewrite::Warn(
-							"formatted SQL spans lines, which this string can't hold \
-							 without escapes; left unformatted"
-								.to_string(),
-						);
-					}
-				}
-				// Raw, as promised: then whatever follows each backslash is
-				// untouched, since formatting only changes whitespace
-				// between tokens. If it changed, the string may take
-				// escapes after all (a line continuation squill moved).
-				if read.is_none() && backslashes && escapes(text).ne(escapes(&anchored))
-				{
+		if text.trim().is_empty() {
+			return Rewrite::Skip;
+		}
+		let backslashes = text.contains('\\');
+		// The SQL the string spells, its escapes read. A raw string
+		// has none: its backslashes are just backslashes.
+		let read = if self.syntax.raw || !backslashes {
+			None
+		} else {
+			let escapes: Vec<_> = self
+				.escapes
+				.iter()
+				.map(|escape| {
+					escape.start - self.range.start..escape.end - self.range.start
+				})
+				.collect();
+			match escapes::read(text, &escapes, &self.syntax.escapes) {
+				Ok(read) => Some(read),
+				Err(escapes::Unreadable::Backslash) => {
 					return Rewrite::Warn(
-						"formatting would change what follows a backslash, which \
-						 this string may treat as an escape; left unformatted"
+						"string holds a backslash, which may be an escape; left \
+						 unformatted (a query can promise the string is raw with \
+						 `(#set! squill.raw)`)"
 							.to_string(),
 					);
 				}
-				Rewrite::Replace(anchored)
+				Err(escapes::Unreadable::Escape(escape)) => {
+					return Rewrite::Warn(format!(
+						"string holds a backslash escape squill doesn't read \
+						 (`{escape}`); left unformatted (a query says which \
+						 escapes a string takes with `(#set! squill.escape …)`)",
+						escape = escape.escape_debug(),
+					));
+				}
+			}
+		};
+		let sql = read.as_ref().map_or(text, |read| read.sql.as_str());
+		// A string that already spans lines, as written or escaped,
+		// proves the syntax takes line breaks of some spelling;
+		// otherwise the query must promise it.
+		let spans_lines = text.contains('\n') || sql.contains('\n');
+		if !(spans_lines || self.syntax.multiline) {
+			return Rewrite::Skip;
+		}
+		// A closing delimiter at the margin may have to stay there
+		// (a bare Ruby heredoc's terminator), so it does.
+		let close_at_margin = text.ends_with('\n');
+		let Anchored { text: anchored, line_ending_crs } =
+			match self.format(sql, close_at_margin) {
+				Ok(anchored) => anchored,
+				Err(rewrite) => return rewrite,
+			};
+		// Every token spelled as it was, escapes and all.
+		let anchored = match &read {
+			Some(read) => match read.respell(
+				text,
+				&anchored,
+				self.dialect,
+				self.options.lex_options(),
+			) {
+				Some(respelled) => respelled,
+				None => {
+					return Rewrite::Warn(
+						"formatting would change SQL spelled with a backslash \
+						 escape; left unformatted"
+							.to_string(),
+					);
+				}
+			},
+			None => anchored,
+		};
+		if anchored.contains('\n') {
+			// Raw syntax, when the string asks for it and every escape
+			// was layout (squill never respells one), so nothing was
+			// respelled and the CRs squill wrote are where it wrote them.
+			if !self.syntax.raw
+				&& self.literal != self.range
+				&& !anchored.contains('\\')
+				&& let Some((string, sql)) = self.promote(&anchored, &line_ending_crs)
+			{
+				return Rewrite::ReplaceString(string, sql);
+			}
+			// Line breaks only an escape spelled: the syntax may not
+			// take them raw.
+			if !(text.contains('\n') || self.syntax.multiline) {
+				return Rewrite::Warn(
+					"formatted SQL spans lines, which this string can't hold \
+					 without escapes; left unformatted"
+						.to_string(),
+				);
 			}
 		}
+		// Raw, as promised: then whatever follows each backslash is
+		// untouched, since formatting only changes whitespace
+		// between tokens. If it changed, the string may take
+		// escapes after all (a line continuation squill moved).
+		if read.is_none() && backslashes && escapes(text).ne(escapes(&anchored)) {
+			return Rewrite::Warn(
+				"formatting would change what follows a backslash, which \
+				 this string may treat as an escape; left unformatted"
+					.to_string(),
+			);
+		}
+		Rewrite::Replace(anchored)
 	}
 
 	/// `content` in the first of the syntax's raw forms that can hold it:
 	/// one whose closing delimiter it doesn't contain, without a control
-	/// character but the line endings squill wrote.
-	fn promote(&self, content: &str) -> Option<(String, std::ops::Range<usize>)> {
-		let crs: Vec<usize> = content
-			.match_indices("\r\n")
-			.map(|(at, _)| at)
-			.filter(|_| self.options.line_ending == formatter::LineEnding::Crlf)
-			.collect();
-		if has_unwritable_control(content, &crs) {
+	/// character but the CRs squill wrote to end lines (`crs`).
+	fn promote(
+		&self,
+		content: &str,
+		crs: &[usize],
+	) -> Option<(String, std::ops::Range<usize>)> {
+		if has_unwritable_control(content, crs) {
 			return None;
 		}
 		self.syntax.promote.iter().find_map(|form| {
@@ -1473,10 +1324,8 @@ impl Snippet<'_> {
 
 	/// Format `sql`, the string's content. A string written on one line
 	/// stays on it when the SQL formats to one line and still fits, with
-	/// `delimiters` columns of a literal's quotes and prefix (a content
-	/// capture's are outside its range) and whatever is glued to its end
-	/// (see `glued`). Otherwise it
-	/// takes the vertical shape: SQL starting on the line after the
+	/// its closing delimiter and whatever is glued to its end (see
+	/// `glued`). Otherwise it takes the vertical shape: SQL starting on the line after the
 	/// opening quote, each line anchored to the host statement's
 	/// indentation, and the closing quote on its own line at that indent,
 	/// or at the margin with `close_at_margin`. A string that already
@@ -1485,7 +1334,6 @@ impl Snippet<'_> {
 		&self,
 		sql: &str,
 		close_at_margin: bool,
-		delimiters: usize,
 	) -> Result<Anchored, Rewrite> {
 		let one_line = !self.source[self.range.clone()].contains('\n');
 		// The host statement's own indentation: the anchor every SQL line
@@ -1563,7 +1411,7 @@ impl Snippet<'_> {
 				.chars()
 				.take_while(|c| !c.is_whitespace() && *c != ',' && *c != ';')
 				.count();
-			let width = column + delimiters + sql.chars().count() + closing + glued;
+			let width = column + sql.chars().count() + closing + glued;
 			if width <= usize::from(max_width) {
 				return Ok(Anchored { text: sql.to_string(), line_ending_crs: vec![] });
 			}
@@ -1686,325 +1534,6 @@ fn line_indent(source: &str, offset: usize) -> String {
 	source[line_start..].chars().take_while(|&c| c == ' ' || c == '\t').collect()
 }
 
-/// A decoded string literal: its SQL content plus enough shape to
-/// re-encode.
-struct Decoded {
-	content: String,
-	kind: LiteralKind,
-}
-
-enum LiteralKind {
-	/// Rust `"..."` (escapes) — rewritten as a raw string once
-	/// multi-line.
-	RustPlain,
-	/// Rust `r#"..."#` with N hashes — content is verbatim.
-	RustRaw { hashes: usize },
-	/// Go `` `...` `` — verbatim, but cannot contain a backtick.
-	GoRaw,
-	/// Go `"..."` (escapes) — rewritten as a raw string once
-	/// multi-line.
-	GoPlain,
-	/// Python `'''...'''` / `"""..."""`, optionally r-prefixed.
-	PyTriple { raw: bool, quote: char },
-	/// JS/TS `` `...` `` template literal without substitutions.
-	JsTemplate,
-	/// Gleam `"..."` — escapes, but literal newlines are allowed.
-	GleamString,
-}
-
-/// Decode a captured literal. `Err` carries what to do instead: skip a
-/// literal that is not a candidate by design (f-strings, `${}`
-/// templates, single-quoted syntaxes), warn about one that is but
-/// cannot be read with confidence (an escape the codec does not know).
-fn decode(host: Host, literal: &str) -> Result<Decoded, Rewrite> {
-	let unknown_escape = || {
-		Rewrite::Warn(
-			"string holds an escape sequence squill cannot decode; left \
-			 unformatted"
-				.to_string(),
-		)
-	};
-	// A capture that is not the literal shape the codec expects (a
-	// custom query aiming at the wrong node) is not ours to touch.
-	let strip =
-		|text: &'_ str, prefix: &str, suffix: &str| -> Result<String, Rewrite> {
-			text
-				.strip_prefix(prefix)
-				.and_then(|rest| rest.strip_suffix(suffix))
-				.map(str::to_string)
-				.ok_or(Rewrite::Skip)
-		};
-	match host {
-		#[cfg(feature = "rust")]
-		Host::Rust => {
-			if let Some(rest) = literal.strip_prefix('r') {
-				let hashes = rest.chars().take_while(|&c| c == '#').count();
-				let fence = "#".repeat(hashes);
-				let body = strip(&rest[hashes..], "\"", &format!("\"{fence}"))?;
-				Ok(Decoded { content: body, kind: LiteralKind::RustRaw { hashes } })
-			} else {
-				let body = strip(literal, "\"", "\"")?;
-				Ok(Decoded {
-					content: unescape(&body, EscapeMode::Rust)
-						.ok_or_else(unknown_escape)?,
-					kind: LiteralKind::RustPlain,
-				})
-			}
-		}
-		#[cfg(feature = "go")]
-		Host::Go => {
-			if literal.starts_with('`') {
-				Ok(Decoded {
-					content: strip(literal, "`", "`")?,
-					kind: LiteralKind::GoRaw,
-				})
-			} else {
-				let body = strip(literal, "\"", "\"")?;
-				Ok(Decoded {
-					content: unescape(&body, EscapeMode::Go)
-						.ok_or_else(unknown_escape)?,
-					kind: LiteralKind::GoPlain,
-				})
-			}
-		}
-		#[cfg(feature = "python")]
-		Host::Python => {
-			let prefix_len =
-				literal.chars().take_while(|c| c.is_ascii_alphabetic()).count();
-			let prefix = literal[..prefix_len].to_ascii_lowercase();
-			if prefix.contains('f') || prefix.contains('b') {
-				// f-strings interpolate (SQL with holes) and bytes
-				// literals are not SQL text: never touched.
-				return Err(Rewrite::Skip);
-			}
-			let raw = prefix.contains('r');
-			let rest = &literal[prefix_len..];
-			for fence in ["'''", "\"\"\""] {
-				if let Ok(body) = strip(rest, fence, fence) {
-					let content = if raw {
-						body
-					} else {
-						unescape(&body, EscapeMode::Go).ok_or_else(unknown_escape)?
-					};
-					let quote = if fence.starts_with('\'') { '\'' } else { '"' };
-					return Ok(Decoded {
-						content,
-						kind: LiteralKind::PyTriple { raw, quote },
-					});
-				}
-			}
-			// Single-quoted syntax: single-line territory, untouched.
-			Err(Rewrite::Skip)
-		}
-		#[cfg(feature = "javascript")]
-		Host::JavaScript => decode_js(literal),
-		#[cfg(feature = "typescript")]
-		Host::TypeScript | Host::Tsx => decode_js(literal),
-		#[cfg(feature = "gleam")]
-		Host::Gleam => {
-			let body = strip(literal, "\"", "\"")?;
-			Ok(Decoded {
-				content: unescape(&body, EscapeMode::Gleam)
-					.ok_or_else(unknown_escape)?,
-				kind: LiteralKind::GleamString,
-			})
-		}
-		// Content-codec grammars never decode a whole literal.
-		#[allow(unreachable_patterns)]
-		_ => Err(Rewrite::Skip),
-	}
-}
-
-/// Decode a JS/TS literal. Only template literals; `${}` substitutions
-/// are SQL with holes and stay byte-identical. Plain '...'/"..."
-/// strings are single-line syntax, also untouched.
-fn decode_js(literal: &str) -> Result<Decoded, Rewrite> {
-	let Some(body) =
-		literal.strip_prefix('`').and_then(|rest| rest.strip_suffix('`'))
-	else {
-		return Err(Rewrite::Skip);
-	};
-	if has_template_substitution(body) {
-		return Err(Rewrite::Skip);
-	}
-	let content = unescape(body, EscapeMode::Js).ok_or_else(|| {
-		Rewrite::Warn(
-			"string holds an escape sequence squill cannot decode; left \
-			 unformatted"
-				.to_string(),
-		)
-	})?;
-	Ok(Decoded { content, kind: LiteralKind::JsTemplate })
-}
-
-/// Does a template-literal body contain an unescaped `${`?
-fn has_template_substitution(body: &str) -> bool {
-	let mut chars = body.chars().peekable();
-	while let Some(c) = chars.next() {
-		match c {
-			'\\' => {
-				chars.next();
-			}
-			'$' if chars.peek() == Some(&'{') => return true,
-			_ => {}
-		}
-	}
-	false
-}
-
-/// Backslash-escape dialects across the host languages.
-#[derive(Clone, Copy, PartialEq)]
-enum EscapeMode {
-	/// `\u{...}` and the line-continuation escape.
-	Rust,
-	/// The shared common escapes only (also used for Python, whose
-	/// extras like `\u####` bail to leave-untouched).
-	Go,
-	/// Adds `` \` `` and `\$`; `\u{...}` or `\u####`.
-	Js,
-	/// `\u{...}`, no line continuation.
-	Gleam,
-}
-
-/// Decode `\`-escapes. Any escape a mode does not know leaves the
-/// literal untouched (`None`), never a guess.
-fn unescape(body: &str, mode: EscapeMode) -> Option<String> {
-	let mut out = String::with_capacity(body.len());
-	let mut chars = body.chars().peekable();
-	while let Some(c) = chars.next() {
-		if c != '\\' {
-			out.push(c);
-			continue;
-		}
-		match chars.next()? {
-			'n' => out.push('\n'),
-			'r' => out.push('\r'),
-			't' => out.push('\t'),
-			'\\' => out.push('\\'),
-			'"' => out.push('"'),
-			'\'' => out.push('\''),
-			'0' => out.push('\0'),
-			'`' if mode == EscapeMode::Js => out.push('`'),
-			'$' if mode == EscapeMode::Js => out.push('$'),
-			'x' if mode != EscapeMode::Gleam => {
-				let hex: String = chars.by_ref().take(2).collect();
-				out.push(u8::from_str_radix(&hex, 16).ok()? as char);
-			}
-			'u'
-				if matches!(
-					mode,
-					EscapeMode::Rust | EscapeMode::Gleam | EscapeMode::Js
-				) =>
-			{
-				if chars.peek() == Some(&'{') {
-					chars.next();
-					let hex: String = chars.by_ref().take_while(|&c| c != '}').collect();
-					out.push(char::from_u32(u32::from_str_radix(&hex, 16).ok()?)?);
-				} else if mode == EscapeMode::Js {
-					let hex: String = chars.by_ref().take(4).collect();
-					out.push(char::from_u32(u32::from_str_radix(&hex, 16).ok()?)?);
-				} else {
-					return None;
-				}
-			}
-			'\n' if mode == EscapeMode::Rust => {
-				// Line continuation: skip following whitespace.
-				while chars.peek().is_some_and(|c| c.is_whitespace()) {
-					chars.next();
-				}
-			}
-			_ => return None, // unknown escape: leave the literal alone
-		}
-	}
-	Some(out)
-}
-
-/// `line_ending_crs` are the CRs squill wrote to end lines in CRLF, as
-/// asked: line endings, not characters only an escape can spell.
-fn encode(
-	decoded: &Decoded,
-	content: &str,
-	line_ending_crs: &[usize],
-) -> Option<String> {
-	match &decoded.kind {
-		LiteralKind::RustRaw { hashes } => {
-			// Keep the original hash count unless the content now needs
-			// more (it never should — we only move whitespace).
-			let needed = min_raw_hashes(content);
-			let hashes = (*hashes).max(needed);
-			let fence = "#".repeat(hashes);
-			Some(format!("r{fence}\"{content}\"{fence}"))
-		}
-		LiteralKind::RustPlain => {
-			// Rewritten as a raw string, so the SQL reads as written: no
-			// escaped quotes or backslashes. Anything only an escape can
-			// spell (a carriage return, a NUL) stays as it was.
-			if has_unwritable_control(content, line_ending_crs) {
-				return None;
-			}
-			let fence = "#".repeat(min_raw_hashes(content).max(1));
-			Some(format!("r{fence}\"{content}\"{fence}"))
-		}
-		LiteralKind::GoRaw => {
-			if content.contains('`') {
-				None // cannot be represented; leave untouched
-			} else {
-				Some(format!("`{content}`"))
-			}
-		}
-		LiteralKind::GoPlain => {
-			// Interpreted strings are single-line: a multi-line query
-			// becomes a raw string. Raw strings cannot hold a backtick,
-			// and Go drops carriage returns from them.
-			if content.contains('`')
-				|| has_unwritable_control(content, line_ending_crs)
-			{
-				None
-			} else {
-				Some(format!("`{content}`"))
-			}
-		}
-		LiteralKind::PyTriple { raw, quote } => {
-			let fence: String = std::iter::repeat_n(*quote, 3).collect();
-			if content.contains(&fence) || (*raw && content.contains('\\')) {
-				return None; // cannot be represented in this fence
-			}
-			let body =
-				if *raw { content.to_string() } else { content.replace('\\', "\\\\") };
-			let prefix = if *raw { "r" } else { "" };
-			Some(format!("{prefix}{fence}{body}{fence}"))
-		}
-		LiteralKind::JsTemplate => {
-			let mut out = String::with_capacity(content.len() + 2);
-			out.push('`');
-			let mut chars = content.chars().peekable();
-			while let Some(c) = chars.next() {
-				match c {
-					'\\' => out.push_str("\\\\"),
-					'`' => out.push_str("\\`"),
-					'$' if chars.peek() == Some(&'{') => out.push_str("\\$"),
-					_ => out.push(c),
-				}
-			}
-			out.push('`');
-			Some(out)
-		}
-		LiteralKind::GleamString => {
-			let mut out = String::with_capacity(content.len() + 2);
-			out.push('"');
-			for c in content.chars() {
-				match c {
-					'\\' => out.push_str("\\\\"),
-					'"' => out.push_str("\\\""),
-					_ => out.push(c),
-				}
-			}
-			out.push('"');
-			Some(out)
-		}
-	}
-}
-
 /// Characters other than newline and tab that a raw string cannot
 /// hold faithfully, but for the CRs squill wrote to end lines (at the
 /// byte offsets `line_ending_crs`, in order): a CR the string spelled
@@ -2016,23 +1545,6 @@ fn has_unwritable_control(content: &str, line_ending_crs: &[usize]) -> bool {
 			&& c != '\t'
 			&& line_ending_crs.binary_search(&at).is_err()
 	})
-}
-
-/// Fewest `#`s a Rust raw string needs to hold `content`.
-fn min_raw_hashes(content: &str) -> usize {
-	let mut needed = 0;
-	let bytes = content.as_bytes();
-	let mut index = 0;
-	while index < bytes.len() {
-		if bytes[index] == b'"' {
-			let run = bytes[index + 1..].iter().take_while(|&&b| b == b'#').count();
-			needed = needed.max(run + 1);
-			index += run + 1;
-		} else {
-			index += 1;
-		}
-	}
-	needed
 }
 
 #[cfg(all(test, feature = "cxx"))]
@@ -2050,11 +1562,8 @@ mod tests {
 			.with_parser(|ts, language| {
 				let query = compile_query(language, CXX_SQL_QUERY)?;
 				let tree = ts.parse(source, None).ok_or(EmbedError::HostParse)?;
-				let extraction = Extraction {
-					query: &query,
-					default_dialect: Dialect::Postgres,
-					codec: grammar.codec(),
-				};
+				let extraction =
+					Extraction { query: &query, default_dialect: Dialect::Postgres };
 				let edits: Vec<Edit> = extraction
 					.captures(&tree, source)
 					.into_iter()

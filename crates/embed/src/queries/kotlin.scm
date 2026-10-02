@@ -1,8 +1,9 @@
-; Default extraction query for Kotlin: raw-string (`"""`) arguments of
-; JDBC, Spring, and Exposed calls, bare or `.trimIndent()`ed. A raw
-; string with `$` templates has several content nodes and never matches.
-; Raw strings take line breaks and no escapes.
+; SQL in Kotlin: raw-string (`"""`) arguments of JDBC, Spring, and
+; Exposed calls. Raw strings take line breaks and no escapes. One with
+; `$` templates has several content nodes, so the anchored `.` patterns
+; below never match it.
 
+; Passed as is.
 ((call_expression
    [
      (identifier) @_method
@@ -18,6 +19,7 @@
    "update" "batchUpdate" "exec")
  (#set! squill.raw) (#set! squill.multiline))
 
+; Passed `.trimIndent()`ed.
 ((call_expression
    [
      (identifier) @_method

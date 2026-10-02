@@ -1,10 +1,10 @@
-; Default extraction query for C#: raw-string (`"""`) arguments of EF
-; Core migrations and raw-SQL calls, ADO.NET's `CommandText`, and
-; Dapper's query/execute family, generic (`QueryAsync<Order>`) or not.
-; Interpolated raw strings (`$"""`) are a different node and never
-; match. Raw strings take no escapes, and a one-line `"""…"""` becomes
-; a multi-line one in squill's layout: its content on lines of its own.
+; SQL in C#: raw-string (`"""`) literals. Raw strings take no escapes,
+; and a one-line `"""…"""` can become a multi-line one, its content on
+; lines of its own. Interpolated raw strings (`$"""`) are a different
+; node, so never match.
 
+; EF Core migrations and raw-SQL calls, and Dapper's query/execute
+; family, generic (`QueryAsync<Order>`) or not.
 ((invocation_expression
    function: (member_access_expression name: [
      (identifier) @_method
@@ -24,6 +24,7 @@
    "ExecuteReader" "ExecuteReaderAsync")
  (#set! squill.raw) (#set! squill.multiline))
 
+; ADO.NET: `cmd.CommandText = """…""";`.
 ((assignment_expression
    left: (member_access_expression name: (identifier) @_prop)
    right: (raw_string_literal (raw_string_content) @sql))

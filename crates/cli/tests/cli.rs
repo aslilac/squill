@@ -708,7 +708,7 @@ fn rules_take_a_custom_query() {
 	// A query that only matches `my_sql!` macros.
 	std::fs::write(
         dir.join(".config/squill/only_mine.scm"),
-        "((macro_invocation macro: (identifier) @_name (token_tree (raw_string_literal) @sql)) (#eq? @_name \"my_sql\"))",
+        "((macro_invocation macro: (identifier) @_name (token_tree (raw_string_literal (string_content) @sql))) (#eq? @_name \"my_sql\") (#set! squill.raw) (#set! squill.multiline))",
     )
     .expect("write");
 	std::fs::write(
@@ -749,7 +749,7 @@ fn embedded_warnings_are_diagnostics() {
 	let output = squill().arg("fmt").arg(&file).output().expect("run");
 	assert!(output.status.success());
 	let stderr = String::from_utf8_lossy(&output.stderr);
-	assert!(stderr.contains("q.rs:2:18: embedded SQL did not parse"), "{stderr}");
+	assert!(stderr.contains("q.rs:2:21: embedded SQL did not parse"), "{stderr}");
 	assert!(stderr.contains("1 diagnostic(s)"), "{stderr}");
 	assert_eq!(std::fs::read_to_string(&file).expect("read"), source);
 	let status =
@@ -1464,7 +1464,7 @@ fn stdin_filepath_resolves_rules_against_the_path() {
 		"fn f() { sqlx::query!(r#\"select (\n\"#); }\n",
 		&[],
 	);
-	assert!(err.contains("src/bad.rs:1:23: embedded SQL did not parse"), "{err}");
+	assert!(err.contains("src/bad.rs:1:26: embedded SQL did not parse"), "{err}");
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -1603,7 +1603,7 @@ fn language_server_formats_and_reports() {
 	assert_eq!(diagnostics[0]["severity"], 2, "{diagnostics}");
 	assert_eq!(
 		diagnostics[0]["range"]["start"],
-		json!({"line": 1, "character": 17})
+		json!({"line": 1, "character": 20})
 	);
 	assert!(
 		diagnostics[0]["message"]
@@ -2164,15 +2164,18 @@ fn line_ending_is_lf_unless_configured() {
 		),
 		"{crlf:?}"
 	);
-	// A CR the string spells `\\r` is data: it stays spelled out, so a
-	// string holding one inside a value is left as it was.
+	// A CR the string spells `\\r` is data: it stays spelled out, and the
+	// line break in the value is the value's, so it stays LF. The string
+	// stays plain, since a raw one couldn't spell the `\\r`.
 	let spelled =
 		"fn f() {\r\n    sqlx::query(\"select 'a\\r\nb'\nfrom t\");\r\n}\r\n";
 	std::fs::write(dir.join("crlf.rs"), spelled).expect("write");
 	let (ok, out, stderr) = run(&["fmt", "--stdout", "crlf.rs"]);
-	assert!(ok, "{stderr}");
-	assert_eq!(out, spelled);
-	assert!(stderr.contains("cannot be written back"), "{stderr}");
+	assert!(ok && stderr.is_empty(), "{stderr}");
+	assert_eq!(
+		out,
+		"fn f() {\r\n    sqlx::query(\"\r\n    select\r\n        'a\\r\nb'\r\n    from t\r\n    \");\r\n}\r\n"
+	);
 	let _ = std::fs::remove_dir_all(&dir);
 }
 

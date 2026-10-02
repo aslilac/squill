@@ -232,8 +232,9 @@ fn multiline_literal_gets_quotes_on_own_lines() {
 #[test]
 fn multiline_plain_strings_become_raw_strings() {
 	// A plain `"..."` that already spans lines is rewritten as a raw
-	// string, so quotes and backslashes need no escaping.
-	let source = "fn f() {\n    sqlx::query!(\"SELECT 'it''s' AS s, \\\"Weird\\\" FROM t\n    WHERE x = $1\");\n}\n";
+	// string. One spelling a quote with an escape keeps it, and so stays
+	// plain: squill never respells an escape.
+	let source = "fn f() {\n    sqlx::query!(\"SELECT 'it''s' AS s FROM t\n    WHERE x = $1\");\n    sqlx::query!(\"SELECT \\\"Weird\\\" FROM t\n    WHERE x = $1\");\n}\n";
 	let formatted = format_embedded(
 		source,
 		&Host::Rust.into(),
@@ -245,15 +246,16 @@ fn multiline_plain_strings_become_raw_strings() {
 	.text;
 	assert_eq!(
 		formatted,
-		"fn f() {\n    sqlx::query!(r#\"\n    select 'it''s' as s, \"Weird\" from t where x = $1\n    \"#);\n}\n"
+		"fn f() {\n    sqlx::query!(r#\"\n    select 'it''s' as s from t where x = $1\n    \"#);\n    sqlx::query!(\"\n    select \\\"Weird\\\" from t where x = $1\n    \");\n}\n"
 	);
 }
 
 #[test]
 fn escaped_newlines_count_as_multiline() {
-	// `\n` escapes are a line break too, so the string becomes a raw one;
-	// it stays on its one source line. A continuation spans source lines,
-	// so that one takes the multi-line shape.
+	// `\n` escapes are a line break too, but that string fits on its one
+	// line, as a plain string. A continuation spans source lines, so that
+	// one takes the multi-line shape, and the continuation was layout, so
+	// it becomes a raw string.
 	let source = "fn f() {\n    sqlx::query!(\"select a\\nfrom t\");\n    sqlx::query!(\"select b \\\n        from t\");\n}\n";
 	let formatted = format_embedded(
 		source,
@@ -266,7 +268,7 @@ fn escaped_newlines_count_as_multiline() {
 	.text;
 	assert_eq!(
 		formatted,
-		"fn f() {\n    sqlx::query!(r#\"select a from t\"#);\n    sqlx::query!(r#\"\n    select b from t\n    \"#);\n}\n"
+		"fn f() {\n    sqlx::query!(\"select a from t\");\n    sqlx::query!(r#\"\n    select b from t\n    \"#);\n}\n"
 	);
 }
 
@@ -314,16 +316,17 @@ fn unparsable_sql_is_reported_not_rewritten() {
 	assert_eq!(formatted.text, source);
 	assert_eq!(formatted.warnings.len(), 1, "{:?}", formatted.warnings);
 	let warning = &formatted.warnings[0];
-	assert_eq!(&source[warning.offset..warning.offset + 3], "r#\"");
+	assert_eq!(&source[warning.offset..warning.offset + 8], "select (");
 	assert!(warning.message.contains("did not parse"), "{}", warning.message);
 }
 
 #[test]
 fn edits_the_query_cannot_read_back_are_dropped() {
-	// This query only knows plain strings. Formatting turns one into a
-	// raw string the query no longer captures, so the re-parse check
-	// refuses the edit and says so.
-	let query = r#"((macro_invocation (token_tree (string_literal) @sql)))"#;
+	// This query only knows plain strings, but asks for them in raw
+	// syntax. Formatting turns one into a raw string the query no longer
+	// captures, so the re-parse check refuses the edit and says so.
+	let query = r##"((macro_invocation (token_tree (string_literal) @sql))
+		(#set! squill.promote-to-raw-syntax "r#\"{}\"#"))"##;
 	let source = "fn f() {\n    sqlx::query!(\"select 1\n    from t\");\n}\n";
 	let formatted = format_embedded(
 		source,
@@ -344,7 +347,9 @@ fn edits_the_query_cannot_read_back_are_dropped() {
 
 #[test]
 fn go_multiline_interpreted_strings_become_raw_strings() {
-	let source = "package main\n\nfunc f(db *sql.DB) {\n\tdb.Exec(\"DELETE FROM t\\nWHERE id = $1\")\n\tdb.Exec(\"DELETE FROM `t`\\nWHERE id = $1\")\n}\n";
+	// An interpreted string can't hold a line break: SQL that needs one
+	// moves into a raw string, and SQL that fits stays where it is.
+	let source = "package main\n\nfunc f(db *sql.DB) {\n\tdb.Exec(\"DELETE FROM t\\nWHERE id = $1\")\n\tdb.Exec(\"DELETE FROM sessions\\nWHERE user_id = $1 AND expires_at < now() AND kind = 'web'\")\n\tdb.Exec(\"DELETE FROM sessions\\nWHERE user_id = $1 AND expires_at < now() AND kind = 'w`b'\")\n}\n";
 	let formatted = format_embedded(
 		source,
 		&Host::Go.into(),
@@ -354,12 +359,19 @@ fn go_multiline_interpreted_strings_become_raw_strings() {
 	)
 	.expect("format");
 	assert!(
-		formatted.text.contains("db.Exec(`delete from t where id = $1`)"),
+		formatted.text.contains("db.Exec(\"delete from t where id = $1\")"),
+		"{}",
+		formatted.text
+	);
+	assert!(
+		formatted.text.contains(
+			"db.Exec(`\n\tdelete from sessions\n\twhere user_id = $1 and expires_at < now() and kind = 'web'\n\t`)"
+		),
 		"{}",
 		formatted.text
 	);
 	// A backtick has no raw-string spelling: left alone, with a warning.
-	assert!(formatted.text.contains("\"DELETE FROM `t`\\nWHERE id = $1\""));
+	assert!(formatted.text.contains("kind = 'w`b'\")"), "{}", formatted.text);
 	assert_eq!(formatted.warnings.len(), 1, "{:?}", formatted.warnings);
 }
 
@@ -1218,4 +1230,31 @@ fn queries_name_only_known_escapes_and_raw_forms() {
 		Indent::FROM_HOST,
 	);
 	assert!(skip.err().unwrap().to_string().contains("@squill.skip"));
+}
+
+#[test]
+fn spelled_escapes_stay_spelled() {
+	// A `\t` inside a SQL string is the string's spelling: it never comes
+	// back as a real tab. One between tokens is layout.
+	let js = format_host(
+		Host::JavaScript,
+		JS_SQL_QUERY,
+		"db.query(`SELECT a,\\tb, 'x\\ty' FROM t`);\n",
+	);
+	assert_eq!(js.text, "db.query(`select a, b, 'x\\ty' from t`);\n");
+	let python = format_host(
+		Host::Python,
+		PYTHON_DB_QUERY,
+		"cur.execute(\"\"\"SELECT 'x\\ty' FROM t\"\"\")\n",
+	);
+	assert_eq!(python.text, "cur.execute(\"\"\"select 'x\\ty' from t\"\"\")\n");
+	let rust = format_host(
+		Host::Rust,
+		RUST_SQLX_QUERY,
+		"fn f() {\n    sqlx::query(\"SELECT 'x\\ty'\n    FROM t\");\n}\n",
+	);
+	assert_eq!(
+		rust.text,
+		"fn f() {\n    sqlx::query(\"\n    select 'x\\ty' from t\n    \");\n}\n"
+	);
 }
