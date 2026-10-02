@@ -88,7 +88,8 @@ fn quoting_transform_preserves_semantics() {
 		"group",
 		"end",
 	];
-	let positions = [IdentPos::ColumnOrTable, IdentPos::TypeOrFunction];
+	let positions =
+		[IdentPos::ColumnOrTable, IdentPos::TypeOrFunction, IdentPos::Expression];
 	let quotings = [IdentQuoting::UnquotedWhenSafe, IdentQuoting::AlwaysQuoted];
 	let dialects = [Dialect::Postgres, Dialect::Sqlite];
 
@@ -187,4 +188,55 @@ fn sqlite_strips_case_insensitively_and_normalizes_quotes() {
 			"for {input:?}"
 		);
 	}
+}
+
+fn format_sqlite(source: &str) -> formatter::Formatted {
+	let options = options(Dialect::Sqlite, IdentQuoting::UnquotedWhenSafe);
+	let tokens =
+		parser::lexer::lex_with(source, Dialect::Sqlite, options.lex_options());
+	let parse = parser::parser::parse(&tokens, Dialect::Sqlite);
+	formatter::format_cst(&parse.cst, &options)
+}
+
+/// SQLite reads a double-quoted name that matches no column as a string,
+/// so a lone one in an expression keeps its quotes, and squill says why.
+/// Names that can only be names lose theirs.
+#[test]
+fn sqlite_keeps_quotes_that_might_be_strings() {
+	let formatted = format_sqlite(
+		"SELECT t.\"Name\" FROM \"foo\" t WHERE status = \"active\";\n\
+		 UPDATE \"foo\" SET \"Name\" = \"b\";\n",
+	);
+	assert_eq!(
+		formatted.text,
+		"select t.Name from foo t where status = \"active\";\n\
+		 update foo set Name = \"b\";\n"
+	);
+	let messages: Vec<_> =
+		formatted.diagnostics.iter().map(|d| d.message.as_str()).collect();
+	assert_eq!(messages.len(), 2, "{messages:?}");
+	assert!(
+		messages[0].starts_with("\"active\" is double-quoted"),
+		"{messages:?}"
+	);
+	assert!(messages[0].contains("write 'active' for a string"), "{messages:?}");
+	assert!(messages[1].starts_with("\"b\""), "{messages:?}");
+	// Postgres has no such reading: a quoted name is only ever a name.
+	assert_eq!(
+		render(
+			&ident("\"active\"", IdentPos::Expression),
+			&options(Dialect::Postgres, IdentQuoting::UnquotedWhenSafe)
+		),
+		"active"
+	);
+}
+
+#[test]
+fn quotes_squill_keeps_anyway_go_unremarked() {
+	// Not an identifier shape, so never unquoted: nothing to say.
+	assert!(
+		format_sqlite("SELECT \"first name\", \"\" FROM t;\n")
+			.diagnostics
+			.is_empty()
+	);
 }

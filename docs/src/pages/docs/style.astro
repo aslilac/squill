@@ -197,6 +197,14 @@ RETURN NEW; END; $$;`}
 			capitals, or a keyword like <code>order</code>. With <code>"always"</code>
 			, every identifier is quoted.
 		</p>
+		<p>
+			SQLite reads a double-quoted name that matches no column as a string, so{" "}
+			<code>WHERE status = "active"</code> may mean the string{" "}
+			<code>'active'</code>. Without the schema, squill can&rsquo;t tell which,
+			so in SQLite a lone double-quoted name in an expression keeps its quotes,
+			and squill reports it: write <code>'active'</code> for a string, or the
+			bare name for a column.
+		</p>
 		<StyleExample
 			input={`SELECT "id", "User"."Name", "order" FROM "users"
 JOIN "User" ON "User"."id" = "users"."user_id";`}

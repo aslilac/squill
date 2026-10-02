@@ -1750,6 +1750,11 @@ impl Lowerer {
 	}
 
 	fn column_ref(&mut self, node: &SyntaxNode, pos: IdentPos) -> Doc {
+		let pos = if pos == IdentPos::ColumnOrTable && lone_expression_name(node) {
+			IdentPos::Expression
+		} else {
+			pos
+		};
 		let mut docs = Vec::new();
 		for element in node.children_with_tokens() {
 			match element {
@@ -2821,4 +2826,22 @@ fn blank_line_before(node: &SyntaxNode) -> bool {
 		}
 	}
 	false
+}
+
+/// Is this column reference a lone, unqualified name in an expression
+/// (not an `UPDATE … SET` target, which can only be a column)?
+pub(crate) fn lone_expression_name(node: &SyntaxNode) -> bool {
+	node.kind() == SyntaxKind::ColumnRef
+		&& !(node
+			.parent()
+			.is_some_and(|parent| parent.kind() == SyntaxKind::SetItem)
+			&& node.prev_sibling().is_none())
+		&& node.children().next().is_none()
+		&& node
+			.children_with_tokens()
+			.filter(|element| {
+				element.as_token().is_none_or(|t| !t.kind().is_trivia())
+			})
+			.count()
+			== 1
 }

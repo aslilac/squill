@@ -1006,8 +1006,9 @@ fn format_source(source: &str, options: &Options) -> Outcome {
 			message: format!("{} (statement passed through verbatim)", d.message),
 		})
 		.collect();
-	diagnostics.extend(result.body_diagnostics.into_iter().map(|body| {
-		Diagnostic { range: Some(body.start..body.end), message: body.message }
+	diagnostics.extend(result.diagnostics.into_iter().map(|body| Diagnostic {
+		range: Some(body.start..body.end),
+		message: body.message,
 	}));
 	diagnostics.sort_by_key(|diagnostic| {
 		diagnostic.range.as_ref().map_or(usize::MAX, |range| range.start)

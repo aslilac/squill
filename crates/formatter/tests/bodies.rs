@@ -251,7 +251,7 @@ fn unparsable_bodies_are_reported() {
 	let parse = parser::parser::parse(&tokens, Dialect::Postgres);
 	let formatted = format_cst(&parse.cst, &options);
 	let found: Vec<(&str, &str)> = formatted
-		.body_diagnostics
+		.diagnostics
 		.iter()
 		.map(|d| (&source[d.start..d.end], d.message.as_str()))
 		.collect();

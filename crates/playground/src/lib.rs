@@ -131,7 +131,7 @@ fn format_sql(source: &str, options: &formatter::Options) -> Response {
 			format!("{line}:{col}: {} (statement passed through verbatim)", d.message)
 		})
 		.collect();
-	diagnostics.extend(result.body_diagnostics.iter().map(|body| {
+	diagnostics.extend(result.diagnostics.iter().map(|body| {
 		let (line, col) = line_col(source, body.start);
 		format!("{line}:{col}: {}", body.message)
 	}));

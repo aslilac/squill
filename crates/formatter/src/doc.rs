@@ -9,6 +9,9 @@
 pub enum IdentPos {
 	ColumnOrTable,
 	TypeOrFunction,
+	/// A lone name in an expression. In SQLite, a double-quoted one that
+	/// matches no column reads as a string, so its quotes stay.
+	Expression,
 }
 
 /// A layout document.

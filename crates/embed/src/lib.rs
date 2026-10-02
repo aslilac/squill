@@ -1412,7 +1412,7 @@ impl Snippet<'_> {
 					.to_string(),
 			));
 		}
-		if let Some(body) = formatted.body_diagnostics.first() {
+		if let Some(body) = formatted.diagnostics.first() {
 			self
 				.body_warning
 				.replace(Some(format!("embedded SQL: {}", body.message)));

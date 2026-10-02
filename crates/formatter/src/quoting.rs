@@ -56,6 +56,9 @@ pub(crate) fn render_ident(
 				text.to_ascii_lowercase()
 			}
 			Form::Bare => text.to_string(),
+			Form::DoubleQuoted if sqlite_string_or_name(pos, options) => {
+				text.to_string()
+			}
 			Form::DoubleQuoted | Form::Backtick | Form::Bracket => {
 				if can_strip(&inner, pos, options.dialect) {
 					inner
@@ -67,6 +70,22 @@ pub(crate) fn render_ident(
 			}
 		},
 	}
+}
+
+/// Is a double-quoted name at `pos` one SQLite might read as a string
+/// (when no column matches it), and so not squill's to unquote?
+fn sqlite_string_or_name(pos: IdentPos, options: &Options) -> bool {
+	pos == IdentPos::Expression && options.dialect == Dialect::Sqlite
+}
+
+/// The double-quoted `text`, a lone name in a SQLite expression, that
+/// squill would otherwise unquote: kept as written, and worth a word,
+/// since SQLite reads it as a string if no column matches.
+pub(crate) fn kept_for_sqlite(text: &str, options: &Options) -> bool {
+	options.quoting == IdentQuoting::UnquotedWhenSafe
+		&& sqlite_string_or_name(IdentPos::Expression, options)
+		&& matches!(classify(text), Some((Form::DoubleQuoted, inner))
+			if can_strip(&inner, IdentPos::Expression, options.dialect))
 }
 
 /// Split an identifier token into its form and unescaped inner name.
@@ -122,7 +141,7 @@ fn can_strip(name: &str, pos: IdentPos, dialect: Dialect) -> bool {
 			}
 			match pg_keyword_category(name) {
 				None | Some(PgKeywordCategory::Unreserved) => true,
-				Some(PgKeywordCategory::ColName) => pos == IdentPos::ColumnOrTable,
+				Some(PgKeywordCategory::ColName) => pos != IdentPos::TypeOrFunction,
 				Some(PgKeywordCategory::TypeFuncName) => {
 					pos == IdentPos::TypeOrFunction
 				}

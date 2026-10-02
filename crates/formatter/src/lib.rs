@@ -140,14 +140,15 @@ pub struct Formatted {
 	/// fully formatted file. ErrorStatements are always verbatim and are
 	/// not counted here.
 	pub fallback_statements: usize,
-	/// Procedural bodies (`LANGUAGE plpgsql` / `LANGUAGE sql` / `DO`)
-	/// that didn't parse, so were left as written.
-	pub body_diagnostics: Vec<BodyDiagnostic>,
+	/// What was left as written for a reason worth saying: procedural
+	/// bodies (`LANGUAGE plpgsql` / `LANGUAGE sql` / `DO`) that didn't
+	/// parse, and double-quoted names SQLite might read as strings.
+	pub diagnostics: Vec<Diagnostic>,
 }
 
-/// Where a procedural body failed to parse, in the source's bytes.
+/// Something left as written, where it is in the source's bytes, and why.
 #[derive(Debug, Clone)]
-pub struct BodyDiagnostic {
+pub struct Diagnostic {
 	pub start: usize,
 	pub end: usize,
 	pub message: String,
@@ -278,15 +279,17 @@ fn format_cst_at(cst: &Cst, options: &Options, depth: u32) -> Formatted {
 	// Bodies that don't parse are left as written by the splice; say so,
 	// pointing into the source. Only at the top: nested bodies are
 	// reported with the one that holds them.
-	let mut body_diagnostics = Vec::new();
+	let mut diagnostics = Vec::new();
 	if depth == 0 {
 		for node in cst.root().children() {
 			if node.kind() != SyntaxKind::ErrorStatement {
-				collect_body_diagnostics(node, options, &mut body_diagnostics);
+				collect_body_diagnostics(node, options, &mut diagnostics);
+				collect_sqlite_quoted_names(node, options, &mut diagnostics);
 			}
 		}
+		diagnostics.sort_by_key(|diagnostic| diagnostic.start);
 	}
-	Formatted { text: out, fallback_statements: fallbacks, body_diagnostics }
+	Formatted { text: out, fallback_statements: fallbacks, diagnostics }
 }
 
 /// A statement with its `;` where it belongs: moved up past any line
@@ -397,7 +400,7 @@ fn trim_verbatim(original: &str) -> String {
 fn collect_body_diagnostics(
 	statement: &parser::syntax::SyntaxNode,
 	options: &Options,
-	out: &mut Vec<BodyDiagnostic>,
+	out: &mut Vec<Diagnostic>,
 ) {
 	let tokens: Vec<(usize, parser::lexer::Token<'_>)> = statement
 		.descendants_with_tokens()
@@ -438,10 +441,47 @@ fn collect_body_diagnostics(
 		};
 		let base = start + tag.len();
 		for diagnostic in &parse.diagnostics {
-			out.push(BodyDiagnostic {
+			out.push(Diagnostic {
 				start: base + diagnostic.start,
 				end: base + diagnostic.end,
 				message: format!("{} ({what} left as written)", diagnostic.message),
+			});
+		}
+	}
+}
+
+/// The double-quoted lone names in a SQLite statement's expressions that
+/// squill kept quoted: SQLite reads `"active"` as a string when no
+/// column matches it, so unquoting could break a query. Say so, since
+/// it's likely a string written with the wrong quotes.
+fn collect_sqlite_quoted_names(
+	statement: &parser::syntax::SyntaxNode,
+	options: &Options,
+	out: &mut Vec<Diagnostic>,
+) {
+	for node in statement.descendants() {
+		if !rules::lone_expression_name(node) {
+			continue;
+		}
+		let Some(token) = node
+			.children_with_tokens()
+			.filter_map(|element| element.into_token())
+			.find(|token| !token.kind().is_trivia())
+		else {
+			continue;
+		};
+		if quoting::kept_for_sqlite(token.text(), options) {
+			let range = token.text_range();
+			let name = token.text();
+			let inner = &name[1..name.len() - 1];
+			out.push(Diagnostic {
+				start: u32::from(range.start()) as usize,
+				end: u32::from(range.end()) as usize,
+				message: format!(
+					"{name} is double-quoted in an expression, where SQLite reads \
+					 it as a string if no column matches; left quoted (write \
+					 '{inner}' for a string, or {inner} for the column)"
+				),
 			});
 		}
 	}
