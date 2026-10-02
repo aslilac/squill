@@ -1063,3 +1063,159 @@ fn gleam_strings_piped_into_a_query() {
 	);
 	assert!(formatted.warnings.is_empty(), "{:?}", formatted.warnings);
 }
+
+/// C++ plain strings, through a query that says which escapes they take
+/// and how they promote to raw syntax.
+const CXX_PLAIN_QUERY: &str = r#"
+((call_expression
+   function: (identifier) @_f
+   arguments: (argument_list (string_literal) @sql))
+ (#eq? @_f "run")
+ (#set! squill.escape "whitespace")
+ (#set! squill.escape "punctuation")
+ (#set! squill.promote-to-raw-syntax "R\"({})\""))
+
+((call_expression
+   function: (identifier) @_f
+   arguments: (argument_list (raw_string_literal (raw_string_content) @sql)))
+ (#eq? @_f "run")
+ (#set! squill.raw)
+ (#set! squill.multiline))
+
+((function_definition
+   declarator: (function_declarator declarator: (identifier) @_name)) @squill.skip
+ (#eq? @_name "legacy"))
+"#;
+
+#[test]
+fn escapes_inside_sql_tokens_keep_their_spelling() {
+	// `\n` between tokens is layout; `\"` and `\t` inside them come back
+	// as written.
+	let source = "void f() {\n  run(\"SELECT a,\\n  \\\"Weird\\\" FROM t WHERE x = 'a\\tb'\");\n}\n";
+	let formatted = format_host(Host::Cxx, CXX_PLAIN_QUERY, source);
+	assert!(
+		formatted
+			.text
+			.contains("run(\"select a, \\\"Weird\\\" from t where x = 'a\\tb'\");"),
+		"{}",
+		formatted.text
+	);
+	assert!(formatted.warnings.is_empty(), "{:?}", formatted.warnings);
+}
+
+#[test]
+fn strings_spanning_lines_promote_to_raw_syntax() {
+	// Every escape is layout, so nothing is lost writing it raw.
+	let source = "void f() {\n  run(\"SELECT id, name, email, created_at FROM users\\nWHERE org = $1 AND active ORDER BY name\");\n}\n";
+	let formatted = format_host(Host::Cxx, CXX_PLAIN_QUERY, source);
+	assert!(
+		formatted.text.contains("run(R\"(\n  select id, name, email, created_at\n"),
+		"{}",
+		formatted.text
+	);
+	assert!(formatted.text.contains("\n  )\");"), "{}", formatted.text);
+	assert!(formatted.warnings.is_empty(), "{:?}", formatted.warnings);
+}
+
+#[test]
+fn an_escape_in_a_token_stops_promotion() {
+	// The `\t` would have to become a raw tab: the string can't be raw,
+	// and as written it spells line breaks only with escapes.
+	let source = "void f() {\n  run(\"SELECT id, name, email, created_at FROM users\\nWHERE org = 'a\\tb' AND active ORDER BY name\");\n}\n";
+	let formatted = format_host(Host::Cxx, CXX_PLAIN_QUERY, source);
+	assert_eq!(formatted.text, source);
+	assert_eq!(formatted.warnings.len(), 1, "{:?}", formatted.warnings);
+	assert!(
+		formatted.warnings[0].message.contains("spans lines"),
+		"{:?}",
+		formatted.warnings
+	);
+}
+
+#[test]
+fn escapes_a_query_doesnt_take_leave_the_string_alone() {
+	let source = "void f() {\n  run(\"SELECT '\\x41'\\nFROM t\");\n  run(\"SEL\\tECT 1\\n\");\n}\n";
+	let formatted = format_host(Host::Cxx, CXX_PLAIN_QUERY, source);
+	assert_eq!(formatted.text, source);
+	assert_eq!(formatted.warnings.len(), 2, "{:?}", formatted.warnings);
+	assert!(
+		formatted.warnings[0].message.contains("`\\\\x41`"),
+		"{:?}",
+		formatted.warnings
+	);
+}
+
+#[test]
+fn a_token_spelled_with_an_escape_must_come_through_unchanged() {
+	// Lowercasing the keyword would lose its escape.
+	let query = CXX_PLAIN_QUERY.replace(
+		"(#set! squill.escape \"punctuation\")",
+		"(#set! squill.escape \"punctuation\") (#set! squill.escape \"\\\\xHH\")",
+	);
+	// (`\x45L`, not `\x45C`: C's `\x` takes every hex digit after it.)
+	let source = "void f() {\n  run(\"S\\x45LECT 1\\n\");\n}\n";
+	let formatted = format_host(Host::Cxx, &query, source);
+	assert_eq!(formatted.text, source);
+	assert!(
+		formatted.warnings[0].message.contains("spelled with a backslash escape"),
+		"{:?}",
+		formatted.warnings
+	);
+}
+
+#[test]
+fn skipped_regions_are_left_alone() {
+	let source = "void legacy() {\n  run(\"SELECT   1\\nFROM t\");\n}\nvoid f() {\n  run(\"SELECT   2\\nFROM t\");\n}\n";
+	let formatted = format_host(Host::Cxx, CXX_PLAIN_QUERY, source);
+	assert!(
+		formatted.text.contains("run(\"SELECT   1\\nFROM t\")"),
+		"{}",
+		formatted.text
+	);
+	assert!(
+		formatted.text.contains("run(\"select 2 from t\")"),
+		"{}",
+		formatted.text
+	);
+	assert!(formatted.warnings.is_empty(), "{:?}", formatted.warnings);
+}
+
+#[test]
+fn queries_name_only_known_escapes_and_raw_forms() {
+	let compile = |properties: &str| {
+		let query = format!("((string_literal) @sql {properties})");
+		format_embedded(
+			"",
+			&Host::Cxx.into(),
+			&query,
+			&options(),
+			Indent::FROM_HOST,
+		)
+		.err()
+		.map(|err| err.to_string())
+	};
+	assert!(
+		compile("(#set! squill.escape \"\\\\q\")")
+			.unwrap()
+			.contains("takes one of")
+	);
+	assert!(
+		compile("(#set! squill.raw) (#set! squill.escape \"whitespace\")")
+			.unwrap()
+			.contains("both")
+	);
+	assert!(
+		compile("(#set! squill.promote-to-raw-syntax \"R\\\"()\\\"\")")
+			.unwrap()
+			.contains("`{}`")
+	);
+	assert!(compile("(#set! squill.escape \"\\\\u{XXXX}\")").is_none());
+	let skip = format_embedded(
+		"",
+		&Host::Cxx.into(),
+		"(string_literal) @squill.ignore",
+		&options(),
+		Indent::FROM_HOST,
+	);
+	assert!(skip.err().unwrap().to_string().contains("@squill.skip"));
+}

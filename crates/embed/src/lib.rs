@@ -20,6 +20,14 @@
 //!   can be formatted onto several; unpromised, only a string that
 //!   already spans lines is formatted) and `squill.raw` (no backslash
 //!   escapes; unpromised, a string holding a backslash is left alone).
+//!   A string that takes escapes says which with `squill.escape`
+//!   (`"whitespace"`, `"\xHH"`, …, see [`escapes`]); the grammar's
+//!   `escape_sequence` nodes, and `@squill.escape` captures, say where
+//!   they are. Each is read to read the SQL and written back as it was
+//!   spelled. `squill.promote-to-raw-syntax` names raw syntaxes a string
+//!   spanning lines is rewritten in, when every escape in it was layout.
+//!   And `@squill.skip` excludes any SQL capture it overlaps: a template
+//!   hole in the string, or a region the string sits in.
 //!
 //! Either way, every rewrite is checked by re-parsing the host file:
 //! an edit that adds a syntax error, or whose string no longer comes
@@ -47,6 +55,8 @@
 	)),
 	allow(dead_code, unused_imports, unused_variables, unreachable_patterns)
 )]
+
+mod escapes;
 
 use formatter::Options;
 use parser::Dialect;
@@ -263,7 +273,7 @@ enum Codec {
 /// What a content capture's string syntax allows, as its query pattern
 /// promises with `#set!` properties. Unpromised, squill assumes the
 /// worst: backslashes may be escapes, and line breaks may be illegal.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 struct StringSyntax {
 	/// `(#set! squill.raw)`: a backslash is just a backslash, so a
 	/// string holding one can be formatted. Checked: formatting must keep
@@ -276,6 +286,36 @@ struct StringSyntax {
 	/// that doesn't take them when the grammar rejects the line break,
 	/// and many (Java's, Kotlin's, Swift's) don't.
 	multiline: bool,
+	/// `(#set! squill.escape "whitespace")`, once per kind: the escapes
+	/// squill may read. An escape no kind covers leaves the string alone.
+	escapes: Vec<escapes::Group>,
+	/// `(#set! squill.promote-to-raw-syntax "r#\"{}\"#")`, in order: raw
+	/// syntaxes to rewrite a string spanning lines in, its content where
+	/// `{}` is. The first whose closing delimiter the content doesn't hold
+	/// wins.
+	promote: Vec<String>,
+}
+
+impl StringSyntax {
+	/// The syntax a query pattern's properties describe.
+	fn of(query: &Query, pattern: usize) -> Self {
+		let mut syntax = StringSyntax::default();
+		for property in query.property_settings(pattern) {
+			let value = property.value.as_deref().unwrap_or_default();
+			match property.key.as_ref() {
+				"squill.raw" => syntax.raw = true,
+				"squill.multiline" => syntax.multiline = true,
+				"squill.escape" => {
+					syntax.escapes.extend(escapes::Group::from_name(value));
+				}
+				"squill.promote-to-raw-syntax" => {
+					syntax.promote.push(value.to_string());
+				}
+				_ => {}
+			}
+		}
+		syntax
+	}
 }
 
 /// A tree-sitter grammar to find SQL with: built in, or (with the
@@ -828,6 +868,27 @@ pub struct Warning {
 struct Edit {
 	range: std::ops::Range<usize>,
 	replacement: String,
+	/// Where in `replacement` the SQL is: all of it, unless the edit
+	/// rewrote a whole string. A re-parse must capture the edit as either.
+	sql: std::ops::Range<usize>,
+}
+
+impl Edit {
+	/// An edit whose replacement is all SQL.
+	fn content(range: std::ops::Range<usize>, replacement: String) -> Self {
+		let sql = 0..replacement.len();
+		Edit { range, replacement, sql }
+	}
+
+	/// Does a re-parse read this edit, applied at `start`, back as SQL?
+	fn reads_back(
+		&self,
+		start: usize,
+		captured: &std::collections::HashSet<std::ops::Range<usize>>,
+	) -> bool {
+		captured.contains(&(start..start + self.replacement.len()))
+			|| captured.contains(&(start + self.sql.start..start + self.sql.end))
+	}
 }
 
 /// Build an extraction query, refusing what squill does not evaluate.
@@ -857,19 +918,64 @@ fn compile_query(
 				 configured dialect), `@sql.postgres`, or `@sql.sqlite`"
 			)));
 		}
+		if name.starts_with("squill.")
+			&& !matches!(*name, "squill.skip" | "squill.escape")
+		{
+			return Err(EmbedError::Query(format!(
+				"unknown capture `@{name}`: squill reads `@squill.skip` and \
+				 `@squill.escape`"
+			)));
+		}
 	}
-	// Likewise a `squill.` property squill doesn't know.
+	// Likewise a `squill.` property squill doesn't know, or a value it
+	// can't use.
 	for pattern in 0..query.pattern_count() {
+		let mut raw = false;
+		let mut escape = false;
 		for property in query.property_settings(pattern) {
 			let key = property.key.as_ref();
-			if key.starts_with("squill.")
-				&& !matches!(key, "squill.raw" | "squill.multiline")
-			{
-				return Err(EmbedError::Query(format!(
-					"unknown property `{key}`: squill reads `squill.raw` and \
-					 `squill.multiline`"
-				)));
+			let value = property.value.as_deref();
+			match key {
+				"squill.raw" => raw = true,
+				"squill.multiline" => {}
+				"squill.escape" => {
+					escape = true;
+					if value.and_then(escapes::Group::from_name).is_none() {
+						let known: Vec<String> = escapes::Group::NAMES
+							.iter()
+							.map(|(name, _)| format!("\"{name}\""))
+							.collect();
+						return Err(EmbedError::Query(format!(
+							"`squill.escape` takes one of {}",
+							known.join(", ")
+						)));
+					}
+				}
+				"squill.promote-to-raw-syntax" => {
+					if value.is_none_or(|value| value.matches("{}").count() != 1) {
+						return Err(EmbedError::Query(
+							"`squill.promote-to-raw-syntax` takes a raw string with `{}` \
+							 where its content goes, like \"r#\\\"{}\\\"#\""
+								.to_string(),
+						));
+					}
+				}
+				_ if key.starts_with("squill.") => {
+					return Err(EmbedError::Query(format!(
+						"unknown property `{key}`: squill reads `squill.raw`, \
+						 `squill.multiline`, `squill.escape`, and \
+						 `squill.promote-to-raw-syntax`"
+					)));
+				}
+				_ => {}
 			}
+		}
+		if raw && escape {
+			return Err(EmbedError::Query(
+				"a pattern can't set both `squill.raw` (no escapes) and \
+				 `squill.escape`"
+					.to_string(),
+			));
 		}
 	}
 	// Anything the binding does not evaluate natively would be silently
@@ -1010,10 +1116,20 @@ pub fn format_embedded(
 			}
 		}
 		let options = &options;
-		for Captured { range: node_range, dialect, pinned, syntax } in captures {
+		for Captured {
+			range: node_range,
+			literal,
+			escapes,
+			dialect,
+			pinned,
+			syntax,
+		} in captures
+		{
 			let snippet = Snippet {
 				source,
 				range: node_range.clone(),
+				literal: literal.clone(),
+				escapes,
 				grammar,
 				dialect,
 				pinned,
@@ -1041,8 +1157,11 @@ pub fn format_embedded(
 				}
 				Rewrite::Replace(replacement) => {
 					if replacement != source[node_range.clone()] {
-						edits.push(Edit { range: node_range, replacement });
+						edits.push(Edit::content(node_range, replacement));
 					}
+				}
+				Rewrite::ReplaceString(replacement, sql) => {
+					edits.push(Edit { range: literal, replacement, sql });
 				}
 			}
 		}
@@ -1092,7 +1211,14 @@ pub fn format_embedded(
 /// One SQL capture: where, in which dialect, and whether the query
 /// pinned that dialect rather than taking the configured one.
 struct Captured {
+	/// What to rewrite: the content, for a content capture.
 	range: std::ops::Range<usize>,
+	/// The whole string, delimiters and all, as far as the capture says:
+	/// the captured node, which for a content node is `range` again.
+	literal: std::ops::Range<usize>,
+	/// The escapes inside `range`, sorted: `escape_sequence` nodes in the
+	/// captured one, and `@squill.escape` captures.
+	escapes: Vec<std::ops::Range<usize>>,
 	dialect: Dialect,
 	pinned: bool,
 	syntax: StringSyntax,
@@ -1109,9 +1235,14 @@ struct Extraction<'a> {
 impl Extraction<'_> {
 	/// Every SQL capture in `tree`: the byte range to rewrite, and the
 	/// dialect — pinned, when the capture names one (`@sql.sqlite`).
+	///
+	/// A capture overlapping any `@squill.skip` capture is left out:
+	/// a hole in it, or it inside something the query excludes.
 	fn captures(&self, tree: &Tree, source: &str) -> Vec<Captured> {
 		let query = self.query;
 		let mut out = Vec::new();
+		let mut skips = Vec::new();
+		let mut escapes = Vec::new();
 		let mut cursor = QueryCursor::new();
 		let mut matches =
 			cursor.matches(query, tree.root_node(), source.as_bytes());
@@ -1119,24 +1250,50 @@ impl Extraction<'_> {
 			if !predicates_hold(query, query_match, source) {
 				continue;
 			}
-			let mut syntax = StringSyntax::default();
-			for property in query.property_settings(query_match.pattern_index) {
-				match property.key.as_ref() {
-					"squill.raw" => syntax.raw = true,
-					"squill.multiline" => syntax.multiline = true,
-					_ => {}
-				}
-			}
 			for capture in query_match.captures {
 				let name = &query.capture_names()[capture.index as usize];
-				if let Some(dialect) = sql_dialect(name, self.default_dialect) {
-					let range = match self.codec {
-						Codec::Literal => capture.node.byte_range(),
-						Codec::Content => content_range(capture.node),
-					};
-					out.push(Captured { range, dialect, pinned: *name != "sql", syntax });
+				match *name {
+					"squill.skip" => skips.push(capture.node.byte_range()),
+					"squill.escape" => escapes.push(capture.node.byte_range()),
+					_ => {}
 				}
+				let Some(dialect) = sql_dialect(name, self.default_dialect) else {
+					continue;
+				};
+				let range = match self.codec {
+					Codec::Literal => capture.node.byte_range(),
+					Codec::Content => content_range(capture.node),
+				};
+				let mut found = Vec::new();
+				escape_sequences(capture.node, &range, &mut found);
+				out.push(Captured {
+					range,
+					literal: capture.node.byte_range(),
+					escapes: found,
+					dialect,
+					pinned: *name != "sql",
+					syntax: StringSyntax::of(query, query_match.pattern_index),
+				});
 			}
+		}
+		let overlaps = |a: &std::ops::Range<usize>, b: &std::ops::Range<usize>| {
+			a.start < b.end && b.start < a.end
+		};
+		out.retain(|captured| {
+			!skips.iter().any(|skip| overlaps(skip, &captured.literal))
+		});
+		for captured in &mut out {
+			captured.escapes.extend(
+				escapes
+					.iter()
+					.filter(|escape| {
+						captured.range.start <= escape.start
+							&& escape.end <= captured.range.end
+					})
+					.cloned(),
+			);
+			captured.escapes.sort_by_key(|escape| (escape.start, escape.end));
+			captured.escapes.dedup();
 		}
 		out
 	}
@@ -1155,17 +1312,18 @@ impl Extraction<'_> {
 			return Ok(Vec::new());
 		}
 		let tree = ts.parse(text, None).ok_or(EmbedError::HostParse)?;
+		// A string promoted to raw syntax was rewritten whole: it reads
+		// back as the whole string, or as its content.
 		let captures: std::collections::HashSet<std::ops::Range<usize>> = self
 			.captures(&tree, text)
 			.into_iter()
-			.map(|captured| captured.range)
+			.flat_map(|captured| [captured.range, captured.literal])
 			.collect();
 		let mut failed = Vec::new();
 		let mut shift: isize = 0;
 		for (index, edit) in edits.iter().enumerate() {
 			let start = (edit.range.start as isize + shift) as usize;
-			let end = start + edit.replacement.len();
-			if !captures.contains(&(start..end)) {
+			if !edit.reads_back(start, &captures) {
 				failed.push(index);
 			}
 			shift += edit.replacement.len() as isize - edit.range.len() as isize;
@@ -1215,10 +1373,14 @@ impl Extraction<'_> {
 	) -> Result<bool, EmbedError> {
 		let text = apply(source, std::slice::from_ref(edit));
 		let tree = ts.parse(&text, None).ok_or(EmbedError::HostParse)?;
-		let range = edit.range.start..edit.range.start + edit.replacement.len();
+		let captures = self
+			.captures(&tree, &text)
+			.into_iter()
+			.flat_map(|captured| [captured.range, captured.literal])
+			.collect();
 		Ok(
 			error_count(&tree) > baseline_errors
-				|| !self.captures(&tree, &text).iter().any(|c| c.range == range),
+				|| !edit.reads_back(edit.range.start, &captures),
 		)
 	}
 }
@@ -1238,6 +1400,28 @@ fn content_range(node: tree_sitter::Node<'_>) -> std::ops::Range<usize> {
 		return first.end_byte()..last.start_byte();
 	}
 	node.byte_range()
+}
+
+/// The `escape_sequence` nodes in `node` that lie inside `content`.
+fn escape_sequences(
+	node: tree_sitter::Node<'_>,
+	content: &std::ops::Range<usize>,
+	out: &mut Vec<std::ops::Range<usize>>,
+) {
+	if node.end_byte() <= content.start || content.end <= node.start_byte() {
+		return;
+	}
+	if node.kind() == "escape_sequence" {
+		let range = node.byte_range();
+		if content.start <= range.start && range.end <= content.end {
+			out.push(range);
+		}
+		return;
+	}
+	let mut cursor = node.walk();
+	for child in node.children(&mut cursor) {
+		escape_sequences(child, content, out);
+	}
 }
 
 /// `source` with `edits` (sorted, non-overlapping) applied.
@@ -1330,13 +1514,21 @@ enum Rewrite {
 	Skip,
 	/// A candidate that could not be formatted with confidence.
 	Warn(String),
+	/// New content for the capture.
 	Replace(String),
+	/// A new whole string, delimiters and all, and where in it the SQL
+	/// is: promoted to raw syntax.
+	ReplaceString(String, std::ops::Range<usize>),
 }
 
 /// One captured string and everything needed to rewrite it.
 struct Snippet<'a> {
 	source: &'a str,
 	range: std::ops::Range<usize>,
+	/// The whole string (see [`Captured::literal`]).
+	literal: std::ops::Range<usize>,
+	/// Its escapes, sorted.
+	escapes: Vec<std::ops::Range<usize>>,
 	grammar: &'a Grammar,
 	dialect: Dialect,
 	/// Did the query set `dialect` (`@sql.sqlite`), over the configured
@@ -1407,34 +1599,102 @@ impl Snippet<'_> {
 				}
 			}
 			Codec::Content => {
-				// A string that already spans lines proves the syntax takes
-				// raw line breaks; otherwise the query must promise it.
-				if text.trim().is_empty()
-					|| !(text.contains('\n') || self.syntax.multiline)
-				{
+				if text.trim().is_empty() {
 					return Rewrite::Skip;
 				}
 				let backslashes = text.contains('\\');
-				if backslashes && !self.syntax.raw {
-					return Rewrite::Warn(
-						"string holds a backslash, which may be an escape; left \
-						 unformatted (a query can promise the string is raw with \
-						 `(#set! squill.raw)`)"
-							.to_string(),
-					);
+				// The SQL the string spells, its escapes read. A raw string
+				// has none: its backslashes are just backslashes.
+				let read = if self.syntax.raw || !backslashes {
+					None
+				} else {
+					let escapes: Vec<_> = self
+						.escapes
+						.iter()
+						.map(|escape| {
+							escape.start - self.range.start..escape.end - self.range.start
+						})
+						.collect();
+					match escapes::read(text, &escapes, &self.syntax.escapes) {
+						Ok(read) => Some(read),
+						Err(escapes::Unreadable::Backslash) => {
+							return Rewrite::Warn(
+								"string holds a backslash, which may be an escape; left \
+								 unformatted (a query can promise the string is raw with \
+								 `(#set! squill.raw)`)"
+									.to_string(),
+							);
+						}
+						Err(escapes::Unreadable::Escape(escape)) => {
+							return Rewrite::Warn(format!(
+								"string holds a backslash escape squill doesn't read \
+								 (`{escape}`); left unformatted (a query says which \
+								 escapes a string takes with `(#set! squill.escape …)`)",
+								escape = escape.escape_debug(),
+							));
+						}
+					}
+				};
+				let sql = read.as_ref().map_or(text, |read| read.sql.as_str());
+				// A string that already spans lines, as written or escaped,
+				// proves the syntax takes line breaks of some spelling;
+				// otherwise the query must promise it.
+				let spans_lines = text.contains('\n') || sql.contains('\n');
+				if !(spans_lines || self.syntax.multiline) {
+					return Rewrite::Skip;
 				}
 				// A closing delimiter at the margin may have to stay there
 				// (a bare Ruby heredoc's terminator), so it does.
 				let close_at_margin = text.ends_with('\n');
-				let anchored = match self.format(text, close_at_margin, 0) {
+				let anchored = match self.format(sql, close_at_margin, 0) {
 					Ok(anchored) => anchored.text,
 					Err(rewrite) => return rewrite,
 				};
+				// Every token spelled as it was, escapes and all.
+				let anchored = match &read {
+					Some(read) => match read.respell(
+						text,
+						&anchored,
+						self.dialect,
+						self.options.lex_options(),
+					) {
+						Some(respelled) => respelled,
+						None => {
+							return Rewrite::Warn(
+								"formatting would change SQL spelled with a backslash \
+								 escape; left unformatted"
+									.to_string(),
+							);
+						}
+					},
+					None => anchored,
+				};
+				if anchored.contains('\n') {
+					// Raw syntax, when the string asks for it and every escape
+					// was layout (squill never respells one).
+					if !self.syntax.raw
+						&& self.literal != self.range
+						&& !anchored.contains('\\')
+						&& let Some((string, sql)) = self.promote(&anchored)
+					{
+						return Rewrite::ReplaceString(string, sql);
+					}
+					// Line breaks only an escape spelled: the syntax may not
+					// take them raw.
+					if !(text.contains('\n') || self.syntax.multiline) {
+						return Rewrite::Warn(
+							"formatted SQL spans lines, which this string can't hold \
+							 without escapes; left unformatted"
+								.to_string(),
+						);
+					}
+				}
 				// Raw, as promised: then whatever follows each backslash is
 				// untouched, since formatting only changes whitespace
 				// between tokens. If it changed, the string may take
 				// escapes after all (a line continuation squill moved).
-				if backslashes && escapes(text).ne(escapes(&anchored)) {
+				if read.is_none() && backslashes && escapes(text).ne(escapes(&anchored))
+				{
 					return Rewrite::Warn(
 						"formatting would change what follows a backslash, which \
 						 this string may treat as an escape; left unformatted"
@@ -1444,6 +1704,29 @@ impl Snippet<'_> {
 				Rewrite::Replace(anchored)
 			}
 		}
+	}
+
+	/// `content` in the first of the syntax's raw forms that can hold it:
+	/// one whose closing delimiter it doesn't contain, without a control
+	/// character but the line endings squill wrote.
+	fn promote(&self, content: &str) -> Option<(String, std::ops::Range<usize>)> {
+		let crs: Vec<usize> = content
+			.match_indices("\r\n")
+			.map(|(at, _)| at)
+			.filter(|_| self.options.line_ending == formatter::LineEnding::Crlf)
+			.collect();
+		if has_unwritable_control(content, &crs) {
+			return None;
+		}
+		self.syntax.promote.iter().find_map(|form| {
+			let (open, close) = form.split_once("{}")?;
+			(!close.is_empty() && !content.contains(close)).then(|| {
+				(
+					format!("{open}{content}{close}"),
+					open.len()..open.len() + content.len(),
+				)
+			})
+		})
 	}
 
 	/// Format `sql`, the string's content. A string written on one line
@@ -1528,14 +1811,17 @@ impl Snippet<'_> {
 				.chars()
 				.map(|c| if c == '\t' { usize::from(tab) } else { 1 })
 				.sum();
-			// Whatever is glued to the string's end, up to a space, `,` or
-			// `;`: a content capture's closing delimiter (`)"`, `"""`),
-			// and a `)` closing the call, which can't break from it either.
-			let glued = self.source[self.range.end..]
+			// The closing delimiter, when the capture is the whole string,
+			// and whatever is glued to the string's end, up to a space, `,`
+			// or `;`: a content node's closing delimiter (`)"`, `"""`), and
+			// a `)` closing the call, which can't break from it either.
+			let closing = self.literal.end.saturating_sub(self.range.end);
+			let end = self.literal.end.max(self.range.end);
+			let glued = self.source[end..]
 				.chars()
 				.take_while(|c| !c.is_whitespace() && *c != ',' && *c != ';')
 				.count();
-			let width = column + delimiters + sql.chars().count() + glued;
+			let width = column + delimiters + sql.chars().count() + closing + glued;
 			if width <= usize::from(max_width) {
 				return Ok(Anchored { text: sql.to_string(), line_ending_crs: vec![] });
 			}
@@ -2031,9 +2317,8 @@ mod tests {
 					.captures(&tree, source)
 					.into_iter()
 					.zip(["select 1)\"); R\"x(", "select  2"])
-					.map(|(captured, replacement)| Edit {
-						range: captured.range,
-						replacement: replacement.to_string(),
+					.map(|(captured, replacement)| {
+						Edit::content(captured.range, replacement.to_string())
 					})
 					.collect();
 				let text = apply(source, &edits);
