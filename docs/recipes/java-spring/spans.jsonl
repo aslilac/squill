@@ -1,6 +1,4 @@
 {"path":"after.java","start":241,"end":390,"line":10,"column":30,"end_line":15,"end_column":9,"dialect":"postgres","pinned_dialect":false}
 {"path":"after.java","start":492,"end":607,"line":19,"column":31,"end_line":23,"end_column":9,"dialect":"postgres","pinned_dialect":false}
-{"path":"after.java","start":691,"end":719,"line":27,"column":37,"end_line":27,"end_column":65,"dialect":"postgres","pinned_dialect":false}
 {"path":"before.java","start":241,"end":398,"line":10,"column":30,"end_line":14,"end_column":13,"dialect":"postgres","pinned_dialect":false}
 {"path":"before.java","start":500,"end":619,"line":18,"column":31,"end_line":21,"end_column":13,"dialect":"postgres","pinned_dialect":false}
-{"path":"before.java","start":703,"end":731,"line":25,"column":37,"end_line":25,"end_column":65,"dialect":"postgres","pinned_dialect":false}

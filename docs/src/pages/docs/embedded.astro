@@ -329,6 +329,12 @@ query = ".config/squill/rust.scm"`}
 			</li>
 		</ul>
 		<p>
+			Where no one node spans a string&rsquo;s content &mdash; a Ruby
+			heredoc&rsquo;s is a run of content and escape nodes &mdash; a quantifier
+			can capture them all as one string, first to last:{" "}
+			<code>[(heredoc_content) (escape_sequence)]+ @sql</code>.
+		</p>
+		<p>
 			And a capture named <code>@squill.skip</code> leaves out any SQL capture
 			it overlaps: a hole in the string, like a JS template&rsquo;s{" "}
 			<code>$&lbrace;&hellip;&rbrace;</code>, or a region the string sits in,

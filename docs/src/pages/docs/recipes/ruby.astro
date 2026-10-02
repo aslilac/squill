@@ -35,11 +35,11 @@ import Recipe from "../../../components/Recipe.astro";
 			A heredoc&rsquo;s body isn&rsquo;t inside the call in Ruby&rsquo;s tree;
 			it follows the whole statement. So the queries below match the statement,
 			then the body that comes right after it, and they only cover a heredoc
-			passed first (or first in an array). A body with{" "}
-			<code>#&lbrace;&rbrace;</code> interpolation or an escape is more than one
-			node, and never matches. Pass values as binds instead. A single-quoted
-			heredoc (<code>&lt;&lt;~'SQL'</code>) takes no escapes, and the queries
-			have a pattern of their own for it that{" "}
+			passed first (or first in an array). Its escapes come back exactly as
+			written. A body with <code>#&lbrace;&rbrace;</code> interpolation is SQL
+			with a hole in it, and the queries skip it; pass values as binds instead.
+			A single-quoted heredoc (<code>&lt;&lt;~'SQL'</code>) takes no escapes,
+			and the queries have a pattern of their own for it that{" "}
 			<a href="docs/embedded/#properties">tells squill so</a>, so a backslash in
 			one is just a backslash.
 		</p>

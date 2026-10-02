@@ -30,9 +30,9 @@ import Recipe from "../../../components/Recipe.astro";
 			written.
 		</p>
 		<p>
-			The queries below take a string only when its content is a single node.
-			Interpolation (<code>#&lbrace;&rbrace;</code>) or an escape splits it, so
-			those strings never match; pass values as parameters instead. The same
+			A string&rsquo;s escapes come back exactly as written. One with
+			interpolation (<code>#&lbrace;&rbrace;</code>) is SQL with a hole in it,
+			and the queries below skip it; pass values as parameters instead. The same
 			goes for sigils: only <code>~S</code>, which never interpolates, is taken.{" "}
 			<code>~S"""</code> is the natural choice for a migration, since
 			backslashes in it are literal; the queries{" "}

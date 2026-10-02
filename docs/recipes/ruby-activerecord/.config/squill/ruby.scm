@@ -2,8 +2,8 @@
 ; methods or the pg gem's exec family, bare or first in an array (the
 ; find_by_sql([sql, binds]) form), as a statement or assigned. The
 ; heredoc's body follows the whole statement in the tree, so the match
-; is the statement, then the body right after it. A body with #{}
-; interpolation has more than one content node and never matches.
+; is the statement, then the body right after it: its content and
+; escapes, which squill reads and writes back as they're spelled.
 (([
    (call
      method: (identifier) @_method
@@ -16,14 +16,20 @@
          [(heredoc_beginning) @_open (array . (heredoc_beginning) @_open)])))
   ]
   .
-  (heredoc_body . (heredoc_content) @sql . (heredoc_end)))
+  (heredoc_body [(heredoc_content) (escape_sequence)]+ @sql . (heredoc_end)))
  (#any-of? @_method
    "execute" "exec_query" "exec_update" "exec_delete" "exec_insert"
    "select_all" "select_one" "select_rows" "select_value" "select_values"
    "find_by_sql" "exec" "exec_params" "async_exec" "async_exec_params")
  (#not-eq? @_open "<<~'SQL'")
  (#not-eq? @_open "<<-'SQL'")
- (#not-eq? @_open "<<'SQL'"))
+ (#not-eq? @_open "<<'SQL'")
+ (#set! squill.escape "whitespace")
+ (#set! squill.escape "punctuation")
+ (#set! squill.escape "\\xHH")
+ (#set! squill.escape "\\uXXXX")
+ (#set! squill.escape "\\u{XXXX}")
+ (#set! squill.escape "\\NNN"))
 
 ; The same heredoc single-quoted (<<~'SQL') takes no escapes.
 (([
@@ -45,3 +51,6 @@
    "find_by_sql" "exec" "exec_params" "async_exec" "async_exec_params")
  (#any-of? @_open "<<~'SQL'" "<<-'SQL'" "<<'SQL'")
  (#set! squill.raw))
+
+; A heredoc with #{} interpolation is SQL with a hole in it: skipped.
+(heredoc_body (interpolation)) @squill.skip

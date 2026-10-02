@@ -9,7 +9,8 @@
 //!
 //! Every grammar, built in or loaded from a `.wasm` file, takes the
 //! same path. The capture is a string's content: a node holding just
-//! that, or a whole string whose delimiters are anonymous tokens. What
+//! that, a whole string whose delimiters are anonymous tokens, or (one
+//! capture, quantified) a run of sibling nodes, first to last. What
 //! the string's syntax allows, its query pattern says with `#set!`
 //! properties (`queries/` holds the built-in queries):
 //!
@@ -886,19 +887,43 @@ impl Extraction<'_> {
 			if !predicates_hold(query, query_match, source) {
 				continue;
 			}
+			// The SQL captures' nodes, by capture: one string each, however
+			// many nodes a quantifier gave it (a Ruby heredoc's content and
+			// escapes, siblings with nothing spanning just them).
+			let mut strings: Vec<(u32, Vec<tree_sitter::Node<'_>>)> = Vec::new();
 			for capture in query_match.captures {
 				let name = &query.capture_names()[capture.index as usize];
 				match *name {
 					"squill.skip" => skips.push(capture.node.byte_range()),
 					"squill.escape" => escapes.push(capture.node.byte_range()),
+					_ if sql_dialect(name, self.default_dialect).is_some() => {
+						match strings.iter_mut().find(|(index, _)| *index == capture.index)
+						{
+							Some((_, nodes)) => nodes.push(capture.node),
+							None => strings.push((capture.index, vec![capture.node])),
+						}
+					}
 					_ => {}
 				}
+			}
+			for (index, mut nodes) in strings {
+				let name = &query.capture_names()[index as usize];
 				let Some(dialect) = sql_dialect(name, self.default_dialect) else {
 					continue;
 				};
-				let (range, literal) = content_range(capture.node, source);
+				nodes.sort_by_key(|node| node.start_byte());
+				let (first, last) = (nodes[0], nodes[nodes.len() - 1]);
+				let (range, literal) = if nodes.len() == 1 {
+					content_range(first, source)
+				} else {
+					let span = content_range(first, source).0.start
+						..content_range(last, source).0.end;
+					(span.clone(), span)
+				};
 				let mut found = Vec::new();
-				escape_sequences(capture.node, &range, &mut found);
+				for node in &nodes {
+					escape_sequences(*node, &range, &mut found);
+				}
 				out.push(Captured {
 					range,
 					literal,

@@ -16,8 +16,10 @@ import Recipe from "../../../components/Recipe.astro";
 			many lines as it needs without changing what the database sees beyond
 			whitespace. Plain strings, and queries built up with <code>+</code>, are
 			left exactly as written &mdash; to have squill format a query, write it as
-			a text block. A text block holding an escape (<code>\n</code>,{" "}
-			<code>\"</code>) is reported rather than rewritten.
+			a text block. A text block&rsquo;s escapes (<code>\n</code>,{" "}
+			<code>\"</code>) come back exactly as written; one holding an escape
+			squill doesn&rsquo;t read, like <code>\s</code> or a line-ending{" "}
+			<code>\</code>, is reported rather than rewritten.
 		</p>
 		<p>
 			The built-in <code>java</code> grammar&rsquo;s default query finds a text

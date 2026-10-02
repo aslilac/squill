@@ -1258,3 +1258,44 @@ fn spelled_escapes_stay_spelled() {
 		"fn f() {\n    sqlx::query(\"\n    select 'x\\ty' from t\n    \");\n}\n"
 	);
 }
+
+#[test]
+fn java_text_blocks_keep_their_escapes() {
+	let source = "class A {\n    void m() {\n        conn.prepareStatement(\"\"\"\n            SELECT \\\"Name\\\" FROM t WHERE x = 'a\\tb'\n            \"\"\");\n        conn.prepareStatement(\"SELECT   1\");\n    }\n}\n";
+	let formatted = format_host(Host::Java, JAVA_SQL_QUERY, source);
+	assert!(
+		formatted.text.contains(
+			"prepareStatement(\"\"\"\n        select \\\"Name\\\" from t where x = 'a\\tb'\n        \"\"\");"
+		),
+		"{}",
+		formatted.text
+	);
+	// A plain string can't take a line break: not a text block, not taken.
+	assert!(formatted.text.contains("prepareStatement(\"SELECT   1\")"));
+	assert!(formatted.warnings.is_empty(), "{:?}", formatted.warnings);
+}
+
+#[test]
+fn swift_strings_keep_their_escapes() {
+	// GRDB's strings are SQLite, which would unquote a plain `"Name"`.
+	let source = "func f() throws {\n    try db.execute(sql: \"\"\"\n        SELECT \\\"first name\\\" FROM t WHERE x = 'a\\tb'\n        \"\"\")\n    try conn.run(\"\"\"\n        SELECT   \\(x)\n        \"\"\")\n}\n";
+	let formatted = format_host(Host::Swift, SWIFT_SQL_QUERY, source);
+	assert!(
+		formatted.text.contains(
+			"sql: \"\"\"\n    select \\\"first name\\\" from t where x = 'a\\tb'\n    \"\"\")"
+		),
+		"{}",
+		formatted.text
+	);
+	// An interpolation is a hole in the SQL: skipped, without a word.
+	assert!(formatted.text.contains("SELECT   \\(x)"), "{}", formatted.text);
+	assert!(formatted.warnings.is_empty(), "{:?}", formatted.warnings);
+}
+
+#[test]
+fn rust_byte_and_c_strings_are_skipped() {
+	let source = "fn f() {\n    sqlx::query(b\"SELECT 1\n    FROM t\");\n    sqlx::query(c\"SELECT 2\n    FROM t\");\n}\n";
+	let formatted = format_host(Host::Rust, RUST_SQLX_QUERY, source);
+	assert_eq!(formatted.text, source);
+	assert!(formatted.warnings.is_empty(), "{:?}", formatted.warnings);
+}

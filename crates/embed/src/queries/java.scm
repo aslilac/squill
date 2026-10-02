@@ -1,17 +1,23 @@
 ; SQL in Java: text-block (`"""`) arguments of JDBC, JPA, and Spring
 ; `JdbcTemplate` calls.
 
-; The whole literal is captured, since the grammar has no node spanning
-; a text block's content, and one holding an escape is reported, not
-; rewritten. Neither property holds: text blocks take escapes, and the
-; capture can't tell a text block from a `"…"` string, which can't take
-; a line break.
+; A text block takes line breaks, and escapes, which squill reads and
+; writes back as they're spelled. A plain `"…"` string can't take a line
+; break, so it isn't taken.
 ((method_invocation
    name: (identifier) @_method
-   arguments: (argument_list (string_literal) @sql))
+   arguments: (argument_list (string_literal "\"\"\"") @sql))
  (#any-of? @_method
    "prepareStatement" "prepareCall" "executeQuery" "executeUpdate"
    "executeLargeUpdate" "execute" "addBatch"
    "createQuery" "createNativeQuery"
    "query" "queryForObject" "queryForList" "queryForMap"
-   "queryForRowSet" "queryForStream" "update" "batchUpdate"))
+   "queryForRowSet" "queryForStream" "update" "batchUpdate")
+ (#set! squill.escape "whitespace")
+ (#set! squill.escape "punctuation")
+ (#set! squill.escape "\\uXXXX")
+ (#set! squill.escape "\\NNN")
+ (#set! squill.multiline))
+
+; A string template's `\{…}` is SQL with a hole in it: skipped.
+(string_literal (string_interpolation)) @squill.skip

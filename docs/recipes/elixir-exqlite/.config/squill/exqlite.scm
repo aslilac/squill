@@ -1,11 +1,16 @@
 ; A string or ~S sigil passed to Exqlite.Sqlite3's execute/prepare.
-; A string with #{} interpolation or an escape has more than one
-; child, and never matches; ~s sigils interpolate too, so only ~S is
-; taken.
+; ~s sigils interpolate, so only ~S is taken.
+
+; A string's escapes are read and written back as they're spelled.
 ((call
    target: (dot right: (identifier) @_fn)
-   (arguments (string . (quoted_content) @sql .)))
- (#any-of? @_fn "execute" "prepare"))
+   (arguments (string) @sql))
+ (#any-of? @_fn "execute" "prepare")
+ (#set! squill.escape "whitespace")
+ (#set! squill.escape "punctuation")
+ (#set! squill.escape "\\xHH")
+ (#set! squill.escape "\\uXXXX")
+ (#set! squill.escape "\\u{XXXX}"))
 
 ; ~S takes no escapes.
 ((call
@@ -14,3 +19,6 @@
  (#eq? @_sigil "S")
  (#any-of? @_fn "execute" "prepare")
  (#set! squill.raw))
+
+; A string with #{} interpolation is SQL with a hole in it: skipped.
+(string (interpolation)) @squill.skip

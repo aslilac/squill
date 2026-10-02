@@ -72,3 +72,8 @@
  (#any-of? @_name "query" "query_as" "query_scalar")
  (#set! squill.raw)
  (#set! squill.multiline))
+
+; Byte (`b"…"`) and C (`c"…"`) strings aren't text, and a raw string
+; would lose the prefix: skipped.
+((string_literal "\"" @_open) @squill.skip
+ (#any-of? @_open "b\"" "c\""))

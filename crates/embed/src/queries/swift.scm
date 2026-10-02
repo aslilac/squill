@@ -1,13 +1,16 @@
-; SQL in Swift: multi-line (`"""`) string arguments. These take
-; escapes, so aren't `raw`; a string with a `\(…)` interpolation or an
-; escape has several content nodes, so the anchored `.` patterns below
-; never match it. Raw strings (`#"""`) aren't taken.
+; SQL in Swift: multi-line (`"""`) string arguments. These take line
+; breaks, and escapes, which squill reads and writes back as they're
+; spelled. Raw strings (`#"""`) aren't taken.
 
 ; GRDB: the argument labeled `sql:`, in SQLite.
 ((value_argument
    name: (value_argument_label (simple_identifier) @_label)
-   value: (multi_line_string_literal . (multi_line_str_text) @sql.sqlite .))
+   value: (multi_line_string_literal) @sql.sqlite)
  (#eq? @_label "sql")
+ (#set! squill.escape "whitespace")
+ (#set! squill.escape "punctuation")
+ (#set! squill.escape "\\u{XXXX}")
+ (#set! squill.escape "\\NNN")
  (#set! squill.multiline))
 
 ; The first, unlabeled argument of `run` / `execute` / `prepare` /
@@ -24,6 +27,16 @@
        .
        (value_argument
          !name
-         value: (multi_line_string_literal . (multi_line_str_text) @sql .)))))
+         value: (multi_line_string_literal) @sql))))
  (#any-of? @_fn "run" "execute" "prepare" "scalar" "query" "raw")
+ (#set! squill.escape "whitespace")
+ (#set! squill.escape "punctuation")
+ (#set! squill.escape "\\u{XXXX}")
+ (#set! squill.escape "\\NNN")
  (#set! squill.multiline))
+
+; Swift's escapes aren't `escape_sequence` nodes; these are.
+(str_escaped_char) @squill.escape
+
+; A `\(…)` interpolation is SQL with a hole in it: skipped.
+(multi_line_string_literal interpolation: (_)) @squill.skip
