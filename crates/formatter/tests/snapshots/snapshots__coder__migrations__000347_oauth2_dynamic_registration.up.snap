@@ -8,7 +8,8 @@ expression: formatted
 alter table oauth2_provider_apps
 	add column client_id_issued_at timestamptz default now(),
 	add column client_secret_expires_at timestamptz,
-	add column grant_types text[] default '{"authorization_code", "refresh_token"}',
+	add column grant_types text[]
+		default '{"authorization_code", "refresh_token"}',
 	add column response_types text[] default '{"code"}',
 	add column token_endpoint_auth_method text default 'client_secret_basic',
 	add column scope text default '',

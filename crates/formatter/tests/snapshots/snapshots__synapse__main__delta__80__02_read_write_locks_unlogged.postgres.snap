@@ -32,12 +32,7 @@ alter table worker_read_write_locks set unlogged;
 alter table worker_read_write_locks_mode set unlogged;
 
 alter table worker_read_write_locks_mode
-	add constraint worker_read_write_locks_mode_foreign foreign key (
-		lock_name,
-		lock_key,
-		token
-	) references worker_read_write_locks (
-		lock_name,
-		lock_key,
-		token
-	) deferrable initially deferred;
+	add constraint worker_read_write_locks_mode_foreign
+		foreign key (lock_name, lock_key, token)
+		references worker_read_write_locks (lock_name, lock_key, token) deferrable
+		initially deferred;

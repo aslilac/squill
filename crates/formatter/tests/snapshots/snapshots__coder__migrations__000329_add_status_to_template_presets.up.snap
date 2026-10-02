@@ -9,4 +9,5 @@ create type prebuild_status as enum (
 );
 
 alter table template_version_presets
-	add column prebuild_status prebuild_status not null default 'healthy'::prebuild_status;
+	add column prebuild_status prebuild_status not null
+		default 'healthy'::prebuild_status;

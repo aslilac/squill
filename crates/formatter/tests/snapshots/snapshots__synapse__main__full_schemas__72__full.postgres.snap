@@ -999,20 +999,15 @@ alter table only account_validity
 alter table only application_services_state
 	add constraint application_services_state_pkey primary key (as_id);
 alter table only application_services_txns
-	add constraint application_services_txns_as_id_txn_id_key unique (
-		as_id,
-		txn_id
-	);
+	add constraint application_services_txns_as_id_txn_id_key
+		unique (as_id, txn_id);
 alter table only appservice_stream_position
 	add constraint appservice_stream_position_lock_key unique (lock);
 alter table only current_state_events
 	add constraint current_state_events_event_id_key unique (event_id);
 alter table only current_state_events
-	add constraint current_state_events_room_id_type_state_key_key unique (
-		room_id,
-		type,
-		state_key
-	);
+	add constraint current_state_events_room_id_type_state_key_key
+		unique (room_id, type, state_key);
 alter table only dehydrated_devices
 	add constraint dehydrated_devices_pkey primary key (user_id);
 alter table only destination_rooms
@@ -1024,49 +1019,33 @@ alter table only devices
 alter table only e2e_device_keys_json
 	add constraint e2e_device_keys_json_uniqueness unique (user_id, device_id);
 alter table only e2e_fallback_keys_json
-	add constraint e2e_fallback_keys_json_uniqueness unique (
-		user_id,
-		device_id,
-		algorithm
-	);
+	add constraint e2e_fallback_keys_json_uniqueness
+		unique (user_id, device_id, algorithm);
 alter table only e2e_one_time_keys_json
-	add constraint e2e_one_time_keys_json_uniqueness unique (
-		user_id,
-		device_id,
-		algorithm,
-		key_id
-	);
+	add constraint e2e_one_time_keys_json_uniqueness
+		unique (user_id, device_id, algorithm, key_id);
 alter table only event_auth_chain_to_calculate
 	add constraint event_auth_chain_to_calculate_pkey primary key (event_id);
 alter table only event_auth_chains
 	add constraint event_auth_chains_pkey primary key (event_id);
 alter table only event_backward_extremities
-	add constraint event_backward_extremities_event_id_room_id_key unique (
-		event_id,
-		room_id
-	);
+	add constraint event_backward_extremities_event_id_room_id_key
+		unique (event_id, room_id);
 alter table only event_expiry
 	add constraint event_expiry_pkey primary key (event_id);
 alter table only event_forward_extremities
-	add constraint event_forward_extremities_event_id_room_id_key unique (
-		event_id,
-		room_id
-	);
+	add constraint event_forward_extremities_event_id_room_id_key
+		unique (event_id, room_id);
 alter table only event_push_actions
-	add constraint event_id_user_id_profile_tag_uniqueness unique (
-		room_id,
-		event_id,
-		user_id,
-		profile_tag
-	);
+	add constraint event_id_user_id_profile_tag_uniqueness
+		unique (room_id, event_id, user_id, profile_tag);
 alter table only event_json
 	add constraint event_json_event_id_key unique (event_id);
 alter table only event_labels
 	add constraint event_labels_pkey primary key (event_id, label);
 alter table only event_push_summary_last_receipt_stream_id
-	add constraint event_push_summary_last_receipt_stream_id_lock_key unique (
-		lock
-	);
+	add constraint event_push_summary_last_receipt_stream_id_lock_key
+		unique (lock);
 alter table only event_push_summary_stream_ordering
 	add constraint event_push_summary_stream_ordering_lock_key unique (lock);
 alter table only event_reports
@@ -1089,62 +1068,39 @@ alter table only partial_state_events
 alter table only partial_state_rooms
 	add constraint partial_state_rooms_pkey primary key (room_id);
 alter table only partial_state_rooms_servers
-	add constraint partial_state_rooms_servers_room_id_server_name_key unique (
-		room_id,
-		server_name
-	);
+	add constraint partial_state_rooms_servers_room_id_server_name_key
+		unique (room_id, server_name);
 alter table only presence add constraint presence_user_id_key unique (user_id);
 alter table only profiles add constraint profiles_user_id_key unique (user_id);
 alter table only push_rules_enable
 	add constraint push_rules_enable_pkey primary key (id);
 alter table only push_rules_enable
-	add constraint push_rules_enable_user_name_rule_id_key unique (
-		user_name,
-		rule_id
-	);
+	add constraint push_rules_enable_user_name_rule_id_key
+		unique (user_name, rule_id);
 alter table only push_rules add constraint push_rules_pkey primary key (id);
 alter table only push_rules
 	add constraint push_rules_user_name_rule_id_key unique (user_name, rule_id);
 alter table only pusher_throttle
 	add constraint pusher_throttle_pkey primary key (pusher, room_id);
 alter table only pushers
-	add constraint pushers2_app_id_pushkey_user_name_key unique (
-		app_id,
-		pushkey,
-		user_name
-	);
+	add constraint pushers2_app_id_pushkey_user_name_key
+		unique (app_id, pushkey, user_name);
 alter table only pushers add constraint pushers2_pkey primary key (id);
 alter table only receipts_graph
-	add constraint receipts_graph_uniqueness unique (
-		room_id,
-		receipt_type,
-		user_id
-	);
+	add constraint receipts_graph_uniqueness
+		unique (room_id, receipt_type, user_id);
 alter table only receipts_graph
-	add constraint receipts_graph_uniqueness_thread unique (
-		room_id,
-		receipt_type,
-		user_id,
-		thread_id
-	);
+	add constraint receipts_graph_uniqueness_thread
+		unique (room_id, receipt_type, user_id, thread_id);
 alter table only receipts_linearized
-	add constraint receipts_linearized_uniqueness unique (
-		room_id,
-		receipt_type,
-		user_id
-	);
+	add constraint receipts_linearized_uniqueness
+		unique (room_id, receipt_type, user_id);
 alter table only receipts_linearized
-	add constraint receipts_linearized_uniqueness_thread unique (
-		room_id,
-		receipt_type,
-		user_id,
-		thread_id
-	);
+	add constraint receipts_linearized_uniqueness_thread
+		unique (room_id, receipt_type, user_id, thread_id);
 alter table only received_transactions
-	add constraint received_transactions_transaction_id_origin_key unique (
-		transaction_id,
-		origin
-	);
+	add constraint received_transactions_transaction_id_origin_key
+		unique (transaction_id, origin);
 alter table only redactions
 	add constraint redactions_event_id_key unique (event_id);
 alter table only refresh_tokens
@@ -1156,16 +1112,11 @@ alter table only registration_tokens
 alter table only rejections
 	add constraint rejections_event_id_key unique (event_id);
 alter table only remote_media_cache
-	add constraint remote_media_cache_media_origin_media_id_key unique (
-		media_origin,
-		media_id
-	);
+	add constraint remote_media_cache_media_origin_media_id_key
+		unique (media_origin, media_id);
 alter table only room_account_data
-	add constraint room_account_data_uniqueness unique (
-		user_id,
-		room_id,
-		account_data_type
-	);
+	add constraint room_account_data_uniqueness
+		unique (user_id, room_id, account_data_type);
 alter table only room_aliases
 	add constraint room_aliases_room_alias_key unique (room_alias);
 alter table only room_depth
@@ -1182,21 +1133,14 @@ alter table only room_tags
 	add constraint room_tag_uniqueness unique (user_id, room_id, tag);
 alter table only rooms add constraint rooms_pkey primary key (room_id);
 alter table only server_keys_json
-	add constraint server_keys_json_uniqueness unique (
-		server_name,
-		key_id,
-		from_server
-	);
+	add constraint server_keys_json_uniqueness
+		unique (server_name, key_id, from_server);
 alter table only server_signature_keys
-	add constraint server_signature_keys_server_name_key_id_key unique (
-		server_name,
-		key_id
-	);
+	add constraint server_signature_keys_server_name_key_id_key
+		unique (server_name, key_id);
 alter table only sessions
-	add constraint sessions_session_type_session_id_key unique (
-		session_type,
-		session_id
-	);
+	add constraint sessions_session_type_session_id_key
+		unique (session_type, session_id);
 alter table only state_events
 	add constraint state_events_event_id_key unique (event_id);
 alter table only stats_incremental_position
@@ -1206,25 +1150,18 @@ alter table only threepid_validation_session
 alter table only threepid_validation_token
 	add constraint threepid_validation_token_pkey primary key (token);
 alter table only ui_auth_sessions_credentials
-	add constraint ui_auth_sessions_credentials_session_id_stage_type_key unique (
-		session_id,
-		stage_type
-	);
+	add constraint ui_auth_sessions_credentials_session_id_stage_type_key
+		unique (session_id, stage_type);
 alter table only ui_auth_sessions_ips
-	add constraint ui_auth_sessions_ips_session_id_ip_user_agent_key unique (
-		session_id,
-		ip,
-		user_agent
-	);
+	add constraint ui_auth_sessions_ips_session_id_ip_user_agent_key
+		unique (session_id, ip, user_agent);
 alter table only ui_auth_sessions
 	add constraint ui_auth_sessions_session_id_key unique (session_id);
 alter table only user_directory_stream_pos
 	add constraint user_directory_stream_pos_lock_key unique (lock);
 alter table only user_external_ids
-	add constraint user_external_ids_auth_provider_external_id_key unique (
-		auth_provider,
-		external_id
-	);
+	add constraint user_external_ids_auth_provider_external_id_key
+		unique (auth_provider, external_id);
 alter table only user_stats_current
 	add constraint user_stats_current_pkey primary key (user_id);
 alter table only users add constraint users_name_key unique (name);
@@ -1661,61 +1598,48 @@ create trigger check_partial_state_events
 	for each row
 	execute procedure check_partial_state_events();
 alter table only access_tokens
-	add constraint access_tokens_refresh_token_id_fkey foreign key (
-		refresh_token_id
-	) references refresh_tokens (id) on delete cascade;
+	add constraint access_tokens_refresh_token_id_fkey
+		foreign key (refresh_token_id) references refresh_tokens (id)
+		on delete cascade;
 alter table only destination_rooms
-	add constraint destination_rooms_destination_fkey foreign key (
-		destination
-	) references destinations (destination);
+	add constraint destination_rooms_destination_fkey foreign key (destination)
+		references destinations (destination);
 alter table only destination_rooms
-	add constraint destination_rooms_room_id_fkey foreign key (
-		room_id
-	) references rooms (room_id);
+	add constraint destination_rooms_room_id_fkey foreign key (room_id)
+		references rooms (room_id);
 alter table only event_edges
-	add constraint event_edges_event_id_fkey foreign key (
-		event_id
-	) references events (event_id);
+	add constraint event_edges_event_id_fkey foreign key (event_id)
+		references events (event_id);
 alter table only event_txn_id
-	add constraint event_txn_id_event_id_fkey foreign key (
-		event_id
-	) references events (event_id) on delete cascade;
+	add constraint event_txn_id_event_id_fkey foreign key (event_id)
+		references events (event_id) on delete cascade;
 alter table only event_txn_id
-	add constraint event_txn_id_token_id_fkey foreign key (
-		token_id
-	) references access_tokens (id) on delete cascade;
+	add constraint event_txn_id_token_id_fkey foreign key (token_id)
+		references access_tokens (id) on delete cascade;
 alter table only partial_state_events
-	add constraint partial_state_events_event_id_fkey foreign key (
-		event_id
-	) references events (event_id);
+	add constraint partial_state_events_event_id_fkey foreign key (event_id)
+		references events (event_id);
 alter table only partial_state_events
-	add constraint partial_state_events_room_id_fkey foreign key (
-		room_id
-	) references partial_state_rooms (room_id);
+	add constraint partial_state_events_room_id_fkey foreign key (room_id)
+		references partial_state_rooms (room_id);
 alter table only partial_state_rooms
-	add constraint partial_state_rooms_room_id_fkey foreign key (
-		room_id
-	) references rooms (room_id);
+	add constraint partial_state_rooms_room_id_fkey foreign key (room_id)
+		references rooms (room_id);
 alter table only partial_state_rooms_servers
-	add constraint partial_state_rooms_servers_room_id_fkey foreign key (
-		room_id
-	) references partial_state_rooms (room_id);
+	add constraint partial_state_rooms_servers_room_id_fkey foreign key (room_id)
+		references partial_state_rooms (room_id);
 alter table only refresh_tokens
-	add constraint refresh_tokens_next_token_id_fkey foreign key (
-		next_token_id
-	) references refresh_tokens (id) on delete cascade;
+	add constraint refresh_tokens_next_token_id_fkey foreign key (next_token_id)
+		references refresh_tokens (id) on delete cascade;
 alter table only ui_auth_sessions_credentials
-	add constraint ui_auth_sessions_credentials_session_id_fkey foreign key (
-		session_id
-	) references ui_auth_sessions (session_id);
+	add constraint ui_auth_sessions_credentials_session_id_fkey
+		foreign key (session_id) references ui_auth_sessions (session_id);
 alter table only ui_auth_sessions_ips
-	add constraint ui_auth_sessions_ips_session_id_fkey foreign key (
-		session_id
-	) references ui_auth_sessions (session_id);
+	add constraint ui_auth_sessions_ips_session_id_fkey foreign key (session_id)
+		references ui_auth_sessions (session_id);
 alter table only users_to_send_full_presence_to
-	add constraint users_to_send_full_presence_to_user_id_fkey foreign key (
-		user_id
-	) references users (name);
+	add constraint users_to_send_full_presence_to_user_id_fkey
+		foreign key (user_id) references users (name);
 insert into appservice_stream_position values ('X', 0);
 insert into event_push_summary_last_receipt_stream_id values ('X', 0);
 insert into event_push_summary_stream_ordering values ('X', 0);

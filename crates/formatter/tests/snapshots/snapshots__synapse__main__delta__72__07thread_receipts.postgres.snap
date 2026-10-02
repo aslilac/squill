@@ -26,17 +26,9 @@ alter table receipts_graph add column thread_id text;
 
 -- Rebuild the unique constraint with the thread_id.
 alter table receipts_linearized
-	add constraint receipts_linearized_uniqueness_thread unique (
-		room_id,
-		receipt_type,
-		user_id,
-		thread_id
-	);
+	add constraint receipts_linearized_uniqueness_thread
+		unique (room_id, receipt_type, user_id, thread_id);
 
 alter table receipts_graph
-	add constraint receipts_graph_uniqueness_thread unique (
-		room_id,
-		receipt_type,
-		user_id,
-		thread_id
-	);
+	add constraint receipts_graph_uniqueness_thread
+		unique (room_id, receipt_type, user_id, thread_id);

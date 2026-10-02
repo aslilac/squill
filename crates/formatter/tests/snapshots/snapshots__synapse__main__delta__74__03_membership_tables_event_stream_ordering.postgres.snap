@@ -25,18 +25,15 @@ expression: formatted
 
 alter table current_state_events add column event_stream_ordering bigint;
 alter table current_state_events
-	add constraint event_stream_ordering_fkey foreign key (
-		event_stream_ordering
-	) references events (stream_ordering) not valid;
+	add constraint event_stream_ordering_fkey foreign key (event_stream_ordering)
+		references events (stream_ordering) not valid;
 
 alter table local_current_membership add column event_stream_ordering bigint;
 alter table local_current_membership
-	add constraint event_stream_ordering_fkey foreign key (
-		event_stream_ordering
-	) references events (stream_ordering) not valid;
+	add constraint event_stream_ordering_fkey foreign key (event_stream_ordering)
+		references events (stream_ordering) not valid;
 
 alter table room_memberships add column event_stream_ordering bigint;
 alter table room_memberships
-	add constraint event_stream_ordering_fkey foreign key (
-		event_stream_ordering
-	) references events (stream_ordering) not valid;
+	add constraint event_stream_ordering_fkey foreign key (event_stream_ordering)
+		references events (stream_ordering) not valid;

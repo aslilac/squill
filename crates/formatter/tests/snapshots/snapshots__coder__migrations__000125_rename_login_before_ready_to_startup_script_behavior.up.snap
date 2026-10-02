@@ -7,7 +7,8 @@ create type startup_script_behavior as enum (
 	'non-blocking'
 );
 alter table workspace_agents
-	add column startup_script_behavior startup_script_behavior not null default 'non-blocking';
+	add column startup_script_behavior startup_script_behavior not null
+		default 'non-blocking';
 
 update workspace_agents
 set

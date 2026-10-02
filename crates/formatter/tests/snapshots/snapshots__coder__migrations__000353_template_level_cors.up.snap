@@ -8,7 +8,8 @@ create type cors_behavior as enum (
 );
 
 alter table templates
-	add column cors_behavior cors_behavior not null default 'simple'::cors_behavior;
+	add column cors_behavior cors_behavior not null
+		default 'simple'::cors_behavior;
 
 -- Update the template_with_users view by recreating it.
 drop view if exists template_with_names;

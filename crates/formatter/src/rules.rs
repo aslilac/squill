@@ -644,7 +644,10 @@ impl Lowerer {
 	}
 
 	/// `ALTER TABLE name` head, then each action on its own (indented)
-	/// soft line, commas attached to the preceding action.
+	/// soft line, commas attached to the preceding action. An overlong
+	/// `add` action wraps before its constraint keywords (`foreign` /
+	/// `references` / `unique` / ...), as a column definition does, so
+	/// exploding a paren list is the last resort.
 	fn alter_flow(&mut self, docs: &mut Vec<Doc>, node: &SyntaxNode) {
 		const ACTION_KWS: &[&str] = &[
 			"add", "drop", "alter", "rename", "validate", "owner", "set", "reset",
@@ -653,9 +656,32 @@ impl Lowerer {
 			// `ALTER DEFAULT PRIVILEGES ... GRANT | REVOKE ...`
 			"grant", "revoke",
 		];
+		let elements: Vec<SyntaxElement> = node.children_with_tokens().collect();
+		let words: Vec<(usize, String)> = elements
+			.iter()
+			.enumerate()
+			.filter_map(|(at, element)| match element {
+				SyntaxElement::Token(token) if token.kind() == SyntaxKind::Ident => {
+					Some((at, token.text().to_ascii_lowercase()))
+				}
+				_ => None,
+			})
+			.collect();
+		let wrap_points = constraint_starts(&words);
 		let mut head: Vec<Doc> = Vec::new();
-		let mut segments: Vec<Vec<Doc>> = Vec::new();
+		// Each action is a run of parts, split at its wrap points, then
+		// whatever trails its comma (a comment).
+		struct Action {
+			parts: Vec<Vec<Doc>>,
+			tail: Vec<Doc>,
+		}
+		let new_action = || Action { parts: vec![Vec::new()], tail: Vec::new() };
+		let mut segments: Vec<Action> = Vec::new();
 		let mut head_tokens = 0usize;
+		// Only `add` actions wrap, and never right after the `add`: in
+		// `add constraint` / `add unique` the keyword names the action.
+		let mut wraps = false;
+		let mut segment_tokens = 0usize;
 		let mut first = true;
 		let mut tight = false;
 		let mut semicolon = false;
@@ -664,7 +690,7 @@ impl Lowerer {
 		// Commas separate actions — except in a GRANT / REVOKE action,
 		// where they separate privileges.
 		let mut comma_splits = true;
-		for element in node.children_with_tokens() {
+		for (at, &element) in elements.iter().enumerate() {
 			// Transitions first, so the borrow below targets the right vec.
 			if let SyntaxElement::Token(token) = element
 				&& !token.kind().is_trivia()
@@ -677,14 +703,19 @@ impl Lowerer {
 					comma_splits = !["grant", "revoke"]
 						.iter()
 						.any(|kw| token.text().eq_ignore_ascii_case(kw));
-					segments.push(Vec::new());
+					segments.push(new_action());
+					wraps = token.text().eq_ignore_ascii_case("add");
+					segment_tokens = 0;
 					first = true;
 					tight = false;
 				} else if !segments.is_empty()
 					&& comma_splits
 					&& token.kind() == SyntaxKind::Comma
 				{
-					let current = segments.last_mut().expect("segment open");
+					let current = segments
+						.last_mut()
+						.and_then(|action| action.parts.last_mut())
+						.expect("segment open");
 					self.push(current, text(","));
 					// Start the next segment lazily so a trailing comment
 					// after the comma stays with this action.
@@ -692,12 +723,28 @@ impl Lowerer {
 					continue;
 				} else if pending_segment {
 					pending_segment = false;
-					segments.push(Vec::new());
+					segments.push(new_action());
+					wraps = token.text().eq_ignore_ascii_case("add");
+					segment_tokens = 0;
+					first = true;
+					tight = false;
+				} else if wraps && segment_tokens >= 2 && wrap_points.contains(&at) {
+					let action = segments.last_mut().expect("segment open");
+					action.parts.push(Vec::new());
 					first = true;
 					tight = false;
 				}
+				segment_tokens += 1;
 			}
-			let current = segments.last_mut().unwrap_or(&mut head);
+			// A comment after an action's comma stays out of its parts,
+			// so it never decides where the action wraps.
+			let current = segments
+				.last_mut()
+				.and_then(|action| match pending_segment {
+					true => Some(&mut action.tail),
+					false => action.parts.last_mut(),
+				})
+				.unwrap_or(&mut head);
 			match element {
 				// Trivia after the `;` (a trailing comment) waits for it:
 				// the `;` is placed last, below.
@@ -766,12 +813,28 @@ impl Lowerer {
 		docs.extend(head);
 		if !segments.is_empty() {
 			let mut actions = Vec::new();
-			for segment in segments {
-				if segment.is_empty() {
+			for Action { mut parts, tail } in segments {
+				if parts.iter().all(Vec::is_empty) && tail.is_empty() {
 					continue;
 				}
 				actions.push(soft_line_or_space());
-				actions.extend(segment);
+				if parts.len() == 1 {
+					actions.append(&mut parts[0]);
+				} else {
+					// Continuation lines indent; the action's first line
+					// (and any comment above it) does not.
+					let mut items = Vec::with_capacity(parts.len() * 2 - 1);
+					for (at, part) in parts.into_iter().enumerate() {
+						if at == 0 {
+							items.push(concat(part));
+						} else {
+							items.push(indent(soft_line_or_space()));
+							items.push(indent(concat(part)));
+						}
+					}
+					actions.push(fill(items));
+				}
+				actions.extend(tail);
 			}
 			docs.push(indent(concat(actions)));
 		}
@@ -2175,21 +2238,6 @@ impl Lowerer {
 	/// break taken only when its line overflows), so exploding a paren
 	/// list is the last resort, not the first.
 	fn column_def(&mut self, node: &SyntaxNode) -> Doc {
-		const STARTERS: &[&str] = &[
-			"references",
-			"constraint",
-			"unique",
-			"primary",
-			"foreign",
-			"check",
-			"default",
-			"generated",
-			"collate",
-			"deferrable",
-			"initially",
-			"not",
-			"on",
-		];
 		let mut elements: Vec<SyntaxElement> =
 			node.children_with_tokens().collect();
 		// Constraints land in canonical order: COLLATE, NOT NULL, the
@@ -2227,27 +2275,7 @@ impl Lowerer {
 				_ => None,
 			})
 			.collect();
-		let mut segment_starts: Vec<usize> = Vec::new();
-		for (word_at, (element_at, word)) in words.iter().enumerate() {
-			if word_at == 0 || !STARTERS.contains(&word.as_str()) {
-				continue;
-			}
-			let prev = &words[word_at - 1].1;
-			let next = words.get(word_at + 1).map(|(_, w)| w.as_str());
-			let starts = match word.as_str() {
-				// `generated by default`: not the DEFAULT clause.
-				"default" => prev != "by",
-				// `not null` / `not deferrable`, but never `nulls not
-				// distinct` or a NOT inside some other phrase.
-				"not" => matches!(next, Some("null" | "deferrable")) && prev != "nulls",
-				// Foreign-key actions only.
-				"on" => matches!(next, Some("delete" | "update")),
-				_ => true,
-			};
-			if starts {
-				segment_starts.push(*element_at);
-			}
-		}
+		let segment_starts = constraint_starts(&words);
 
 		// Leading trivia stays outside the fill's indent region — a
 		// comment's newline there would re-indent every following line.
@@ -2808,6 +2836,49 @@ impl ListJoiner {
 /// The line break before a statement in a PL/pgSQL body: a fresh line
 /// (a trailing comment may already have ended the previous one), and a
 /// blank line too where the author left one.
+/// The elements (by index) where a constraint clause starts, given an
+/// item's significant words: the points a column definition or an ALTER
+/// `add` action may wrap at. Never the item's first word.
+fn constraint_starts(words: &[(usize, String)]) -> Vec<usize> {
+	const STARTERS: &[&str] = &[
+		"references",
+		"constraint",
+		"unique",
+		"primary",
+		"foreign",
+		"check",
+		"default",
+		"generated",
+		"collate",
+		"deferrable",
+		"initially",
+		"not",
+		"on",
+	];
+	let mut starts = Vec::new();
+	for (word_at, (element_at, word)) in words.iter().enumerate() {
+		if word_at == 0 || !STARTERS.contains(&word.as_str()) {
+			continue;
+		}
+		let prev = &words[word_at - 1].1;
+		let next = words.get(word_at + 1).map(|(_, w)| w.as_str());
+		let is_start = match word.as_str() {
+			// `generated by default`: not the DEFAULT clause.
+			"default" => prev != "by",
+			// `not null` / `not deferrable`, but never `nulls not
+			// distinct` or a NOT inside some other phrase.
+			"not" => matches!(next, Some("null" | "deferrable")) && prev != "nulls",
+			// Foreign-key actions only.
+			"on" => matches!(next, Some("delete" | "update")),
+			_ => true,
+		};
+		if is_start {
+			starts.push(*element_at);
+		}
+	}
+	starts
+}
+
 fn statement_break(blank: bool) -> Doc {
 	if blank { concat([fresh_line(), hard_line()]) } else { fresh_line() }
 }

@@ -23,5 +23,5 @@ expression: formatted
 -- covers instances that haven't been upgraded yet, which insert without the
 -- column, and is what lets the column be NOT NULL during a rolling upgrade.
 alter table state_groups_persisting
-	add column inserted_ts bigint not null default extract(epoch from now())
-		* 1000;
+	add column inserted_ts bigint not null
+		default extract(epoch from now()) * 1000;

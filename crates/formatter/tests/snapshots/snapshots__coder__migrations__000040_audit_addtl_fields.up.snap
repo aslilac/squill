@@ -4,7 +4,8 @@ expression: formatted
 ---
 alter table audit_logs
 	add column additional_fields jsonb not null default '{}'::jsonb,
-	add column request_id uuid not null default '00000000-0000-0000-0000-000000000000'::uuid,
+	add column request_id uuid not null
+		default '00000000-0000-0000-0000-000000000000'::uuid,
 	add column resource_icon text not null default '';
 
 alter table audit_logs

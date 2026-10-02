@@ -108,12 +108,7 @@ create unique index if not exists worker_read_write_locks_write
 alter table worker_read_write_locks_mode
 	drop constraint if exists worker_read_write_locks_mode_foreign;
 alter table worker_read_write_locks_mode
-	add constraint worker_read_write_locks_mode_foreign foreign key (
-		lock_name,
-		lock_key,
-		token
-	) references worker_read_write_locks (
-		lock_name,
-		lock_key,
-		token
-	) deferrable initially deferred;
+	add constraint worker_read_write_locks_mode_foreign
+		foreign key (lock_name, lock_key, token)
+		references worker_read_write_locks (lock_name, lock_key, token) deferrable
+		initially deferred;

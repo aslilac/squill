@@ -18,6 +18,5 @@ expression: formatted
  */
 
 alter table user_filters
-	add constraint full_user_id_not_null check (
-		full_user_id is not null
-	) not valid;
+	add constraint full_user_id_not_null
+		check (full_user_id is not null) not valid;

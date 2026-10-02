@@ -9,10 +9,8 @@ alter table workspace_builds
 	add constraint workspace_builds_id_workspace_id_key unique (id, workspace_id);
 
 alter table template_version_presets
-	add constraint template_version_presets_id_template_version_id_key unique (
-		id,
-		template_version_id
-	);
+	add constraint template_version_presets_id_template_version_id_key
+		unique (id, template_version_id);
 
 create table workspace_build_orchestrations (
 	id uuid not null primary key,

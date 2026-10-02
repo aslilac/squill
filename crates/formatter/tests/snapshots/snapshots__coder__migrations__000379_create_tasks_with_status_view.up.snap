@@ -19,10 +19,8 @@ alter table task_workspace_apps
 	alter column workspace_build_number set not null,
 	alter column workspace_agent_id drop not null,
 	alter column workspace_app_id drop not null,
-	add constraint task_workspace_apps_pkey primary key (
-		task_id,
-		workspace_build_number
-	);
+	add constraint task_workspace_apps_pkey
+		primary key (task_id, workspace_build_number);
 
 -- Add indexes for common joins or filters.
 create index if not exists tasks_workspace_id_idx on tasks (workspace_id);

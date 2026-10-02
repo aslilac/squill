@@ -6,9 +6,8 @@ expression: formatted
 alter table telemetry_locks
 	drop constraint telemetry_lock_event_type_constraint;
 alter table telemetry_locks
-	add constraint telemetry_lock_event_type_constraint check (
-		event_type in ('aibridge_interceptions_summary')
-	);
+	add constraint telemetry_lock_event_type_constraint
+		check (event_type in ('aibridge_interceptions_summary'));
 
 drop table boundary_usage_stats;
 

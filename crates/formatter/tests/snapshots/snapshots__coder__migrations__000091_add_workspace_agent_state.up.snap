@@ -12,7 +12,8 @@ create type workspace_agent_lifecycle_state as enum (
 
 -- Set all existing workspace agents to 'ready' so that only newly created agents will be in the 'created' state.
 alter table workspace_agents
-	add column lifecycle_state workspace_agent_lifecycle_state not null default 'ready';
+	add column lifecycle_state workspace_agent_lifecycle_state not null
+		default 'ready';
 -- Change the default for newly created agents.
 alter table workspace_agents alter column lifecycle_state set default 'created';
 

@@ -6,8 +6,7 @@ alter table template_version_parameters
 	add column validation_monotonic text not null default '';
 
 alter table template_version_parameters
-	add constraint validation_monotonic_order check (
-		validation_monotonic in ('increasing', 'decreasing', '')
-	);
+	add constraint validation_monotonic_order
+		check (validation_monotonic in ('increasing', 'decreasing', ''));
 
 comment on column template_version_parameters.validation_monotonic is 'Validation: consecutive values preserve the monotonic order';

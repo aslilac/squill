@@ -23,9 +23,8 @@ expression: formatted
 -- We initially add an invalid constraint which guards against new data (this
 -- doesn't lock the table).
 alter table event_push_actions
-	add constraint event_push_actions_thread_id check (
-		thread_id is not null
-	) not valid;
+	add constraint event_push_actions_thread_id
+		check (thread_id is not null) not valid;
 
 -- We then validate the constraint which doesn't need to worry about new data. It
 -- only needs a SHARE UPDATE EXCLUSIVE lock but can still take a while to complete.

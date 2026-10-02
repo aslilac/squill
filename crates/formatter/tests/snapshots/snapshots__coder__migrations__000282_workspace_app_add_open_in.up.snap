@@ -9,4 +9,5 @@ create type workspace_app_open_in as enum (
 );
 
 alter table workspace_apps
-	add column open_in workspace_app_open_in not null default 'slim-window'::workspace_app_open_in;
+	add column open_in workspace_app_open_in not null
+		default 'slim-window'::workspace_app_open_in;

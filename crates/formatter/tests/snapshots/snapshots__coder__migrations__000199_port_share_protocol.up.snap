@@ -8,4 +8,5 @@ create type port_share_protocol as enum (
 );
 
 alter table workspace_agent_port_share
-	add column protocol port_share_protocol not null default 'http'::port_share_protocol;
+	add column protocol port_share_protocol not null
+		default 'http'::port_share_protocol;

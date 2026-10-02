@@ -12,9 +12,8 @@ alter table workspace_builds
 	add column ai_tasks_sidebar_app_id uuid default null;
 
 alter table workspace_builds
-	add constraint workspace_builds_ai_tasks_sidebar_app_id_fkey foreign key (
-		ai_tasks_sidebar_app_id
-	) references workspace_apps (id);
+	add constraint workspace_builds_ai_tasks_sidebar_app_id_fkey
+		foreign key (ai_tasks_sidebar_app_id) references workspace_apps (id);
 
 -- Determines if a coder_ai_task resource is defined in a template version.
 alter table template_versions

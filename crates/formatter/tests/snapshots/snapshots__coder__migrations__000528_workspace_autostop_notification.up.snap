@@ -29,7 +29,8 @@ from (
 comment on view template_with_names is 'Joins in the display name information such as username, avatar, and organization name.';
 
 alter table workspace_builds
-	add column notified_autostop_deadline timestamptz default '0001-01-01 00:00:00+00' not null;
+	add column notified_autostop_deadline timestamptz
+		default '0001-01-01 00:00:00+00' not null;
 
 comment on column workspace_builds.notified_autostop_deadline is 'The autostop deadline value that an autostop reminder notification was last sent for. Used for idempotence: when it equals the build deadline the reminder has already been sent, and it re-arms automatically when the deadline changes.';
 

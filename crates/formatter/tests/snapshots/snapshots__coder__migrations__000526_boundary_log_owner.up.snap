@@ -13,6 +13,5 @@ from boundary_sessions bs
 where bl.session_id = bs.id and bs.owner_id is not null;
 
 alter table boundary_logs
-	add constraint boundary_logs_owner_id_fkey foreign key (
-		owner_id
-	) references users (id) on delete set null;
+	add constraint boundary_logs_owner_id_fkey foreign key (owner_id)
+		references users (id) on delete set null;

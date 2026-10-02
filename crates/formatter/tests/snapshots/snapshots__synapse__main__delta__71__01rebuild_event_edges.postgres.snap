@@ -32,9 +32,8 @@ alter table event_edges
 	alter room_id drop not null,
 	alter is_state set default false,
 	drop constraint if exists event_edges_event_id_prev_event_id_room_id_is_state_key,
-	add constraint event_edges_event_id_fkey foreign key (
-		event_id
-	) references events (event_id) not valid;
+	add constraint event_edges_event_id_fkey foreign key (event_id)
+		references events (event_id) not valid;
 
 -- In the background, we drop any rows with is_state=True. These may have been
 -- added a long time ago, but they are no longer used.

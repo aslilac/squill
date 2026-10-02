@@ -50,9 +50,8 @@ create table refresh_tokens (
 
 -- Add a reference to the refresh token generated alongside each access token
 alter table access_tokens
-	add column refresh_token_id bigint references refresh_tokens (
-		id
-	) on delete cascade;
+	add column refresh_token_id bigint references refresh_tokens (id)
+		on delete cascade;
 
 -- Add a flag whether the token was already used or not
 alter table access_tokens add column used boolean;

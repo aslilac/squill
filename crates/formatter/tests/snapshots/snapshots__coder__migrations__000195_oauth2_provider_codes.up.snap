@@ -102,7 +102,6 @@ where secret_prefix is null;
 
 alter table only oauth2_provider_app_secrets
 	alter column secret_prefix set not null,
-	add constraint oauth2_provider_app_secrets_secret_prefix_key unique (
-		secret_prefix
-	),
+	add constraint oauth2_provider_app_secrets_secret_prefix_key
+		unique (secret_prefix),
 	drop constraint if exists oauth2_provider_app_secrets_app_id_hashed_secret_key;
