@@ -21,7 +21,7 @@
 //!   already spans lines is formatted) and `squill.raw` (no backslash
 //!   escapes; unpromised, a string holding a backslash is left alone).
 //!   A string that takes escapes says which with `squill.escape`
-//!   (`"whitespace"`, `"\xHH"`, …, see [`escapes`]); the grammar's
+//!   (`"whitespace"`, `"\xHH"`, …; see `escapes.rs`); the grammar's
 //!   `escape_sequence` nodes, and `@squill.escape` captures, say where
 //!   they are. Each is read to read the SQL and written back as it was
 //!   spelled. `squill.promote-to-raw-syntax` names raw syntaxes a string
@@ -497,303 +497,45 @@ pub mod wasm {
 	}
 }
 
-/// Default extraction query for Rust: the string-literal argument of
-/// sqlx's `query!` / `query_as!` / `query_scalar!` / `query_unchecked!`
-/// macros, and the first argument of its `query` / `query_as` /
-/// `query_scalar` functions (any path whose last segment matches).
+/// The default query for Rust: `queries/rust.scm`.
 #[cfg(feature = "rust")]
-pub const RUST_SQLX_QUERY: &str = r#"
-((macro_invocation
-   macro: [
-     (identifier) @_name
-     (scoped_identifier name: (identifier) @_name)
-   ]
-   (token_tree
-     [(string_literal) (raw_string_literal)] @sql))
- (#any-of? @_name "query" "query_as" "query_scalar" "query_unchecked"))
+pub const RUST_SQLX_QUERY: &str = include_str!("queries/rust.scm");
 
-((call_expression
-   function: [
-     (identifier) @_name
-     (scoped_identifier name: (identifier) @_name)
-     (generic_function function: [
-       (identifier) @_name
-       (scoped_identifier name: (identifier) @_name)
-     ])
-   ]
-   arguments: (arguments . [(string_literal) (raw_string_literal)] @sql))
- (#any-of? @_name "query" "query_as" "query_scalar"))
-"#;
-
-/// Default extraction query for Go: string arguments of `.Query`-family
-/// method calls (`database/sql` style).
+/// The default query for Go: `queries/go.scm`.
 #[cfg(feature = "go")]
-pub const GO_DB_QUERY: &str = r#"
-((call_expression
-   function: (selector_expression field: (field_identifier) @_method)
-   arguments: (argument_list
-     [(raw_string_literal) (interpreted_string_literal)] @sql))
- (#any-of? @_method
-   "Query" "QueryRow" "Exec"
-   "QueryContext" "QueryRowContext" "ExecContext"))
-"#;
+pub const GO_DB_QUERY: &str = include_str!("queries/go.scm");
 
-/// Default extraction query for Python: the first string argument of
-/// `.execute`-family method calls (sqlite3 / psycopg / asyncpg style)
-/// and of SQLAlchemy's `text(...)`.
+/// The default query for Python: `queries/python.scm`.
 #[cfg(feature = "python")]
-pub const PYTHON_DB_QUERY: &str = r#"
-((call
-   function: (attribute attribute: (identifier) @_method)
-   arguments: (argument_list . (string) @sql))
- (#any-of? @_method
-   "execute" "executemany" "executescript"
-   "fetch" "fetchrow" "fetchval"))
+pub const PYTHON_DB_QUERY: &str = include_str!("queries/python.scm");
 
-((call
-   function: (identifier) @_fn
-   arguments: (argument_list . (string) @sql))
- (#eq? @_fn "text"))
-"#;
-
-/// Default extraction query for JavaScript/TypeScript: the first string
-/// or template-literal argument of `.query` / `.execute` / `.prepare`
-/// method calls (pg, mysql2, better-sqlite3 style), plus `sql`-tagged
-/// template literals (postgres.js style). TypeScript reads a generic call
-/// right after `await` (`await pool.query<Row>(…)`) as a call of the whole
-/// `await` expression, so that shape is matched too.
+/// The default query for JavaScript and TypeScript: `queries/javascript.scm`.
 #[cfg(any(feature = "javascript", feature = "typescript"))]
-pub const JS_SQL_QUERY: &str = r#"
-((call_expression
-   function: [
-     (member_expression property: (property_identifier) @_method)
-     (await_expression
-       (member_expression property: (property_identifier) @_method))
-   ]
-   arguments: (arguments . [(string) (template_string)] @sql))
- (#any-of? @_method "query" "execute" "prepare"))
+pub const JS_SQL_QUERY: &str = include_str!("queries/javascript.scm");
 
-((call_expression
-   function: (identifier) @_tag
-   arguments: (template_string) @sql)
- (#eq? @_tag "sql"))
-"#;
-
-/// Default extraction query for Gleam: the first string argument of
-/// `query` / `exec` / `execute` calls, module-qualified (`sqlight.query`,
-/// `pog.query`) or bare, or a string piped into one (`"…" |> pog.query`,
-/// `"…" |> sqlight.query(on: db)`). `sqlight` is a SQLite library, so its
-/// calls carry that dialect; everything else uses the session dialect.
+/// The default query for Gleam: `queries/gleam.scm`.
 #[cfg(feature = "gleam")]
-pub const GLEAM_SQL_QUERY: &str = r#"
-((function_call
-   function: (field_access record: (identifier) @_mod field: (label) @_fn)
-   arguments: (arguments . (argument value: (string) @sql.sqlite)))
- (#eq? @_mod "sqlight")
- (#any-of? @_fn "query" "exec" "execute"))
+pub const GLEAM_SQL_QUERY: &str = include_str!("queries/gleam.scm");
 
-((function_call
-   function: (field_access record: (identifier) @_mod field: (label) @_fn)
-   arguments: (arguments . (argument value: (string) @sql)))
- (#not-eq? @_mod "sqlight")
- (#any-of? @_fn "query" "exec" "execute"))
-
-((function_call
-   function: (identifier) @_fn
-   arguments: (arguments . (argument value: (string) @sql)))
- (#any-of? @_fn "query" "exec" "execute"))
-
-((binary_expression
-   left: (string) @sql.sqlite
-   operator: "|>"
-   right: [
-     (field_access record: (identifier) @_mod field: (label) @_fn)
-     (function_call
-       function: (field_access record: (identifier) @_mod field: (label) @_fn))
-   ])
- (#eq? @_mod "sqlight")
- (#any-of? @_fn "query" "exec" "execute"))
-
-((binary_expression
-   left: (string) @sql
-   operator: "|>"
-   right: [
-     (field_access record: (identifier) @_mod field: (label) @_fn)
-     (function_call
-       function: (field_access record: (identifier) @_mod field: (label) @_fn))
-   ])
- (#not-eq? @_mod "sqlight")
- (#any-of? @_fn "query" "exec" "execute"))
-
-((binary_expression
-   left: (string) @sql
-   operator: "|>"
-   right: [
-     (identifier) @_fn
-     (function_call function: (identifier) @_fn)
-   ])
- (#any-of? @_fn "query" "exec" "execute"))
-"#;
-
-/// Default extraction query for C++: raw-string (`R"(...)"`) arguments
-/// of sqlite3, libpq, and libpqxx calls. The C APIs name their dialect;
-/// pqxx-style `exec`/`query` calls, templated (`tx.query<int>`) or not,
-/// use the configured one. Raw strings take line breaks and no escapes.
+/// The default query for C++: `queries/cpp.scm`.
 #[cfg(feature = "cxx")]
-pub const CXX_SQL_QUERY: &str = r#"
-((call_expression
-   function: (identifier) @_fn
-   arguments: (argument_list (raw_string_literal (raw_string_content) @sql.sqlite)))
- (#any-of? @_fn
-   "sqlite3_prepare" "sqlite3_prepare_v2" "sqlite3_prepare_v3" "sqlite3_exec")
- (#set! squill.raw) (#set! squill.multiline))
+pub const CXX_SQL_QUERY: &str = include_str!("queries/cpp.scm");
 
-((call_expression
-   function: (identifier) @_fn
-   arguments: (argument_list (raw_string_literal (raw_string_content) @sql.postgres)))
- (#any-of? @_fn "PQexec" "PQexecParams" "PQprepare" "PQsendQuery")
- (#set! squill.raw) (#set! squill.multiline))
-
-((call_expression
-   function: [
-     (field_expression field: [
-       (field_identifier) @_fn
-       (template_method name: (field_identifier) @_fn)
-     ])
-     (qualified_identifier name: (identifier) @_fn)
-   ]
-   arguments: (argument_list (raw_string_literal (raw_string_content) @sql)))
- (#any-of? @_fn
-   "exec" "exec0" "exec1" "exec_n" "exec_params" "exec_params0"
-   "exec_params1" "exec_prepared" "prepare" "query" "query1" "query01"
-   "query_n" "query_value" "for_query" "stream")
- (#set! squill.raw) (#set! squill.multiline))
-"#;
-
-/// Default extraction query for C#: raw-string (`"""`) arguments of EF
-/// Core migrations and raw-SQL calls, ADO.NET's `CommandText`, and
-/// Dapper's query/execute family, generic (`QueryAsync<Order>`) or not.
-/// Interpolated raw strings (`$"""`) are a different node and never
-/// match. Raw strings take no escapes, and a one-line `"""…"""` becomes
-/// a multi-line one in squill's layout: its content on lines of its own.
+/// The default query for C#: `queries/csharp.scm`.
 #[cfg(feature = "csharp")]
-pub const CSHARP_SQL_QUERY: &str = r#"
-((invocation_expression
-   function: (member_access_expression name: [
-     (identifier) @_method
-     (generic_name (identifier) @_method)
-   ])
-   arguments: (argument_list
-     (argument (raw_string_literal (raw_string_content) @sql))))
- (#any-of? @_method
-   "Sql" "ExecuteSql" "ExecuteSqlAsync" "ExecuteSqlRaw" "ExecuteSqlRawAsync"
-   "FromSql" "FromSqlRaw" "SqlQuery" "SqlQueryRaw"
-   "Query" "QueryAsync" "QueryFirst" "QueryFirstAsync"
-   "QueryFirstOrDefault" "QueryFirstOrDefaultAsync"
-   "QuerySingle" "QuerySingleAsync"
-   "QuerySingleOrDefault" "QuerySingleOrDefaultAsync"
-   "QueryMultiple" "QueryMultipleAsync"
-   "Execute" "ExecuteAsync" "ExecuteScalar" "ExecuteScalarAsync"
-   "ExecuteReader" "ExecuteReaderAsync")
- (#set! squill.raw) (#set! squill.multiline))
+pub const CSHARP_SQL_QUERY: &str = include_str!("queries/csharp.scm");
 
-((assignment_expression
-   left: (member_access_expression name: (identifier) @_prop)
-   right: (raw_string_literal (raw_string_content) @sql))
- (#eq? @_prop "CommandText")
- (#set! squill.raw) (#set! squill.multiline))
-"#;
-
-/// Default extraction query for Java: text-block (`"""`) arguments of
-/// JDBC, JPA, and Spring `JdbcTemplate` calls. The whole literal is
-/// captured — the grammar has no node spanning a text block's content —
-/// and one holding an escape is reported, not rewritten. Neither
-/// property holds: text blocks take escapes, and the capture can't tell
-/// a text block from a `"..."` string, which can't take a line break.
+/// The default query for Java: `queries/java.scm`.
 #[cfg(feature = "java")]
-pub const JAVA_SQL_QUERY: &str = r#"
-((method_invocation
-   name: (identifier) @_method
-   arguments: (argument_list (string_literal) @sql))
- (#any-of? @_method
-   "prepareStatement" "prepareCall" "executeQuery" "executeUpdate"
-   "executeLargeUpdate" "execute" "addBatch"
-   "createQuery" "createNativeQuery"
-   "query" "queryForObject" "queryForList" "queryForMap"
-   "queryForRowSet" "queryForStream" "update" "batchUpdate"))
-"#;
+pub const JAVA_SQL_QUERY: &str = include_str!("queries/java.scm");
 
-/// Default extraction query for Kotlin: raw-string (`"""`) arguments of
-/// JDBC, Spring, and Exposed calls, bare or `.trimIndent()`ed. A raw
-/// string with `$` templates has several content nodes and never matches.
-/// Raw strings take line breaks and no escapes.
+/// The default query for Kotlin: `queries/kotlin.scm`.
 #[cfg(feature = "kotlin")]
-pub const KOTLIN_SQL_QUERY: &str = r#"
-((call_expression
-   [
-     (identifier) @_method
-     (navigation_expression (identifier) @_method .)
-   ]
-   (value_arguments
-     (value_argument
-       (multiline_string_literal . (string_content) @sql .))))
- (#any-of? @_method
-   "prepareStatement" "prepareCall" "executeQuery" "executeUpdate"
-   "execute" "addBatch" "createQuery" "createNativeQuery"
-   "query" "queryForObject" "queryForList" "queryForMap"
-   "update" "batchUpdate" "exec")
- (#set! squill.raw) (#set! squill.multiline))
+pub const KOTLIN_SQL_QUERY: &str = include_str!("queries/kotlin.scm");
 
-((call_expression
-   [
-     (identifier) @_method
-     (navigation_expression (identifier) @_method .)
-   ]
-   (value_arguments
-     (value_argument
-       (call_expression
-         (navigation_expression
-           (multiline_string_literal . (string_content) @sql .)
-           (identifier) @_trim)))))
- (#any-of? @_method
-   "prepareStatement" "prepareCall" "executeQuery" "executeUpdate"
-   "execute" "addBatch" "createQuery" "createNativeQuery"
-   "query" "queryForObject" "queryForList" "queryForMap"
-   "update" "batchUpdate" "exec")
- (#eq? @_trim "trimIndent")
- (#set! squill.raw) (#set! squill.multiline))
-"#;
-
-/// Default extraction query for Swift: multi-line (`"""`) string
-/// arguments. One labeled `sql:` is GRDB's, and SQLite; the first,
-/// unlabeled argument of `run` / `execute` / `prepare` / `scalar`
-/// (SQLite.swift), `query` (PostgresNIO), or `raw` (SQLKit) uses the
-/// configured dialect. A string with a `\(…)` interpolation or an escape
-/// has several content nodes and never matches; raw strings (`#"""`)
-/// aren't taken. Multi-line strings take escapes, so aren't `raw`.
+/// The default query for Swift: `queries/swift.scm`.
 #[cfg(feature = "swift")]
-pub const SWIFT_SQL_QUERY: &str = r#"
-((value_argument
-   name: (value_argument_label (simple_identifier) @_label)
-   value: (multi_line_string_literal . (multi_line_str_text) @sql.sqlite .))
- (#eq? @_label "sql")
- (#set! squill.multiline))
-
-((call_expression
-   [
-     (simple_identifier) @_fn
-     (navigation_expression
-       suffix: (navigation_suffix suffix: (simple_identifier) @_fn))
-   ]
-   (call_suffix
-     (value_arguments
-       .
-       (value_argument
-         !name
-         value: (multi_line_string_literal . (multi_line_str_text) @sql .)))))
- (#any-of? @_fn "run" "execute" "prepare" "scalar" "query" "raw")
- (#set! squill.multiline))
-"#;
+pub const SWIFT_SQL_QUERY: &str = include_str!("queries/swift.scm");
 
 /// Which indent options the caller configured. Whatever it didn't comes
 /// from the host file, so embedded SQL is indented like the code around
