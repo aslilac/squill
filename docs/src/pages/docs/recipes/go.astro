@@ -11,11 +11,14 @@ import Recipe from "../../../components/Recipe.astro";
 	<section>
 		<h2>Which strings squill rewrites</h2>
 		<p>
-			Backtick strings are always fair game: they take newlines as written, so
-			squill lays the query out one clause per line. A double-quoted string
-			joins them once it already spans lines (an escaped <code>\n</code>{" "}
-			counts), and comes out as a backtick string. A double-quoted string on one
-			line is left exactly as written &mdash; to have squill format a short
+			Backtick strings are always fair game: they take newlines as written, so a
+			query that outgrows its line can spread over several. A double-quoted
+			string joins them once it spells a line break (<code>\n</code>). Its
+			escapes come back exactly as written; when its SQL needs more than one
+			line it becomes a backtick string, unless an escape is part of the SQL
+			itself, which a backtick string couldn&rsquo;t spell, and then it&rsquo;s
+			reported and left alone. A double-quoted string on one line without
+			escapes is left exactly as written &mdash; to have squill format a short
 			query, write it in backticks. A query built with <code>+</code> is several
 			strings, not one, and none of them is touched.
 		</p>

@@ -136,10 +136,14 @@ grammar = "rust"`}
 		</p>
 		<p>
 			A plain Rust or Go string joins them once it already spans lines &mdash;
-			written, escaped (<code>\n</code>), or continued &mdash; and is rewritten
-			as a raw string (<code>r#"&hellip;"#</code>, or backticks in Go), so the
-			SQL reads as written with no escaped quotes. A single-line plain string
-			stays byte-identical.
+			written, escaped (<code>\n</code>), or continued. Its escapes come back
+			exactly as they were spelled: squill reads them to read the SQL, and never
+			respells one. When the SQL takes more than one line and every escape in it
+			sat between SQL tokens, the string is rewritten as a raw string (
+			<code>r#"&hellip;"#</code>, or backticks in Go); otherwise it keeps its
+			own syntax, or, in Go, where a plain string can&rsquo;t span lines, is
+			left alone. A single-line plain string without escapes stays
+			byte-identical.
 		</p>
 		<p>
 			That is also why there is no C grammar. A C string literal ends with its
@@ -162,9 +166,10 @@ grammar = "rust"`}
 			file, and then the host file is parsed again: an edit that would add a
 			syntax error, or whose string no longer reads back through the query
 			exactly as written, is dropped. A string squill declines to rewrite
-			&mdash; SQL that doesn&rsquo;t parse, an escape it can&rsquo;t decode, a
-			result the string can&rsquo;t hold &mdash; is reported as a diagnostic
-			with its line and column, and fails the run under <code>--strict</code>.
+			&mdash; SQL that doesn&rsquo;t parse, an escape its query doesn&rsquo;t
+			name, a result the string can&rsquo;t hold &mdash; is reported as a
+			diagnostic with its line and column, and fails the run under{" "}
+			<code>--strict</code>.
 		</p>
 	</section>
 
@@ -207,8 +212,10 @@ query = ".config/squill/rust.scm"`}
 			file=".config/squill/rust.scm"
 			code={`((macro_invocation
    macro: (identifier) @_name
-   (token_tree (raw_string_literal) @sql))
- (#eq? @_name "my_sql"))`}
+   (token_tree (raw_string_literal (string_content) @sql)))
+ (#eq? @_name "my_sql")
+ (#set! squill.raw)
+ (#set! squill.multiline))`}
 		/>
 		<p>
 			Captures whose names start with <code>_</code> are the usual tree-sitter
@@ -272,13 +279,13 @@ query = ".config/squill/rust.scm"`}
 		</ol>
 		<h3 id="properties">What a string allows</h3>
 		<p>
-			For most grammars &mdash; C++, C#, Java, Kotlin, Swift, and every grammar
-			you bring &mdash; squill captures a string&rsquo;s text as written, and
-			knows nothing about its syntax. Unless the query says otherwise, it
-			assumes the worst: a string is formatted only when it already spans lines
-			(proof the syntax takes line breaks), and never when it holds a backslash
-			(which might be an escape). A pattern can promise more with
-			tree-sitter&rsquo;s <code>#set!</code>:
+			squill captures a string&rsquo;s text as written, and knows nothing about
+			its syntax but what the query says &mdash; for every grammar, the built-in
+			ones included. Unless the query says otherwise, it assumes the worst: a
+			string is formatted only when it already spans lines (proof the syntax
+			takes line breaks), and never when it holds a backslash (which might be an
+			escape). A pattern can promise more with tree-sitter&rsquo;s{" "}
+			<code>#set!</code>:
 		</p>
 		<ul>
 			<li>
@@ -291,10 +298,50 @@ query = ".config/squill/rust.scm"`}
 				<code>(#set! squill.multiline)</code>: the string takes raw line breaks,
 				so one written on a single line can be given the multi-line layout.
 				Promise it for a syntax meant for it, like Lua&rsquo;s long strings, and
-				not for a language&rsquo;s everyday string, or every short query becomes
-				three lines.
+				not for a language&rsquo;s everyday string.
+			</li>
+			<li>
+				<code>(#set! squill.escape "whitespace")</code>, once per kind: the
+				escapes the string takes, which squill may read. It reads them only to
+				read the SQL, and writes each back exactly as it was spelled, so an
+				escape kind it isn&rsquo;t told about leaves the string alone rather
+				than be misread. The kinds: <code>"whitespace"</code> (<code>\n</code>{" "}
+				<code>\r</code> <code>\t</code>), <code>"punctuation"</code> (
+				<code>\\</code> <code>\"</code> <code>\'</code>), <code>"\\$"</code>,{" "}
+				<code>"\\`"</code>, <code>"\\xHH"</code>, <code>"\\uXXXX"</code>,{" "}
+				<code>
+					"\\u{"{"}XXXX{"}"}"
+				</code>
+				, <code>"\\UXXXXXXXX"</code>, <code>"\\NNN"</code> (octal, and so{" "}
+				<code>\0</code>), <code>"line-continuation"</code>, and{" "}
+				<code>"line-continuation-trim"</code> (Rust&rsquo;s, which drops the
+				next line&rsquo;s indentation too). Where each escape is, the grammar
+				says: its <code>escape_sequence</code> nodes count, and a grammar that
+				names them otherwise can capture them as <code>@squill.escape</code>.
+			</li>
+			<li>
+				<code>(#set! squill.promote-to-raw-syntax "r#\"{"{}"}\"#")</code>, once
+				per form: raw syntaxes, tried in order, that a string spanning lines is
+				rewritten in, its content where <code>{"{}"}</code> is. The first whose
+				closing delimiter the SQL doesn&rsquo;t contain wins, and only when
+				every escape in the string sat between SQL tokens, since a raw string
+				can&rsquo;t spell one.
 			</li>
 		</ul>
+		<p>
+			And a capture named <code>@squill.skip</code> leaves out any SQL capture
+			it overlaps: a hole in the string, like a JS template&rsquo;s{" "}
+			<code>$&lbrace;&hellip;&rbrace;</code>, or a region the string sits in,
+			like a function you&rsquo;d rather squill didn&rsquo;t touch.
+		</p>
+		<Code
+			lang="query"
+			file=".config/squill/skip.scm"
+			code={`(template_substitution) @squill.skip
+
+((function_declaration name: (identifier) @_name) @squill.skip
+ (#eq? @_name "legacyMigration"))`}
+		/>
 		<Code
 			lang="query"
 			file=".config/squill/lua.scm"

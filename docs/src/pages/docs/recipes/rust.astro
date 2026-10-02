@@ -14,7 +14,11 @@ import Recipe from "../../../components/Recipe.astro";
 			Raw strings (<code>r"&hellip;"</code>, <code>r#"&hellip;"#</code>) are
 			always fair game: they take newlines and quotes as written, so a query
 			that outgrows its line can spread over several. A plain string joins them
-			once it already spans lines, and comes out as a raw string. A plain string
+			once it already spans lines, or spells a line break as <code>\n</code>.
+			Its escapes come back exactly as written, and one whose SQL spans lines
+			comes out as a raw string &mdash; unless an escape is part of the SQL
+			itself (<code>\"Weird\"</code>, <code>'a\tb'</code>), which a raw string
+			couldn&rsquo;t spell, so it stays a plain string. Any other plain string
 			on one line is left exactly as written &mdash; to have squill format a
 			short query, write it as a raw string.
 		</p>
