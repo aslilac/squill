@@ -310,3 +310,21 @@ fn assignment_targets_keep_their_case() {
 		"do $$\nbegin\n\tNEW.a := NEW.b;\nend\n$$;\n"
 	);
 }
+
+/// A string spanning lines inside a body is data: its lines take no
+/// indent when the body is anchored.
+#[test]
+fn strings_spanning_lines_in_bodies_keep_their_lines() {
+	assert_eq!(
+		format(
+			"create function f() returns text language sql as $$\nselect 'a\nb';\n$$;"
+		),
+		"create function f()\nreturns text\nlanguage sql\nas $$\n\tselect\n\t\t'a\nb';\n$$;\n"
+	);
+	assert_eq!(
+		format(
+			"create function f() returns text language plpgsql as $$\nbegin\nreturn 'a\nb';\nend\n$$;"
+		),
+		"create function f()\nreturns text\nlanguage plpgsql\nas $$\nbegin\n\treturn 'a\nb';\nend\n$$;\n"
+	);
+}

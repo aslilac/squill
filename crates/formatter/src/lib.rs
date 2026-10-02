@@ -686,14 +686,19 @@ fn splice_sql_bodies(statement: &str, options: &Options, depth: u32) -> String {
 				IndentStyle::Spaces => " ".repeat(usize::from(options.indent_width)),
 			},
 		};
+		// A line that begins inside a value (a string spanning lines) is
+		// data, and takes no indent.
+		let verbatim_lines = verbatim_line_starts(body, options);
 		let mut replacement = String::from(tag);
+		let mut line_start = 0;
 		for line in body.split('\n') {
 			replacement.push('\n');
-			if !line.is_empty() {
+			if !line.is_empty() && !verbatim_lines.contains(&line_start) {
 				replacement.push_str(&anchor);
 				replacement.push_str(&unit);
-				replacement.push_str(line);
 			}
+			replacement.push_str(line);
+			line_start += line.len() + 1;
 		}
 		replacement.push('\n');
 		replacement.push_str(&anchor);
@@ -706,6 +711,13 @@ fn splice_sql_bodies(statement: &str, options: &Options, depth: u32) -> String {
 	let mut out = statement.to_string();
 	for (range, replacement) in edits.into_iter().rev() {
 		out.replace_range(range, &replacement);
+	}
+	// The re-anchored bodies must still be the same SQL: a value the
+	// anchoring touched would show here.
+	if !check::tokens_equivalent(statement, &out, options.dialect, lex_options)
+		|| !check::comments_conserved(statement, &out, options.dialect, lex_options)
+	{
+		return statement.to_string();
 	}
 	out
 }
