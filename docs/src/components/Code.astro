@@ -6,9 +6,11 @@
 // code comes as a prop, not as children, so nothing collapses its
 // whitespace on the way.
 import CopyButton from "./CopyButton.astro";
-import { highlight } from "./highlight.js";
+import ShowMore from "./ShowMore.astro";
+import { folds, highlight } from "./highlight.js";
 
 const { lang, code, file, copy = true } = Astro.props;
+const lines = folds(code, lang);
 ---
 
 <div
@@ -19,7 +21,7 @@ const { lang, code, file, copy = true } = Astro.props;
 		{ captioned: file, copyable: copy },
 	]}
 >
-	<figure>
+	<figure class:list={{ folds: lines }}>
 		{file ? (
 			<figcaption>
 				<span class="filename">{file}</span>
@@ -33,5 +35,6 @@ const { lang, code, file, copy = true } = Astro.props;
 			copy && <CopyButton />
 		)}
 		<div set:html={await highlight(code.trim(), lang)} />
+		{lines && <ShowMore lines={lines} />}
 	</figure>
 </div>

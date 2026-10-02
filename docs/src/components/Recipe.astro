@@ -6,8 +6,9 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import CopyButton from "./CopyButton.astro";
+import ShowMore from "./ShowMore.astro";
 import settingsIcon from "lucide-static/icons/settings-2.svg?raw";
-import { highlight as shiki, highlightHost } from "./highlight.js";
+import { folds, highlight as shiki, highlightHost } from "./highlight.js";
 import { liveRecipe } from "./recipes.js";
 
 const { name, lang } = Astro.props;
@@ -111,18 +112,22 @@ const settings = live && [
 
 <div class="recipe" data-live={live ? JSON.stringify(live) : undefined}>
 	<div class="pair stacked">
-		{files.map(async (path) => (
-			<figure data-file={path}>
-				<figcaption>
-					<span class="filename">{path}</span>
-					<span class="caption-tools">
-						<span>{kind(path)}</span>
-						<CopyButton />
-					</span>
-				</figcaption>
-				<div set:html={await highlight(read(path), kind(path))} />
-			</figure>
-		))}
+		{files.map(async (path) => {
+			const lines = folds(read(path), kind(path));
+			return (
+				<figure data-file={path} class:list={{ folds: lines }}>
+					<figcaption>
+						<span class="filename">{path}</span>
+						<span class="caption-tools">
+							<span>{kind(path)}</span>
+							<CopyButton />
+						</span>
+					</figcaption>
+					<div set:html={await highlight(read(path), kind(path))} />
+					{lines && <ShowMore lines={lines} />}
+				</figure>
+			);
+		})}
 	</div>
 	<div class="pair stacked" data-tabs data-current="after">
 		<figure>

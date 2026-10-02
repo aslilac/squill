@@ -208,3 +208,15 @@ function render(pieces) {
 		`<pre class="shiki squill-dark" style="color:${colors.fg}"><code>${body}</code></pre>`,
 	);
 }
+
+// A query longer than this many lines folds to its first `FOLDED_LINES`:
+// enough to show what it's for, with the rest a click away. Not much
+// longer, and it shows whole, since folding away two lines saves nothing.
+const FOLD_OVER = 14;
+export const FOLDED_LINES = 10;
+
+/// How many lines `code` has, if it's a query long enough to fold.
+export function folds(code, lang) {
+	const lines = code.trim().split("\n").length;
+	return lang === "query" && lines > FOLD_OVER ? lines : undefined;
+}

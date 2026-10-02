@@ -597,6 +597,46 @@ const topNav = [
 			.recipe-menu:last-child .recipe-gear {
 				margin-right: -0.4rem;
 			}
+			/* A long query shows its first lines, fading out, until its
+			   pane's foot (ShowMore) unfolds the rest. */
+			.folds:not(.unfolded) pre {
+				/* Ten lines past the pre's top padding. */
+				max-height: calc(10lh + 0.5rem);
+				overflow-y: hidden;
+				mask-image: linear-gradient(
+					to bottom,
+					black calc(100% - 2.5lh),
+					transparent
+				);
+			}
+			.code-block:not(.captioned) .folds:not(.unfolded) pre {
+				max-height: calc(10lh + 1.1rem);
+			}
+			.show-more {
+				font-family: "JetBrains Mono", monospace;
+				font-size: 0.65rem;
+				letter-spacing: 0.1em;
+				text-transform: uppercase;
+				color: var(--code-comment);
+				background: transparent;
+				border: 0;
+				border-top: 1px solid var(--pane-edge);
+				padding: 0.7rem 1.25rem;
+				text-align: left;
+				cursor: pointer;
+			}
+			.show-more:hover {
+				color: var(--pane-text);
+				background: color-mix(in oklab, var(--pane-edge) 25%, transparent);
+			}
+			.show-more:focus-visible {
+				outline: 2px solid var(--violet);
+				outline-offset: -2px;
+			}
+			.folds.unfolded .show-all,
+			.folds:not(.unfolded) .show-fewer {
+				display: none;
+			}
 			.copy-code:hover {
 				color: var(--pane-text);
 				border-color: var(--pane-edge);

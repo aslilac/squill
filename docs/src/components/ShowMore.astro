@@ -1,0 +1,26 @@
+---
+// The foot of a long code pane: the pane shows its first lines, and this
+// shows the rest, or folds them away again. Rendered only for code long
+// enough to fold (see `folds`); copying copies all of it either way.
+const { lines } = Astro.props;
+---
+
+<button type="button" class="show-more" aria-expanded="false">
+	<span class="show-all">Show all {lines} lines</span>
+	<span class="show-fewer">Show fewer lines</span>
+</button>
+
+<script>
+	document.addEventListener("click", (event) => {
+		const button = (event.target as Element).closest<HTMLElement>(".show-more");
+		const pane = button?.closest(".folds");
+		if (!button || !pane) return;
+		const open = pane.classList.toggle("unfolded");
+		button.setAttribute("aria-expanded", String(open));
+		// Folding back up from the end of a long query would leave the
+		// reader far below the pane; bring its top back into view.
+		if (!open && pane.getBoundingClientRect().top < 0) {
+			pane.scrollIntoView({ block: "start" });
+		}
+	});
+</script>
