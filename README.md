@@ -58,6 +58,7 @@ Set in the nearest `squill.toml` or `.config/squill.toml` (or `squill.yaml` / `s
 | `keyword-case` | `--keyword-case` | `lower` \| `upper` | `lower` |
 | `quote-idents` | `--quote-idents` | `as-needed` \| `always` | `as-needed` |
 | `trailing-semicolons` | `--trailing-semicolons` | `always` \| `none`: whether the last statement ends in `;` | `always` (`none` for embedded SQL) |
+| `line-ending` | `--line-ending` | `lf` \| `crlf`, never detected from the input; lines inside a string keep theirs (SQL files only) | `lf` |
 | `at-params` | `--at-params` | lex [sqlc-style](https://docs.sqlc.dev/en/latest/howto/named_parameters.html) and ADO.NET-style `@name` parameters | `false` |
 | `question-params` | `--question-params` | lex JDBC-style `?` and JPA-style `?1` parameters in Postgres | `false` |
 | `colon-params` | `--colon-params` | lex `:name` parameters (SQLAlchemy, Spring, JPA, sqlx) in Postgres; `:` inside `[…]` is still a slice | `false` |

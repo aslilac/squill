@@ -98,6 +98,7 @@ Options:
                           always | none: whether the last statement ends
                           in `;` (default always for SQL files, none for
                           embedded SQL)
+  --line-ending <EOL>     lf (default) | crlf, for SQL files
   --at-params             Treat sqlc- and ADO.NET-style @name as
                           parameters (Postgres)
   --question-params       Treat JDBC-style ? as parameters (Postgres)
@@ -118,9 +119,9 @@ Options:
 Configuration: the nearest squill.toml or .config/squill.toml (or
 squill.yaml / squill.yml, same keys) at or above each formatted file
 supplies defaults. Top-level keys: dialect, indent, indent-width,
-max-width, keyword-case, quote-idents, trailing-semicolons, at-params,
-question-params, colon-params, pyformat-params, ignore and frozen (arrays of glob
-patterns), frozen-ref, and frozen-fetch. Explicit flags override the
+max-width, keyword-case, quote-idents, trailing-semicolons, line-ending,
+at-params, question-params, colon-params, pyformat-params, ignore and
+frozen (arrays of glob patterns), frozen-ref, and frozen-fetch. Explicit flags override the
 config. The search upward stops at a git repository root, a mount
 point, or a symlinked directory, so a config outside a checkout never
 reaches inside it. Directory recursion honors .gitignore and skips
@@ -408,6 +409,10 @@ fn parse_args() -> Result<Invocation, String> {
 						&mut argv,
 						"--trailing-semicolons",
 					)?)?)
+			}
+			"--line-ending" => {
+				args.overrides.line_ending =
+					Some(config::parse_line_ending(&value(&mut argv, "--line-ending")?)?)
 			}
 			"--quote-idents" => {
 				args.overrides.quoting =

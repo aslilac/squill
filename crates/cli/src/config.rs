@@ -29,6 +29,7 @@ use std::path::PathBuf;
 use formatter::IdentQuoting;
 use formatter::IndentStyle;
 use formatter::KeywordCase;
+use formatter::LineEnding;
 use formatter::TrailingSemicolons;
 use parser::Dialect;
 use toml::de::DeTable;
@@ -45,6 +46,7 @@ pub struct PartialOptions {
 	pub keyword_case: Option<KeywordCase>,
 	pub quoting: Option<IdentQuoting>,
 	pub trailing_semicolons: Option<TrailingSemicolons>,
+	pub line_ending: Option<LineEnding>,
 	pub at_params: Option<bool>,
 	pub question_params: Option<bool>,
 	pub colon_params: Option<bool>,
@@ -73,6 +75,9 @@ impl PartialOptions {
 		}
 		if let Some(value) = self.trailing_semicolons {
 			options.trailing_semicolons = value;
+		}
+		if let Some(value) = self.line_ending {
+			options.line_ending = value;
 		}
 		if let Some(value) = self.at_params {
 			options.at_params = value;
@@ -174,6 +179,14 @@ pub fn parse_trailing_semicolons(
 		"always" => Ok(TrailingSemicolons::Always),
 		"none" => Ok(TrailingSemicolons::None),
 		other => Err(format!("unknown trailing-semicolons mode `{other}`")),
+	}
+}
+
+pub fn parse_line_ending(value: &str) -> Result<LineEnding, String> {
+	match value {
+		"lf" => Ok(LineEnding::Lf),
+		"crlf" => Ok(LineEnding::Crlf),
+		other => Err(format!("unknown line ending `{other}`")),
 	}
 }
 
@@ -611,6 +624,17 @@ fn apply_key(
 		"trailing-semicolons" => {
 			options.trailing_semicolons =
 				Some(parse_trailing_semicolons(&string(key_name)?).map_err(&err)?)
+		}
+		"line-ending" if scope == Scope::Embedded => {
+			return Err(err(format!(
+				"`line-ending` applies to SQL files; an {} rule's SQL is \
+				 always written with LF",
+				syntax.name("embedded"),
+			)));
+		}
+		"line-ending" => {
+			options.line_ending =
+				Some(parse_line_ending(&string(key_name)?).map_err(&err)?)
 		}
 		"indent-width" => match integer() {
 			Some(n) if (1..=16).contains(&n) => {

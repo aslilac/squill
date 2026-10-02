@@ -345,7 +345,8 @@ fn resolve_ident(token: &str, dialect: Dialect) -> String {
 /// The comment texts of `source`, in order, recursing into dollar-quoted
 /// bodies. Trailing whitespace inside a comment is not significant (the
 /// formatter never emits trailing whitespace), so it is trimmed for
-/// comparison.
+/// comparison; nor are its line endings (the `line_ending` option's to
+/// choose), so they compare as `\n`.
 pub fn comment_texts(
 	source: &str,
 	dialect: Dialect,
@@ -366,7 +367,7 @@ fn collect_comments(
 	for token in lex_with(source, dialect, lex_options) {
 		match token.kind {
 			SyntaxKind::LineComment | SyntaxKind::BlockComment => {
-				out.push(token.text.trim_end().to_string());
+				out.push(token.text.trim_end().replace("\r\n", "\n"));
 			}
 			SyntaxKind::DollarString if depth < MAX_BODY_DEPTH => {
 				if let Some((_, body)) = split_dollar(token.text) {

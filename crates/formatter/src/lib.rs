@@ -50,6 +50,16 @@ pub enum TrailingSemicolons {
 	None,
 }
 
+/// How lines end. LF unless CRLF is asked for: never detected from the
+/// input. Lines inside a value (a string spanning lines) are data, and
+/// keep whatever they had.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum LineEnding {
+	#[default]
+	Lf,
+	Crlf,
+}
+
 /// The complete configuration surface of the renderer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Options {
@@ -66,6 +76,8 @@ pub struct Options {
 	pub quoting: IdentQuoting,
 	/// Whether the last statement ends in a `;`.
 	pub trailing_semicolons: TrailingSemicolons,
+	/// LF (default) or CRLF.
+	pub line_ending: LineEnding,
 	/// Governs the identifier-quoting safety rules.
 	pub dialect: Dialect,
 	/// sqlc-style `@name` parameters (see [`LexOptions::at_params`]);
@@ -98,6 +110,7 @@ impl Default for Options {
 			keyword_case: KeywordCase::default(),
 			quoting: IdentQuoting::default(),
 			trailing_semicolons: TrailingSemicolons::default(),
+			line_ending: LineEnding::default(),
 			dialect: Dialect::default(),
 			at_params: false,
 			pyformat_params: false,
@@ -252,6 +265,10 @@ fn format_cst_at(cst: &Cst, options: &Options, depth: u32) -> Formatted {
 	}
 	if !out.is_empty() && !out.ends_with('\n') {
 		out.push('\n');
+	}
+	// Once, over the whole file: bodies are spliced in by now.
+	if depth == 0 {
+		out = end_lines(&out, options);
 	}
 	// Bodies that don't parse are left as written by the splice; say so,
 	// pointing into the source. Only at the top: nested bodies are
@@ -530,6 +547,32 @@ fn collect_verbatim_lines(
 		}
 		start = end;
 	}
+}
+
+/// `sql` with every line ending `options.line_ending`, except the ones
+/// inside a value, which are its data. Only `\r\n` and `\n` count as
+/// line endings; a lone `\r` is left as it is.
+fn end_lines(sql: &str, options: &Options) -> String {
+	let ending = match options.line_ending {
+		LineEnding::Lf => "\n",
+		LineEnding::Crlf => "\r\n",
+	};
+	let verbatim = verbatim_line_starts(sql, options);
+	let mut out = String::with_capacity(sql.len());
+	let mut start = 0;
+	for (newline, _) in sql.match_indices('\n') {
+		let line_start = newline + 1;
+		if verbatim.contains(&line_start) {
+			out.push_str(&sql[start..line_start]);
+		} else {
+			let line = &sql[start..newline];
+			out.push_str(line.strip_suffix('\r').unwrap_or(line));
+			out.push_str(ending);
+		}
+		start = line_start;
+	}
+	out.push_str(&sql[start..]);
+	out
 }
 
 /// Recursively format procedural dollar-quoted bodies inside a rendered

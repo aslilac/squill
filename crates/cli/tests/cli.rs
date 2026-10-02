@@ -2103,6 +2103,49 @@ fn trailing_semicolons_by_kind() {
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// LF unless `line-ending` (or the flag) asks for CRLF, whatever the
+/// input had; not an `[[embedded]]` rule's to set.
+#[test]
+fn line_ending_is_lf_unless_configured() {
+	let dir = temp_dir("lineending");
+	std::fs::write(dir.join("a.sql"), "select 1;\r\nselect 2;\r\n")
+		.expect("write");
+	let run = |args: &[&str]| {
+		let output = squill().current_dir(&dir).args(args).output().expect("run");
+		(
+			output.status.success(),
+			String::from_utf8_lossy(&output.stdout).into_owned(),
+			String::from_utf8_lossy(&output.stderr).into_owned(),
+		)
+	};
+	assert_eq!(run(&["fmt", "--stdout", "a.sql"]).1, "select 1;\nselect 2;\n");
+	assert_eq!(
+		run(&["fmt", "--stdout", "--line-ending", "crlf", "a.sql"]).1,
+		"select 1;\r\nselect 2;\r\n"
+	);
+	std::fs::write(dir.join("squill.toml"), "line-ending = \"crlf\"\n")
+		.expect("write config");
+	assert_eq!(
+		run(&["fmt", "--stdout", "a.sql"]).1,
+		"select 1;\r\nselect 2;\r\n"
+	);
+	assert_eq!(
+		run(&["fmt", "--stdout", "--line-ending", "lf", "a.sql"]).1,
+		"select 1;\nselect 2;\n"
+	);
+	std::fs::write(
+		dir.join("squill.toml"),
+		"[[embedded]]\ninclude = [\"*.rs\"]\ngrammar = \"rust\"\nline-ending = \"crlf\"\n",
+	)
+	.expect("write config");
+	let (ok, _, stderr) = run(&["fmt", "--stdout", "a.sql"]);
+	assert!(
+		!ok && stderr.contains("`line-ending` applies to SQL files"),
+		"{stderr}"
+	);
+	let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// SQLAlchemy's, Spring's, and JPA's `:name` placeholders, by key.
 #[test]
 fn colon_params_are_configured() {

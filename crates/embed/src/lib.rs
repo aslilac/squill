@@ -1459,6 +1459,8 @@ impl Snippet<'_> {
 		// The author chose a multi-line literal: keep statements
 		// clause-per-line, never collapsed onto one line.
 		format_options.always_break_statements = true;
+		// The lines are joined with `\n` below, whatever the file's.
+		format_options.line_ending = formatter::LineEnding::Lf;
 		if !self.indent.configured_style {
 			format_options.indent_style =
 				host_indent_style(self.source, &host_indent);
