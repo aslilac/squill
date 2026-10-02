@@ -52,15 +52,18 @@ fn crlf_is_opt_in() {
 	assert_eq!(format(&out, LineEnding::Crlf), out);
 }
 
+/// Its strings are only the lexer's guess, so an unparsable statement
+/// is left byte for byte; the line breaks between statements are still
+/// squill's.
 #[test]
-fn unparsable_statements_follow_too() {
+fn unparsable_statements_keep_theirs() {
 	assert_eq!(
-		format("frobnicate\r\nthe widgets;\r\n", LineEnding::Lf),
-		"frobnicate\nthe widgets;\n"
+		format("frobnicate\r\nthe widgets;\r\nselect\r\n1;\r\n", LineEnding::Lf),
+		"frobnicate\r\nthe widgets;\nselect 1;\n"
 	);
 	assert_eq!(
-		format("frobnicate\nthe widgets;\n", LineEnding::Crlf),
-		"frobnicate\r\nthe widgets;\r\n"
+		format("frobnicate\nthe widgets;\nselect\n1;\n", LineEnding::Crlf),
+		"frobnicate\nthe widgets;\r\nselect 1;\r\n"
 	);
 }
 
@@ -83,5 +86,16 @@ fn procedural_bodies_follow() {
 	assert_eq!(
 		format(source, LineEnding::Lf),
 		"create function f()\nreturns text\nlanguage sql\nas $$\n\tselect 'a';\n$$;\n"
+	);
+}
+
+#[test]
+fn unparsable_bodies_keep_theirs() {
+	let source = "create function f() returns text language sql as $$\r\n\
+		frobnicate\r\nthe widgets;\r\n$$;\r\n";
+	assert_eq!(
+		format(source, LineEnding::Lf),
+		"create function f()\nreturns text\nlanguage sql\nas $$\r\n\
+		frobnicate\r\nthe widgets;\r\n$$;\n"
 	);
 }

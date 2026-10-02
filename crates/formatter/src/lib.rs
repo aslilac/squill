@@ -172,8 +172,10 @@ const MAX_BODY_DEPTH: u32 = 3;
 
 fn format_cst_at(cst: &Cst, options: &Options, depth: u32) -> Formatted {
 	let lex_options = options.lex_options();
-	// Each piece carries the number of blank lines that precede it.
-	let mut pieces: Vec<(usize, String)> = Vec::new();
+	// Each piece carries the number of blank lines that precede it, and
+	// whether it parsed: a statement that didn't is left byte for byte,
+	// line endings and all, since its strings are only the lexer's guess.
+	let mut pieces: Vec<(usize, String, bool)> = Vec::new();
 	let mut fallbacks = 0;
 	let mut pending_blank = 0usize;
 	// The last statement, whose `;` is `trailing_semicolons`' to settle.
@@ -222,7 +224,7 @@ fn format_cst_at(cst: &Cst, options: &Options, depth: u32) -> Formatted {
 							} else {
 								spliced
 							};
-							pieces.push((blank, piece));
+							pieces.push((blank, piece, true));
 						} else {
 							fallbacks += 1;
 							if std::env::var_os("SQUILL_DEBUG").is_some() {
@@ -230,10 +232,14 @@ fn format_cst_at(cst: &Cst, options: &Options, depth: u32) -> Formatted {
 									"== fallback ==\n-- original --\n{original}\n-- rendered --\n{rendered}\n=="
 								);
 							}
-							pieces.push((blank, trim_verbatim(&original)));
+							pieces.push((blank, trim_verbatim(&original), true));
 						}
 					}
-					None => pieces.push((blank, trim_verbatim(&original))),
+					None => pieces.push((
+						blank,
+						trim_verbatim(&original),
+						node.kind() != SyntaxKind::ErrorStatement,
+					)),
 				}
 			}
 			parser::syntax::SyntaxElement::Token(token) => match token.kind() {
@@ -241,34 +247,39 @@ fn format_cst_at(cst: &Cst, options: &Options, depth: u32) -> Formatted {
 					pending_blank = pending_blank.max(blank_lines(token.text()));
 				}
 				SyntaxKind::LineComment | SyntaxKind::BlockComment => {
-					pieces.push((pending_blank, token.text().to_string()));
+					pieces.push((pending_blank, token.text().to_string(), true));
 					pending_blank = 0;
 				}
 				_ => {
 					// Stray root-level tokens (shouldn't happen): keep.
-					pieces.push((pending_blank, token.text().to_string()));
+					pieces.push((pending_blank, token.text().to_string(), false));
 					pending_blank = 0;
 				}
 			},
 		}
 	}
 
+	// Line endings are settled once, at the top, where bodies are spliced
+	// in by now; a body is joined with `\n` like any other text.
+	let ending = match (depth, options.line_ending) {
+		(0, LineEnding::Crlf) => "\r\n",
+		_ => "\n",
+	};
 	let mut out = String::new();
-	for (index, (blank, piece)) in pieces.iter().enumerate() {
+	for (index, (blank, piece, parsed)) in pieces.iter().enumerate() {
 		if index > 0 {
-			out.push('\n');
-			for _ in 0..*blank {
-				out.push('\n');
+			for _ in 0..=*blank {
+				out.push_str(ending);
 			}
 		}
-		out.push_str(piece);
+		if depth == 0 && *parsed {
+			out.push_str(&end_lines(piece, ending, options));
+		} else {
+			out.push_str(piece);
+		}
 	}
 	if !out.is_empty() && !out.ends_with('\n') {
-		out.push('\n');
-	}
-	// Once, over the whole file: bodies are spliced in by now.
-	if depth == 0 {
-		out = end_lines(&out, options);
+		out.push_str(ending);
 	}
 	// Bodies that don't parse are left as written by the splice; say so,
 	// pointing into the source. Only at the top: nested bodies are
@@ -492,15 +503,18 @@ pub fn verbatim_line_starts(
 	options: &Options,
 ) -> std::collections::HashSet<usize> {
 	let mut out = std::collections::HashSet::new();
-	collect_verbatim_lines(sql, 0, options, 0, &mut out);
+	collect_verbatim_lines(sql, 0, options, 0, false, &mut out);
 	out
 }
 
+/// With `unparsed_bodies`, a body that doesn't parse is a value too:
+/// every line of it.
 fn collect_verbatim_lines(
 	sql: &str,
 	base: usize,
 	options: &Options,
 	depth: u32,
+	unparsed_bodies: bool,
 	out: &mut std::collections::HashSet<usize>,
 ) {
 	let tokens =
@@ -528,15 +542,17 @@ fn collect_verbatim_lines(
 			}
 			let at = base + offsets[start + index];
 			if token.kind == SyntaxKind::DollarString
-				&& lang.is_some()
+				&& let Some(lang) = lang
 				&& depth < MAX_BODY_DEPTH
 				&& let Some((tag, content)) = check::split_dollar(token.text)
+				&& !(unparsed_bodies && !body_parses(content, lang, options))
 			{
 				collect_verbatim_lines(
 					content,
 					at + tag.len(),
 					options,
 					depth + 1,
+					unparsed_bodies,
 					out,
 				);
 				continue;
@@ -549,15 +565,26 @@ fn collect_verbatim_lines(
 	}
 }
 
-/// `sql` with every line ending `options.line_ending`, except the ones
-/// inside a value, which are its data. Only `\r\n` and `\n` count as
-/// line endings; a lone `\r` is left as it is.
-fn end_lines(sql: &str, options: &Options) -> String {
-	let ending = match options.line_ending {
-		LineEnding::Lf => "\n",
-		LineEnding::Crlf => "\r\n",
+/// Does a procedural body parse cleanly in its grammar?
+fn body_parses(content: &str, lang: BodyLang, options: &Options) -> bool {
+	let tokens =
+		parser::lexer::lex_with(content, options.dialect, options.lex_options());
+	let parse = match lang {
+		BodyLang::Sql => parser::parser::parse(&tokens, options.dialect),
+		BodyLang::Plpgsql => {
+			parser::parser::parse_plpgsql_body(&tokens, options.dialect)
+		}
 	};
-	let verbatim = verbatim_line_starts(sql, options);
+	parse.diagnostics.is_empty()
+}
+
+/// A parsed statement with every line ending `ending`, except the ones
+/// inside a value, which are its data, and inside a body that didn't
+/// parse, which is left as written. Only `\r\n` and `\n` count as line
+/// endings; a lone `\r` is left as it is.
+fn end_lines(sql: &str, ending: &str, options: &Options) -> String {
+	let mut verbatim = std::collections::HashSet::new();
+	collect_verbatim_lines(sql, 0, options, 0, true, &mut verbatim);
 	let mut out = String::with_capacity(sql.len());
 	let mut start = 0;
 	for (newline, _) in sql.match_indices('\n') {
