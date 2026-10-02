@@ -98,7 +98,7 @@ Options:
                           always | none: whether the last statement ends
                           in `;` (default always for SQL files, none for
                           embedded SQL)
-  --line-ending <EOL>     lf (default) | crlf, for SQL files
+  --line-ending <EOL>     lf (default) | crlf
   --at-params             Treat sqlc- and ADO.NET-style @name as
                           parameters (Postgres)
   --question-params       Treat JDBC-style ? as parameters (Postgres)

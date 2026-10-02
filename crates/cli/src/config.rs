@@ -625,13 +625,6 @@ fn apply_key(
 			options.trailing_semicolons =
 				Some(parse_trailing_semicolons(&string(key_name)?).map_err(&err)?)
 		}
-		"line-ending" if scope == Scope::Embedded => {
-			return Err(err(format!(
-				"`line-ending` applies to SQL files; an {} rule's SQL is \
-				 always written with LF",
-				syntax.name("embedded"),
-			)));
-		}
 		"line-ending" => {
 			options.line_ending =
 				Some(parse_line_ending(&string(key_name)?).map_err(&err)?)

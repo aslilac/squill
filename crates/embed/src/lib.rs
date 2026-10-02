@@ -1391,7 +1391,8 @@ impl Snippet<'_> {
 					Ok(anchored) => anchored,
 					Err(rewrite) => return rewrite,
 				};
-				match encode(&decoded, &anchored) {
+				let crlf = self.options.line_ending == formatter::LineEnding::Crlf;
+				match encode(&decoded, &anchored, crlf) {
 					Some(literal) => Rewrite::Replace(literal),
 					None => Rewrite::Warn(
 						"formatted SQL cannot be written back into this string \
@@ -1459,8 +1460,6 @@ impl Snippet<'_> {
 		// The author chose a multi-line literal: keep statements
 		// clause-per-line, never collapsed onto one line.
 		format_options.always_break_statements = true;
-		// The lines are joined with `\n` below, whatever the file's.
-		format_options.line_ending = formatter::LineEnding::Lf;
 		if !self.indent.configured_style {
 			format_options.indent_style =
 				host_indent_style(self.source, &host_indent);
@@ -1512,17 +1511,26 @@ impl Snippet<'_> {
 		// Lines that start inside a value (a string spanning lines) are
 		// data: never indented.
 		let verbatim_lines = formatter::verbatim_line_starts(sql, &format_options);
+		// The formatter ended each line (CRLF keeps its `\r` on the line);
+		// the breaks after the opening quote and before the closing one
+		// are this function's.
+		let eol = match format_options.line_ending {
+			formatter::LineEnding::Lf => "\n",
+			formatter::LineEnding::Crlf => "\r\n",
+		};
 		let mut anchored = String::new();
 		let mut line_start = 0;
-		for line in sql.split('\n') {
-			anchored.push('\n');
-			if !line.is_empty() && !verbatim_lines.contains(&line_start) {
+		for (index, line) in sql.split('\n').enumerate() {
+			anchored.push_str(if index == 0 { eol } else { "\n" });
+			if !line.trim_end_matches('\r').is_empty()
+				&& !verbatim_lines.contains(&line_start)
+			{
 				anchored.push_str(&host_indent);
 			}
 			anchored.push_str(line);
 			line_start += line.len() + 1;
 		}
-		anchored.push('\n');
+		anchored.push_str(eol);
 		if !close_at_margin {
 			anchored.push_str(&host_indent);
 		}
@@ -1834,7 +1842,10 @@ fn unescape(body: &str, mode: EscapeMode) -> Option<String> {
 	Some(out)
 }
 
-fn encode(decoded: &Decoded, content: &str) -> Option<String> {
+/// With `crlf`, the content's lines end in CRLF by request, and a CR
+/// before a line feed is one of those line endings, not a character only
+/// an escape can spell.
+fn encode(decoded: &Decoded, content: &str, crlf: bool) -> Option<String> {
 	match &decoded.kind {
 		LiteralKind::RustRaw { hashes } => {
 			// Keep the original hash count unless the content now needs
@@ -1848,7 +1859,7 @@ fn encode(decoded: &Decoded, content: &str) -> Option<String> {
 			// Rewritten as a raw string, so the SQL reads as written: no
 			// escaped quotes or backslashes. Anything only an escape can
 			// spell (a carriage return, a NUL) stays as it was.
-			if has_unwritable_control(content) {
+			if has_unwritable_control(content, crlf) {
 				return None;
 			}
 			let fence = "#".repeat(min_raw_hashes(content).max(1));
@@ -1865,7 +1876,7 @@ fn encode(decoded: &Decoded, content: &str) -> Option<String> {
 			// Interpreted strings are single-line: a multi-line query
 			// becomes a raw string. Raw strings cannot hold a backtick,
 			// and Go drops carriage returns from them.
-			if content.contains('`') || has_unwritable_control(content) {
+			if content.contains('`') || has_unwritable_control(content, crlf) {
 				None
 			} else {
 				Some(format!("`{content}`"))
@@ -1913,9 +1924,16 @@ fn encode(decoded: &Decoded, content: &str) -> Option<String> {
 }
 
 /// Characters other than newline and tab that a raw string cannot
-/// hold faithfully.
-fn has_unwritable_control(content: &str) -> bool {
-	content.chars().any(|c| c.is_control() && c != '\n' && c != '\t')
+/// hold faithfully; with `crlf`, a CR ending a line is a newline too.
+fn has_unwritable_control(content: &str, crlf: bool) -> bool {
+	let mut chars = content.chars().peekable();
+	while let Some(c) = chars.next() {
+		let line_ending = crlf && c == '\r' && chars.peek() == Some(&'\n');
+		if c.is_control() && c != '\n' && c != '\t' && !line_ending {
+			return true;
+		}
+	}
+	false
 }
 
 /// Fewest `#`s a Rust raw string needs to hold `content`.

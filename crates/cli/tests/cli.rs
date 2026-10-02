@@ -2104,7 +2104,7 @@ fn trailing_semicolons_by_kind() {
 }
 
 /// LF unless `line-ending` (or the flag) asks for CRLF, whatever the
-/// input had; not an `[[embedded]]` rule's to set.
+/// input had, in SQL files and embedded SQL alike.
 #[test]
 fn line_ending_is_lf_unless_configured() {
 	let dir = temp_dir("lineending");
@@ -2133,15 +2133,30 @@ fn line_ending_is_lf_unless_configured() {
 		run(&["fmt", "--stdout", "--line-ending", "lf", "a.sql"]).1,
 		"select 1;\nselect 2;\n"
 	);
+	// Embedded SQL too: the lines squill writes into the string.
 	std::fs::write(
 		dir.join("squill.toml"),
-		"[[embedded]]\ninclude = [\"*.rs\"]\ngrammar = \"rust\"\nline-ending = \"crlf\"\n",
+		"[[embedded]]\ninclude = [\"*.rs\"]\ngrammar = \"rust\"\n\n\
+		 [[embedded]]\ninclude = [\"crlf.rs\"]\nline-ending = \"crlf\"\n",
 	)
 	.expect("write config");
-	let (ok, _, stderr) = run(&["fmt", "--stdout", "a.sql"]);
+	let rust = "fn f() {\r\n    sqlx::query(r\"select 1\r\nfrom t\");\r\n    \
+		sqlx::query(\"select 2\nfrom t\");\r\n}\r\n";
+	std::fs::write(dir.join("lf.rs"), rust).expect("write");
+	std::fs::write(dir.join("crlf.rs"), rust).expect("write");
+	let (ok, lf, stderr) = run(&["fmt", "--stdout", "lf.rs"]);
+	assert!(ok, "{stderr}");
+	assert!(lf.contains("r\"\n    select 1\n    from t\n    \""), "{lf:?}");
+	assert!(lf.contains("r#\"\n    select 2\n    from t\n    \"#"), "{lf:?}");
+	let (ok, crlf, stderr) = run(&["fmt", "--stdout", "crlf.rs"]);
+	assert!(ok && stderr.is_empty(), "{stderr}");
 	assert!(
-		!ok && stderr.contains("`line-ending` applies to SQL files"),
-		"{stderr}"
+		crlf.contains("r\"\r\n    select 1\r\n    from t\r\n    \""),
+		"{crlf:?}"
+	);
+	assert!(
+		crlf.contains("r#\"\r\n    select 2\r\n    from t\r\n    \"#"),
+		"{crlf:?}"
 	);
 	let _ = std::fs::remove_dir_all(&dir);
 }
