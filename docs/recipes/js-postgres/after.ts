@@ -14,9 +14,7 @@ export async function setup() {
 }
 
 export async function refreshStats() {
-  await sql`
-  refresh materialized view concurrently event_stats
-  `;
+  await sql`refresh materialized view concurrently event_stats`;
 }
 
 export async function recent(kind: string) {

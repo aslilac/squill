@@ -31,10 +31,6 @@ def tagged(db: sqlite3.Connection, tag: str) -> list[sqlite3.Row]:
 
 def rename(db: sqlite3.Connection, bookmark_id: int, title: str) -> None:
     db.execute(
-        """
-        update bookmarks
-        set title = :title
-        where id = :id
-        """,
+        """update bookmarks set title = :title where id = :id""",
         {"id": bookmark_id, "title": title},
     )

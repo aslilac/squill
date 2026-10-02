@@ -12,12 +12,12 @@ import Recipe from "../../../components/Recipe.astro";
 		<h2>Which strings squill rewrites</h2>
 		<p>
 			Text blocks (<code>"""</code>, Java 15 and later). Java strips a text
-			block&rsquo;s common indentation, so squill can lay the query out one
-			clause per line without changing what the database sees beyond whitespace.
-			Plain strings, and queries built up with <code>+</code>, are left exactly
-			as written &mdash; to have squill format a query, write it as a text
-			block. A text block holding an escape (<code>\n</code>, <code>\"</code>)
-			is reported rather than rewritten.
+			block&rsquo;s common indentation, so squill can lay the query out over as
+			many lines as it needs without changing what the database sees beyond
+			whitespace. Plain strings, and queries built up with <code>+</code>, are
+			left exactly as written &mdash; to have squill format a query, write it as
+			a text block. A text block holding an escape (<code>\n</code>,{" "}
+			<code>\"</code>) is reported rather than rewritten.
 		</p>
 		<p>
 			The built-in <code>java</code> grammar&rsquo;s default query finds a text

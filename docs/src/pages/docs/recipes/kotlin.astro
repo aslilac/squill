@@ -11,12 +11,12 @@ import Recipe from "../../../components/Recipe.astro";
 	<section>
 		<h2>Which strings squill rewrites</h2>
 		<p>
-			Raw strings (<code>"""</code>) without templates. squill puts the quotes
-			on their own lines and lays the query out one clause per line between
-			them, even for a raw string written on one line. Plain strings are left
-			exactly as written, and so is any string with a <code>$name</code> or{" "}
-			<code>${"${…}"}</code> template in it &mdash; SQL with holes in it
-			isn&rsquo;t SQL squill can parse.
+			Raw strings (<code>"""</code>) without templates. A raw string written on
+			one line stays there while the query fits; otherwise squill puts the
+			quotes on their own lines and lays the query out between them. Plain
+			strings are left exactly as written, and so is any string with a{" "}
+			<code>$name</code> or <code>${"${…}"}</code> template in it &mdash; SQL
+			with holes in it isn&rsquo;t SQL squill can parse.
 		</p>
 		<p>
 			The built-in <code>kotlin</code> grammar&rsquo;s default query finds a raw

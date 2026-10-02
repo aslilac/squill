@@ -14,7 +14,8 @@ import Recipe from "../../../components/Recipe.astro";
 			Raw string literals (<code>"""</code>, C# 11 and later): the quotes sit on
 			their own lines, and squill lays the query out between them at the closing
 			quotes&rsquo; indent, which is where C# measures a raw string&rsquo;s
-			indentation from. A raw string written on one line gets the same layout.
+			indentation from. A raw string written on one line stays there while the
+			query fits, and gets the same layout once it doesn&rsquo;t.
 		</p>
 		<p>
 			Everything else is left exactly as written: plain strings, verbatim

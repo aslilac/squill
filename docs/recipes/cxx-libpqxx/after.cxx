@@ -13,9 +13,7 @@ std::vector<Member> active_members(pqxx::connection& conn, int team_id) {
     }
     tx.exec(
         R"(
-        update teams
-        set last_listed_at = now()
-        where id = $1
+        update teams set last_listed_at = now() where id = $1
         )",
         pqxx::params{team_id});
     tx.commit();

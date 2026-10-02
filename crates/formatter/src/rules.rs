@@ -64,10 +64,7 @@ fn element_has_comment(element: SyntaxElement) -> bool {
 
 /// Lower one statement node to a document. Returns `None` for kinds the
 /// rules do not format (ErrorStatement — handled as verbatim upstream).
-pub(crate) fn lower_statement(
-	stmt: &SyntaxNode,
-	always_break: bool,
-) -> Option<Doc> {
+pub(crate) fn lower_statement(stmt: &SyntaxNode) -> Option<Doc> {
 	match stmt.kind() {
 		SyntaxKind::SelectStmt
 		| SyntaxKind::EmptyStmt
@@ -162,11 +159,6 @@ pub(crate) fn lower_statement(
 				_ => lowerer.dml_flow(&mut docs, stmt),
 			}
 			lowerer.flush_pending(&mut docs);
-			if always_break {
-				// Force the statement group broken: clause-per-line even
-				// when the statement would fit on one line.
-				docs.insert(0, break_parent());
-			}
 			header.push(group(concat(docs)));
 			Some(concat(header))
 		}

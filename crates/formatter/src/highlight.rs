@@ -70,7 +70,7 @@ fn keyword_offsets(
 ) -> HashSet<usize> {
 	let mut offsets = HashSet::new();
 	for statement in root.children() {
-		match rules::lower_statement(statement, false) {
+		match rules::lower_statement(statement) {
 			Some(doc) => {
 				let mut stack = vec![&doc];
 				while let Some(doc) = stack.pop() {

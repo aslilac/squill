@@ -15,9 +15,7 @@ func (s *Store) Authors(ctx context.Context, country string) ([]Author, error) {
 func (s *Store) Author(ctx context.Context, id int64) (Author, error) {
 	var author Author
 	err := s.db.GetContext(ctx, &author, `
-	select id, name, country
-	from authors
-	where id = $1
+	select id, name, country from authors where id = $1
 	`, id)
 	return author, err
 }

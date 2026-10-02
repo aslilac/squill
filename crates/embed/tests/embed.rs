@@ -167,10 +167,10 @@ fn single_line_plain_strings_stay_untouched() {
 }
 
 #[test]
-fn single_line_raw_strings_reformat_vertically() {
-	// Raw strings are multiline-capable, so they always take the
-	// vertical shape — even when currently single-line.
-	let source = "fn main() {\n    let q = sqlx::query!(\n        r#\"delete from team_auto_add_rules where team_id = $1 and id = $2\"#\n    );\n}\n";
+fn single_line_raw_strings_stay_on_one_line_while_they_fit() {
+	// A raw string written on one line stays there when the SQL fits;
+	// SQL that doesn't takes the vertical shape.
+	let source = "fn main() {\n    let q = sqlx::query!(\n        r#\"DELETE FROM team_auto_add_rules WHERE team_id = $1 and id = $2\"#\n    );\n    sqlx::query!(r#\"delete from team_auto_add_rules where team_id = $1 and id = $2 and kind = $3\"#);\n}\n";
 	let formatted = format_embedded(
 		source,
 		&Host::Rust.into(),
@@ -182,7 +182,7 @@ fn single_line_raw_strings_reformat_vertically() {
 	.text;
 	assert_eq!(
 		formatted,
-		"fn main() {\n    let q = sqlx::query!(\n        r#\"\n        delete from team_auto_add_rules\n        where team_id = $1 and id = $2\n        \"#\n    );\n}\n"
+		"fn main() {\n    let q = sqlx::query!(\n        r#\"delete from team_auto_add_rules where team_id = $1 and id = $2\"#\n    );\n    sqlx::query!(r#\"\n    delete from team_auto_add_rules where team_id = $1 and id = $2 and kind = $3\n    \"#);\n}\n"
 	);
 	// Idempotent.
 	let twice = format_embedded(
@@ -209,11 +209,11 @@ fn multiline_literal_gets_quotes_on_own_lines() {
 	)
 	.expect("format")
 	.text;
-	// Multi-line literals stay clause-per-line even when the SQL would
-	// fit on one line.
+	// A literal spanning lines keeps its quotes on their own lines, even
+	// when the SQL fits on one.
 	assert_eq!(
 		formatted,
-		"fn main() {\n    let q = sqlx::query!(\n        r#\"\n        select id, name\n        from users\n        where org = $1\n        order by name\n        \"#\n    );\n}\n"
+		"fn main() {\n    let q = sqlx::query!(\n        r#\"\n        select id, name from users where org = $1 order by name\n        \"#\n    );\n}\n"
 	);
 	assert!(!formatted.contains('\t'), "no tabs in a spaces-indented file");
 	// Idempotent.
@@ -245,13 +245,15 @@ fn multiline_plain_strings_become_raw_strings() {
 	.text;
 	assert_eq!(
 		formatted,
-		"fn f() {\n    sqlx::query!(r#\"\n    select 'it''s' as s, \"Weird\"\n    from t\n    where x = $1\n    \"#);\n}\n"
+		"fn f() {\n    sqlx::query!(r#\"\n    select 'it''s' as s, \"Weird\" from t where x = $1\n    \"#);\n}\n"
 	);
 }
 
 #[test]
 fn escaped_newlines_count_as_multiline() {
-	// `\n` escapes are a line break too; so is a continuation.
+	// `\n` escapes are a line break too, so the string becomes a raw one;
+	// it stays on its one source line. A continuation spans source lines,
+	// so that one takes the multi-line shape.
 	let source = "fn f() {\n    sqlx::query!(\"select a\\nfrom t\");\n    sqlx::query!(\"select b \\\n        from t\");\n}\n";
 	let formatted = format_embedded(
 		source,
@@ -264,7 +266,7 @@ fn escaped_newlines_count_as_multiline() {
 	.text;
 	assert_eq!(
 		formatted,
-		"fn f() {\n    sqlx::query!(r#\"\n    select a\n    from t\n    \"#);\n    sqlx::query!(r#\"\n    select b\n    from t\n    \"#);\n}\n"
+		"fn f() {\n    sqlx::query!(r#\"select a from t\"#);\n    sqlx::query!(r#\"\n    select b from t\n    \"#);\n}\n"
 	);
 }
 
@@ -286,13 +288,13 @@ fn rust_query_functions_use_the_session_dialect() {
 	.expect("format");
 	assert!(
 		formatted.text.contains(
-			"db::query(r#\"\n    select id\n    from t\n    where x = ?1\n"
+			"db::query(r#\"\n    select id from t where x = ?1 limit 1\n    \"#)"
 		),
 		"{}",
 		formatted.text
 	);
 	assert!(
-		formatted.text.contains("query_as::<_, Row>(r#\"\n    select 1\n    \"#)"),
+		formatted.text.contains("query_as::<_, Row>(r#\"select 1\"#)"),
 		"{}",
 		formatted.text
 	);
@@ -352,9 +354,7 @@ fn go_multiline_interpreted_strings_become_raw_strings() {
 	)
 	.expect("format");
 	assert!(
-		formatted
-			.text
-			.contains("db.Exec(`\n\tdelete from t\n\twhere id = $1\n\t`)"),
+		formatted.text.contains("db.Exec(`delete from t where id = $1`)"),
 		"{}",
 		formatted.text
 	);
@@ -392,7 +392,7 @@ fn go_smoke_test() {
 	.text;
 	assert!(
 		formatted.contains(
-			"`\n\tselect id, name\n\tfrom users\n\twhere active\n\torder by name\n\t`"
+			"`\n\tselect id, name from users where active order by name\n\t`"
 		),
 		"multi-line raw string not formatted: {formatted}"
 	);
@@ -469,15 +469,14 @@ fn js_smoke_test() {
 	)
 	.expect("format")
 	.text;
-	// Template literals take the vertical shape.
+	// A template on one line stays there while the SQL fits.
 	assert!(
-		formatted.contains(
-			"`\n  select id, name\n  from users\n  where org = $1\n  order by name\n  `"
-		),
+		formatted
+			.contains("`select id, name from users where org = $1 order by name`"),
 		"template not formatted: {formatted}"
 	);
 	// Tagged templates format too.
-	assert!(formatted.contains("sql`\n  select 3\n  `"), "{formatted}");
+	assert!(formatted.contains("sql`select 3`"), "{formatted}");
 	// `${}` substitutions and plain quoted strings stay byte-identical.
 	assert!(
 		formatted
@@ -510,7 +509,7 @@ fn typescript_smoke_test() {
 	.expect("format")
 	.text;
 	assert!(
-		formatted.contains("`\n  select id\n  from t\n  where x = $1\n  `"),
+		formatted.contains("`select id from t where x = $1`"),
 		"ts template not formatted: {formatted}"
 	);
 	let tsx = "export const List = () => {\n  const rows = db.query(`SELECT id,name FROM t`);\n  return <ul>{rows.map((r) => <li key={r.id}>{r.name}</li>)}</ul>;\n};\n";
@@ -524,7 +523,7 @@ fn typescript_smoke_test() {
 	.expect("format")
 	.text;
 	assert!(
-		formatted.contains("`\n  select id, name\n  from t\n  `"),
+		formatted.contains("`select id, name from t`"),
 		"tsx template not formatted: {formatted}"
 	);
 	assert!(formatted.contains("<li key={r.id}>"), "jsx mangled: {formatted}");
@@ -542,15 +541,14 @@ fn gleam_smoke_test() {
 	)
 	.expect("format")
 	.text;
-	// sqlight is SQLite: `?` params lex; strings take the vertical shape.
+	// sqlight is SQLite: `?` params lex.
 	assert!(
-		formatted.contains(
-			"\"\n  select id, name\n  from users\n  where org = ?\n  order by name\n  \""
-		),
+		formatted
+			.contains("\"select id, name from users where org = ? order by name\""),
 		"sqlight string not formatted: {formatted}"
 	);
 	// pog goes through the session dialect (postgres by default).
-	assert!(formatted.contains("pog.query(\"\n  select 1\n  \")"), "{formatted}");
+	assert!(formatted.contains("pog.query(\"select 1\")"), "{formatted}");
 	// Idempotent.
 	let twice = format_embedded(
 		&formatted,
@@ -635,11 +633,11 @@ fn csharp_raw_strings() {
 fn cxx_raw_strings() {
 	let source = "void f() {\n  sqlite3_prepare_v2(db, R\"sql(\n    SELECT a FROM t LIMIT 1\n  )sql\", -1, &s, 0);\n  txn.exec(R\"(select   1)\");\n}\n";
 	let formatted = format_host(Host::Cxx, CXX_SQL_QUERY, source);
-	// sqlite3_* calls are SQLite. The query promises raw strings take
-	// line breaks, so a one-line one gets the multi-line layout too.
+	// sqlite3_* calls are SQLite. A one-line string stays on its line
+	// while the SQL fits.
 	assert_eq!(
 		formatted.text,
-		"void f() {\n  sqlite3_prepare_v2(db, R\"sql(\n  select a\n  from t\n  limit 1\n  )sql\", -1, &s, 0);\n  txn.exec(R\"(\n  select 1\n  )\");\n}\n"
+		"void f() {\n  sqlite3_prepare_v2(db, R\"sql(\n  select a from t limit 1\n  )sql\", -1, &s, 0);\n  txn.exec(R\"(select 1)\");\n}\n"
 	);
 }
 
@@ -652,7 +650,7 @@ fn java_text_blocks() {
 		format_host_with(Host::Java, JAVA_SQL_QUERY, source, &options);
 	assert!(
 		formatted.text.contains(
-			"prepareStatement(\"\"\"\n        select id\n        from users\n        where org = ?\n        \"\"\");"
+			"prepareStatement(\"\"\"\n        select id from users where org = ?\n        \"\"\");"
 		),
 		"{}",
 		formatted.text
@@ -670,7 +668,7 @@ fn kotlin_raw_strings() {
 	let formatted = format_host(Host::Kotlin, KOTLIN_SQL_QUERY, source);
 	assert!(
 		formatted.text.contains(
-			"db.query(\"\"\"\n    select id\n    from users\n    \"\"\", mapper)"
+			"db.query(\"\"\"\n    select id from users\n    \"\"\", mapper)"
 		),
 		"{}",
 		formatted.text
@@ -826,7 +824,7 @@ fn generic_and_wrapped_calls_are_found() {
 			Host::TypeScript,
 			JS_SQL_QUERY,
 			"async function f() {\n  const r = await pool.query<Row>(`SELECT  1`);\n}\n",
-			"await pool.query<Row>(`\n  select 1\n  `);",
+			"await pool.query<Row>(`select 1`);",
 		),
 		(
 			Host::CSharp,
@@ -881,19 +879,14 @@ fn swift_multi_line_strings() {
 		formatted.text,
 		r#"func f() throws {
     try db.execute(sql: """
-    select id
-    from t
-    where a = ? and b = :name
+    select id from t where a = ? and b = :name
     """, arguments: [1])
     let n = try Int.fetchOne(db, sql: "SELECT   1")
     try conn.run("""
         select   \(x)
         """)
     let rows = try await client.query("""
-    select id
-    from users
-    where org = $1
-    order by id
+    select id from users where org = $1 order by id
     """, logger: logger)
 }
 "#
@@ -936,24 +929,25 @@ fn dialect_captures() {
 #[test]
 fn one_line_raw_strings_become_multi_line() {
 	// C#'s `"""` must open and close on lines of their own once the
-	// content spans lines, which is squill's layout.
-	let source = "class M {\n    void Up(DbCommand cmd) {\n        cmd.CommandText = \"\"\"select   1 from t\"\"\";\n    }\n}\n";
+	// content spans lines, which is squill's layout for SQL that doesn't
+	// fit on the string's one line.
+	let source = "class M {\n    void Up(DbCommand cmd) {\n        cmd.CommandText = \"\"\"select   id, name from users where org = $1 order by name\"\"\";\n    }\n}\n";
 	let formatted = format_host(Host::CSharp, CSHARP_SQL_QUERY, source);
 	assert!(
 		formatted.text.contains(
-			"cmd.CommandText = \"\"\"\n        select 1\n        from t\n        \"\"\";"
+			"cmd.CommandText = \"\"\"\n        select id, name from users where org = $1 order by name\n        \"\"\";"
 		),
 		"{}",
 		formatted.text
 	);
 	assert!(formatted.warnings.is_empty(), "{:?}", formatted.warnings);
 
-	let source = "fun m() {\n    db.query(\"\"\"select   1 from t\"\"\")\n}\n";
+	let source = "fun m() {\n    db.query(\"\"\"select   id, name, email from users where org = $1 order by name\"\"\")\n}\n";
 	let formatted = format_host(Host::Kotlin, KOTLIN_SQL_QUERY, source);
 	assert!(
 		formatted
 			.text
-			.contains("db.query(\"\"\"\n    select 1\n    from t\n    \"\"\")"),
+			.contains("db.query(\"\"\"\n    select id, name, email from users where org = $1 order by name\n    \"\"\")"),
 		"{}",
 		formatted.text
 	);
@@ -1002,7 +996,7 @@ fn a_closing_delimiter_at_the_margin_stays_there() {
 	let formatted = format_host(Host::Cxx, CXX_SQL_QUERY, source);
 	assert_eq!(
 		formatted.text,
-		"void f() {\n  txn.exec(R\"(\n  select a\n  from t\n)\");\n}\n"
+		"void f() {\n  txn.exec(R\"(\n  select a from t\n)\");\n}\n"
 	);
 }
 
@@ -1027,12 +1021,15 @@ fn a_broken_multiline_promise_fails_the_reparse() {
  (#set! squill.raw)
  (#set! squill.multiline))
 "#;
-	let source =
-		"void f() {\n  run(\"select   1\");\n  txn.exec(R\"(select   2)\");\n}\n";
+	let source = "void f() {\n  run(\"select   id, name, email, created_at from users where org = $1 order by name\");\n  txn.exec(R\"(select   id, name, email, created_at from users where org = $1 order by name)\");\n}\n";
 	let formatted = format_host(Host::Cxx, query, source);
-	assert!(formatted.text.contains("run(\"select   1\")"), "{}", formatted.text);
 	assert!(
-		formatted.text.contains("txn.exec(R\"(\n  select 2\n  )\")"),
+		formatted.text.contains("run(\"select   id, name, email,"),
+		"{}",
+		formatted.text
+	);
+	assert!(
+		formatted.text.contains("txn.exec(R\"(\n  select id, name, email, created_at from users where org = $1 order by name\n  )\")"),
 		"{}",
 		formatted.text
 	);
@@ -1046,21 +1043,21 @@ fn gleam_strings_piped_into_a_query() {
 	let formatted = format_host(Host::Gleam, GLEAM_SQL_QUERY, source);
 	// `"…" |> pog.query`, chained on.
 	assert!(
-		formatted.text.contains("  \"\n  select 1\n  \"\n  |> pog.query\n"),
+		formatted.text.contains("  \"select 1\"\n  |> pog.query\n"),
 		"{}",
 		formatted.text
 	);
 	// sqlight's dialect comes along through a pipe: `?` lexes as SQLite.
 	assert!(
-		formatted.text.contains(
-			"\"\n  select id\n  from t\n  where a = ?\n  \" |> sqlight.query("
-		),
+		formatted
+			.text
+			.contains("\"select id from t where a = ?\" |> sqlight.query("),
 		"{}",
 		formatted.text
 	);
 	// A bare `query`.
 	assert!(
-		formatted.text.contains("\"\n  select 2\n  \" |> query"),
+		formatted.text.contains("\"select 2\" |> query"),
 		"{}",
 		formatted.text
 	);

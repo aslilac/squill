@@ -16,9 +16,7 @@ pub async fn active_members(pool: &PgPool, team: Uuid) -> sqlx::Result<Vec<Membe
 pub async fn rename(pool: &PgPool, id: Uuid, name: &str) -> sqlx::Result<()> {
     sqlx::query(
         r#"
-        update members
-        set name = $2, updated_at = now()
-        where id = $1
+        update members set name = $2, updated_at = now() where id = $1
         "#,
     )
     .bind(id)

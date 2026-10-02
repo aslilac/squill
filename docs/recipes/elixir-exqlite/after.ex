@@ -12,8 +12,7 @@ defmodule Tally.Store do
         at integer not null,
         payload text check (json_valid(payload))
       );
-      create index if not exists events_by_name
-        on events (name, at desc)
+      create index if not exists events_by_name on events (name, at desc)
       """)
 
     {:ok, conn}

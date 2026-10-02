@@ -575,7 +575,7 @@ fn explicit_rust_path_formats_under_an_embedded_rule() {
 	let out = std::fs::read_to_string(&file).expect("read");
 	assert!(
         out.contains(
-            "r#\"\n        select id, name\n        from users\n        where org = $1\n        order by name\n        \"#"
+            "r#\"\n        select id, name from users where org = $1 order by name\n        \"#"
         ),
         "sqlx macro not formatted: {out}"
     );
@@ -652,7 +652,7 @@ fn embedded_rules_bring_host_files_into_recursion() {
 	assert!(
 		std::fs::read_to_string(dir.join("q.rs"))
 			.expect("read")
-			.contains("select id, name\n        from users"),
+			.contains("select id, name from users where org = $1"),
 	);
 	let status =
 		squill().args(["fmt", "--check"]).arg(&dir).status().expect("run");
@@ -694,7 +694,7 @@ fn go_host_files_format() {
 	assert!(
 		std::fs::read_to_string(&file)
 			.expect("read")
-			.contains("`\n\tselect count(*)\n\tfrom t\n\twhere a = 1\n\t`"),
+			.contains("`\n\tselect count(*) from t where a = 1\n\t`"),
 	);
 	let _ = std::fs::remove_dir_all(&dir);
 }
@@ -727,7 +727,7 @@ fn rules_take_a_custom_query() {
 	assert!(status.success());
 	let out = std::fs::read_to_string(&file).expect("read");
 	assert!(
-		out.contains("my_sql!(r#\"\n    select 1\n    \"#)"),
+		out.contains("my_sql!(r#\"select 1\"#)"),
 		"custom query missed: {out}"
 	);
 	assert!(
@@ -1238,7 +1238,7 @@ fn question_params_are_configured() {
 	assert!(
 		std::fs::read_to_string(dir.join("A.java"))
 			.expect("read")
-			.contains("        where org = ?\n"),
+			.contains("        select id from users where org = ?\n"),
 	);
 	// Not for plain SQL, which the rule doesn't cover: it takes the flag.
 	assert_eq!(
@@ -1380,9 +1380,9 @@ fn pyformat_params_are_configured() {
 	let status = squill().arg("fmt").arg(dir.join("q.py")).status().expect("run");
 	assert!(status.success());
 	assert!(
-		std::fs::read_to_string(dir.join("q.py"))
-			.expect("read")
-			.contains("    where org = %(org)s\n"),
+		std::fs::read_to_string(dir.join("q.py")).expect("read").contains(
+			"execute(\"\"\"select id from users where org = %(org)s\"\"\")"
+		),
 	);
 	// Plain SQL takes the flag.
 	let status = squill()
@@ -1445,7 +1445,7 @@ fn stdin_filepath_resolves_rules_against_the_path() {
 	// A host file: its embedded SQL formats.
 	let (code, out, _) = stdin_as(&dir, "src/q.rs", RS_FIXTURE, &[]);
 	assert_eq!(code, Some(0));
-	assert!(out.contains("select id, name\n        from users"), "{out}");
+	assert!(out.contains("select id, name from users where org = $1"), "{out}");
 
 	// A [[files]] rule applies: `?1` only lexes in SQLite.
 	let (code, out, err) = stdin_as(
@@ -1688,9 +1688,9 @@ fn language_server_serves_one_formatter_editors() {
 	assert_eq!(action["kind"], "source.formatSql");
 	let edit = &action["edit"]["changes"][uri.as_str()][0]["newText"];
 	assert!(
-		edit
-			.as_str()
-			.is_some_and(|text| text.contains("select id, name\n        from users")),
+		edit.as_str().is_some_and(
+			|text| text.contains("select id, name from users where org = $1")
+		),
 		"{action}"
 	);
 	assert_eq!(reply(3)["result"], json!([]));
@@ -2094,12 +2094,8 @@ fn trailing_semicolons_by_kind() {
 		run(&["fmt", "--stdout", "--trailing-semicolons", "none", "a.sql"]),
 		"select 1;\nselect 2\n"
 	);
-	assert!(
-		run(&["fmt", "--stdout", "db.rs"]).contains("r\"\n    select 1\n    \"")
-	);
-	assert!(
-		run(&["fmt", "--stdout", "keep.rs"]).contains("r\"\n    select 1;\n    \"")
-	);
+	assert!(run(&["fmt", "--stdout", "db.rs"]).contains("r\"select 1\""));
+	assert!(run(&["fmt", "--stdout", "keep.rs"]).contains("r\"select 1;\""));
 	let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -2140,22 +2136,32 @@ fn line_ending_is_lf_unless_configured() {
 		 [[embedded]]\ninclude = [\"crlf.rs\"]\nline-ending = \"crlf\"\n",
 	)
 	.expect("write config");
-	let rust = "fn f() {\r\n    sqlx::query(r\"select 1\r\nfrom t\");\r\n    \
-		sqlx::query(\"select 2\nfrom t\");\r\n}\r\n";
+	let rust = "fn f() {\r\n    sqlx::query(r\"select 1 -- one\r\nfrom t\");\r\n    \
+		sqlx::query(\"select 2 -- two\nfrom t\");\r\n}\r\n";
 	std::fs::write(dir.join("lf.rs"), rust).expect("write");
 	std::fs::write(dir.join("crlf.rs"), rust).expect("write");
 	let (ok, lf, stderr) = run(&["fmt", "--stdout", "lf.rs"]);
 	assert!(ok, "{stderr}");
-	assert!(lf.contains("r\"\n    select 1\n    from t\n    \""), "{lf:?}");
-	assert!(lf.contains("r#\"\n    select 2\n    from t\n    \"#"), "{lf:?}");
+	assert!(
+		lf.contains("r\"\n    select\n        1 -- one\n    from t\n    \""),
+		"{lf:?}"
+	);
+	assert!(
+		lf.contains("r#\"\n    select\n        2 -- two\n    from t\n    \"#"),
+		"{lf:?}"
+	);
 	let (ok, crlf, stderr) = run(&["fmt", "--stdout", "crlf.rs"]);
 	assert!(ok && stderr.is_empty(), "{stderr}");
 	assert!(
-		crlf.contains("r\"\r\n    select 1\r\n    from t\r\n    \""),
+		crlf.contains(
+			"r\"\r\n    select\r\n        1 -- one\r\n    from t\r\n    \""
+		),
 		"{crlf:?}"
 	);
 	assert!(
-		crlf.contains("r#\"\r\n    select 2\r\n    from t\r\n    \"#"),
+		crlf.contains(
+			"r#\"\r\n    select\r\n        2 -- two\r\n    from t\r\n    \"#"
+		),
 		"{crlf:?}"
 	);
 	// A CR the string spells `\\r` is data: it stays spelled out, so a
@@ -2192,8 +2198,9 @@ fn colon_params_are_configured() {
 		String::from_utf8_lossy(&output.stderr)
 	);
 	assert!(
-		String::from_utf8_lossy(&output.stdout)
-			.contains("    where org = :org and tags[1:2] = :tags\n"),
+		String::from_utf8_lossy(&output.stdout).contains(
+			"\"\"\"\n    select id from users where org = :org and tags[1:2] = :tags\n"
+		),
 		"{}",
 		String::from_utf8_lossy(&output.stdout)
 	);

@@ -12,8 +12,7 @@ struct PlayerStore {
                 name text not null,
                 score integer not null default 0
             );
-            create index player_on_score
-                on player (score desc)
+            create index player_on_score on player (score desc)
             """)
         }
         try migrator.migrate(dbQueue)

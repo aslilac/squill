@@ -1,6 +1,6 @@
 {"path":"after.rs","start":134,"end":328,"line":4,"column":12,"end_line":9,"end_column":9,"dialect":"postgres","pinned_dialect":false}
-{"path":"after.rs","start":494,"end":590,"line":18,"column":12,"end_line":22,"end_column":9,"dialect":"postgres","pinned_dialect":false}
-{"path":"after.rs","start":758,"end":800,"line":32,"column":26,"end_line":32,"end_column":68,"dialect":"postgres","pinned_dialect":false}
+{"path":"after.rs","start":494,"end":574,"line":18,"column":12,"end_line":20,"end_column":9,"dialect":"postgres","pinned_dialect":false}
+{"path":"after.rs","start":742,"end":784,"line":30,"column":26,"end_line":30,"end_column":68,"dialect":"postgres","pinned_dialect":false}
 {"path":"before.rs","start":134,"end":322,"line":4,"column":12,"end_line":7,"end_column":28,"dialect":"postgres","pinned_dialect":false}
 {"path":"before.rs","start":486,"end":557,"line":16,"column":10,"end_line":17,"end_column":57,"dialect":"postgres","pinned_dialect":false}
 {"path":"before.rs","start":724,"end":766,"line":27,"column":26,"end_line":27,"end_column":68,"dialect":"postgres","pinned_dialect":false}

@@ -5,9 +5,7 @@ class AddSearchToArticles < ActiveRecord::Migration[7.2]
       add column search tsvector generated always as (
         to_tsvector('english', coalesce(title, '') || ' ' || coalesce(body, ''))
       ) stored;
-    create index articles_search
-      on articles
-      using gin(search)
+    create index articles_search on articles using gin(search)
     SQL
   end
 end

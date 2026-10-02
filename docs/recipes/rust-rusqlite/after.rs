@@ -7,8 +7,7 @@ fn migrate(conn: &Connection) -> rusqlite::Result<()> {
             body text not null default '',
             updated_at integer not null
         );
-        create index if not exists notes_updated
-            on notes (updated_at desc)
+        create index if not exists notes_updated on notes (updated_at desc)
         "#,
     )
 }

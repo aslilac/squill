@@ -127,10 +127,12 @@ grammar = "rust"`}
 			Only <em>multiline string syntaxes</em> are rewritten: Rust raw strings,
 			Go backticks, Python triple quotes, JS template literals, Gleam strings,
 			C++ and C# raw strings, Java text blocks, Kotlin raw strings, and Swift
-			multi-line strings. Those already support a vertical layout, so squill
-			puts the quotes on their own lines and formats one clause per line &mdash;
-			a raw string written on one line (<code>R"(&hellip;)"</code>,{" "}
-			<code>"""&hellip;"""</code>) included.
+			multi-line strings. The query is formatted just as it would be in a{" "}
+			<code>.sql</code> file. A string written on one line (
+			<code>R"(&hellip;)"</code>, <code>"""&hellip;"""</code>) stays on it while
+			the query fits there; a string that already spans lines, or a query that
+			doesn&rsquo;t fit, gets the quotes on lines of their own with the query
+			between them.
 		</p>
 		<p>
 			A plain Rust or Go string joins them once it already spans lines &mdash;

@@ -1369,8 +1369,9 @@ impl Snippet<'_> {
 				// Only multiline string *syntaxes* are formatted: raw
 				// strings (`r#"..."#`, Go backticks), Python triple quotes,
 				// JS templates, and Gleam strings natively support
-				// multiple lines, so they always take the vertical shape.
-				// A plain Rust or Go string joins them once it already
+				// multiple lines, so SQL that takes more than one gets the
+				// vertical shape. A plain Rust or Go string joins them once
+				// it already
 				// holds a line break (written, escaped, or continued), and
 				// is rewritten as a raw string; a single-line one never
 				// reformats.
@@ -1387,8 +1388,12 @@ impl Snippet<'_> {
 				if !multiline {
 					return Rewrite::Skip;
 				}
+				// What the quotes and prefix take on the line, for SQL that
+				// stays on it.
+				let delimiters =
+					text.chars().count().saturating_sub(decoded.content.chars().count());
 				let Anchored { text: anchored, line_ending_crs } =
-					match self.format(&decoded.content, false) {
+					match self.format(&decoded.content, false, delimiters) {
 						Ok(anchored) => anchored,
 						Err(rewrite) => return rewrite,
 					};
@@ -1421,7 +1426,7 @@ impl Snippet<'_> {
 				// A closing delimiter at the margin may have to stay there
 				// (a bare Ruby heredoc's terminator), so it does.
 				let close_at_margin = text.ends_with('\n');
-				let anchored = match self.format(text, close_at_margin) {
+				let anchored = match self.format(text, close_at_margin, 0) {
 					Ok(anchored) => anchored.text,
 					Err(rewrite) => return rewrite,
 				};
@@ -1441,15 +1446,23 @@ impl Snippet<'_> {
 		}
 	}
 
-	/// Format `sql` into the vertical shape: SQL starting on the line
-	/// after the opening quote, each line anchored to the host
-	/// statement's indentation, and the closing quote on its own line at
-	/// that indent, or at the margin with `close_at_margin`.
+	/// Format `sql`, the string's content. A string written on one line
+	/// stays on it when the SQL formats to one line and still fits, with
+	/// `delimiters` columns of a literal's quotes and prefix (a content
+	/// capture's are outside its range) and whatever is glued to its end
+	/// (see `glued`). Otherwise it
+	/// takes the vertical shape: SQL starting on the line after the
+	/// opening quote, each line anchored to the host statement's
+	/// indentation, and the closing quote on its own line at that indent,
+	/// or at the margin with `close_at_margin`. A string that already
+	/// spans lines keeps the vertical shape.
 	fn format(
 		&self,
 		sql: &str,
 		close_at_margin: bool,
+		delimiters: usize,
 	) -> Result<Anchored, Rewrite> {
+		let one_line = !self.source[self.range.clone()].contains('\n');
 		// The host statement's own indentation: the anchor every SQL line
 		// hangs off, and — unless an indent style was configured — the
 		// indent character too, so continuation lines don't mix tabs into
@@ -1457,9 +1470,6 @@ impl Snippet<'_> {
 		let host_indent = line_indent(self.source, self.range.start);
 		let mut format_options = *self.options;
 		format_options.dialect = self.dialect;
-		// The author chose a multi-line literal: keep statements
-		// clause-per-line, never collapsed onto one line.
-		format_options.always_break_statements = true;
 		// LF from the formatter; the line endings are settled below,
 		// where the lines are anchored.
 		format_options.line_ending = formatter::LineEnding::Lf;
@@ -1510,6 +1520,26 @@ impl Snippet<'_> {
 				.replace(Some(format!("embedded SQL: {}", body.message)));
 		}
 		let sql = formatted.text.trim_end();
+
+		if one_line && !sql.contains('\n') {
+			let line_start =
+				self.source[..self.range.start].rfind('\n').map_or(0, |at| at + 1);
+			let column: usize = self.source[line_start..self.range.start]
+				.chars()
+				.map(|c| if c == '\t' { usize::from(tab) } else { 1 })
+				.sum();
+			// Whatever is glued to the string's end, up to a space, `,` or
+			// `;`: a content capture's closing delimiter (`)"`, `"""`),
+			// and a `)` closing the call, which can't break from it either.
+			let glued = self.source[self.range.end..]
+				.chars()
+				.take_while(|c| !c.is_whitespace() && *c != ',' && *c != ';')
+				.count();
+			let width = column + delimiters + sql.chars().count() + glued;
+			if width <= usize::from(max_width) {
+				return Ok(Anchored { text: sql.to_string(), line_ending_crs: vec![] });
+			}
+		}
 
 		// Lines that start inside a value (a string spanning lines), or in
 		// a body that didn't parse, are data: never indented, and the line
